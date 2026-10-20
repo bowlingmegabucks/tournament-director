@@ -1,4 +1,5 @@
 import js from '@eslint/js'
+import { defineConfig } from 'eslint/config'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
@@ -6,7 +7,7 @@ import tseslint from 'typescript-eslint'
 import jsxA11y from 'eslint-plugin-jsx-a11y'
 import prettier from 'eslint-config-prettier'
 
-export default tseslint.config(
+export default defineConfig(
   { ignores: ['dist', 'coverage', 'reports', '.stryker-tmp', 'public/mockServiceWorker.js'] },
   {
     files: ['**/*.{ts,tsx}'],

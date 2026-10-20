@@ -16,8 +16,8 @@ defaults:
     working-directory: web
 
 jobs:
-  verify:
-    name: Lint, test, build
+  web-verify:
+    name: Web lint, test, build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -50,7 +50,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-traces
+          name: web-playwright-traces
           path: web/test-results
           if-no-files-found: ignore
 
@@ -58,7 +58,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage
+          name: web-coverage
           path: web/coverage
           if-no-files-found: ignore
 
@@ -68,8 +68,8 @@ jobs:
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-  mutation:
-    name: Mutation tests
+  web-mutation:
+    name: Web mutation tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -88,7 +88,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mutation-report
+          name: web-mutation-report
           path: web/reports/mutation
           if-no-files-found: ignore
 

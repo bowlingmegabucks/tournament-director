@@ -17,5 +17,15 @@ export default tseslint.config(
       prettier,
     ],
     languageOptions: { ecmaVersion: 2023, globals: globals.browser },
+    rules: {
+      '@typescript-eslint/no-non-null-assertion': 'error',
+      '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
+      // Components and hooks go through api.ts. Only api.ts calls fetch.
+      'no-restricted-globals': [
+        'error',
+        { name: 'fetch', message: 'Call fetch only from a feature api.ts file.' },
+      ],
+    },
   },
+  { files: ['**/api.ts'], rules: { 'no-restricted-globals': 'off' } },
 )

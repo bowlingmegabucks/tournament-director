@@ -4,7 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import App from './App.tsx'
 
-const queryClient = new QueryClient()
+// One retry keeps a failed request from showing "Loading…" for several seconds.
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1 } } })
 
 // Until the real API exists, VITE_USE_MOCKS=true serves random data from the browser.
 async function enableMocking() {
@@ -17,7 +18,10 @@ async function enableMocking() {
 }
 
 function render() {
-  createRoot(document.getElementById('root')!).render(
+  const root = document.getElementById('root')
+  if (!root) throw new Error('Missing #root element in index.html')
+
+  createRoot(root).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
         <App />
@@ -27,6 +31,9 @@ function render() {
 }
 
 // If mocks fail to start, still render the app so the user sees the API error.
-enableMocking()
-  .catch((error: unknown) => console.error('Mocking failed to start', error))
-  .finally(render)
+try {
+  await enableMocking()
+} catch (error: unknown) {
+  console.error('Mocking failed to start', error)
+}
+render()

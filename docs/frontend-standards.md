@@ -44,4 +44,4 @@ Plain CSS for now. Theming comes after the API works. Keep colors and spacing in
 
 ## Formatting and lint
 
-Prettier decides formatting (no semicolons, single quotes, 100 columns). ESLint decides correctness. Do not argue with either; change the config in one commit if you want a different rule.
+Prettier decides formatting (no semicolons, single quotes, 100 columns). ESLint decides correctness. Beyond the recommended rules, ESLint errors on: `any`, `@ts-ignore`, non-null `!`, `type` aliases for object shapes (use `interface`), and `fetch` outside `api.ts`. Do not argue with either; change the config in one commit if you want a different rule.

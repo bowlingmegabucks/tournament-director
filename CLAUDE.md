@@ -11,6 +11,8 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 4. Deploy `api/`. The GreenGeeks plan has no "Setup Node.js App" in cPanel, so the API host is undecided. Ask GreenGeeks, or pick another host.
 5. Theming and polish.
 
+Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, TypeScript, testing, composition) and stricter ESLint rules.
+
 ## Revisit later
 
 - **Dev container.** Not needed now: one developer, Node 24 from `web/.nvmrc`, and CI tests a clean environment. Raise it with the owner when any of these happens:
@@ -39,7 +41,7 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 | `npm run lint` / `npm run format:check` | ESLint / Prettier check                       |
 | `npm run typecheck`                     | `tsc -b`                                      |
 | `npm test`                              | Unit and integration tests                    |
-| `npm run test:coverage`                 | Same, with coverage                           |
+| `npm run test:coverage`                 | Same, with coverage. Fails under 80%          |
 | `npm run test:e2e`                      | Playwright against a built preview with mocks |
 | `npm run test:mutation`                 | Stryker mutation tests                        |
 
@@ -49,6 +51,7 @@ Before you say a task is done, run lint, typecheck, test, and `format:check`. Ru
 
 - **Vitest stays on 4.x.** Stryker's vitest runner 10.0.0 runs zero tests per mutant on Vitest 5. Do not upgrade until Stryker supports it.
 - **MSW 3** renamed `onUnhandledRequest` to `onUnhandledFrame`. Docs older than 2026 show the old name.
+- **`qs` override in `web/package.json`.** Stryker 10.0.0 pulls `qs` 6.15.1 (through `typed-rest-client`), which has moderate advisories. The override forces 6.16.1. Dev-only. Remove it once a Stryker release ships a fixed `qs`, then run `npm audit`.
 - Node 24 (`web/.nvmrc`).
 - Mocks are on when `VITE_USE_MOCKS=true` (`.env.development`, `.env.production`, `.env.mocks`). Delete it from `.env.production` once the real API exists.
 - `vite.config.ts` sets `base: './'` so the build works from any folder on the host.
@@ -58,7 +61,7 @@ Before you say a task is done, run lint, typecheck, test, and `format:check`. Ru
 
 Details in [docs/frontend-standards.md](docs/frontend-standards.md).
 
-- TypeScript strict. No `any`. Use `unknown` and narrow.
+- TypeScript strict. No `any`, no non-null `!`. Use `unknown` and narrow. ESLint enforces both.
 - Function components and hooks only. No class components.
 - Organize by feature: `src/features/<name>/` holds components, hooks, API calls, types, and tests together. Shared code goes in `src/shared/` only when two features need it.
 - Components render. Hooks hold logic. `api.ts` files call `fetch`. Do not call `fetch` inside components.
@@ -80,6 +83,20 @@ Details in [docs/testing.md](docs/testing.md).
 - E2E: Playwright in `web/e2e/`. Cover main user journeys only.
 - Mutation: Stryker. Thresholds in `stryker.config.json` (break at 50, aim for 80). A surviving mutant means a missing or weak assertion. Fix the test, not the threshold.
 - Write the test with the code. A change without a test is incomplete.
+
+## Skills (`.claude/skills/`)
+
+Claude loads a skill when the task matches its description. The rules above stay short; the skills hold examples and checklists.
+
+| Skill                           | Use for                                                                                                  |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `react-patterns`                | Components, hooks, TanStack Query, state, effects                                                        |
+| `typescript-standards`          | Types, narrowing, unions, API typing                                                                     |
+| `testing-patterns`              | Vitest, MSW, factories, Playwright, Stryker survivors                                                    |
+| `composition-patterns`          | Component API design: compound components, boolean props. Third party (Vercel, MIT), see its `SOURCE.md` |
+| `pull-request-prep`, `write-pr` | Review and describe a branch before the PR                                                               |
+
+Read any third-party skill before you add it. A skill steers Claude like code. Do not add skills that fetch their instructions from a URL at run time.
 
 ## Git and CI
 

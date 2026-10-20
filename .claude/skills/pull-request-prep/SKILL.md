@@ -34,7 +34,7 @@ npm test
 
 Also run:
 
-- `npm run test:e2e` when the diff changes a UI flow (routes, navigation, forms, data views).
+- `npm run test:e2e` when the diff changes a UI flow (routes, navigation, forms, data views) or any CSS. It includes the axe accessibility scan (`e2e/accessibility.spec.ts`). A violation there is a Blocker. Quote the rule id and the element.
 - `npm run test:mutation` when the diff changes logic in hooks, `api.ts` files, or utilities. A surviving mutant means a missing or weak assertion. Report it as a Should Fix. Never lower the threshold in `stryker.config.json`.
 - `npm audit` always. A new advisory can land upstream with no change to `package-lock.json` on this branch.
   - `high` or `critical`: Blocker. `moderate` or `low`: Should Fix.
@@ -66,6 +66,7 @@ Load these before reviewing:
 
 - `CLAUDE.md`
 - `docs/frontend-standards.md`
+- `.claude/skills/ui-standards/SKILL.md` (when the diff touches `.tsx`, `.css`, or `index.html`)
 - `docs/testing.md`
 - `docs/deployment.md` (only if `.github/workflows` or deploy config changed)
 
@@ -93,6 +94,20 @@ Trace every flag to a rule in one of these. For each issue, record:
 - [ ] Every list has a stable `key` (an id, not the index)
 - [ ] Semantic HTML, labels on inputs, accessible names on buttons and links
 - [ ] No secrets or hard-coded API hosts in the frontend
+
+**UI and accessibility** (when the diff touches `.tsx` or `.css`)
+
+- [ ] No hex, `rgb()`, or raw `px` color or spacing in component CSS. Values come from `tokens.css` tokens.
+- [ ] A new color token has a dark and a light value, and its contrast was checked (4.5:1 text, 3:1 borders and UI parts)
+- [ ] Component styles are in a `Component.module.css` next to the component. No ids, no `!important`, no element selectors in modules.
+- [ ] No `outline: none` without a replacement focus style
+- [ ] Interactive targets are at least `--target-min`
+- [ ] Meaning is never shown by color alone (errors have text)
+- [ ] Inputs have visible labels. Errors link to inputs with `aria-describedby`.
+- [ ] One `<h1>` per page, no skipped heading levels, landmarks in place
+- [ ] Meaningful images have `alt`. Decorative ones use `alt=""`. Icon-only buttons have an accessible name.
+- [ ] A new page or route is added to `e2e/accessibility.spec.ts`
+- [ ] No `eslint-disable` for a `jsx-a11y` rule without a stated reason
 
 **Structure**
 

@@ -40,7 +40,36 @@ web/src/
 
 ## Styling
 
-Plain CSS for now. Theming comes after the API works. Keep colors and spacing in CSS variables when we start.
+Plain CSS with custom properties (no Tailwind, no component library). Palette comes from the tournament logo: black, tan gold, green.
+
+**Files**
+
+- `src/styles/tokens.css`: the only place raw colors, sizes, and fonts live. Light and dark values.
+- `src/styles/base.css`: element defaults (body, headings, links, buttons, focus ring).
+- `Component.module.css` next to its component: layout and look for that component. CSS Modules scope class names to the file, like a .NET scoped stylesheet (`Component.razor.css`).
+
+**Rules**
+
+- No hex, `rgb()`, or pixel values for color or spacing in component CSS. Use `var(--color-*)` and `var(--space-*)`.
+- Add a new token to `tokens.css` before you use a new value. Give a color token a dark and a light value.
+- Style with classes, not element selectors or ids. No `!important`.
+- Use logical properties (`margin-inline`, `padding-block`, `inline-size`) and `rem`, not `px`, so layout follows text size and writing direction.
+- Mobile first. Add `min-width` media queries only when the layout needs them.
+- Dark and light follow the OS (`prefers-color-scheme`). No manual toggle yet.
+
+**Accessibility (WCAG 2.2 AA)**
+
+Enforced by `eslint-plugin-jsx-a11y` (lint) and axe in `e2e/accessibility.spec.ts` (dark and light, includes contrast). Automated checks miss many issues, so also tab through each new screen. The `ui-standards` skill has the full workflow and checklist.
+
+- Text contrast 4.5:1 (3:1 for text of 24px or larger). Borders, icons, and focus rings 3:1. Check any new color pair before you add it.
+- Do not use color alone to show meaning. Pair it with text or an icon (an error shows a message, not just red).
+- Keep the `:focus-visible` ring. Never set `outline: none` without a replacement.
+- Interactive targets are at least `--target-min` (44px) tall.
+- Respect `prefers-reduced-motion`. Put every animation and transition inside `@media (prefers-reduced-motion: no-preference)`. Keep it short and optional.
+- Use one `<h1>` per page and do not skip heading levels. Use landmarks (`header`, `main`, `nav`).
+- Text must stay readable at 200% zoom and 320px width with no sideways scroll.
+- Every image has `alt` text. Decorative images use `alt=""`.
+- Brand text on the logo's black background: gold `--color-accent` and green `--color-success` both pass in dark mode. In light mode the tokens use darker shades.
 
 ## Formatting and lint
 

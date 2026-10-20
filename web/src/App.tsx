@@ -1,10 +1,19 @@
+import logo from './assets/logo.png'
+import styles from './App.module.css'
 import { TournamentList } from './features/tournaments/TournamentList'
 
 export default function App() {
   return (
-    <main>
-      <h1>Tournament Management</h1>
-      <TournamentList />
-    </main>
+    <>
+      <header className={styles.header}>
+        <div className={styles.headerInner}>
+          <img className={styles.logo} src={logo} alt="Northeast MegaBuck$ Tournament" />
+        </div>
+      </header>
+      <main className={styles.main}>
+        <h1>Tournament Management</h1>
+        <TournamentList />
+      </main>
+    </>
   )
 }

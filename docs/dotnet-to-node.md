@@ -12,6 +12,7 @@
 | WebApplicationFactory             | Supertest against the Express app (API phase)  |
 | `appsettings.json`                | `.env` files (`VITE_*` for the frontend)       |
 | Razor / Blazor component          | React function component                       |
+| `Component.razor.css` (scoped)    | `Component.module.css` (CSS Modules)           |
 | `async`/`await` + `Task<T>`       | `async`/`await` + `Promise<T>`                 |
 | `HttpClient`                      | `fetch`                                        |
 | `IMemoryCache` for server data    | TanStack Query cache                           |

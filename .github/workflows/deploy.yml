@@ -1,14 +1,15 @@
 name: Deploy
 
-# Push to main: verify, build web/, upload web/dist/ to GreenGeeks over FTPS.
+# Verify, build web/, upload web/dist/ to GreenGeeks over FTPS.
+# main.yml calls it on each push to main.
 # Run it by hand with dry_run on to see what would upload without changing the server.
 # See docs/deployment.md.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "web/**"
-      - ".github/workflows/deploy.yml"
+  workflow_call:
+    inputs:
+      dry_run:
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       dry_run:

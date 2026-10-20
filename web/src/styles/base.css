@@ -1,0 +1,64 @@
+/* Element defaults. Component styles live next to their component in *.module.css. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height);
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+}
+
+h1 {
+  font-size: var(--font-size-xl);
+}
+
+a {
+  color: var(--color-accent);
+}
+
+/* Never remove focus. One visible ring for every focusable element. */
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+button {
+  min-block-size: var(--target-min);
+  padding: var(--space-2) var(--space-4);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius);
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(1.1);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/*
+ * Motion is opt-in. A component that animates or transitions wraps the rule in
+ * @media (prefers-reduced-motion: no-preference) { ... }, so no override with
+ * !important is needed. Do not add a global "reduce" reset: `*` has the lowest
+ * specificity and loses to any class rule.
+ */

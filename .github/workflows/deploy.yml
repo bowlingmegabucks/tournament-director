@@ -83,11 +83,7 @@ jobs:
     needs: deploy-api
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # TEMPORARY: the main-only guard is off so the web deploy can be tested from a branch.
-    # Restore `if: github.ref == 'refs/heads/main'` before merging.
-    # The API job is skipped off main, and a skipped dependency skips this job too unless the
-    # condition names it. Run when the API job succeeded or was skipped, but not when it failed.
-    if: ${{ !cancelled() && (needs.deploy-api.result == 'success' || needs.deploy-api.result == 'skipped') }}
+    if: github.ref == 'refs/heads/main'
     environment: production
     defaults:
       run:

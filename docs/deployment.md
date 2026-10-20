@@ -35,7 +35,7 @@ Settings:
 
 - GitHub `production` environment: secret `AZURE_CLIENT_ID`; variables `AZURE_WEB_APP_NAME` (`app-tournamentdirector-prod`) and `API_BASE_URL` (the API origin, for example `https://app-tournamentdirector-prod.azurewebsites.net`; copy the exact "Default domain" from the Web App overview). The web build passes `API_BASE_URL` to Vite as `VITE_API_BASE_URL`.
 - GitHub organization secrets, shared to this repo: `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`.
-- Web App application settings: `CORS_ORIGIN` = `https://bowlingmegabucks.com`. An origin is scheme and host only, so leave off the `/tournament-director` path. Azure sets `PORT`.
+- Web App application settings: `CORS_ORIGIN` = `https://bowlingmegabucks.com,https://www.bowlingmegabucks.com`. The site answers on both hosts, and a page on one that is not in the list gets a CORS block (the button then says "Could not reach the API"). An origin is scheme and host only, so leave off the `/tournament-director` path. Azure sets `PORT`.
 - `main.yml` grants `id-token: write` to the deploy job. A called workflow cannot hold more permission than its caller.
 
 If `Azure/login` fails with `AADSTS700213` (no matching federated identity), the error prints the `sub` claim GitHub sent. Make the credential's subject match it.

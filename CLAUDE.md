@@ -8,7 +8,7 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 1. `web/` hello world, fed by mock data (MSW + faker). **Done on branch `uiShell`.**
 2. Merge to `main`, add a GitHub Action that builds `web/` and deploys it to GreenGeeks over FTP.
 3. Build `api/` (Express + TypeScript). **Skeleton done on branch `api`:** health and tournament list routes (random demo data, 3 to 7 per call), tests, skills, CI. **Wired on the same branch:** `npm run dev` at the root starts both; Vite proxies `/api` to the API. Production still builds with mocks until step 4.
-4. Deploy `api/`. **Host chosen: Azure App Service** (Web App `app-tournamentdirector-prod`). The `deploy-api` job in `deploy.yml` is written and runs before the web deploy. API deploy works. The production web build now calls it (mocks removed; origin from the `API_BASE_URL` variable). The main-only guards in `deploy.yml` are off for testing: restore them before merging. See [docs/deployment.md](docs/deployment.md).
+4. Deploy `api/`. **Done.** Azure App Service (Web App `app-tournamentdirector-prod`, free tier: slow after idle). The `deploy-api` job in `deploy.yml` runs before `deploy-web`, both on `main` only. The production web build has no mocks; it calls the API at the `API_BASE_URL` variable. See [docs/deployment.md](docs/deployment.md).
 5. Theming and polish. **Done on branch `uiTheming`:** tokens, light/dark, logo header, `ui-standards` skill, a11y checks.
 
 Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, TypeScript, testing, composition) and stricter ESLint rules.

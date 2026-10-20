@@ -81,6 +81,20 @@ Details in [docs/testing.md](docs/testing.md).
 - Mutation: Stryker. Thresholds in `stryker.config.json` (break at 50, aim for 80). A surviving mutant means a missing or weak assertion. Fix the test, not the threshold.
 - Write the test with the code. A change without a test is incomplete.
 
+## Skills (`.claude/skills/`)
+
+Claude loads a skill when the task matches its description. The rules above stay short; the skills hold examples and checklists.
+
+| Skill                           | Use for                                                                                                  |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `react-patterns`                | Components, hooks, TanStack Query, state, effects                                                        |
+| `typescript-standards`          | Types, narrowing, unions, API typing                                                                     |
+| `testing-patterns`              | Vitest, MSW, factories, Playwright, Stryker survivors                                                    |
+| `composition-patterns`          | Component API design: compound components, boolean props. Third party (Vercel, MIT), see its `SOURCE.md` |
+| `pull-request-prep`, `write-pr` | Review and describe a branch before the PR                                                               |
+
+Read any third-party skill before you add it. A skill steers Claude like code. Do not add skills that fetch their instructions from a URL at run time.
+
 ## Git and CI
 
 - Branch from `main`. Small, focused commits. Commit messages in the imperative.

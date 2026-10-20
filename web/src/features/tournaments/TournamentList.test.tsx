@@ -34,12 +34,20 @@ describe('TournamentList', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Failed to load tournaments (500)')
   })
 
-  it('shows an error when the response is not a tournament list', async () => {
+  it('shows an error when the response is not JSON', async () => {
     server.use(http.get('/tournaments', () => new HttpResponse('<html></html>')))
 
     renderWithClient(<TournamentList />)
 
     expect(await screen.findByRole('alert')).toHaveTextContent('response is not JSON')
+  })
+
+  it('shows an error when the response is not a tournament list', async () => {
+    server.use(http.get('/tournaments', () => HttpResponse.json({ tournaments: [] })))
+
+    renderWithClient(<TournamentList />)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('unexpected response')
   })
 
   it('announces loading', async () => {

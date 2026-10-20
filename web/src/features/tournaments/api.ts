@@ -1,18 +1,15 @@
 import { apiUrl } from '../../shared/apiUrl'
+import { readJson } from '../../shared/readJson'
 import type { Tournament } from './types'
 
 function isTournament(value: unknown): value is Tournament {
+  if (typeof value !== 'object' || value === null) return false
+  const get = (key: string): unknown => Reflect.get(value, key)
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    'id' in value &&
-    typeof value.id === 'string' &&
-    'name' in value &&
-    typeof value.name === 'string' &&
-    'date' in value &&
-    typeof value.date === 'string' &&
-    'entrants' in value &&
-    typeof value.entrants === 'number'
+    typeof get('id') === 'string' &&
+    typeof get('name') === 'string' &&
+    typeof get('date') === 'string' &&
+    typeof get('entrants') === 'number'
   )
 }
 
@@ -21,12 +18,7 @@ export async function fetchTournaments(): Promise<Tournament[]> {
   if (!response.ok) {
     throw new Error(`Failed to load tournaments (${response.status})`)
   }
-  let body: unknown
-  try {
-    body = await response.json()
-  } catch {
-    throw new Error('Failed to load tournaments (response is not JSON)')
-  }
+  const body = await readJson(response, 'Failed to load tournaments')
   if (!Array.isArray(body) || !body.every(isTournament)) {
     throw new Error('Failed to load tournaments (unexpected response)')
   }

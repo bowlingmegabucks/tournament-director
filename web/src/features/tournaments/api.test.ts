@@ -25,7 +25,9 @@ describe('fetchTournaments', () => {
   it('rejects a body that is not JSON', async () => {
     server.use(http.get('/tournaments', () => new HttpResponse('<html></html>')))
 
-    await expect(fetchTournaments()).rejects.toThrow('response is not JSON')
+    await expect(fetchTournaments()).rejects.toThrow(
+      'Failed to load tournaments (response is not JSON)',
+    )
   })
 
   it('rejects a body that is not an array', async () => {

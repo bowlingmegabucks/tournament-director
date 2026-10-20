@@ -96,7 +96,7 @@ Details in [docs/frontend-standards.md](docs/frontend-standards.md).
 - No `useEffect` to derive state or fetch data. Compute during render or use a query.
 - Every list needs a stable `key` (an id, not the index).
 - Handle loading, error, and empty states on every data view.
-- Use `Toast` (`src/shared/Toast.tsx`) for alerts and notices that are not part of a data view. Errors stay until dismissed; success closes itself.
+- Use `Toast` (`src/shared/Toast.tsx`) for alerts and notices that are not part of a data view. Errors stay until dismissed. Pass `autoDismissMs` to make a toast close itself (success toasts do).
 - Use semantic HTML and labels. Tests query by role and text, so the UI stays accessible. Target WCAG 2.2 AA. ESLint (`jsx-a11y`) and the axe e2e test enforce it.
 - Style with CSS Modules and the tokens in `src/styles/tokens.css`. No raw colors in component CSS.
 - No secrets in the frontend. Anything in `VITE_*` ships to every browser.

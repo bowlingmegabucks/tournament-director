@@ -1,4 +1,5 @@
 import { apiUrl } from '../../shared/apiUrl'
+import { readJson } from '../../shared/readJson'
 import { shouldForceFailure } from './forcedFailure'
 
 /** Resolve if the API says it is healthy. Reject with a message the user can read. */
@@ -14,12 +15,7 @@ export async function checkHealth(): Promise<void> {
   if (!response.ok) {
     throw new Error(`API health check failed (${response.status})`)
   }
-  let body: unknown
-  try {
-    body = await response.json()
-  } catch {
-    throw new Error('API health check failed (response is not JSON)')
-  }
+  const body = await readJson(response, 'API health check failed')
   if (typeof body !== 'object' || body === null || !('status' in body) || body.status !== 'ok') {
     throw new Error('API health check failed (unexpected response)')
   }

@@ -4,7 +4,7 @@
 
 `.github/workflows/deploy.yml` runs on push to `main` (when `web/` changes) and by hand:
 
-1. `npm ci --ignore-scripts`, lint, format check, typecheck, test, then `npm run build`. Mocks stay on through `web/.env.production` until the API is deployed.
+1. `npm ci --ignore-scripts`, lint, format check, typecheck, test, then `npm run build`. The build has no mocks: it calls the API at `API_BASE_URL` (see the API section).
 2. Upload `web/dist/` over FTPS with [FTP-Deploy-Action](https://github.com/SamKirkland/FTP-Deploy-Action), pinned to a commit SHA. It keeps a state file on the server and uploads only changed files. `web/public/.htaccess` blocks web access to that file.
 3. The job uses the GitHub environment `production`. Set these there:
    - Secrets: `FTP_USERNAME`, `FTP_PASSWORD`.

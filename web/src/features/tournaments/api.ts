@@ -1,9 +1,24 @@
 import type { Tournament } from './types'
 
+function isTournament(value: unknown): value is Tournament {
+  if (typeof value !== 'object' || value === null) return false
+  const t = value as Record<string, unknown>
+  return (
+    typeof t.id === 'string' &&
+    typeof t.name === 'string' &&
+    typeof t.date === 'string' &&
+    typeof t.entrants === 'number'
+  )
+}
+
 export async function fetchTournaments(): Promise<Tournament[]> {
   const response = await fetch('/api/tournaments')
   if (!response.ok) {
     throw new Error(`Failed to load tournaments (${response.status})`)
   }
-  return (await response.json()) as Tournament[]
+  const body: unknown = await response.json().catch(() => null)
+  if (!Array.isArray(body) || !body.every(isTournament)) {
+    throw new Error('Failed to load tournaments (unexpected response)')
+  }
+  return body
 }

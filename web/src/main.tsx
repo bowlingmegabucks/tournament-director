@@ -10,10 +10,13 @@ const queryClient = new QueryClient()
 async function enableMocking() {
   if (import.meta.env.VITE_USE_MOCKS !== 'true') return
   const { worker } = await import('./mocks/browser')
-  await worker.start({ onUnhandledFrame: 'bypass' })
+  await worker.start({
+    onUnhandledFrame: 'bypass',
+    serviceWorker: { url: `${import.meta.env.BASE_URL}mockServiceWorker.js` },
+  })
 }
 
-void enableMocking().then(() => {
+function render() {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
@@ -21,4 +24,9 @@ void enableMocking().then(() => {
       </QueryClientProvider>
     </StrictMode>,
   )
-})
+}
+
+// If mocks fail to start, still render the app so the user sees the API error.
+enableMocking()
+  .catch((error: unknown) => console.error('Mocking failed to start', error))
+  .finally(render)

@@ -11,6 +11,7 @@ export default defineConfig({
   webServer: {
     command: 'npm run build -- --mode mocks && npm run preview -- --port 4173',
     url: 'http://localhost:4173',
-    reuseExistingServer: !process.env.CI,
+    // Never reuse: a running non-mock server on this port would fail the test with no clue why.
+    reuseExistingServer: false,
   },
 })

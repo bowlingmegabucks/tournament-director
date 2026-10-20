@@ -1,10 +1,19 @@
 import { useTournaments } from './useTournaments'
 
 export function TournamentList() {
-  const { data, isPending, error } = useTournaments()
+  const { data, isPending, error, refetch } = useTournaments()
 
-  if (isPending) return <p>Loading tournaments…</p>
-  if (error) return <p role="alert">{error.message}</p>
+  if (isPending) return <p role="status">Loading tournaments…</p>
+  if (error) {
+    return (
+      <div role="alert">
+        <p>{error.message}</p>
+        <button type="button" onClick={() => void refetch()}>
+          Try again
+        </button>
+      </div>
+    )
+  }
   if (data.length === 0) return <p>No tournaments yet.</p>
 
   return (

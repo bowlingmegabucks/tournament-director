@@ -6,5 +6,7 @@
  */
 export function apiUrl(path: string): string {
   const base = import.meta.env.VITE_API_BASE_URL ?? ''
-  return `${base.replace(/\/+$/, '')}${path}`
+  let end = base.length
+  while (end > 0 && base[end - 1] === '/') end--
+  return `${base.slice(0, end)}${path}`
 }

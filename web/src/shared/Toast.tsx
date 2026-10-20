@@ -10,7 +10,7 @@ interface ToastProps {
 }
 
 /** A filled snackbar in the top right corner, like MudBlazor's. Errors interrupt screen readers; success waits its turn. */
-export function Toast({ kind, children, onDismiss, autoDismissMs }: ToastProps) {
+export function Toast({ kind, children, onDismiss, autoDismissMs }: Readonly<ToastProps>) {
   // A timer is outside React, so an effect is the right tool here.
   useEffect(() => {
     if (autoDismissMs === undefined) return
@@ -18,9 +18,15 @@ export function Toast({ kind, children, onDismiss, autoDismissMs }: ToastProps) 
     return () => clearTimeout(timer)
   }, [autoDismissMs, onDismiss])
 
+  // <output> has the implicit "status" role. Errors need "alert", which <output> should not carry.
+  const Container = kind === 'error' ? 'div' : 'output'
+
   return (
     // Stryker disable next-line StringLiteral: the class names only style the toast, which jsdom cannot check.
-    <div role={kind === 'error' ? 'alert' : 'status'} className={`${styles.toast} ${styles[kind]}`}>
+    <Container
+      role={kind === 'error' ? 'alert' : undefined}
+      className={`${styles.toast} ${styles[kind]}`}
+    >
       <span aria-hidden="true" className={styles.icon}>
         {kind === 'success' ? '✓' : '✕'}
       </span>
@@ -28,6 +34,6 @@ export function Toast({ kind, children, onDismiss, autoDismissMs }: ToastProps) 
       <button type="button" className={styles.dismiss} aria-label="Dismiss" onClick={onDismiss}>
         <span aria-hidden="true">×</span>
       </button>
-    </div>
+    </Container>
   )
 }

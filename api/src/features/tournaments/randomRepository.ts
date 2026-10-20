@@ -35,7 +35,7 @@ export function createRandomTournamentRepository({
         date: new Date(now().getTime() + pickInt(1, 366) * MS_PER_DAY).toISOString().slice(0, 10),
         entrants: pickInt(8, 129),
       }))
-      return Promise.resolve(tournaments.sort((a, b) => a.date.localeCompare(b.date)))
+      return Promise.resolve(tournaments.toSorted((a, b) => a.date.localeCompare(b.date)))
     },
   }
 }

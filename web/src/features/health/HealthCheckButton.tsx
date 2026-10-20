@@ -6,7 +6,7 @@ interface HealthCheckButtonProps {
   successToastMs?: number
 }
 
-export function HealthCheckButton({ successToastMs = 5000 }: HealthCheckButtonProps) {
+export function HealthCheckButton({ successToastMs = 5000 }: Readonly<HealthCheckButtonProps>) {
   const { mutate, reset, isPending, isSuccess, isError, error } = useHealthCheck()
 
   return (

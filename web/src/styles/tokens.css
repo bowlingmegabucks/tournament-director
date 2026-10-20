@@ -18,6 +18,7 @@
   --color-accent-text: #0b0b08; /* text on an accent fill */
   --color-success: #50d060; /* green from "BUCK$" */
   --color-danger: #ff8a80;
+  --color-on-status: #0b0b08; /* text on a success or danger fill: 9:1 and 8:1 */
   --color-focus: #f3efe3;
   --color-brand-bg: #000000; /* the logo is designed for black, in both themes */
 
@@ -39,6 +40,7 @@
 
   --radius: 0.5rem;
   --border-width: 1px;
+  --shadow-elevated: 0 3px 5px -1px rgb(0 0 0 / 0.3), 0 6px 10px 0 rgb(0 0 0 / 0.2);
   --target-min: 2.75rem; /* 44px. WCAG 2.2 AA asks for 24px, we aim higher for touch. */
   --content-width: 48rem;
 }
@@ -54,6 +56,7 @@
     --color-accent-text: #fbf9f3;
     --color-success: #1d7a30;
     --color-danger: #a3201a;
+    --color-on-status: #ffffff; /* 5.4:1 on success, 7.6:1 on danger */
     --color-focus: #1b1a14;
   }
 }

@@ -1,3 +1,4 @@
+import { apiUrl } from '../../shared/apiUrl'
 import type { Tournament } from './types'
 
 function isTournament(value: unknown): value is Tournament {
@@ -12,7 +13,7 @@ function isTournament(value: unknown): value is Tournament {
 }
 
 export async function fetchTournaments(): Promise<Tournament[]> {
-  const response = await fetch('/api/tournaments')
+  const response = await fetch(apiUrl('/api/tournaments'))
   if (!response.ok) {
     throw new Error(`Failed to load tournaments (${response.status})`)
   }

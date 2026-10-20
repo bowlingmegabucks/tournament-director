@@ -103,8 +103,11 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
-      # Mocks come from web/.env.production (VITE_USE_MOCKS).
+      # Mocks come from web/.env.production (VITE_USE_MOCKS). API_BASE_URL is the API origin,
+      # for example https://app-tournamentdirector-prod.azurewebsites.net (no path, no trailing slash).
       - run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ vars.API_BASE_URL }}
 
       - name: Check FTP_SERVER_DIR
         env:

@@ -23,6 +23,19 @@ for (const colorScheme of colorSchemes) {
   })
 }
 
+for (const colorScheme of colorSchemes) {
+  test(`home page (success toast) has no WCAG 2.2 AA violations in ${colorScheme} mode`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme })
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Check API' }).click()
+    await expect(page.getByRole('status')).toContainText('API is healthy')
+
+    await expectNoViolations(page)
+  })
+}
+
 // Empty and error states: force the API response with `route`. The mock service worker
 // would answer first, so block it for these tests.
 test.describe('other states', () => {
@@ -47,6 +60,18 @@ test.describe('other states', () => {
       await page.emulateMedia({ colorScheme })
       await page.goto('/')
       await expect(page.getByRole('alert')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
+    test(`home page (error toast) has no WCAG 2.2 AA violations in ${colorScheme} mode`, async ({
+      page,
+    }) => {
+      await page.route('**/api/health', (route) => route.fulfill({ status: 503, body: '' }))
+      await page.emulateMedia({ colorScheme })
+      await page.goto('/')
+      await page.getByRole('button', { name: 'Check API' }).click()
+      await expect(page.getByRole('alert').filter({ hasText: '503' })).toBeVisible()
 
       await expectNoViolations(page)
     })

@@ -6,26 +6,23 @@ describe('shouldForceFailure', () => {
     vi.unstubAllEnvs()
   })
 
-  it.each(['development', 'mocks'])(
-    'fails below the 50% line under the dev server (%s mode)',
-    (mode) => {
-      vi.stubEnv('DEV', true)
-      vi.stubEnv('MODE', mode)
-
-      expect(shouldForceFailure(() => 0.49)).toBe(true)
-    },
-  )
-
-  it('succeeds at and above the 50% line under the dev server', () => {
+  it('fails below the 50% line under the mocks dev server', () => {
     vi.stubEnv('DEV', true)
-    vi.stubEnv('MODE', 'development')
+    vi.stubEnv('MODE', 'mocks')
+
+    expect(shouldForceFailure(() => 0.49)).toBe(true)
+  })
+
+  it('succeeds at and above the 50% line under the mocks dev server', () => {
+    vi.stubEnv('DEV', true)
+    vi.stubEnv('MODE', 'mocks')
 
     expect(shouldForceFailure(() => 0.5)).toBe(false)
   })
 
-  it('never fails in test mode', () => {
+  it.each(['development', 'test'])('never fails in %s mode', (mode) => {
     vi.stubEnv('DEV', true)
-    vi.stubEnv('MODE', 'test')
+    vi.stubEnv('MODE', mode)
 
     expect(shouldForceFailure(() => 0)).toBe(false)
   })

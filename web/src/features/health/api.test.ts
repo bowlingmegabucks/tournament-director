@@ -28,7 +28,7 @@ describe('checkHealth', () => {
   it('rejects a body that is not JSON', async () => {
     server.use(http.get('/health', () => new HttpResponse('<html></html>')))
 
-    await expect(checkHealth()).rejects.toThrow('unexpected response')
+    await expect(checkHealth()).rejects.toThrow('response is not JSON')
   })
 
   it.each([
@@ -42,17 +42,17 @@ describe('checkHealth', () => {
     await expect(checkHealth()).rejects.toThrow('unexpected response')
   })
 
-  it('fails with "forced failure" when development mode rolls a failure', async () => {
+  it('fails with "forced failure" when mocks mode rolls a failure', async () => {
     vi.stubEnv('DEV', true)
-    vi.stubEnv('MODE', 'development')
+    vi.stubEnv('MODE', 'mocks')
     vi.spyOn(Math, 'random').mockReturnValue(0)
 
     await expect(checkHealth()).rejects.toThrow('forced failure')
   })
 
-  it('calls the API when development mode rolls a success', async () => {
+  it('calls the API when mocks mode rolls a success', async () => {
     vi.stubEnv('DEV', true)
-    vi.stubEnv('MODE', 'development')
+    vi.stubEnv('MODE', 'mocks')
     vi.spyOn(Math, 'random').mockReturnValue(0.99)
 
     await expect(checkHealth()).resolves.toBeUndefined()

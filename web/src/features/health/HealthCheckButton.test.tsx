@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -71,6 +71,23 @@ describe('HealthCheckButton', () => {
     await screen.findByRole('status')
 
     await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
+  })
+
+  it('cancels the timer when the component unmounts', async () => {
+    const setSpy = vi.spyOn(globalThis, 'setTimeout')
+    const clearSpy = vi.spyOn(globalThis, 'clearTimeout')
+    const { unmount } = renderWithClient(<HealthCheckButton successToastMs={1234} />)
+    await userEvent.click(checkButton())
+    await screen.findByRole('status')
+    const call = setSpy.mock.calls.findIndex(([, delay]) => delay === 1234)
+    const timerId = setSpy.mock.results[call]?.value
+
+    unmount()
+
+    expect(call).toBeGreaterThanOrEqual(0)
+    expect(clearSpy).toHaveBeenCalledWith(timerId)
+    setSpy.mockRestore()
+    clearSpy.mockRestore()
   })
 
   it('keeps the error toast until the user dismisses it', async () => {

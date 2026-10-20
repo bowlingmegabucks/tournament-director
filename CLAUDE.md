@@ -7,7 +7,7 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 
 1. `web/` hello world, fed by mock data (MSW + faker). **Done on branch `uiShell`.**
 2. Merge to `main`, add a GitHub Action that builds `web/` and deploys it to GreenGeeks over FTP.
-3. Build `api/` (Express + TypeScript). **Skeleton done on branch `api`:** health and tournament list routes (random demo data, 3 to 7 per call), tests, skills, CI. **Wired on the same branch:** `npm run dev` at the root starts both; Vite proxies `/api` to the API. Production still builds with mocks until step 4.
+3. Build `api/` (Express + TypeScript). **Skeleton done on branch `api`:** health and tournament list routes (random demo data, 3 to 7 per call), tests, skills, CI. **Wired on the same branch:** `npm run dev` at the root starts both; Vite proxies `/api` to the API.
 4. Deploy `api/`. **Done.** Azure App Service (Web App `app-tournamentdirector-prod`, free tier: slow after idle). The `deploy-api` job in `deploy.yml` runs before `deploy-web`, both on `main` only. The production web build has no mocks; it calls the API at the `API_BASE_URL` variable. See [docs/deployment.md](docs/deployment.md).
 5. Theming and polish. **Done on branch `uiTheming`:** tokens, light/dark, logo header, `ui-standards` skill, a11y checks.
 
@@ -37,12 +37,12 @@ Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, 
 
 The root `package.json` only holds shortcuts. It is not an npm workspace; `web/` and `api/` keep their own `package.json` and lockfile.
 
-| Command             | Does                                                             |
-| ------------------- | ---------------------------------------------------------------- |
-| `npm run setup`     | `npm ci` in the root, `api/`, and `web/`                         |
-| `npm run dev`       | API (port 3000) and web (port 5173) together; web proxies `/api` |
-| `npm run dev:mocks` | Web only, with MSW mocks (no API needed)                         |
-| `npm run check`     | lint, format check, typecheck, and tests in `api/` and `web/`    |
+| Command             | Does                                                                                               |
+| ------------------- | -------------------------------------------------------------------------------------------------- |
+| `npm run setup`     | `npm ci` in the root, `api/`, and `web/`                                                           |
+| `npm run dev`       | API (port 3000) and web (port 5173) together; web proxies `/api`                                   |
+| `npm run dev:mocks` | Web only, with MSW mocks (no API needed). "Check API" fails half the time, to show the error toast |
+| `npm run check`     | lint, format check, typecheck, and tests in `api/` and `web/`                                      |
 
 ## Commands (run in `web/`; `api/` has the same names, minus e2e)
 
@@ -96,6 +96,7 @@ Details in [docs/frontend-standards.md](docs/frontend-standards.md).
 - No `useEffect` to derive state or fetch data. Compute during render or use a query.
 - Every list needs a stable `key` (an id, not the index).
 - Handle loading, error, and empty states on every data view.
+- Use `Toast` (`src/shared/Toast.tsx`) for alerts and notices that are not part of a data view. Errors stay until dismissed; success closes itself.
 - Use semantic HTML and labels. Tests query by role and text, so the UI stays accessible. Target WCAG 2.2 AA. ESLint (`jsx-a11y`) and the axe e2e test enforce it.
 - Style with CSS Modules and the tokens in `src/styles/tokens.css`. No raw colors in component CSS.
 - No secrets in the frontend. Anything in `VITE_*` ships to every browser.

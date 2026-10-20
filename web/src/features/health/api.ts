@@ -14,12 +14,13 @@ export async function checkHealth(): Promise<void> {
   if (!response.ok) {
     throw new Error(`API health check failed (${response.status})`)
   }
-  const body: unknown = await response.json().catch(() => null)
-  if (
-    typeof body !== 'object' ||
-    body === null ||
-    (body as Record<string, unknown>).status !== 'ok'
-  ) {
+  let body: unknown
+  try {
+    body = await response.json()
+  } catch {
+    throw new Error('API health check failed (response is not JSON)')
+  }
+  if (typeof body !== 'object' || body === null || !('status' in body) || body.status !== 'ok') {
     throw new Error('API health check failed (unexpected response)')
   }
 }

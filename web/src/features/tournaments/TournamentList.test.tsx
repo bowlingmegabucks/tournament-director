@@ -39,7 +39,7 @@ describe('TournamentList', () => {
 
     renderWithClient(<TournamentList />)
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('unexpected response')
+    expect(await screen.findByRole('alert')).toHaveTextContent('response is not JSON')
   })
 
   it('announces loading', async () => {

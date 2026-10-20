@@ -30,6 +30,7 @@ web/src/
 - State: keep it as local as you can. Lift it only when siblings need it. Reach for context only for truly global values.
 - Effects sync with things outside React (timers, subscriptions). They are not for data flow.
 - Do not mutate state or props. Return new objects and arrays.
+- Alerts and notices: use `Toast` from `src/shared/Toast.tsx`. It is the app's one alert component, so it stays in `shared/` with one caller. Errors use `role="alert"` and stay until dismissed; success uses `role="status"` and closes itself (see `HealthCheckButton` for the timer).
 
 ## Data fetching
 

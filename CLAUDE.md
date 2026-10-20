@@ -9,7 +9,7 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 2. Merge to `main`, add a GitHub Action that builds `web/` and deploys it to GreenGeeks over FTP.
 3. Build `api/` (Express + TypeScript). Replace mocks with real calls.
 4. Deploy `api/`. The GreenGeeks plan has no "Setup Node.js App" in cPanel, so the API host is undecided. Ask GreenGeeks, or pick another host.
-5. Theming and polish. **In progress on branch `uiTheming`:** tokens, light/dark, logo header, `ui-standards` skill, a11y checks.
+5. Theming and polish. **Done on branch `uiTheming`:** tokens, light/dark, logo header, `ui-standards` skill, a11y checks.
 
 Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, TypeScript, testing, composition) and stricter ESLint rules.
 
@@ -96,7 +96,7 @@ Claude loads a skill when the task matches its description. The rules above stay
 | `typescript-standards`          | Types, narrowing, unions, API typing                                                                     |
 | `testing-patterns`              | Vitest, MSW, factories, Playwright, Stryker survivors                                                    |
 | `composition-patterns`          | Component API design: compound components, boolean props. Third party (Vercel, MIT), see its `SOURCE.md` |
-| `ui-standards`                  | Designing or styling any screen: tokens, CSS Modules, semantic HTML, forms, WCAG 2.2 AA checklist       |
+| `ui-standards`                  | Designing or styling any screen: tokens, CSS Modules, semantic HTML, forms, WCAG 2.2 AA checklist        |
 | `pull-request-prep`, `write-pr` | Review and describe a branch before the PR                                                               |
 
 Read any third-party skill before you add it. A skill steers Claude like code. Do not add skills that fetch their instructions from a URL at run time.

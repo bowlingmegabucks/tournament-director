@@ -10,12 +10,12 @@ Rules for `web/` and `api/`. Base rules (strict mode, no `any`, `interface` vs `
 ## Rules
 
 1. **No `any`.** Use `unknown` and narrow. (.NET: `unknown` is like `object` plus a compiler that forces you to check before use.)
-2. **Do not cast to silence an error.** `as Foo` tells the compiler to trust you. Fix the type or narrow with a check. The one allowed cast: a value you just validated with a schema.
+2. **Do not cast to silence an error.** `as Foo` tells the compiler to trust you. Fix the type or narrow with a check. Allowed: a cast to `Record<string, unknown>` inside a type guard, and a cast on a value a schema just validated.
 3. **No `@ts-ignore`.** Use `@ts-expect-error` with a reason. It fails the build once the error goes away, so stale suppressions do not pile up.
 4. **Type data at the edge.** `api.ts` returns typed data. Once the API exists, parse responses with Zod and derive the type with `z.infer`. A cast on `response.json()` checks nothing at runtime.
 5. **Let inference work.** Annotate function parameters and exported return types. Skip annotations on locals the compiler already infers.
 6. **Avoid `enum`.** Use a union of string literals, or `as const` objects.
-7. **Avoid non-null `!`.** Narrow with a check, or change the type so null cannot occur.
+7. **No non-null `!`.** ESLint enforces this. Narrow with a check and throw a clear error, or change the type so null cannot occur.
 
 ## Patterns
 

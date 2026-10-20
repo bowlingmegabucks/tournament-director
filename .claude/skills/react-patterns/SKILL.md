@@ -41,19 +41,19 @@ The `key` is an id, never the array index.
 
 ```ts
 export function useTournaments() {
-  return useQuery({ queryKey: ['tournaments'], queryFn: fetchTournaments })
+  return useQuery({ queryKey: tournamentKeys.all, queryFn: fetchTournaments })
 }
 
 export function useCreateTournament() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: createTournament,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tournaments'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: tournamentKeys.all }),
   })
 }
 ```
 
-- Keys go from general to specific: `['tournaments', id]`.
+- Keys go from general to specific. Define them once, as `tournamentKeys` in the hook file, and reuse them when you invalidate.
 - Never copy query data into `useState`. Read it from the query.
 - Derive values during render. Do not store them.
 

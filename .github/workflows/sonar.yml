@@ -25,10 +25,18 @@ jobs:
         with:
           node-version-file: web/.nvmrc
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: |
+            web/package-lock.json
+            api/package-lock.json
 
-      - name: Test with coverage
+      - name: Test web with coverage
         working-directory: web
+        run: |
+          npm ci --ignore-scripts
+          npm run test:coverage -- --coverage.reporter=lcov
+
+      - name: Test api with coverage
+        working-directory: api
         run: |
           npm ci --ignore-scripts
           npm run test:coverage -- --coverage.reporter=lcov
@@ -49,5 +57,5 @@ jobs:
             -Dsonar.organization=bowlingmegabucks
             -Dsonar.projectKey=bowlingmegabucks_tournament-director
             -Dsonar.exclusions=web/public/mockServiceWorker.js
-            -Dsonar.coverage.exclusions=web/e2e/**,web/**/*.test.ts,web/**/*.test.tsx,web/*.config.*,web/src/main.tsx,web/src/mocks/**,web/src/test/**,web/src/**/*.d.ts
-            -Dsonar.javascript.lcov.reportPaths=web/coverage/lcov.info
+            -Dsonar.coverage.exclusions=web/e2e/**,web/**/*.test.ts,web/**/*.test.tsx,web/*.config.*,web/src/main.tsx,web/src/mocks/**,web/src/test/**,web/src/**/*.d.ts,api/**/*.test.ts,api/*.config.*,api/src/server.ts,api/src/test/**
+            -Dsonar.javascript.lcov.reportPaths=web/coverage/lcov.info,api/coverage/lcov.info

@@ -29,3 +29,18 @@
 - Read `reports/mutation/mutation.html` to see survivors line by line.
 - The 10 "errors" in a run are mutants that fail TypeScript checks. They are normal.
 - Run it before a PR for changed features, and in CI on a schedule (it is slow).
+
+## API (`api/`)
+
+| Level              | Tool               | Where                 | Run (in `api/`)         |
+| ------------------ | ------------------ | --------------------- | ----------------------- |
+| Unit / integration | Vitest + Supertest | `src/**/*.test.ts`    | `npm test`              |
+| Mutation           | Stryker            | `stryker.config.json` | `npm run test:mutation` |
+
+- Test through `createApp` with Supertest. It sends real HTTP requests in memory, so no port opens. Fake only storage: pass an in-memory or failing repository.
+- Factories are in `src/test/factories.ts`. Override only the fields a test cares about.
+- Cover happy path, empty result, bad input, missing resource, and storage failure (generic 500, no leaked detail).
+- Config tests pass an object to `loadConfig`. They never set `process.env`.
+- Coverage fails under 80%. Mutation thresholds match `web/` (break at 50, aim for 80).
+- When the database arrives, test the real repository against a throwaway database, and keep the in-memory one for route tests.
+- See the `api-testing-patterns` skill for examples.

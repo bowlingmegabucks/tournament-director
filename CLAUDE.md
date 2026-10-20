@@ -41,7 +41,7 @@ Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, 
 | `npm run lint` / `npm run format:check` | ESLint / Prettier check                       |
 | `npm run typecheck`                     | `tsc -b`                                      |
 | `npm test`                              | Unit and integration tests                    |
-| `npm run test:coverage`                 | Same, with coverage                           |
+| `npm run test:coverage`                 | Same, with coverage. Fails under 80%          |
 | `npm run test:e2e`                      | Playwright against a built preview with mocks |
 | `npm run test:mutation`                 | Stryker mutation tests                        |
 

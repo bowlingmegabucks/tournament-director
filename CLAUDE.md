@@ -11,6 +11,8 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 4. Deploy `api/`. The GreenGeeks plan has no "Setup Node.js App" in cPanel, so the API host is undecided. Ask GreenGeeks, or pick another host.
 5. Theming and polish.
 
+Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, TypeScript, testing, composition) and stricter ESLint rules.
+
 ## Revisit later
 
 - **Dev container.** Not needed now: one developer, Node 24 from `web/.nvmrc`, and CI tests a clean environment. Raise it with the owner when any of these happens:
@@ -49,6 +51,7 @@ Before you say a task is done, run lint, typecheck, test, and `format:check`. Ru
 
 - **Vitest stays on 4.x.** Stryker's vitest runner 10.0.0 runs zero tests per mutant on Vitest 5. Do not upgrade until Stryker supports it.
 - **MSW 3** renamed `onUnhandledRequest` to `onUnhandledFrame`. Docs older than 2026 show the old name.
+- **`qs` override in `web/package.json`.** Stryker 10.0.0 pulls `qs` 6.15.1 (through `typed-rest-client`), which has moderate advisories. The override forces 6.16.1. Dev-only. Remove it once a Stryker release ships a fixed `qs`, then run `npm audit`.
 - Node 24 (`web/.nvmrc`).
 - Mocks are on when `VITE_USE_MOCKS=true` (`.env.development`, `.env.production`, `.env.mocks`). Delete it from `.env.production` once the real API exists.
 - `vite.config.ts` sets `base: './'` so the build works from any folder on the host.
@@ -58,7 +61,7 @@ Before you say a task is done, run lint, typecheck, test, and `format:check`. Ru
 
 Details in [docs/frontend-standards.md](docs/frontend-standards.md).
 
-- TypeScript strict. No `any`. Use `unknown` and narrow.
+- TypeScript strict. No `any`, no non-null `!`. Use `unknown` and narrow. ESLint enforces both.
 - Function components and hooks only. No class components.
 - Organize by feature: `src/features/<name>/` holds components, hooks, API calls, types, and tests together. Shared code goes in `src/shared/` only when two features need it.
 - Components render. Hooks hold logic. `api.ts` files call `fetch`. Do not call `fetch` inside components.

@@ -60,6 +60,8 @@ A surviving mutant means a missing or weak assertion. Fix the test, never the th
 | Block removed                   | Side effect never asserted     | Assert the effect (request sent, query invalidated) |
 | `if (!response.ok)` flipped     | Only the success path ran      | Add the error-status test                           |
 
+Some survivors are equivalent mutants: the change cannot alter behavior, so no test can kill it. Example: replacing `.catch(() => null)` with `.catch(() => undefined)` when the next line rejects both. Confirm the behavior is identical before you accept one. Do not write a test that passes either way.
+
 Read `reports/mutation/mutation.html` for survivors line by line. The "errors" are mutants that fail TypeScript and are normal.
 
 ## End to end

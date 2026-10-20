@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createInMemoryTournamentRepository } from './repository.ts'
 import { createTournament, createTournaments } from '../../test/factories.ts'
-import { seedTournaments } from './seed.ts'
-import { tournamentSchema } from './types.ts'
 
 describe('in-memory tournament repository', () => {
   it('lists what it was seeded with', async () => {
@@ -23,13 +21,5 @@ describe('in-memory tournament repository', () => {
     first.name = 'Changed'
 
     expect((await repository.list())[0]?.name).toBe('Original')
-  })
-})
-
-describe('seed data', () => {
-  it('matches the tournament schema', () => {
-    for (const tournament of seedTournaments) {
-      expect(tournamentSchema.safeParse(tournament).success).toBe(true)
-    }
   })
 })

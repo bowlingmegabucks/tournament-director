@@ -7,7 +7,7 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 
 1. `web/` hello world, fed by mock data (MSW + faker). **Done on branch `uiShell`.**
 2. Merge to `main`, add a GitHub Action that builds `web/` and deploys it to GreenGeeks over FTP.
-3. Build `api/` (Express + TypeScript). **Skeleton done on branch `api`:** health and tournament list routes (in-memory data), tests, skills, CI. **Wired on the same branch:** `npm run dev` at the root starts both; Vite proxies `/api` to the API. Production still builds with mocks until step 4.
+3. Build `api/` (Express + TypeScript). **Skeleton done on branch `api`:** health and tournament list routes (random demo data, 3 to 7 per call), tests, skills, CI. **Wired on the same branch:** `npm run dev` at the root starts both; Vite proxies `/api` to the API. Production still builds with mocks until step 4.
 4. Deploy `api/`. The GreenGeeks plan has no "Setup Node.js App" in cPanel, so the API host is undecided. Ask GreenGeeks, or pick another host.
 5. Theming and polish. **Done on branch `uiTheming`:** tokens, light/dark, logo header, `ui-standards` skill, a11y checks.
 

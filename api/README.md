@@ -9,10 +9,10 @@ npm run dev          # http://localhost:3000, restarts on change (or `npm run de
 curl localhost:3000/api/tournaments
 ```
 
-| Route                  | Returns                                 |
-| ---------------------- | --------------------------------------- |
-| `GET /api/health`      | `{ "status": "ok" }`                    |
-| `GET /api/tournaments` | `Tournament[]` (in-memory seed for now) |
+| Route                  | Returns                                                 |
+| ---------------------- | ------------------------------------------------------- |
+| `GET /api/health`      | `{ "status": "ok" }`                                    |
+| `GET /api/tournaments` | `Tournament[]`: 3 to 7 random ones per call (demo data) |
 
 Other scripts: `build`, `start` (runs `dist/`), `lint`, `format:check`, `typecheck`, `test`, `test:coverage`, `test:mutation`.
 

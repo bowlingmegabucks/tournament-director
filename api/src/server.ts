@@ -1,12 +1,11 @@
 import { createApp } from './app.ts'
 import { loadConfig } from './config.ts'
-import { createInMemoryTournamentRepository } from './features/tournaments/repository.ts'
-import { seedTournaments } from './features/tournaments/seed.ts'
+import { createRandomTournamentRepository } from './features/tournaments/randomRepository.ts'
 
 const config = loadConfig()
 const app = createApp({
   config,
-  tournaments: createInMemoryTournamentRepository(seedTournaments),
+  tournaments: createRandomTournamentRepository(),
 })
 
 const server = app.listen(config.port, () => {

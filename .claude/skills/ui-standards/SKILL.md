@@ -101,7 +101,7 @@ Do not put a click handler on a `div` or `span`. The lint rule `jsx-a11y` fails 
 - [ ] Every input has a visible label, and errors are linked with `aria-describedby`
 - [ ] One `<h1>`, no skipped heading levels, landmarks in place
 - [ ] Readable at 200% zoom and 320px wide with no sideways scroll
-- [ ] Animation is short and stops under `prefers-reduced-motion`
+- [ ] Animation is short and is wrapped in `@media (prefers-reduced-motion: no-preference)`
 - [ ] Page `<title>` and `lang` are set (new pages get their own title)
 - [ ] Images have `alt`
 

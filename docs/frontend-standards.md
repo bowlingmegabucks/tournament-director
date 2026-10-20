@@ -45,14 +45,14 @@ Plain CSS with custom properties (no Tailwind, no component library). Palette co
 **Files**
 
 - `src/styles/tokens.css`: the only place raw colors, sizes, and fonts live. Light and dark values.
-- `src/styles/base.css`: element defaults (body, headings, links, buttons, focus ring, reduced motion).
+- `src/styles/base.css`: element defaults (body, headings, links, buttons, focus ring).
 - `Component.module.css` next to its component: layout and look for that component. CSS Modules scope class names to the file, like a .NET scoped stylesheet (`Component.razor.css`).
 
 **Rules**
 
 - No hex, `rgb()`, or pixel values for color or spacing in component CSS. Use `var(--color-*)` and `var(--space-*)`.
 - Add a new token to `tokens.css` before you use a new value. Give a color token a dark and a light value.
-- Style with classes, not element selectors or ids. No `!important` (the one exception is the reduced-motion block in `base.css`).
+- Style with classes, not element selectors or ids. No `!important`.
 - Use logical properties (`margin-inline`, `padding-block`, `inline-size`) and `rem`, not `px`, so layout follows text size and writing direction.
 - Mobile first. Add `min-width` media queries only when the layout needs them.
 - Dark and light follow the OS (`prefers-color-scheme`). No manual toggle yet.
@@ -65,7 +65,7 @@ Enforced by `eslint-plugin-jsx-a11y` (lint) and axe in `e2e/accessibility.spec.t
 - Do not use color alone to show meaning. Pair it with text or an icon (an error shows a message, not just red).
 - Keep the `:focus-visible` ring. Never set `outline: none` without a replacement.
 - Interactive targets are at least `--target-min` (44px) tall.
-- Respect `prefers-reduced-motion`. Keep animation short and optional.
+- Respect `prefers-reduced-motion`. Put every animation and transition inside `@media (prefers-reduced-motion: no-preference)`. Keep it short and optional.
 - Use one `<h1>` per page and do not skip heading levels. Use landmarks (`header`, `main`, `nav`).
 - Text must stay readable at 200% zoom and 320px width with no sideways scroll.
 - Every image has `alt` text. Decorative images use `alt=""`.

@@ -28,6 +28,7 @@ jobs:
     name: Deploy web
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    if: github.ref == 'refs/heads/main'
     environment: production
     defaults:
       run:
@@ -47,14 +48,20 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
-      # Remove VITE_USE_MOCKS once the real API exists.
-      - name: Build
-        run: npm run build
+      # Mocks come from web/.env.production (VITE_USE_MOCKS).
+      - run: npm run build
+
+      - name: Check FTP_SERVER_DIR
         env:
-          VITE_USE_MOCKS: "true"
+          FTP_SERVER_DIR: ${{ vars.FTP_SERVER_DIR }}
+        run: |
+          case "$FTP_SERVER_DIR" in
+            */) ;;
+            *) echo "::error::FTP_SERVER_DIR must be set and end with '/' (for example public_html/)"; exit 1 ;;
+          esac
 
       - name: Upload to GreenGeeks
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        uses: SamKirkland/FTP-Deploy-Action@110f9186c050f71550953127052e77650219c287 # v4.4.0
         with:
           server: ${{ vars.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}

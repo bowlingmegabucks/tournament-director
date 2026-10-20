@@ -4,13 +4,14 @@
 
 `.github/workflows/deploy.yml` runs on push to `main` (when `web/` changes) and by hand:
 
-1. `npm ci`, lint, format check, typecheck, test, then `npm run build` with `VITE_USE_MOCKS=true` (until the API exists).
-2. Upload `web/dist/` over FTPS with [FTP-Deploy-Action](https://github.com/SamKirkland/FTP-Deploy-Action). It keeps a state file on the server and uploads only changed files.
+1. `npm ci`, lint, format check, typecheck, test, then `npm run build`. Mocks stay on through `web/.env.production` until the API exists.
+2. Upload `web/dist/` over FTPS with [FTP-Deploy-Action](https://github.com/SamKirkland/FTP-Deploy-Action), pinned to a commit SHA. It keeps a state file on the server and uploads only changed files. `web/public/.htaccess` blocks web access to that file.
 3. The job uses the GitHub environment `production`. Set these there:
    - Secrets: `FTP_USERNAME`, `FTP_PASSWORD`.
    - Variables: `FTP_SERVER`, `FTP_SERVER_DIR` (remote folder, must end with `/`, for example `public_html/`).
-4. First run: use "Run workflow" with `dry_run` on to check the file list.
-5. Once the site gets client-side routes, add an `.htaccess` rewrite so deep links return `index.html`. Switch `base` from `'./'` to `'/'` at the same time, or assets will break on nested paths.
+   The job runs only on `main`, and a step fails the run if `FTP_SERVER_DIR` does not end with `/`.
+4. First run: use "Run workflow" with `dry_run` on to check the file list. If an upload fails midway, run the workflow again by hand.
+5. Once the site gets client-side routes, add a rewrite to `web/public/.htaccess` so deep links return `index.html`. Switch `base` from `'./'` to `'/'` at the same time, or assets will break on nested paths.
 
 The mock bundle is large (faker). That is acceptable for the throwaway demo. The real build drops it.
 

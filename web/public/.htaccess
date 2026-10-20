@@ -1,0 +1,4 @@
+# Block dotfiles, such as the deploy state file .ftp-deploy-sync-state.json.
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>

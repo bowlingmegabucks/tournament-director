@@ -1,10 +1,10 @@
 # Testing
 
-| Level | Tool | Where | Run |
-| --- | --- | --- | --- |
-| Unit / integration | Vitest + Testing Library + MSW | `src/**/*.test.ts(x)` | `npm test` |
-| End to end | Playwright | `e2e/` | `npm run test:e2e` |
-| Mutation | Stryker | `stryker.config.json` | `npm run test:mutation` |
+| Level              | Tool                           | Where                 | Run                     |
+| ------------------ | ------------------------------ | --------------------- | ----------------------- |
+| Unit / integration | Vitest + Testing Library + MSW | `src/**/*.test.ts(x)` | `npm test`              |
+| End to end         | Playwright                     | `e2e/`                | `npm run test:e2e`      |
+| Mutation           | Stryker                        | `stryker.config.json` | `npm run test:mutation` |
 
 ## Unit and integration
 

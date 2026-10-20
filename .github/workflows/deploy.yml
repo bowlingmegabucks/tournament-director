@@ -30,7 +30,8 @@ jobs:
     name: Deploy API
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: github.ref == 'refs/heads/main'
+    # TEMPORARY: the main-only guard is off so the API deploy can be tested from a branch.
+    # Restore `if: github.ref == 'refs/heads/main'` before merging.
     environment: production
     # id-token lets the job ask GitHub for the OIDC token that Azure trusts.
     permissions:

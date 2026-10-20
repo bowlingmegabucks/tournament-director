@@ -6,6 +6,11 @@ export default defineConfig({
   // Relative base: the build works from any folder on the host (public_html/ or a subfolder).
   base: './',
   plugins: [react()],
+  server: {
+    // The browser calls /api on the dev server; Vite forwards it to the API (api/ default port).
+    // Same origin, so no CORS in dev. The API keeps its /api prefix, so no rewrite.
+    proxy: { '/api': 'http://localhost:3000' },
+  },
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],

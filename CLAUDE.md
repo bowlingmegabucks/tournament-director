@@ -7,7 +7,7 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 
 1. `web/` hello world, fed by mock data (MSW + faker). **Done on branch `uiShell`.**
 2. Merge to `main`, add a GitHub Action that builds `web/` and deploys it to GreenGeeks over FTP.
-3. Build `api/` (Express + TypeScript). **Skeleton done on branch `api`:** health and tournament list routes (in-memory data), tests, skills, CI. Next: wire `web/` to it and drop the mocks.
+3. Build `api/` (Express + TypeScript). **Skeleton done on branch `api`:** health and tournament list routes (in-memory data), tests, skills, CI. **Wired on the same branch:** `npm run dev` at the root starts both; Vite proxies `/api` to the API. Production still builds with mocks until step 4.
 4. Deploy `api/`. The GreenGeeks plan has no "Setup Node.js App" in cPanel, so the API host is undecided. Ask GreenGeeks, or pick another host.
 5. Theming and polish. **Done on branch `uiTheming`:** tokens, light/dark, logo header, `ui-standards` skill, a11y checks.
 
@@ -33,18 +33,29 @@ Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, 
 | Tests         | Vitest, Testing Library, MSW, Playwright, Stryker (web); Vitest, Supertest, Stryker (api) |
 | API libraries | Zod (validation), helmet (headers), cors                                                  |
 
+## Root commands
+
+The root `package.json` only holds shortcuts. It is not an npm workspace; `web/` and `api/` keep their own `package.json` and lockfile.
+
+| Command             | Does                                                             |
+| ------------------- | ---------------------------------------------------------------- |
+| `npm run setup`     | `npm ci` in the root, `api/`, and `web/`                         |
+| `npm run dev`       | API (port 3000) and web (port 5173) together; web proxies `/api` |
+| `npm run dev:mocks` | Web only, with MSW mocks (no API needed)                         |
+| `npm run check`     | lint, format check, typecheck, and tests in `api/` and `web/`    |
+
 ## Commands (run in `web/`; `api/` has the same names, minus e2e)
 
-| Command                                 | Does                                          |
-| --------------------------------------- | --------------------------------------------- |
-| `npm run dev`                           | Dev server with mock API                      |
-| `npm run build`                         | Typecheck and build to `dist/`                |
-| `npm run lint` / `npm run format:check` | ESLint / Prettier check                       |
-| `npm run typecheck`                     | `tsc -b`                                      |
-| `npm test`                              | Unit and integration tests                    |
-| `npm run test:coverage`                 | Same, with coverage. Fails under 80%          |
-| `npm run test:e2e`                      | Playwright against a built preview with mocks |
-| `npm run test:mutation`                 | Stryker mutation tests                        |
+| Command                                 | Does                                                                            |
+| --------------------------------------- | ------------------------------------------------------------------------------- |
+| `npm run dev`                           | Dev server; `/api` goes to the API on port 3000 (`npm run dev:mocks` for mocks) |
+| `npm run build`                         | Typecheck and build to `dist/`                                                  |
+| `npm run lint` / `npm run format:check` | ESLint / Prettier check                                                         |
+| `npm run typecheck`                     | `tsc -b`                                                                        |
+| `npm test`                              | Unit and integration tests                                                      |
+| `npm run test:coverage`                 | Same, with coverage. Fails under 80%                                            |
+| `npm run test:e2e`                      | Playwright against a built preview with mocks                                   |
+| `npm run test:mutation`                 | Stryker mutation tests                                                          |
 
 `api/` also has `npm run start` (run the build) and `npm run dev` (watch mode with `.env`). Before you say a task is done, run lint, typecheck, test, and `format:check` in each folder you changed. Run e2e when you change UI flow.
 
@@ -55,7 +66,7 @@ Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, 
 - **`eslint-plugin-jsx-a11y` override in `web/package.json`.** The plugin lists ESLint up to 9 as a peer, and we use 10. The override (`"eslint": "$eslint"`) lets it install. The rules work on 10. Remove the override once the plugin supports ESLint 10.
 - **`qs` override in `web/package.json`.** Stryker 10.0.0 pulls `qs` 6.15.1 (through `typed-rest-client`), which has moderate advisories. The override forces 6.16.1. Dev-only. Remove it once a Stryker release ships a fixed `qs`, then run `npm audit`.
 - Node 24 (`web/.nvmrc`).
-- Mocks are on when `VITE_USE_MOCKS=true` (`.env.development`, `.env.production`, `.env.mocks`). Delete it from `.env.production` once the real API exists.
+- Mocks are on when `VITE_USE_MOCKS=true` (`.env.production`, `.env.mocks`). `npm run dev` uses the real API through the Vite proxy; `npm run dev:mocks` and e2e use mocks. Delete the variable from `.env.production` once the API is deployed (step 4). Until then the live site needs the mocks, because it has no API to call.
 - `vite.config.ts` sets `base: './'` so the build works from any folder on the host.
 - `public/mockServiceWorker.js` is generated by `npx msw init`. Do not edit it.
 

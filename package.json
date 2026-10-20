@@ -1,0 +1,14 @@
+{
+  "name": "tournament-director",
+  "private": true,
+  "description": "Convenience scripts only. web/ and api/ keep their own package.json; this is not an npm workspace.",
+  "scripts": {
+    "setup": "npm ci && npm --prefix api ci && npm --prefix web ci",
+    "dev": "concurrently --kill-others --names api,web --prefix-colors blue,green \"npm --prefix api run dev\" \"npm --prefix web run dev\"",
+    "dev:mocks": "npm --prefix web run dev:mocks",
+    "check": "npm --prefix api run lint && npm --prefix api run format:check && npm --prefix api run typecheck && npm --prefix api test && npm --prefix web run lint && npm --prefix web run format:check && npm --prefix web run typecheck && npm --prefix web test"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  }
+}

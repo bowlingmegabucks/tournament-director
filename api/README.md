@@ -5,7 +5,7 @@ Express 5 + TypeScript. Node 24 (`.nvmrc`). Standards: [docs/api-standards.md](.
 ```
 npm ci
 cp .env.example .env
-npm run dev          # http://localhost:3000, restarts on change
+npm run dev          # http://localhost:3000, restarts on change (or `npm run dev` at the repo root for web + api)
 curl localhost:3000/api/tournaments
 ```
 

@@ -18,7 +18,7 @@
 ## End to end
 
 - Playwright builds the app with `--mode mocks` and serves it with `vite preview` on port 4173.
-- Once the API exists, add a second project that starts the real API with a test database.
+- Once the API deploys, add a second project that starts the real API (and a test database, if there is one) and checks one journey end to end. The current project stays on mocks.
 - `e2e/accessibility.spec.ts` scans pages with axe (`@axe-core/playwright`) for WCAG 2.2 AA violations in dark and light mode, for the loaded, empty, and error states. Add each new page or route to it, with its states. jsdom cannot check contrast, so this runs in the browser.
 - Keep e2e tests few and about user journeys. Logic belongs in unit tests.
 

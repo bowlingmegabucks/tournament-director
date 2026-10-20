@@ -40,7 +40,6 @@ Settings:
 
 If `Azure/login` fails with `AADSTS700213` (no matching federated identity), the error prints the `sub` claim GitHub sent. Make the credential's subject match it.
 
-When the API is live:
+The live site calls the real API (`web/.env.production` is gone, so mocks are off). The web job stops early if `API_BASE_URL` is not an `https://` URL.
 
-1. Delete `VITE_USE_MOCKS` from `web/.env.production`.
-2. The site (`https://bowlingmegabucks.com/tournament-director/`) and the API (`*.azurewebsites.net`) are different origins. `web/` reads the API origin from `VITE_API_BASE_URL` (`apiUrl()` in `web/src/shared/apiUrl.ts`; empty in dev, where Vite proxies `/api`), and `CORS_ORIGIN` on the API must be the site's origin.
+The site (`https://bowlingmegabucks.com/tournament-director/`) and the API (`*.azurewebsites.net`) are different origins. `web/` reads the API origin from `VITE_API_BASE_URL` (`apiUrl()` in `web/src/shared/apiUrl.ts`; empty in dev, where Vite proxies `/api`), and `CORS_ORIGIN` on the API must be the site's origin.

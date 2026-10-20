@@ -30,8 +30,7 @@ jobs:
     name: Deploy API
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # TEMPORARY: the main-only guard is off so the API deploy can be tested from a branch.
-    # Restore `if: github.ref == 'refs/heads/main'` before merging.
+    if: github.ref == 'refs/heads/main'
     environment: production
     # id-token lets the job ask GitHub for the OIDC token that Azure trusts.
     permissions:
@@ -84,7 +83,11 @@ jobs:
     needs: deploy-api
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: github.ref == 'refs/heads/main'
+    # TEMPORARY: the main-only guard is off so the web deploy can be tested from a branch.
+    # Restore `if: github.ref == 'refs/heads/main'` before merging.
+    # The API job is skipped off main, and a skipped dependency skips this job too unless the
+    # condition names it. Run when the API job succeeded or was skipped, but not when it failed.
+    if: ${{ !cancelled() && (needs.deploy-api.result == 'success' || needs.deploy-api.result == 'skipped') }}
     environment: production
     defaults:
       run:
@@ -104,8 +107,17 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
-      # Mocks come from web/.env.production (VITE_USE_MOCKS). API_BASE_URL is the API origin,
-      # for example https://app-tournamentdirector-prod.azurewebsites.net (no path, no trailing slash).
+      # The site calls the real API. Without a base URL it would call its own host and fail.
+      - name: Check API_BASE_URL
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+        run: |
+          case "$API_BASE_URL" in
+            https://*) ;;
+            *) echo "::error::API_BASE_URL must be set to the API origin, for example https://example.azurewebsites.net"; exit 1 ;;
+          esac
+
+      # API_BASE_URL is the API origin: no path, no trailing slash.
       - run: npm run build
         env:
           VITE_API_BASE_URL: ${{ vars.API_BASE_URL }}

@@ -49,5 +49,5 @@ jobs:
             -Dsonar.organization=bowlingmegabucks
             -Dsonar.projectKey=bowlingmegabucks_tournament-director
             -Dsonar.exclusions=web/public/mockServiceWorker.js
-            -Dsonar.coverage.exclusions=web/e2e/**,web/*.config.*,web/src/main.tsx,web/src/mocks/**,web/src/test/**,web/src/**/*.d.ts
+            -Dsonar.coverage.exclusions=web/e2e/**,web/**/*.test.ts,web/**/*.test.tsx,web/*.config.*,web/src/main.tsx,web/src/mocks/**,web/src/test/**,web/src/**/*.d.ts
             -Dsonar.javascript.lcov.reportPaths=web/coverage/lcov.info

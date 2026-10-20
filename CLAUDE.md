@@ -11,6 +11,13 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 4. Deploy `api/`. The GreenGeeks plan has no "Setup Node.js App" in cPanel, so the API host is undecided. Ask GreenGeeks, or pick another host.
 5. Theming and polish.
 
+## Revisit later
+
+- **Dev container.** Not needed now: one developer, Node 24 from `web/.nvmrc`, and CI tests a clean environment. Raise it with the owner when any of these happens:
+  - `api/` needs a database or other services (a dev container with Docker Compose starts them together).
+  - A second contributor joins.
+  - The owner wants to run Claude with broad permissions in a sandbox.
+
 ## Stack (decided)
 
 | Area          | Choice                                                                   |

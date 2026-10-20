@@ -1,0 +1,21 @@
+.header {
+  background: var(--color-brand-bg);
+  border-block-end: var(--border-width) solid var(--color-accent);
+  padding: var(--space-2) var(--space-4);
+}
+
+.headerInner,
+.main {
+  max-inline-size: var(--content-width);
+  margin-inline: auto;
+}
+
+.logo {
+  display: block;
+  block-size: 4.5rem;
+  inline-size: auto;
+}
+
+.main {
+  padding: var(--space-6) var(--space-4);
+}

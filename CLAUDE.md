@@ -9,7 +9,7 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 2. Merge to `main`, add a GitHub Action that builds `web/` and deploys it to GreenGeeks over FTP.
 3. Build `api/` (Express + TypeScript). Replace mocks with real calls.
 4. Deploy `api/`. The GreenGeeks plan has no "Setup Node.js App" in cPanel, so the API host is undecided. Ask GreenGeeks, or pick another host.
-5. Theming and polish.
+5. Theming and polish. **In progress on branch `uiTheming`:** tokens, light/dark, logo header, `ui-standards` skill, a11y checks.
 
 Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, TypeScript, testing, composition) and stricter ESLint rules.
 
@@ -51,6 +51,7 @@ Before you say a task is done, run lint, typecheck, test, and `format:check`. Ru
 
 - **Vitest stays on 4.x.** Stryker's vitest runner 10.0.0 runs zero tests per mutant on Vitest 5. Do not upgrade until Stryker supports it.
 - **MSW 3** renamed `onUnhandledRequest` to `onUnhandledFrame`. Docs older than 2026 show the old name.
+- **`eslint-plugin-jsx-a11y` override in `web/package.json`.** The plugin lists ESLint up to 9 as a peer, and we use 10. The override (`"eslint": "$eslint"`) lets it install. The rules work on 10. Remove the override once the plugin supports ESLint 10.
 - **`qs` override in `web/package.json`.** Stryker 10.0.0 pulls `qs` 6.15.1 (through `typed-rest-client`), which has moderate advisories. The override forces 6.16.1. Dev-only. Remove it once a Stryker release ships a fixed `qs`, then run `npm audit`.
 - Node 24 (`web/.nvmrc`).
 - Mocks are on when `VITE_USE_MOCKS=true` (`.env.development`, `.env.production`, `.env.mocks`). Delete it from `.env.production` once the real API exists.
@@ -70,7 +71,8 @@ Details in [docs/frontend-standards.md](docs/frontend-standards.md).
 - No `useEffect` to derive state or fetch data. Compute during render or use a query.
 - Every list needs a stable `key` (an id, not the index).
 - Handle loading, error, and empty states on every data view.
-- Use semantic HTML and labels. Tests query by role and text, so the UI stays accessible.
+- Use semantic HTML and labels. Tests query by role and text, so the UI stays accessible. Target WCAG 2.2 AA. ESLint (`jsx-a11y`) and the axe e2e test enforce it.
+- Style with CSS Modules and the tokens in `src/styles/tokens.css`. No raw colors in component CSS.
 - No secrets in the frontend. Anything in `VITE_*` ships to every browser.
 
 ## Testing standards (summary)
@@ -94,6 +96,7 @@ Claude loads a skill when the task matches its description. The rules above stay
 | `typescript-standards`          | Types, narrowing, unions, API typing                                                                     |
 | `testing-patterns`              | Vitest, MSW, factories, Playwright, Stryker survivors                                                    |
 | `composition-patterns`          | Component API design: compound components, boolean props. Third party (Vercel, MIT), see its `SOURCE.md` |
+| `ui-standards`                  | Designing or styling any screen: tokens, CSS Modules, semantic HTML, forms, WCAG 2.2 AA checklist       |
 | `pull-request-prep`, `write-pr` | Review and describe a branch before the PR                                                               |
 
 Read any third-party skill before you add it. A skill steers Claude like code. Do not add skills that fetch their instructions from a URL at run time.

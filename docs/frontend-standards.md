@@ -59,6 +59,8 @@ Plain CSS with custom properties (no Tailwind, no component library). Palette co
 
 **Accessibility (WCAG 2.2 AA)**
 
+Enforced by `eslint-plugin-jsx-a11y` (lint) and axe in `e2e/accessibility.spec.ts` (dark and light, includes contrast). Automated checks miss many issues, so also tab through each new screen. The `ui-standards` skill has the full workflow and checklist.
+
 - Text contrast 4.5:1 (3:1 for text of 24px or larger). Borders, icons, and focus rings 3:1. Check any new color pair before you add it.
 - Do not use color alone to show meaning. Pair it with text or an icon (an error shows a message, not just red).
 - Keep the `:focus-visible` ring. Never set `outline: none` without a replacement.

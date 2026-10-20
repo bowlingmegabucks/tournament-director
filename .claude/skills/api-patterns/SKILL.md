@@ -14,7 +14,7 @@ Check Context7 for Express 5 and Zod 4 before you use an API from memory. Both c
 1. `types.ts`: Zod schema, then `export type X = z.infer<typeof xSchema>`.
 2. `repository.ts`: an `interface XRepository` and `createInMemoryXRepository(seed)`.
 3. `routes.ts`: `createXRouter(repository): Router`.
-4. Mount it in `app.ts` under `/api/<name>`; add the repository to `AppDependencies`; build the real one in `server.ts`.
+4. Mount it in `app.ts` under `/<name>`; add the repository to `AppDependencies`; build the real one in `server.ts`.
 5. Tests: `routes.test.ts`, `repository.test.ts`. Use the `api-testing-patterns` skill.
 6. If `web/` calls it, update the web types, `api.ts`, and MSW handlers in the same PR.
 

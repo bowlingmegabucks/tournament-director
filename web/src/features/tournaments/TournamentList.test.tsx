@@ -10,7 +10,7 @@ import { TournamentList } from './TournamentList'
 describe('TournamentList', () => {
   it('shows tournaments returned by the API', async () => {
     const tournament = createTournament({ name: 'Spring Open', entrants: 42 })
-    server.use(http.get('/api/tournaments', () => HttpResponse.json([tournament])))
+    server.use(http.get('/tournaments', () => HttpResponse.json([tournament])))
 
     renderWithClient(<TournamentList />)
 
@@ -19,7 +19,7 @@ describe('TournamentList', () => {
   })
 
   it('shows a message when there are no tournaments', async () => {
-    server.use(http.get('/api/tournaments', () => HttpResponse.json([])))
+    server.use(http.get('/tournaments', () => HttpResponse.json([])))
 
     renderWithClient(<TournamentList />)
 
@@ -27,7 +27,7 @@ describe('TournamentList', () => {
   })
 
   it('shows an error when the API fails', async () => {
-    server.use(http.get('/api/tournaments', () => new HttpResponse(null, { status: 500 })))
+    server.use(http.get('/tournaments', () => new HttpResponse(null, { status: 500 })))
 
     renderWithClient(<TournamentList />)
 
@@ -35,7 +35,7 @@ describe('TournamentList', () => {
   })
 
   it('shows an error when the response is not a tournament list', async () => {
-    server.use(http.get('/api/tournaments', () => new HttpResponse('<html></html>')))
+    server.use(http.get('/tournaments', () => new HttpResponse('<html></html>')))
 
     renderWithClient(<TournamentList />)
 
@@ -54,7 +54,7 @@ describe('TournamentList', () => {
     const tournament = createTournament({ name: 'Retry Open' })
     let calls = 0
     server.use(
-      http.get('/api/tournaments', () =>
+      http.get('/tournaments', () =>
         ++calls === 1 ? new HttpResponse(null, { status: 500 }) : HttpResponse.json([tournament]),
       ),
     )

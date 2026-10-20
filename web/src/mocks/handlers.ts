@@ -5,6 +5,6 @@ import { createTournaments } from './data'
 const tournaments = createTournaments()
 
 export const handlers = [
-  http.get('/api/health', () => HttpResponse.json({ status: 'ok' })),
-  http.get('/api/tournaments', () => HttpResponse.json(tournaments)),
+  http.get('/health', () => HttpResponse.json({ status: 'ok' })),
+  http.get('/tournaments', () => HttpResponse.json(tournaments)),
 ]

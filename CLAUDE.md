@@ -46,16 +46,16 @@ The root `package.json` only holds shortcuts. It is not an npm workspace; `web/`
 
 ## Commands (run in `web/`; `api/` has the same names, minus e2e)
 
-| Command                                 | Does                                                                            |
-| --------------------------------------- | ------------------------------------------------------------------------------- |
-| `npm run dev`                           | Dev server; `/api` goes to the API on port 3000 (`npm run dev:mocks` for mocks) |
-| `npm run build`                         | Typecheck and build to `dist/`                                                  |
-| `npm run lint` / `npm run format:check` | ESLint / Prettier check                                                         |
-| `npm run typecheck`                     | `tsc -b`                                                                        |
-| `npm test`                              | Unit and integration tests                                                      |
-| `npm run test:coverage`                 | Same, with coverage. Fails under 80%                                            |
-| `npm run test:e2e`                      | Playwright against a built preview with mocks                                   |
-| `npm run test:mutation`                 | Stryker mutation tests                                                          |
+| Command                                 | Does                                                                                              |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `npm run dev`                           | Dev server; `/api` goes to the API on port 3000 (prefix stripped) (`npm run dev:mocks` for mocks) |
+| `npm run build`                         | Typecheck and build to `dist/`                                                                    |
+| `npm run lint` / `npm run format:check` | ESLint / Prettier check                                                                           |
+| `npm run typecheck`                     | `tsc -b`                                                                                          |
+| `npm test`                              | Unit and integration tests                                                                        |
+| `npm run test:coverage`                 | Same, with coverage. Fails under 80%                                                              |
+| `npm run test:e2e`                      | Playwright against a built preview with mocks                                                     |
+| `npm run test:mutation`                 | Stryker mutation tests                                                                            |
 
 `api/` also has `npm run start` (run the build) and `npm run dev` (watch mode with `.env`). Before you say a task is done, run lint, typecheck, test, and `format:check` in each folder you changed. Run e2e when you change UI flow.
 

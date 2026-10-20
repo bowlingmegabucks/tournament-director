@@ -26,7 +26,7 @@ api/src/
 - **Validate input at the edge with Zod.** Body, params, query, and the environment. Never trust `req.body` as typed.
 - **Errors:** throw `HttpError(status, message)` for expected failures (404, 409). Anything else becomes a 500 with a generic message; the cause goes to the log, never to the client. Express 5 forwards rejected promises from async handlers, so do not wrap handlers in try/catch.
 - **Error body:** `{ "message": string }`, for every status. The web `api.ts` files check the status first.
-- **Routes live under `/api`.** The web app calls `/api/...`.
+- **Routes live at the root** (`/health`, `/tournaments`), with no `/api` prefix: in production the API has its own host. In dev the Vite proxy takes `/api/...` and strips the prefix.
 - **Contract with `web/`.** The `Tournament` shape is in `api/src/features/tournaments/types.ts` and `web/src/features/tournaments/types.ts`. Change both together. (No shared package: two folders, no workspaces.)
 - **Config:** every setting is an env var, validated at startup. The app refuses to start on bad config. Add new vars to `.env.example`.
 - **Security defaults stay on:** `helmet()` and an explicit CORS allow-list (`CORS_ORIGIN`). No `*`.

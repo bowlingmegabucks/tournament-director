@@ -4,9 +4,9 @@ import { createInMemoryTournamentRepository } from './features/tournaments/repos
 import { createTournaments } from './test/factories.ts'
 import { createTestApp } from './test/testApp.ts'
 
-describe('GET /api/health', () => {
+describe('GET /health', () => {
   it('reports ok', async () => {
-    const response = await request(createTestApp()).get('/api/health')
+    const response = await request(createTestApp()).get('/health')
 
     expect(response.status).toBe(200)
     expect(response.body).toEqual({ status: 'ok' })
@@ -15,7 +15,7 @@ describe('GET /api/health', () => {
 
 describe('unknown routes', () => {
   it('return a JSON 404', async () => {
-    const response = await request(createTestApp()).get('/api/nope')
+    const response = await request(createTestApp()).get('/nope')
 
     expect(response.status).toBe(404)
     expect(response.body).toEqual({ message: 'Not found' })
@@ -24,7 +24,7 @@ describe('unknown routes', () => {
 
 describe('security headers', () => {
   it('sets helmet headers and hides the framework name', async () => {
-    const response = await request(createTestApp()).get('/api/health')
+    const response = await request(createTestApp()).get('/health')
 
     expect(response.headers['x-content-type-options']).toBe('nosniff')
     expect(response.headers['x-powered-by']).toBeUndefined()
@@ -37,7 +37,7 @@ describe('CORS', () => {
   it('allows a configured origin', async () => {
     const app = createTestApp({ config: { port: 0, corsOrigins: [origin] } })
 
-    const response = await request(app).get('/api/health').set('Origin', origin)
+    const response = await request(app).get('/health').set('Origin', origin)
 
     expect(response.headers['access-control-allow-origin']).toBe(origin)
   })
@@ -45,13 +45,13 @@ describe('CORS', () => {
   it('does not allow an origin that is not configured', async () => {
     const app = createTestApp({ config: { port: 0, corsOrigins: [origin] } })
 
-    const response = await request(app).get('/api/health').set('Origin', 'https://evil.example')
+    const response = await request(app).get('/health').set('Origin', 'https://evil.example')
 
     expect(response.headers['access-control-allow-origin']).toBeUndefined()
   })
 
   it('sends no CORS headers when none are configured', async () => {
-    const response = await request(createTestApp()).get('/api/health').set('Origin', origin)
+    const response = await request(createTestApp()).get('/health').set('Origin', origin)
 
     expect(response.headers['access-control-allow-origin']).toBeUndefined()
   })
@@ -64,7 +64,7 @@ describe('server errors', () => {
       tournaments: { list: () => Promise.reject(new Error('db password is hunter2')) },
     })
 
-    const response = await request(app).get('/api/tournaments')
+    const response = await request(app).get('/tournaments')
 
     expect(response.status).toBe(500)
     expect(response.body).toEqual({ message: 'Internal server error' })
@@ -78,7 +78,7 @@ describe('app wiring', () => {
     const tournaments = createTournaments(2)
     const app = createTestApp({ tournaments: createInMemoryTournamentRepository(tournaments) })
 
-    const response = await request(app).get('/api/tournaments')
+    const response = await request(app).get('/tournaments')
 
     expect(response.body).toEqual(tournaments)
   })

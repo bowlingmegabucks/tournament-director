@@ -6,7 +6,7 @@ export async function checkHealth(): Promise<void> {
   if (shouldForceFailure()) throw new Error('forced failure')
   let response: Response
   try {
-    response = await fetch(apiUrl('/api/health'))
+    response = await fetch(apiUrl('/health'))
   } catch {
     // fetch rejects for network and CORS failures, and its message ("Failed to fetch") says little.
     throw new Error('Could not reach the API')

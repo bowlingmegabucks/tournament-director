@@ -5,12 +5,12 @@ import { tournamentSchema } from './types.ts'
 import { createTournament } from '../../test/factories.ts'
 import { createTestApp } from '../../test/testApp.ts'
 
-describe('GET /api/tournaments', () => {
+describe('GET /tournaments', () => {
   it('returns the tournaments as JSON', async () => {
     const tournament = createTournament({ name: 'Spring Open', entrants: 42 })
     const app = createTestApp({ tournaments: createInMemoryTournamentRepository([tournament]) })
 
-    const response = await request(app).get('/api/tournaments')
+    const response = await request(app).get('/tournaments')
 
     expect(response.status).toBe(200)
     expect(response.headers['content-type']).toMatch(/application\/json/)
@@ -18,7 +18,7 @@ describe('GET /api/tournaments', () => {
   })
 
   it('returns an empty array when there are none', async () => {
-    const response = await request(createTestApp()).get('/api/tournaments')
+    const response = await request(createTestApp()).get('/tournaments')
 
     expect(response.status).toBe(200)
     expect(response.body).toEqual([])
@@ -29,7 +29,7 @@ describe('GET /api/tournaments', () => {
       tournaments: createInMemoryTournamentRepository([createTournament()]),
     })
 
-    const response = await request(app).get('/api/tournaments')
+    const response = await request(app).get('/tournaments')
 
     expect(tournamentSchema.array().safeParse(response.body).success).toBe(true)
   })

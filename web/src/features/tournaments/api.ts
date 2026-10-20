@@ -13,7 +13,7 @@ function isTournament(value: unknown): value is Tournament {
 }
 
 export async function fetchTournaments(): Promise<Tournament[]> {
-  const response = await fetch(apiUrl('/api/tournaments'))
+  const response = await fetch(apiUrl('/tournaments'))
   if (!response.ok) {
     throw new Error(`Failed to load tournaments (${response.status})`)
   }

@@ -20,7 +20,7 @@ it('returns the tournaments as JSON', async () => {
     tournaments: createInMemoryTournamentRepository([tournament]),
   })
 
-  const response = await request(app).get('/api/tournaments')
+  const response = await request(app).get('/tournaments')
 
   expect(response.status).toBe(200)
   expect(response.body).toEqual([tournament])

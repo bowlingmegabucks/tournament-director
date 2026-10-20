@@ -25,7 +25,7 @@ describe('HealthCheckButton', () => {
   })
 
   it('shows the error message in a toast when the check fails', async () => {
-    server.use(http.get('/api/health', () => new HttpResponse(null, { status: 503 })))
+    server.use(http.get('/health', () => new HttpResponse(null, { status: 503 })))
     renderWithClient(<HealthCheckButton />)
 
     await userEvent.click(checkButton())
@@ -39,7 +39,7 @@ describe('HealthCheckButton', () => {
       finish = resolve
     })
     server.use(
-      http.get('/api/health', async () => {
+      http.get('/health', async () => {
         await gate
         return HttpResponse.json({ status: 'ok' })
       }),
@@ -74,7 +74,7 @@ describe('HealthCheckButton', () => {
   })
 
   it('keeps the error toast until the user dismisses it', async () => {
-    server.use(http.get('/api/health', () => HttpResponse.error()))
+    server.use(http.get('/health', () => HttpResponse.error()))
     renderWithClient(<HealthCheckButton successToastMs={50} />)
 
     await userEvent.click(checkButton())
@@ -87,7 +87,7 @@ describe('HealthCheckButton', () => {
   it('replaces an error toast with a success toast on the next try', async () => {
     let calls = 0
     server.use(
-      http.get('/api/health', () =>
+      http.get('/health', () =>
         ++calls === 1
           ? new HttpResponse(null, { status: 500 })
           : HttpResponse.json({ status: 'ok' }),

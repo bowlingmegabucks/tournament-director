@@ -7,9 +7,12 @@ export default defineConfig({
   base: './',
   plugins: [react()],
   server: {
-    // The browser calls /api on the dev server; Vite forwards it to the API (api/ default port).
-    // Same origin, so no CORS in dev. The API keeps its /api prefix, so no rewrite.
-    proxy: { '/api': 'http://localhost:3000' },
+    // The browser calls /api/... on the dev server (VITE_API_BASE_URL=/api in .env.development).
+    // Vite strips the prefix and forwards to the API (api/ default port), which serves from the root.
+    // Same origin, so no CORS in dev.
+    proxy: {
+      '/api': { target: 'http://localhost:3000', rewrite: (path) => path.replace(/^\/api/, '') },
+    },
   },
   test: {
     environment: 'jsdom',

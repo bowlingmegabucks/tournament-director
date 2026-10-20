@@ -45,7 +45,7 @@ test.describe('other states', () => {
     test(`home page (empty) has no WCAG 2.2 AA violations in ${colorScheme} mode`, async ({
       page,
     }) => {
-      await page.route('**/api/tournaments', (route) => route.fulfill({ json: [] }))
+      await page.route('**/tournaments', (route) => route.fulfill({ json: [] }))
       await page.emulateMedia({ colorScheme })
       await page.goto('/')
       await expect(page.getByText('No tournaments yet.')).toBeVisible()
@@ -56,7 +56,7 @@ test.describe('other states', () => {
     test(`home page (error) has no WCAG 2.2 AA violations in ${colorScheme} mode`, async ({
       page,
     }) => {
-      await page.route('**/api/tournaments', (route) => route.fulfill({ status: 500, body: '' }))
+      await page.route('**/tournaments', (route) => route.fulfill({ status: 500, body: '' }))
       await page.emulateMedia({ colorScheme })
       await page.goto('/')
       await expect(page.getByRole('alert')).toBeVisible()
@@ -67,7 +67,7 @@ test.describe('other states', () => {
     test(`home page (error toast) has no WCAG 2.2 AA violations in ${colorScheme} mode`, async ({
       page,
     }) => {
-      await page.route('**/api/health', (route) => route.fulfill({ status: 503, body: '' }))
+      await page.route('**/health', (route) => route.fulfill({ status: 503, body: '' }))
       await page.emulateMedia({ colorScheme })
       await page.goto('/')
       await page.getByRole('button', { name: 'Check API' }).click()

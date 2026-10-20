@@ -14,19 +14,19 @@ describe('checkHealth', () => {
   })
 
   it('reports the status when the API fails', async () => {
-    server.use(http.get('/api/health', () => new HttpResponse(null, { status: 503 })))
+    server.use(http.get('/health', () => new HttpResponse(null, { status: 503 })))
 
     await expect(checkHealth()).rejects.toThrow('API health check failed (503)')
   })
 
   it('says the API is unreachable when the request fails', async () => {
-    server.use(http.get('/api/health', () => HttpResponse.error()))
+    server.use(http.get('/health', () => HttpResponse.error()))
 
     await expect(checkHealth()).rejects.toThrow('Could not reach the API')
   })
 
   it('rejects a body that is not JSON', async () => {
-    server.use(http.get('/api/health', () => new HttpResponse('<html></html>')))
+    server.use(http.get('/health', () => new HttpResponse('<html></html>')))
 
     await expect(checkHealth()).rejects.toThrow('unexpected response')
   })
@@ -37,12 +37,13 @@ describe('checkHealth', () => {
     ['an empty object', {}],
     ['a different status', { status: 'down' }],
   ])('rejects a body that is %s', async (_label, body) => {
-    server.use(http.get('/api/health', () => HttpResponse.json(body)))
+    server.use(http.get('/health', () => HttpResponse.json(body)))
 
     await expect(checkHealth()).rejects.toThrow('unexpected response')
   })
 
   it('fails with "forced failure" when development mode rolls a failure', async () => {
+    vi.stubEnv('DEV', true)
     vi.stubEnv('MODE', 'development')
     vi.spyOn(Math, 'random').mockReturnValue(0)
 
@@ -50,6 +51,7 @@ describe('checkHealth', () => {
   })
 
   it('calls the API when development mode rolls a success', async () => {
+    vi.stubEnv('DEV', true)
     vi.stubEnv('MODE', 'development')
     vi.spyOn(Math, 'random').mockReturnValue(0.99)
 

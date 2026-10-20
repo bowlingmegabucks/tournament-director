@@ -20,10 +20,10 @@ export function createApp({ config, tournaments }: AppDependencies): express.Exp
   // An empty list allows no cross-origin caller.
   app.use(cors({ origin: config.corsOrigins }))
 
-  app.get('/api/health', (_req, res) => {
+  app.get('/health', (_req, res) => {
     res.json({ status: 'ok' })
   })
-  app.use('/api/tournaments', createTournamentRouter(tournaments))
+  app.use('/tournaments', createTournamentRouter(tournaments))
 
   app.use(notFound)
   app.use(errorHandler)

@@ -1,0 +1,22 @@
+name: Deploy
+
+# Shell only. It lives on main so workflow_dispatch can run it while we build the real steps.
+# Planned: push to main -> build web/ -> FTP upload to GreenGeeks. See docs/deployment.md.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy-web:
+    name: Deploy web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Placeholder
+        run: echo "Deploy steps not written yet."

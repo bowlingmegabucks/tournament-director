@@ -1,0 +1,6 @@
+dist
+coverage
+reports
+.stryker-tmp
+public/mockServiceWorker.js
+package-lock.json

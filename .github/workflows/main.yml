@@ -19,4 +19,8 @@ jobs:
   deploy:
     name: Deploy
     uses: ./.github/workflows/deploy.yml
+    # The called workflow cannot ask for more than the caller grants: deploy-api needs id-token.
+    permissions:
+      contents: read
+      id-token: write
     secrets: inherit

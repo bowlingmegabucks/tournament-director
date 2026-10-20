@@ -9,24 +9,38 @@
 3. The job uses the GitHub environment `production`. Set these there:
    - Secrets: `FTP_USERNAME`, `FTP_PASSWORD`.
    - Variables: `FTP_SERVER`, `FTP_SERVER_DIR` (remote folder, must end with `/`, for example `public_html/`).
-   The job runs only on `main`, and a step fails the run if `FTP_SERVER_DIR` does not end with `/`.
+     The job runs only on `main`, and a step fails the run if `FTP_SERVER_DIR` does not end with `/`.
 4. First run: use "Run workflow" with `dry_run` on to check the file list. If an upload fails midway, run the workflow again by hand.
 5. Once the site gets client-side routes, add a rewrite to `web/public/.htaccess` so deep links return `index.html`. Switch `base` from `'./'` to `'/'` at the same time, or assets will break on nested paths.
 
 The mock bundle is large (faker). That is acceptable for the throwaway demo. The real build drops it.
 
-## API
+## API (Azure App Service)
 
-GreenGeeks shared hosting does not show "Setup Node.js App" in cPanel for this account. Options:
+The `deploy-api` job in `.github/workflows/deploy.yml` runs before `deploy-web` and the web job waits for it (`needs`). A failed API deploy stops the web deploy.
 
-- Ask GreenGeeks support whether Node is available on the plan.
-- Host the API elsewhere (Render, Railway, Fly.io). The frontend then needs the API URL in an env var and the API needs CORS.
-- Move to a plan or VPS that runs Node.
+Azure resources (in one resource group):
 
-Decide at step 4 of the plan in `CLAUDE.md`.
+- App Service plan (Linux, B1 or better; F1 sleeps when idle).
+- Web App `app-tournamentdirector-prod`, runtime Node 24 LTS, startup command `npm start`.
+- Entra app registration with a federated credential: GitHub organization `bowlingmegabucks`, repository `tournament-director`, entity type Environment, name `production`. The app's service principal has the **Website Contributor** role on the Web App.
+
+The job:
+
+1. Checks out, then runs `npm ci --ignore-scripts`, lint, format check, typecheck, test, and `npm run build` in `api/`.
+2. Stages `dist/`, `package.json`, and `package-lock.json` in `api-package/` and runs `npm ci --omit=dev` there, so Azure gets only what runs.
+3. Signs in with [Azure/login](https://github.com/Azure/login) over OIDC (no stored password) and uploads the folder with [Azure/webapps-deploy](https://github.com/Azure/webapps-deploy). Both actions are pinned to commit SHAs. With `dry_run` on, the job builds and stages but skips the sign-in and upload.
+
+Settings:
+
+- GitHub `production` environment: secret `AZURE_CLIENT_ID`, variable `AZURE_WEB_APP_NAME` (`app-tournamentdirector-prod`).
+- GitHub organization secrets, shared to this repo: `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`.
+- Web App application settings: `CORS_ORIGIN` set to the site's origin (for example `https://yoursite.com`). Azure sets `PORT`.
+- `main.yml` grants `id-token: write` to the deploy job. A called workflow cannot hold more permission than its caller.
+
+If `Azure/login` fails with `AADSTS700213` (no matching federated identity), the error prints the `sub` claim GitHub sent. Make the credential's subject match it.
 
 When the API is live:
 
 1. Delete `VITE_USE_MOCKS` from `web/.env.production`.
-2. Decide how the browser reaches the API. Same host with a reverse proxy for `/api` needs no change. A different host needs a build-time API base URL in `web/` (`api.ts` files call relative `/api/...` today) and `CORS_ORIGIN` on the API set to the site's origin.
-3. Add the API deploy workflow and its secrets to the `production` environment.
+2. The site (GreenGeeks) and the API (`<name>.azurewebsites.net`) are different origins. `web/` needs a build-time API base URL (`api.ts` files call relative `/api/...` today), and `CORS_ORIGIN` on the API must match the site's origin.

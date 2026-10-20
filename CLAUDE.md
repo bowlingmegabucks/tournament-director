@@ -1,14 +1,14 @@
 # Tournament Management
 
-Bowling tournament management app. React frontend (`web/`), Node.js API (`api/`, not built yet).
+Bowling tournament management app. React frontend (`web/`), Node.js API (`api/`).
 The owner is a .NET developer learning React and Node. Explain choices briefly and compare to .NET where it helps.
 
 ## Status and plan
 
 1. `web/` hello world, fed by mock data (MSW + faker). **Done on branch `uiShell`.**
 2. Merge to `main`, add a GitHub Action that builds `web/` and deploys it to GreenGeeks over FTP.
-3. Build `api/` (Express + TypeScript). Replace mocks with real calls.
-4. Deploy `api/`. The GreenGeeks plan has no "Setup Node.js App" in cPanel, so the API host is undecided. Ask GreenGeeks, or pick another host.
+3. Build `api/` (Express + TypeScript). **Skeleton done on branch `api`:** health and tournament list routes (random demo data, 3 to 7 per call), tests, skills, CI. **Wired on the same branch:** `npm run dev` at the root starts both; Vite proxies `/api` to the API.
+4. Deploy `api/`. **Done.** Azure App Service (Web App `app-tournamentdirector-prod`, free tier: slow after idle). The `deploy-api` job in `deploy.yml` runs before `deploy-web`, both on `main` only. The production web build has no mocks; it calls the API at the `API_BASE_URL` variable. See [docs/deployment.md](docs/deployment.md).
 5. Theming and polish. **Done on branch `uiTheming`:** tokens, light/dark, logo header, `ui-standards` skill, a11y checks.
 
 Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, TypeScript, testing, composition) and stricter ESLint rules.
@@ -22,30 +22,42 @@ Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, 
 
 ## Stack (decided)
 
-| Area          | Choice                                                                   |
-| ------------- | ------------------------------------------------------------------------ |
-| Frontend      | Vite + React + TypeScript (static build, no server)                      |
-| Server state  | TanStack Query over plain `fetch`                                        |
-| API           | Express + TypeScript                                                     |
-| Layout        | Two separate folders, no npm workspaces. Each has its own `package.json` |
-| Packages      | npm. Commit `package-lock.json`                                          |
-| Lint / format | ESLint + Prettier                                                        |
-| Tests         | Vitest, Testing Library, MSW, Playwright, Stryker                        |
+| Area          | Choice                                                                                    |
+| ------------- | ----------------------------------------------------------------------------------------- |
+| Frontend      | Vite + React + TypeScript (static build, no server)                                       |
+| Server state  | TanStack Query over plain `fetch`                                                         |
+| API           | Express + TypeScript                                                                      |
+| Layout        | Two separate folders, no npm workspaces. Each has its own `package.json`                  |
+| Packages      | npm. Commit `package-lock.json`                                                           |
+| Lint / format | ESLint + Prettier                                                                         |
+| Tests         | Vitest, Testing Library, MSW, Playwright, Stryker (web); Vitest, Supertest, Stryker (api) |
+| API libraries | Zod (validation), helmet (headers), cors                                                  |
 
-## Commands (run in `web/`)
+## Root commands
 
-| Command                                 | Does                                          |
-| --------------------------------------- | --------------------------------------------- |
-| `npm run dev`                           | Dev server with mock API                      |
-| `npm run build`                         | Typecheck and build to `dist/`                |
-| `npm run lint` / `npm run format:check` | ESLint / Prettier check                       |
-| `npm run typecheck`                     | `tsc -b`                                      |
-| `npm test`                              | Unit and integration tests                    |
-| `npm run test:coverage`                 | Same, with coverage. Fails under 80%          |
-| `npm run test:e2e`                      | Playwright against a built preview with mocks |
-| `npm run test:mutation`                 | Stryker mutation tests                        |
+The root `package.json` only holds shortcuts. It is not an npm workspace; `web/` and `api/` keep their own `package.json` and lockfile.
 
-Before you say a task is done, run lint, typecheck, test, and `format:check`. Run e2e when you change UI flow.
+| Command             | Does                                                                                               |
+| ------------------- | -------------------------------------------------------------------------------------------------- |
+| `npm run setup`     | `npm ci` in the root, `api/`, and `web/`                                                           |
+| `npm run dev`       | API (port 3000) and web (port 5173) together; web proxies `/api`                                   |
+| `npm run dev:mocks` | Web only, with MSW mocks (no API needed). "Check API" fails half the time, to show the error toast |
+| `npm run check`     | lint, format check, typecheck, and tests in `api/` and `web/`                                      |
+
+## Commands (run in `web/`; `api/` has the same names, minus e2e)
+
+| Command                                 | Does                                                                                              |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `npm run dev`                           | Dev server; `/api` goes to the API on port 3000 (prefix stripped) (`npm run dev:mocks` for mocks) |
+| `npm run build`                         | Typecheck and build to `dist/`                                                                    |
+| `npm run lint` / `npm run format:check` | ESLint / Prettier check                                                                           |
+| `npm run typecheck`                     | `tsc -b`                                                                                          |
+| `npm test`                              | Unit and integration tests                                                                        |
+| `npm run test:coverage`                 | Same, with coverage. Fails under 80%                                                              |
+| `npm run test:e2e`                      | Playwright against a built preview with mocks                                                     |
+| `npm run test:mutation`                 | Stryker mutation tests                                                                            |
+
+`api/` also has `npm run start` (run the build) and `npm run dev` (watch mode with `.env`). Before you say a task is done, run lint, typecheck, test, and `format:check` in each folder you changed. Run e2e when you change UI flow.
 
 ## Pinned versions and gotchas
 
@@ -54,9 +66,22 @@ Before you say a task is done, run lint, typecheck, test, and `format:check`. Ru
 - **`eslint-plugin-jsx-a11y` override in `web/package.json`.** The plugin lists ESLint up to 9 as a peer, and we use 10. The override (`"eslint": "$eslint"`) lets it install. The rules work on 10. Remove the override once the plugin supports ESLint 10.
 - **`qs` override in `web/package.json`.** Stryker 10.0.0 pulls `qs` 6.15.1 (through `typed-rest-client`), which has moderate advisories. The override forces 6.16.1. Dev-only. Remove it once a Stryker release ships a fixed `qs`, then run `npm audit`.
 - Node 24 (`web/.nvmrc`).
-- Mocks are on when `VITE_USE_MOCKS=true` (`.env.development`, `.env.production`, `.env.mocks`). Delete it from `.env.production` once the real API exists.
+- Mocks are on when `VITE_USE_MOCKS=true` (`.env.mocks`, and the pull request build). `npm run dev` uses the real API through the Vite proxy; `npm run dev:mocks` and e2e use mocks. The production build has no mocks: it calls the API at `VITE_API_BASE_URL`, which the deploy sets from the `API_BASE_URL` variable.
 - `vite.config.ts` sets `base: './'` so the build works from any folder on the host.
 - `public/mockServiceWorker.js` is generated by `npx msw init`. Do not edit it.
+
+## API standards (summary)
+
+Details in [docs/api-standards.md](docs/api-standards.md).
+
+- Node 24 runs the `.ts` files directly. Erasable syntax only (no `enum`, no constructor parameter properties). Imports keep the `.ts` extension.
+- Organize by feature: `src/features/<name>/` holds `routes.ts`, `repository.ts`, `types.ts`, and tests.
+- `createApp(deps)` takes its dependencies as arguments. Only `server.ts` builds the real ones.
+- Routes are thin: validate input with Zod, call the repository, send the result. Throw `HttpError` for expected failures. Errors are `{ message }`.
+- Read `process.env` only in `config.ts`. ESLint enforces it.
+- Keep `helmet` and the CORS allow-list. The web `Tournament` shape and the API's must match.
+- Test with Vitest + Supertest through `createApp`. Mutation: Stryker, same thresholds as `web/`.
+- `qs` override in `api/package.json`: same Stryker advisory as `web/`. Remove it in both places together.
 
 ## Code standards (summary)
 
@@ -71,6 +96,7 @@ Details in [docs/frontend-standards.md](docs/frontend-standards.md).
 - No `useEffect` to derive state or fetch data. Compute during render or use a query.
 - Every list needs a stable `key` (an id, not the index).
 - Handle loading, error, and empty states on every data view.
+- Use `Toast` (`src/shared/Toast.tsx`) for alerts and notices that are not part of a data view. Errors stay until dismissed. Pass `autoDismissMs` to make a toast close itself (success toasts do).
 - Use semantic HTML and labels. Tests query by role and text, so the UI stays accessible. Target WCAG 2.2 AA. ESLint (`jsx-a11y`) and the axe e2e test enforce it.
 - Style with CSS Modules and the tokens in `src/styles/tokens.css`. No raw colors in component CSS.
 - No secrets in the frontend. Anything in `VITE_*` ships to every browser.
@@ -97,6 +123,8 @@ Claude loads a skill when the task matches its description. The rules above stay
 | `testing-patterns`              | Vitest, MSW, factories, Playwright, Stryker survivors                                                    |
 | `composition-patterns`          | Component API design: compound components, boolean props. Third party (Vercel, MIT), see its `SOURCE.md` |
 | `ui-standards`                  | Designing or styling any screen: tokens, CSS Modules, semantic HTML, forms, WCAG 2.2 AA checklist        |
+| `api-patterns`                  | Routes, repositories, Zod validation, errors, config in `api/`                                           |
+| `api-testing-patterns`          | Vitest + Supertest, factories, error-path tests, Stryker survivors in `api/`                             |
 | `pull-request-prep`, `write-pr` | Review and describe a branch before the PR                                                               |
 
 Read any third-party skill before you add it. A skill steers Claude like code. Do not add skills that fetch their instructions from a URL at run time.

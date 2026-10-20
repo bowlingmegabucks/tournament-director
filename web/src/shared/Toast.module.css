@@ -1,0 +1,62 @@
+/* A filled snackbar in the top right corner, after MudBlazor's. */
+.toast {
+  position: fixed;
+  inset-block-start: var(--space-4);
+  inset-inline-end: var(--space-4);
+  z-index: 1000;
+  inline-size: min(24rem, 100% - 2 * var(--space-4));
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border-radius: var(--radius);
+  background: var(--toast-fill);
+  color: var(--color-on-status);
+  box-shadow: var(--shadow-elevated);
+}
+
+.success {
+  --toast-fill: var(--color-success);
+}
+
+.error {
+  --toast-fill: var(--color-danger);
+}
+
+.icon {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+}
+
+.message {
+  flex: 1;
+  margin: 0;
+}
+
+/* Icon-only close button: no fill, same color as the text. */
+.dismiss {
+  min-inline-size: var(--target-min);
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: inherit;
+  font-size: var(--font-size-lg);
+  line-height: 1;
+}
+
+.dismiss:hover {
+  border-color: currentColor;
+  filter: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .toast {
+    animation: slide-in 200ms ease-out;
+  }
+
+  @keyframes slide-in {
+    from {
+      transform: translateX(calc(100% + var(--space-4)));
+    }
+  }
+}

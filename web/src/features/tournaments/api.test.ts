@@ -5,7 +5,7 @@ import { createTournament } from '../../mocks/data'
 import { fetchTournaments } from './api'
 
 function respondWith(body: JsonBodyType) {
-  server.use(http.get('/api/tournaments', () => HttpResponse.json(body)))
+  server.use(http.get('/tournaments', () => HttpResponse.json(body)))
 }
 
 describe('fetchTournaments', () => {
@@ -17,15 +17,17 @@ describe('fetchTournaments', () => {
   })
 
   it('reports the status when the API fails', async () => {
-    server.use(http.get('/api/tournaments', () => new HttpResponse(null, { status: 503 })))
+    server.use(http.get('/tournaments', () => new HttpResponse(null, { status: 503 })))
 
     await expect(fetchTournaments()).rejects.toThrow('Failed to load tournaments (503)')
   })
 
   it('rejects a body that is not JSON', async () => {
-    server.use(http.get('/api/tournaments', () => new HttpResponse('<html></html>')))
+    server.use(http.get('/tournaments', () => new HttpResponse('<html></html>')))
 
-    await expect(fetchTournaments()).rejects.toThrow('unexpected response')
+    await expect(fetchTournaments()).rejects.toThrow(
+      'Failed to load tournaments (response is not JSON)',
+    )
   })
 
   it('rejects a body that is not an array', async () => {

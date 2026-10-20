@@ -1,8 +1,9 @@
 name: Deploy
 
-# Verify, build web/, upload web/dist/ to GreenGeeks over FTPS.
+# Verify, build, and deploy api/ to Azure App Service (OIDC sign-in), then
+# verify, build web/ and upload web/dist/ to GreenGeeks over FTPS.
 # main.yml calls it on each push to main.
-# Run it by hand with dry_run on to see what would upload without changing the server.
+# Run it by hand with dry_run on to build both without changing either server.
 # See docs/deployment.md.
 on:
   workflow_call:
@@ -25,8 +26,61 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  deploy-api:
+    name: Deploy API
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    # id-token lets the job ask GitHub for the OIDC token that Azure trusts.
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: api/.nvmrc
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      - run: npm ci --ignore-scripts
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+      # Ship only what runs: the build and production dependencies.
+      - name: Stage package
+        run: |
+          mkdir ../api-package
+          cp -r dist package.json package-lock.json ../api-package/
+          npm ci --omit=dev --ignore-scripts --prefix ../api-package
+
+      - name: Sign in to Azure
+        if: ${{ inputs.dry_run != true }}
+        uses: Azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Azure App Service
+        if: ${{ inputs.dry_run != true }}
+        uses: Azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3.0.8
+        with:
+          app-name: ${{ vars.AZURE_WEB_APP_NAME }}
+          package: api-package
+
   deploy-web:
     name: Deploy web
+    # The API goes first, so the site never calls an API that is older than it expects.
+    needs: deploy-api
     runs-on: ubuntu-latest
     timeout-minutes: 15
     if: github.ref == 'refs/heads/main'
@@ -49,8 +103,20 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
-      # Mocks come from web/.env.production (VITE_USE_MOCKS).
+      # The site calls the real API. Without a base URL it would call its own host and fail.
+      - name: Check API_BASE_URL
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+        run: |
+          case "$API_BASE_URL" in
+            https://*) ;;
+            *) echo "::error::API_BASE_URL must be set to the API origin, for example https://example.azurewebsites.net"; exit 1 ;;
+          esac
+
+      # API_BASE_URL is the API origin: no path, no trailing slash.
       - run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ vars.API_BASE_URL }}
 
       - name: Check FTP_SERVER_DIR
         env:

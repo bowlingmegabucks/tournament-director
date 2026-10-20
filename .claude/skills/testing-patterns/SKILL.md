@@ -16,7 +16,7 @@ Render the real component with the real hook. Fake only the network, with MSW.
 ```tsx
 it('shows tournaments returned by the API', async () => {
   const tournament = createTournament({ name: 'Spring Open', entrants: 42 })
-  server.use(http.get('/api/tournaments', () => HttpResponse.json([tournament])))
+  server.use(http.get('/tournaments', () => HttpResponse.json([tournament])))
 
   renderWithClient(<TournamentList />)
 

@@ -23,7 +23,7 @@ For a large diff, group the review by area: `web/src/features/*`, `web/src/share
 
 ### 2. Run the checks
 
-Run from `web/` when anything under `web/` changed. Add `api/` checks once `api/` exists.
+Run from `web/` when anything under `web/` changed. Run the same four from `api/` when anything under `api/` changed. For `api/` changes, also check the `api-patterns` and `api-testing-patterns` skills' review checklists, and that a changed response shape is mirrored in `web/`.
 
 ```
 npm run lint

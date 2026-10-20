@@ -1,5 +1,6 @@
 import logo from './assets/logo.png'
 import styles from './App.module.css'
+import { HealthCheckButton } from './features/health/HealthCheckButton'
 import { TournamentList } from './features/tournaments/TournamentList'
 
 export default function App() {
@@ -12,6 +13,7 @@ export default function App() {
       </header>
       <main className={styles.main}>
         <h1>Tournament Management</h1>
+        <HealthCheckButton />
         <TournamentList />
       </main>
     </>

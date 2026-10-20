@@ -7,7 +7,7 @@ import App from './App.tsx'
 // One retry keeps a failed request from showing "Loading…" for several seconds.
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1 } } })
 
-// Until the real API exists, VITE_USE_MOCKS=true serves random data from the browser.
+// VITE_USE_MOCKS=true serves random data from the browser instead of calling the API.
 async function enableMocking() {
   if (import.meta.env.VITE_USE_MOCKS !== 'true') return
   const { worker } = await import('./mocks/browser')

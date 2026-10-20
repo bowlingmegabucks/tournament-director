@@ -1,6 +1,6 @@
 ---
 name: typescript-standards
-description: TypeScript rules and patterns for this repo (web/ and the future api/). Use when writing or reviewing .ts/.tsx code, typing API responses, narrowing unknown values, modeling states with unions, or fixing type errors.
+description: TypeScript rules and patterns for this repo (web/ and api/). Use when writing or reviewing .ts/.tsx code, typing API responses, narrowing unknown values, modeling states with unions, or fixing type errors.
 ---
 
 # TypeScript standards

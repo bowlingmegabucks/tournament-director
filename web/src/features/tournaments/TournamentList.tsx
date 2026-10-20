@@ -3,7 +3,7 @@ import { useTournaments } from './useTournaments'
 export function TournamentList() {
   const { data, isPending, error, refetch } = useTournaments()
 
-  if (isPending) return <p role="status">Loading tournaments…</p>
+  if (isPending) return <output>Loading tournaments…</output>
   if (error) {
     return (
       <div role="alert">

@@ -31,6 +31,9 @@ function render() {
 }
 
 // If mocks fail to start, still render the app so the user sees the API error.
-enableMocking()
-  .catch((error: unknown) => console.error('Mocking failed to start', error))
-  .finally(render)
+try {
+  await enableMocking()
+} catch (error: unknown) {
+  console.error('Mocking failed to start', error)
+}
+render()

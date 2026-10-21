@@ -16,6 +16,28 @@ defaults:
     working-directory: web
 
 jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      # Full history: the check reads main's version and the release tags.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: api/.nvmrc
+
+      # In 0.x a missing bump is a warning on the pull request. A released version, a mismatch
+      # between api and web, or a version below main fails the job. From 1.0.0 a missing bump fails too.
+      - run: npm run test:scripts
+      - run: npm run check:version -- --base origin/main
+
   web-verify:
     name: Web lint, test, build
     runs-on: ubuntu-latest

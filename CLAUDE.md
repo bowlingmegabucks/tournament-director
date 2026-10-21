@@ -155,6 +155,7 @@ Read any third-party skill before you add it. A skill steers Claude like code. D
 - Never commit `.env*.local`, FTP credentials, or build output.
 - Deploy secrets live in GitHub Actions secrets. Never in the repo.
 - See [docs/deployment.md](docs/deployment.md) for the GreenGeeks plan.
+- **Version.** One `x.y.z` for the whole repo, kept the same in `api/package.json` and `web/package.json` (`npm version <x.y.z> --no-git-tag-version` in each folder). The API logs it as `service.version`. A release tag is `v<version>`. The `Version` job in the pull request workflow runs `scripts/checkVersion.ts`: in 0.x a missing bump is a warning, but a version at or below the newest release tag fails (after tagging 0.2.0, move to 0.3.0); a version below `main` or a mismatch between folders always fails; from 1.0.0 a missing bump fails. Run it locally with `npm run check:version`.
 
 ## Working with the owner
 

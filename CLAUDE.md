@@ -14,6 +14,8 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 
 Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, TypeScript, testing, composition) and stricter ESLint rules.
 
+**Legacy migration.** We are porting the WinForms Tournament Manager feature by feature. [docs/migration/](docs/migration/README.md) documents every legacy rule with an ID (`REG-04`); use it instead of the old code. Before building a feature, check [decisions-and-questions.md](docs/migration/decisions-and-questions.md) for its open questions. Cite rule IDs in tests and PRs.
+
 ## Revisit later
 
 - **Dev container.** Not needed now: one developer, Node 24 from `web/.nvmrc`, and CI tests a clean environment. Raise it with the owner when any of these happens:

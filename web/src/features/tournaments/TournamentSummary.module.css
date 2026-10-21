@@ -1,0 +1,38 @@
+.card {
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.badgeRow {
+  margin-block: 0 var(--space-2);
+}
+
+.badge {
+  display: inline-block;
+  padding-inline: var(--space-2);
+  border: var(--border-width) solid currentColor;
+  border-radius: var(--radius);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.in-progress {
+  color: var(--color-accent);
+}
+
+.upcoming {
+  color: var(--color-success);
+}
+
+.name {
+  margin-block: 0 var(--space-2);
+  font-size: var(--font-size-lg);
+}
+
+.meta {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}

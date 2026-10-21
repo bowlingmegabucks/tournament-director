@@ -43,6 +43,8 @@
   --shadow-elevated: 0 3px 5px -1px rgb(0 0 0 / 0.3), 0 6px 10px 0 rgb(0 0 0 / 0.2);
   --target-min: 2.75rem; /* 44px. WCAG 2.2 AA asks for 24px, we aim higher for touch. */
   --content-width: 48rem;
+  --layout-width: 64rem; /* header, menu, and page frame */
+  --sidebar-width: 15rem;
 }
 
 @media (prefers-color-scheme: light) {

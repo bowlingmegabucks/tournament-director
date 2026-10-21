@@ -1,0 +1,37 @@
+.shell {
+  display: grid;
+  max-inline-size: var(--layout-width);
+  margin-inline: auto;
+}
+
+.side {
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border-block-end: var(--border-width) solid var(--color-border);
+}
+
+.name {
+  margin-block: 0 var(--space-1);
+  font-size: var(--font-size-lg);
+}
+
+.meta {
+  margin-block: 0 var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.content {
+  padding: var(--space-6) var(--space-4);
+}
+
+@media (min-width: 40rem) {
+  .shell {
+    grid-template-columns: var(--sidebar-width) 1fr;
+  }
+
+  .side {
+    border-block-end: 0;
+    border-inline-end: var(--border-width) solid var(--color-border);
+  }
+}

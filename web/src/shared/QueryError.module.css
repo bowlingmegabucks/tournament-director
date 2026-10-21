@@ -1,0 +1,10 @@
+.error {
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--color-danger);
+  border-radius: var(--radius);
+  color: var(--color-danger);
+}
+
+.error p {
+  margin-block-start: 0;
+}

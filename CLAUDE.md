@@ -14,6 +14,15 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 
 Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, TypeScript, testing, composition) and stricter ESLint rules.
 
+**Legacy migration.** We are porting the WinForms Tournament Manager feature by feature. [docs/migration/](docs/migration/README.md) documents every legacy rule with an ID (`REG-04`); use it instead of the old code. Before building a feature, check [decisions-and-questions.md](docs/migration/decisions-and-questions.md) for its open questions. Cite rule IDs in tests and PRs.
+
+**Release path.** 0.1.0 (structure) is out. Next:
+
+- **0.2.0:** read-only views (GET routes) on the existing legacy database; the WinForms app will be sunset. Public routes only. Bowler GETs wait for auth. Every route declares its access; undeclared routes deny.
+- **0.3.0:** authentication and authorization, with a ping-style route to test it. Decide the approach (hosted provider, Keycloak, or self-rolled) after the 0.2.0 tag. Also set the rules for what the UI shows when signed in or out (no permission, no Add button). The API still enforces access.
+- **0.4.0 and up:** commands (create tournament, edit division), one feature area per release.
+- **1.0.0:** every item in [docs/v1-requirements.md](docs/v1-requirements.md) is checked. Keep that file current: check items off as they land and add items as we find them. It includes a review of open issues in the legacy `tournament-manager` repo.
+
 ## Revisit later
 
 - **Dev container.** Not needed now: one developer, Node 24 from `web/.nvmrc`, and CI tests a clean environment. Raise it with the owner when any of these happens:
@@ -135,6 +144,8 @@ Claude loads a skill when the task matches its description. The rules above stay
 | `api-testing-patterns`          | Vitest + Supertest, factories, error-path tests, Stryker survivors in `api/`                             |
 | `api-observability`             | What to log, which level, when to add a metric or span, what never to log, checking it in Seq            |
 | `pull-request-prep`, `write-pr` | Review and describe a branch before the PR                                                               |
+| `release-notes`                 | Write GitHub release notes for a new version (`release-notes.md`); marks 0.x as pre-release              |
+| `migrate-feature`               | Port a legacy feature: settle questions, plan, build, record in `docs/requirements/`                     |
 
 Read any third-party skill before you add it. A skill steers Claude like code. Do not add skills that fetch their instructions from a URL at run time.
 

@@ -32,9 +32,21 @@ api/src/
 - **Security defaults stay on:** `helmet()` and an explicit CORS allow-list (`CORS_ORIGIN`). No `*`.
 - **No secrets in the repo.** Use env vars and GitHub Actions secrets.
 
+## Telemetry
+
+OpenTelemetry covers traces, metrics, and logs. Seq is the local backend; Application Insights is the production one. In .NET terms: `Microsoft.Extensions.Logging` plus the OpenTelemetry SDK, started in `Program.cs` before the host builds.
+
+- `src/instrumentation.ts` loads first (`node --import ...`, set in the `dev` and `start` scripts). It reads config, registers the ESM hook, and starts the SDK. Express is CommonJS, so without the hook the Express spans do not appear.
+- `src/telemetry.ts` builds the SDK. A destination turns telemetry on: `OTEL_EXPORTER_OTLP_ENDPOINT` (OTLP over HTTP/protobuf) and/or `APPLICATIONINSIGHTS_CONNECTION_STRING` (Azure Monitor). With neither set, nothing starts and nothing is sent. Tests and production without Application Insights run this way.
+- `http` and Express are instrumented. `/health` is left out so probes do not fill the traces.
+- `server.ts` calls `shutdownTelemetry()` on SIGTERM so buffered data goes out before exit.
+- Local: `npm run services:up` at the repo root, copy `.env.example` to `.env`, then open Seq at http://localhost:15380.
+- `OTEL_EXPORTER_OTLP_HEADERS` (an API key, for example) is read by the exporters, not by `config.ts`.
+
 ## Not built yet
 
 - Database (see "Revisit later" in `CLAUDE.md`)
-- Request logging
+- Structured logging, request logging, and custom metrics (next parts of `apiHardening`)
+- Rate limiting
 - Authentication
 - Write routes (POST, PUT, DELETE) and `express.json()`

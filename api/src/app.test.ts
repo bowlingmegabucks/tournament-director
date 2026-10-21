@@ -1,7 +1,7 @@
 import request from 'supertest'
 import { describe, expect, it, vi } from 'vitest'
 import { createInMemoryTournamentRepository } from './features/tournaments/repository.ts'
-import { createTournaments } from './test/factories.ts'
+import { createConfig, createTournaments } from './test/factories.ts'
 import { createTestApp } from './test/testApp.ts'
 
 describe('GET /health', () => {
@@ -35,7 +35,7 @@ describe('CORS', () => {
   const origin = 'https://app.example'
 
   it('allows a configured origin', async () => {
-    const app = createTestApp({ config: { port: 0, corsOrigins: [origin] } })
+    const app = createTestApp({ config: createConfig({ corsOrigins: [origin] }) })
 
     const response = await request(app).get('/health').set('Origin', origin)
 
@@ -43,7 +43,7 @@ describe('CORS', () => {
   })
 
   it('does not allow an origin that is not configured', async () => {
-    const app = createTestApp({ config: { port: 0, corsOrigins: [origin] } })
+    const app = createTestApp({ config: createConfig({ corsOrigins: [origin] }) })
 
     const response = await request(app).get('/health').set('Origin', 'https://evil.example')
 

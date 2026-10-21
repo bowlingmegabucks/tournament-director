@@ -80,6 +80,7 @@ Details in [docs/api-standards.md](docs/api-standards.md).
 - `createApp(deps)` takes its dependencies as arguments. Only `server.ts` builds the real ones.
 - Routes are thin: validate input with Zod, call the repository, send the result. Throw `HttpError` for expected failures. Errors are `{ message }`.
 - Read `process.env` only in `config.ts`. ESLint enforces it.
+- Telemetry is OpenTelemetry, loaded by `src/instrumentation.ts` before the app. Seq locally (`npm run services:up`), Application Insights in production; each turns on only when its env var is set.
 - Keep `helmet` and the CORS allow-list. The web `Tournament` shape and the API's must match.
 - Test with Vitest + Supertest through `createApp`. Mutation: Stryker, same thresholds as `web/`.
 - `qs` override in `api/package.json`: same Stryker advisory as `web/`. Remove it in both places together.

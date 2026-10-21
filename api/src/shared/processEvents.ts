@@ -22,8 +22,22 @@ export function handleProcessEvents(
   { logger, server, flush, exit, forceExitMs }: ProcessEventDependencies,
 ): void {
   let stopping = false
+  let finishing = false
+  let exitCode = 0
+
+  function finish(): void {
+    if (finishing) return
+    finishing = true
+    flush()
+      .catch((err: unknown) => logger.error({ err }, 'Could not send telemetry'))
+      .finally(() => exit(exitCode))
+  }
 
   function stop(code: number): void {
+    // A crash during a graceful shutdown still decides the exit code.
+    exitCode = Math.max(exitCode, code)
+    // After a crash, do not wait for open requests: the process state is unknown.
+    if (code !== 0) finish()
     if (stopping) return
     stopping = true
     // unref: this timer alone must not keep the process alive.
@@ -31,11 +45,7 @@ export function handleProcessEvents(
       logger.error({ forceExitMs }, 'Shutdown took too long, exiting')
       exit(1)
     }, forceExitMs).unref()
-    server.close(() => {
-      flush()
-        .catch((err: unknown) => logger.error({ err }, 'Could not send telemetry'))
-        .finally(() => exit(code))
-    })
+    server.close(finish)
   }
 
   for (const signal of ['SIGINT', 'SIGTERM']) {

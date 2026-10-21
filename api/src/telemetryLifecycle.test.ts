@@ -2,7 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createConfig } from './test/factories.ts'
 
 // A fake SDK, so the test sees the calls without starting real exporters.
-const sdk = vi.hoisted(() => ({ start: vi.fn(), shutdown: vi.fn(() => Promise.resolve()) }))
+const sdk = vi.hoisted(() => ({
+  start: vi.fn<() => void>(),
+  shutdown: vi.fn(() => Promise.resolve()),
+}))
 
 vi.mock('@opentelemetry/sdk-node', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@opentelemetry/sdk-node')>()),
@@ -35,6 +38,33 @@ describe('startTelemetry', () => {
     startTelemetry({ ...withDestination, otlpEndpoint: undefined })
 
     expect(sdk.start).not.toHaveBeenCalled()
+  })
+})
+
+describe('startTelemetry called twice', () => {
+  it('shuts the first SDK down before it starts the second', async () => {
+    startTelemetry(withDestination)
+    startTelemetry(withDestination)
+
+    expect(sdk.start).toHaveBeenCalledTimes(2)
+    expect(sdk.shutdown).toHaveBeenCalledTimes(1)
+    await shutdownTelemetry()
+    expect(sdk.shutdown).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('startTelemetry when the SDK fails to start', () => {
+  it('throws, and leaves nothing to shut down', async () => {
+    sdk.start.mockImplementationOnce(() => {
+      throw new Error('bad start')
+    })
+
+    expect(() => {
+      startTelemetry(withDestination)
+    }).toThrow('bad start')
+    await shutdownTelemetry()
+
+    expect(sdk.shutdown).not.toHaveBeenCalled()
   })
 })
 

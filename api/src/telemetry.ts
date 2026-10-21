@@ -104,10 +104,18 @@ export function createTelemetrySdk(config: TelemetryConfig): NodeSDK | undefined
 
 let running: NodeSDK | undefined
 
-/** Call before the app loads (see instrumentation.ts). Does nothing when no destination is set. */
+/**
+ * Call before the app loads (see instrumentation.ts). Does nothing when no destination is set.
+ * A second call stops the SDK that is already running first.
+ */
 export function startTelemetry(config: TelemetryConfig): void {
-  running = createTelemetrySdk(config)
-  running?.start()
+  const previous = running
+  running = undefined
+  void previous?.shutdown()
+  const sdk = createTelemetrySdk(config)
+  sdk?.start()
+  // Set only after start succeeds, so a failed start leaves nothing for shutdownTelemetry to stop.
+  running = sdk
 }
 
 /** Send what is still buffered, then stop. Safe to call when telemetry never started. */

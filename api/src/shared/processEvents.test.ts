@@ -108,3 +108,26 @@ describe('a crash', () => {
     ])
   })
 })
+
+describe('a crash', () => {
+  it('does not wait for open requests', async () => {
+    const { events, exit, flush } = setup()
+
+    events.emit('uncaughtException', new Error('boom'))
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(flush).toHaveBeenCalledOnce()
+    expect(exit).toHaveBeenCalledExactlyOnceWith(1)
+  })
+
+  it('exits 1, not 0, when it happens during a graceful shutdown', async () => {
+    const { events, exit, flush } = setup({ serverClosesAfterMs: 50 })
+
+    events.emit('SIGTERM')
+    events.emit('unhandledRejection', new Error('boom'))
+    await vi.advanceTimersByTimeAsync(50)
+
+    expect(flush).toHaveBeenCalledOnce()
+    expect(exit).toHaveBeenCalledExactlyOnceWith(1)
+  })
+})

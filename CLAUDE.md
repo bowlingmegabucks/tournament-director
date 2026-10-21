@@ -67,6 +67,7 @@ The root `package.json` only holds shortcuts. It is not an npm workspace; `web/`
 - **MSW 3** renamed `onUnhandledRequest` to `onUnhandledFrame`. Docs older than 2026 show the old name.
 - **`eslint-plugin-jsx-a11y` override in `web/package.json`.** The plugin lists ESLint up to 9 as a peer, and we use 10. The override (`"eslint": "$eslint"`) lets it install. The rules work on 10. Remove the override once the plugin supports ESLint 10.
 - **`qs` override in `web/package.json`.** Stryker 10.0.0 pulls `qs` 6.15.1 (through `typed-rest-client`), which has moderate advisories. The override forces 6.16.1. Dev-only. Remove it once a Stryker release ships a fixed `qs`, then run `npm audit`.
+- **`@azure/monitor-opentelemetry-exporter` is pinned to `1.0.0-beta.46` (no caret).** Beta versions can change between releases, and this one is built on OpenTelemetry 2.x while the app uses the 3.x SDK. `api/src/telemetryExport.test.ts` sends a span through it to a local server. Bump the pin on purpose, run that test, and unpin once the exporter ships a stable release on OpenTelemetry 3.x.
 - Node 24 (`web/.nvmrc`).
 - Mocks are on when `VITE_USE_MOCKS=true` (`.env.mocks`, and the pull request build). `npm run dev` uses the real API through the Vite proxy; `npm run dev:mocks` and e2e use mocks. The production build has no mocks: it calls the API at `VITE_API_BASE_URL`, which the deploy sets from the `API_BASE_URL` variable.
 - `vite.config.ts` sets `base: './'` so the build works from any folder on the host.

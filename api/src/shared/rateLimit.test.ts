@@ -182,11 +182,13 @@ describe('rate limit setup', () => {
   it('raises no key generator warning on the first request', async () => {
     // express-rate-limit reports a setup problem with console.error, once, on the first request.
     const warn = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    try {
+      await request(limitedApp(2)).get('/tournaments')
 
-    await request(limitedApp(2)).get('/tournaments')
-
-    expect(warn).not.toHaveBeenCalled()
-    warn.mockRestore()
+      expect(warn).not.toHaveBeenCalled()
+    } finally {
+      warn.mockRestore()
+    }
   })
 })
 

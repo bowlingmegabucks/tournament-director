@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { createServer, type Server } from 'node:https'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { getCACertificates, setDefaultCACertificates } from 'node:tls'
 import type { AddressInfo } from 'node:net'
 import { gunzipSync } from 'node:zlib'
 import { trace } from '@opentelemetry/api'
@@ -19,7 +20,7 @@ let bodies: string[] = []
 let endpoint = ''
 
 let certDir = ''
-let rejectUnauthorized: string | undefined
+let defaultCaCerts: string[] = []
 
 beforeAll(async () => {
   // The exporter only speaks HTTPS, so the stand-in needs a throwaway self-signed certificate.
@@ -38,11 +39,14 @@ beforeAll(async () => {
       '1',
       '-subj',
       '/CN=127.0.0.1',
+      '-addext',
+      'subjectAltName=IP:127.0.0.1',
     ].concat(['-keyout', key, '-out', cert]),
     { stdio: 'ignore' },
   )
-  rejectUnauthorized = process.env['NODE_TLS_REJECT_UNAUTHORIZED']
-  process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0'
+  // Trust only this certificate, on top of the defaults. Certificate checks stay on.
+  defaultCaCerts = getCACertificates('default')
+  setDefaultCACertificates([...defaultCaCerts, readFileSync(cert, 'utf8')])
   server = createServer({ key: readFileSync(key), cert: readFileSync(cert) }, (req, res) => {
     const chunks: Buffer[] = []
     req.on('data', (chunk: Buffer) => chunks.push(chunk))
@@ -59,8 +63,7 @@ beforeAll(async () => {
 })
 
 afterAll(() => {
-  if (rejectUnauthorized === undefined) delete process.env['NODE_TLS_REJECT_UNAUTHORIZED']
-  else process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = rejectUnauthorized
+  setDefaultCACertificates(defaultCaCerts)
   server.close()
   rmSync(certDir, { recursive: true, force: true })
 })

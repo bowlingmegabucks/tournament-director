@@ -137,6 +137,7 @@ Claude loads a skill when the task matches its description. The rules above stay
 | `api-testing-patterns`          | Vitest + Supertest, factories, error-path tests, Stryker survivors in `api/`                             |
 | `api-observability`             | What to log, which level, when to add a metric or span, what never to log, checking it in Seq            |
 | `pull-request-prep`, `write-pr` | Review and describe a branch before the PR                                                               |
+| `release-notes`                 | Write GitHub release notes for a new version (`release-notes.md`); marks 0.x as pre-release              |
 | `migrate-feature`               | Port a legacy feature: settle questions, plan, build, record in `docs/requirements/`                     |
 
 Read any third-party skill before you add it. A skill steers Claude like code. Do not add skills that fetch their instructions from a URL at run time.

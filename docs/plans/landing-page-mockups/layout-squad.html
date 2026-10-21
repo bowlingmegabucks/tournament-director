@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Layout C: inside a squad</title>
+    <link rel="stylesheet" href="../../../web/src/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../web/src/styles/base.css" />
+    <link rel="stylesheet" href="mockup.css" />
+    <style>
+      .global {
+        padding-inline: var(--space-4);
+        border-block-end: var(--border-width) solid var(--color-border);
+      }
+      .shell {
+        display: grid;
+      }
+      .side {
+        display: grid;
+        align-content: start;
+        gap: var(--space-2);
+        padding: var(--space-4);
+        background: var(--color-surface);
+        border-block-end: var(--border-width) solid var(--color-border);
+      }
+      .side h2 {
+        margin: 0;
+        font-size: var(--font-size-lg);
+      }
+      .side .menu {
+        flex-direction: column;
+      }
+      .side .menu a[aria-current='page'] {
+        border-block-end: 0;
+        border-inline-start: 3px solid var(--color-accent);
+        border-radius: 0 var(--radius) var(--radius) 0;
+      }
+      .group {
+        margin: var(--space-3) 0 0;
+        color: var(--color-text-muted);
+        font-size: var(--font-size-sm);
+        text-transform: uppercase;
+      }
+      .sub {
+        margin: 0 0 0 var(--space-4);
+        padding: 0 0 0 var(--space-2);
+        border-inline-start: var(--border-width) solid var(--color-border);
+        list-style: none;
+      }
+      .sub a {
+        display: flex;
+        align-items: center;
+        min-block-size: var(--target-min);
+        padding-inline: var(--space-3);
+        color: var(--color-text);
+        text-decoration: none;
+      }
+      .sub a[aria-current='page'] {
+        font-weight: 600;
+        border-inline-start: 3px solid var(--color-accent);
+      }
+      .crumbs ol {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        margin: 0 0 var(--space-4);
+        padding: 0;
+        list-style: none;
+        font-size: var(--font-size-sm);
+      }
+      .crumbs li + li::before {
+        content: '/';
+        margin-inline-end: var(--space-2);
+        color: var(--color-text-muted);
+      }
+      .title {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+        margin-block-end: var(--space-4);
+      }
+      .title h1 {
+        margin: 0;
+      }
+      .tabs {
+        margin-block-end: var(--space-4);
+        border-block-end: var(--border-width) solid var(--color-border);
+      }
+      .badge-open {
+        border-color: var(--color-accent);
+        color: var(--color-accent);
+      }
+      .placeholder {
+        padding: var(--space-8) var(--space-4);
+        border: var(--border-width) dashed var(--color-border);
+        border-radius: var(--radius);
+        color: var(--color-text-muted);
+        text-align: center;
+      }
+      @media (min-width: 40rem) {
+        .shell {
+          grid-template-columns: 15rem 1fr;
+        }
+        .side {
+          border-block-end: 0;
+          border-inline-end: var(--border-width) solid var(--color-border);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1 class="caption">Layout C: inside a squad or sweeper</h1>
+    <p class="note">
+      URL: <code>/tournaments/{id}/squads/{squadId}/scores</code>. A sweeper uses the same shape at
+      <code>/sweepers/{sweeperId}/…</code> with its own results. Squad pages (lane assignments,
+      scores, results, complete) come after 0.3.0; this only shows where they will go. Three
+      options, same page content.
+    </p>
+
+    <h2 class="caption">0. Picking a squad (<code>/tournaments/{id}/squads</code>), all options start here</h2>
+    <div class="frame">
+      <header class="header"><img class="logo" src="../../../web/src/assets/logo.png" alt="Northeast MegaBuck$ Tournament" /></header>
+      <nav class="global" aria-label="Main">
+        <ul class="menu">
+          <li><a href="#">Home</a></li>
+          <li><a href="#" aria-current="page">Tournaments</a></li>
+        </ul>
+      </nav>
+      <div class="shell">
+        <nav class="side" aria-labelledby="s0">
+          <h2 id="s0">2026 Northeast MegaBuck$ Tournament</h2>
+          <p class="meta">Oct 23 to Oct 25, 2026</p>
+          <ul class="menu">
+            <li><a href="#">Divisions</a></li>
+            <li><a href="#" aria-current="page">Squads</a></li>
+            <li><a href="#">Sweepers</a></li>
+          </ul>
+          <p><a href="#">Change tournament</a></p>
+        </nav>
+        <main class="page">
+          <h1>Squads</h1>
+          <ul class="list">
+            <li class="card">
+              <h2><a href="#">Fri Oct 23, 6:00 PM</a> <span class="badge badge-open">Open</span></h2>
+              <p class="meta">96 entries · 24 lanes</p>
+            </li>
+            <li class="card">
+              <h2><a href="#">Sat Oct 24, 9:00 AM</a> <span class="badge badge-open">Open</span></h2>
+              <p class="meta">88 entries · 24 lanes</p>
+            </li>
+            <li class="card">
+              <h2><a href="#">Sat Oct 24, 1:00 PM</a> <span class="badge">Complete</span></h2>
+              <p class="meta">92 entries · 24 lanes</p>
+            </li>
+          </ul>
+        </main>
+      </div>
+    </div>
+
+    <h2 class="caption">Option 1: tree in the sidebar</h2>
+    <p class="note">The squad opens under "Squads" in the one sidebar. Everything stays in view; the sidebar gets long.</p>
+    <div class="frame">
+      <header class="header"><img class="logo" src="../../../web/src/assets/logo.png" alt="Northeast MegaBuck$ Tournament" /></header>
+      <nav class="global" aria-label="Main">
+        <ul class="menu">
+          <li><a href="#">Home</a></li>
+          <li><a href="#" aria-current="page">Tournaments</a></li>
+        </ul>
+      </nav>
+      <div class="shell">
+        <nav class="side" aria-labelledby="s1">
+          <h2 id="s1">2026 Northeast MegaBuck$ Tournament</h2>
+          <p class="meta">Oct 23 to Oct 25, 2026</p>
+          <ul class="menu">
+            <li><a href="#">Divisions</a></li>
+            <li><a href="#">Squads</a></li>
+          </ul>
+          <ul class="sub">
+            <li><a href="#">Fri Oct 23, 6:00 PM</a></li>
+            <li>
+              <a href="#" aria-current="location">Sat Oct 24, 9:00 AM</a>
+              <ul class="sub">
+                <li><a href="#">Lane assignments</a></li>
+                <li><a href="#" aria-current="page">Scores</a></li>
+                <li><a href="#">Results</a></li>
+              </ul>
+            </li>
+            <li><a href="#">Sat Oct 24, 1:00 PM</a></li>
+          </ul>
+          <ul class="menu">
+            <li><a href="#">Sweepers</a></li>
+            <li><a href="#">Registrations</a></li>
+            <li><a href="#">At-large</a></li>
+            <li><a href="#">Finals seeding</a></li>
+          </ul>
+        </nav>
+        <main class="page">
+          <div class="title">
+            <h1>Scores <span class="meta">Sat Oct 24, 9:00 AM</span></h1>
+            <button type="button">Complete squad</button>
+          </div>
+          <div class="placeholder">Scores grid goes here</div>
+        </main>
+      </div>
+    </div>
+
+    <h2 class="caption">Option 2: the sidebar swaps to the squad</h2>
+    <p class="note">Inside a squad the sidebar shows only the squad's pages, with a link back to the tournament. Focused, but you leave the tournament menu to reach it.</p>
+    <div class="frame">
+      <header class="header"><img class="logo" src="../../../web/src/assets/logo.png" alt="Northeast MegaBuck$ Tournament" /></header>
+      <nav class="global" aria-label="Main">
+        <ul class="menu">
+          <li><a href="#">Home</a></li>
+          <li><a href="#" aria-current="page">Tournaments</a></li>
+        </ul>
+      </nav>
+      <div class="shell">
+        <nav class="side" aria-labelledby="s2">
+          <p><a href="#">← 2026 Northeast MegaBuck$ Tournament</a></p>
+          <h2 id="s2">Sat Oct 24, 9:00 AM</h2>
+          <p class="meta"><span class="badge badge-open">Open</span> Squad · 88 entries</p>
+          <ul class="menu">
+            <li><a href="#">Lane assignments</a></li>
+            <li><a href="#" aria-current="page">Scores</a></li>
+            <li><a href="#">Results</a></li>
+          </ul>
+          <p><a href="#">Other squads</a></p>
+        </nav>
+        <main class="page">
+          <div class="title">
+            <h1>Scores</h1>
+            <button type="button">Complete squad</button>
+          </div>
+          <div class="placeholder">Scores grid goes here</div>
+        </main>
+      </div>
+    </div>
+
+    <h2 class="caption">Option 3: breadcrumb and tabs in the page; sidebar stays the tournament menu</h2>
+    <p class="note">The sidebar does not change, with "Squads" marked as the parent. The page header names the squad and carries its pages as tabs. A sweeper reuses the same header.</p>
+    <div class="frame">
+      <header class="header"><img class="logo" src="../../../web/src/assets/logo.png" alt="Northeast MegaBuck$ Tournament" /></header>
+      <nav class="global" aria-label="Main">
+        <ul class="menu">
+          <li><a href="#">Home</a></li>
+          <li><a href="#" aria-current="page">Tournaments</a></li>
+        </ul>
+      </nav>
+      <div class="shell">
+        <nav class="side" aria-labelledby="s3">
+          <h2 id="s3">2026 Northeast MegaBuck$ Tournament</h2>
+          <p class="meta">Oct 23 to Oct 25, 2026</p>
+          <ul class="menu">
+            <li><a href="#">Divisions</a></li>
+            <li><a href="#" aria-current="location">Squads</a></li>
+            <li><a href="#">Sweepers</a></li>
+            <li><a href="#">Registrations</a></li>
+            <li><a href="#">At-large</a></li>
+            <li><a href="#">Finals seeding</a></li>
+          </ul>
+          <p><a href="#">Change tournament</a></p>
+        </nav>
+        <main class="page">
+          <nav class="crumbs" aria-label="Breadcrumb">
+            <ol>
+              <li><a href="#">Squads</a></li>
+              <li aria-current="page">Sat Oct 24, 9:00 AM</li>
+            </ol>
+          </nav>
+          <div class="title">
+            <h1>Sat Oct 24, 9:00 AM <span class="badge badge-open">Open</span></h1>
+            <button type="button">Complete squad</button>
+          </div>
+          <nav class="tabs" aria-label="Squad">
+            <ul class="menu">
+              <li><a href="#">Lane assignments</a></li>
+              <li><a href="#" aria-current="page">Scores</a></li>
+              <li><a href="#">Results</a></li>
+            </ul>
+          </nav>
+          <div class="placeholder">Scores grid goes here</div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

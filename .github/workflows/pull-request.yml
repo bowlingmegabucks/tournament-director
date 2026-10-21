@@ -16,6 +16,30 @@ defaults:
     working-directory: web
 
 jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      # Full history: the check reads main's version and the release tags.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: api/.nvmrc
+
+      # In 0.x a missing bump is a warning on the pull request. A released version, a mismatch
+      # between api and web, or a version below main fails the job. From 1.0.0 a missing bump fails too.
+      - run: npm ci --ignore-scripts
+      - run: npm run format:scripts:check
+      - run: npm run test:scripts
+      - run: npm run check:version -- --base origin/main
+
   web-verify:
     name: Web lint, test, build
     runs-on: ubuntu-latest
@@ -69,29 +93,15 @@ jobs:
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-  web-mutation:
-    name: Web mutation tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: web/.nvmrc
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - run: npm ci --ignore-scripts
-      - run: npm run test:mutation
-
-      - name: Upload mutation report
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: web-mutation-report
-          path: web/reports/mutation
-          if-no-files-found: ignore
+  mutation:
+    name: Mutation tests
+    strategy:
+      fail-fast: false
+      matrix:
+        folder: [web, api]
+    uses: ./.github/workflows/mutation.yml
+    with:
+      folder: ${{ matrix.folder }}
 
   api-verify:
     name: API lint, test, build
@@ -144,31 +154,4 @@ jobs:
         with:
           name: api-coverage
           path: api/coverage
-          if-no-files-found: ignore
-
-  api-mutation:
-    name: API mutation tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    defaults:
-      run:
-        working-directory: api
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: api/.nvmrc
-          cache: npm
-          cache-dependency-path: api/package-lock.json
-
-      - run: npm ci --ignore-scripts
-      - run: npm run test:mutation
-
-      - name: Upload mutation report
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: api-mutation-report
-          path: api/reports/mutation
           if-no-files-found: ignore

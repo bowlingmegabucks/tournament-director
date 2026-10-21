@@ -23,4 +23,10 @@ describe('apiUrl', () => {
 
     expect(apiUrl('/health')).toBe('https://api.example.com/health')
   })
+
+  it('returns the path as is when the base URL is only slashes', () => {
+    vi.stubEnv('VITE_API_BASE_URL', '//')
+
+    expect(apiUrl('/health')).toBe('/health')
+  })
 })

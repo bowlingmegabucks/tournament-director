@@ -9,6 +9,8 @@ import { requestIdHeader, requestLogging } from './shared/requestLogging.ts'
 import { createTournamentRouter } from './features/tournaments/routes.ts'
 import type { TournamentRepository } from './features/tournaments/repository.ts'
 import { createErrorHandler, notFound } from './shared/middleware.ts'
+import { createHealthRouter } from './shared/healthRoutes.ts'
+import { mountRoutes } from './shared/mountRoutes.ts'
 
 export interface AppDependencies {
   config: Config
@@ -40,10 +42,11 @@ export function createApp({
   // After CORS, so a 429 still carries the CORS headers and the browser can read it.
   app.use(createRateLimiter(config.rateLimit, meter))
 
-  app.get('/health', (_req, res) => {
-    res.json({ status: 'ok' })
-  })
-  app.use('/tournaments', createTournamentRouter(tournaments))
+  // Every group declares its access (D-27). Anything not mounted here is a 404.
+  mountRoutes(app, [
+    { path: '/health', access: 'public', router: createHealthRouter() },
+    { path: '/v1/tournaments', access: 'public', router: createTournamentRouter(tournaments) },
+  ])
 
   app.use(notFound)
   app.use(createErrorHandler(logger))

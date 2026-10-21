@@ -29,6 +29,9 @@ jobs:
             web/package-lock.json
             api/package-lock.json
 
+      - name: Test scripts with coverage
+        run: npm run test:scripts:coverage
+
       - name: Test web with coverage
         working-directory: web
         run: |
@@ -57,5 +60,5 @@ jobs:
             -Dsonar.organization=bowlingmegabucks
             -Dsonar.projectKey=bowlingmegabucks_tournament-director
             -Dsonar.exclusions=web/public/mockServiceWorker.js
-            -Dsonar.coverage.exclusions=web/e2e/**,web/**/*.test.ts,web/**/*.test.tsx,web/*.config.*,web/src/main.tsx,web/src/mocks/**,web/src/test/**,web/src/**/*.d.ts,api/**/*.test.ts,api/*.config.*,api/src/server.ts,api/src/test/**
-            -Dsonar.javascript.lcov.reportPaths=web/coverage/lcov.info,api/coverage/lcov.info
+            -Dsonar.coverage.exclusions=web/e2e/**,web/**/*.test.ts,web/**/*.test.tsx,web/*.config.*,web/src/main.tsx,web/src/mocks/**,web/src/test/**,web/src/**/*.d.ts,api/**/*.test.ts,api/*.config.*,api/src/server.ts,api/src/test/**,scripts/*.test.ts,scripts/checkVersion.ts
+            -Dsonar.javascript.lcov.reportPaths=web/coverage/lcov.info,api/coverage/lcov.info,scripts/coverage/lcov.info

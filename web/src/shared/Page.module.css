@@ -1,0 +1,5 @@
+.page {
+  max-inline-size: var(--layout-width);
+  margin-inline: auto;
+  padding: var(--space-6) var(--space-4);
+}

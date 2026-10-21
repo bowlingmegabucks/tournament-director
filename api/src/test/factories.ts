@@ -6,8 +6,10 @@ export function createTournament(overrides: Partial<Tournament> = {}): Tournamen
   return {
     id: faker.string.uuid(),
     name: `${faker.location.city()} Open`,
-    date: faker.date.future().toISOString().slice(0, 10),
-    entrants: faker.number.int({ min: 8, max: 128 }),
+    startDate: '2026-10-23',
+    endDate: '2026-10-25',
+    entryFee: faker.number.int({ min: 20, max: 120 }),
+    bowlingCenter: `${faker.company.name()} Lanes`,
     ...overrides,
   }
 }

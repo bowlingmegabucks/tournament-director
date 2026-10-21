@@ -133,7 +133,7 @@ Trace every flag to a rule in one of these. For each issue, record:
 **Config and CI**
 
 - [ ] `VITE_USE_MOCKS` stays consistent across `.env.development`, `.env.production`, `.env.mocks`. Once the real API exists, it is gone from `.env.production`.
-- [ ] `vite.config.ts` keeps `base: './'`
+- [ ] `vite.config.ts` keeps `base: '/'`
 - [ ] Workflows read secrets from GitHub Actions secrets and pin action versions
 - [ ] No Node version drift from `web/.nvmrc`
 

@@ -43,3 +43,6 @@ What the user sees and can do.
 
 | Feature | File |
 | --- | --- |
+| Tournaments (list, Home card, overview) | [tournaments.md](tournaments.md) |
+| Navigation and layout | [navigation.md](navigation.md) |
+| API route access | [api-access.md](api-access.md) |

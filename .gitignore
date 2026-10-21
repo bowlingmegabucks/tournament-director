@@ -2,3 +2,5 @@ node_modules
 pr-review.md
 pr-description.md
 release-notes.md
+
+scripts/coverage/

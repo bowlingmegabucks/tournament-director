@@ -1,0 +1,65 @@
+name: Mutation tests
+
+# One definition for pull requests and main. Main also reports to the Stryker Dashboard.
+on:
+  workflow_call:
+    inputs:
+      folder:
+        description: web or api
+        required: true
+        type: string
+      report:
+        description: Send the result to the Stryker Dashboard
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      STRYKER_DASHBOARD_API_KEY:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    name: ${{ inputs.folder }} mutation tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: ${{ inputs.folder }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ${{ inputs.folder }}/.nvmrc
+          cache: npm
+          cache-dependency-path: ${{ inputs.folder }}/package-lock.json
+
+      - run: npm ci --ignore-scripts
+
+      # Each folder sets its dashboard module in stryker.config.json (badges take ?module=web and ?module=api).
+      # Without the key the dashboard reporter would fail after the full run, so skip it and warn.
+      - name: Run mutation tests
+        env:
+          REPORT: ${{ inputs.report }}
+          STRYKER_DASHBOARD_API_KEY: ${{ secrets.STRYKER_DASHBOARD_API_KEY }}
+        run: |
+          reporters=clear-text,html
+          if [ "$REPORT" = true ]; then
+            if [ -n "$STRYKER_DASHBOARD_API_KEY" ]; then
+              reporters="$reporters,dashboard"
+            else
+              echo "::warning::STRYKER_DASHBOARD_API_KEY is not set, so the result is not sent to the Stryker Dashboard."
+            fi
+          fi
+          npm run test:mutation -- --reporters "$reporters"
+
+      - name: Upload mutation report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ inputs.folder }}-mutation-report
+          path: ${{ inputs.folder }}/reports/mutation
+          if-no-files-found: ignore

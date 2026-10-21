@@ -11,5 +11,6 @@
     "!src/test/**"
   ],
   "reporters": ["clear-text", "html"],
+  "dashboard": { "module": "api" },
   "thresholds": { "high": 80, "low": 60, "break": 50 }
 }

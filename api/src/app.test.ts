@@ -63,10 +63,13 @@ describe('server errors', () => {
     const { logger, records } = createCapturedLogger()
     const app = createTestApp({
       logger,
-      tournaments: { list: () => Promise.reject(new Error('db password is hunter2')) },
+      tournaments: {
+        list: () => Promise.reject(new Error('db password is hunter2')),
+        get: () => Promise.reject(new Error('db password is hunter2')),
+      },
     })
 
-    const response = await request(app).get('/tournaments')
+    const response = await request(app).get('/v1/tournaments')
 
     expect(response.status).toBe(500)
     expect(response.body).toEqual({ message: 'Internal server error' })
@@ -101,8 +104,16 @@ describe('app wiring', () => {
     const tournaments = createTournaments(2)
     const app = createTestApp({ tournaments: createInMemoryTournamentRepository(tournaments) })
 
-    const response = await request(app).get('/tournaments')
+    const response = await request(app).get('/v1/tournaments')
 
-    expect(response.body).toEqual(tournaments)
+    expect(response.body).toEqual({ tournaments })
+  })
+})
+
+describe('route access (D-27)', () => {
+  it('does not serve the old demo path', async () => {
+    const response = await request(createTestApp()).get('/tournaments')
+
+    expect(response.status).toBe(404)
   })
 })

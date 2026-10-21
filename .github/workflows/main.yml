@@ -1,6 +1,6 @@
 name: Main
 
-# Push to main: scan with SonarCloud and deploy web/, in parallel.
+# Push to main: scan with SonarCloud, run mutation tests (reported to the Stryker Dashboard), and deploy, in parallel.
 # Add new main-branch work as another job here.
 on:
   push:
@@ -23,4 +23,17 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    secrets: inherit
+
+  # Pull requests run the same tests without reporting (see pull-request.yml).
+  mutation:
+    name: Mutation tests
+    strategy:
+      fail-fast: false
+      matrix:
+        folder: [web, api]
+    uses: ./.github/workflows/mutation.yml
+    with:
+      folder: ${{ matrix.folder }}
+      report: true
     secrets: inherit

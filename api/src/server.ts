@@ -1,6 +1,6 @@
 import { createApp } from './app.ts'
 import { loadConfig } from './config.ts'
-import { createRandomTournamentRepository } from './features/tournaments/randomRepository.ts'
+import { createDemoTournamentRepository } from './features/tournaments/demoRepository.ts'
 import { createLogger } from './shared/logger.ts'
 import { handleProcessEvents } from './shared/processEvents.ts'
 import { shutdownTelemetry } from './telemetry.ts'
@@ -10,7 +10,7 @@ const logger = createLogger(config)
 const app = createApp({
   config,
   logger,
-  tournaments: createRandomTournamentRepository(),
+  tournaments: createDemoTournamentRepository(),
 })
 
 const server = app.listen(config.port, () => {

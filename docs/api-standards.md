@@ -27,7 +27,9 @@ api/src/
 - **Errors:** throw `HttpError(status, message)` for expected failures (404, 409). Anything else becomes a 500 with a generic message; the cause goes to the log, never to the client. Express 5 forwards rejected promises from async handlers, so do not wrap handlers in try/catch.
 - **Zod errors are 400s.** If a route's schema throws a `ZodError`, the error handler answers 400 with `Invalid request. field: reason; ...`. Use `schema.parse(...)` and let it throw; do not catch it.
 - **Error body:** `{ "message": string }`, for every status. The web `api.ts` files check the status first.
-- **Routes live at the root** (`/health`, `/tournaments`), with no `/api` prefix: in production the API has its own host. In dev the Vite proxy takes `/api/...` and strips the prefix.
+- **Routes live at the root** (`/health`, `/v1/tournaments`), with no `/api` prefix: in production the API has its own host. In dev the Vite proxy takes `/api/...` and strips the prefix.
+- **Every route group declares its access (D-27).** Mount routers with `mountRoutes(app, [{ path, access, router }])` in `app.ts`; do not call `app.use` for a router. `access` is `'public'` until authentication (0.3.0) adds more labels. A group with no label stops startup. The API enforces access; the web app only hides what a user cannot use.
+- **Vendor routes.** `/v1/tournaments` and `/v1/tournaments/{id}` are read by the registration site (`API-03`, `API-04`). Their shapes change only after a vendor change doc (D-09).
 - **Contract with `web/`.** The `Tournament` shape is in `api/src/features/tournaments/types.ts` and `web/src/features/tournaments/types.ts`. Change both together. (No shared package: two folders, no workspaces.)
 - **Config:** every setting is an env var, validated at startup. The app refuses to start on bad config. Add new vars to `.env.example`.
 - **Security defaults stay on:** `helmet()` and an explicit CORS allow-list (`CORS_ORIGIN`). No `*`.

@@ -8,9 +8,15 @@
     "services:up": "docker compose up -d --wait",
     "services:down": "docker compose down",
     "dev:mocks": "npm --prefix web run dev:mocks",
-    "check": "npm --prefix api run lint && npm --prefix api run format:check && npm --prefix api run typecheck && npm --prefix api test && npm --prefix web run lint && npm --prefix web run format:check && npm --prefix web run typecheck && npm --prefix web test"
+    "check:version": "node scripts/checkVersion.ts",
+    "test:scripts": "node --test \"scripts/*.test.ts\"",
+    "test:scripts:coverage": "mkdir -p scripts/coverage && node --test --experimental-test-coverage --test-coverage-include=scripts/version.ts --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=scripts/coverage/lcov.info \"scripts/*.test.ts\"",
+    "format:scripts": "prettier --write scripts",
+    "format:scripts:check": "prettier --check scripts",
+    "check": "npm run test:scripts && npm run format:scripts:check && npm --prefix api run lint && npm --prefix api run format:check && npm --prefix api run typecheck && npm --prefix api test && npm --prefix web run lint && npm --prefix web run format:check && npm --prefix web run typecheck && npm --prefix web test"
   },
   "devDependencies": {
-    "concurrently": "^10.0.6"
+    "concurrently": "^10.0.6",
+    "prettier": "^3.9.10"
   }
 }

@@ -15,6 +15,8 @@
 | `Component.razor.css` (scoped)    | `Component.module.css` (CSS Modules)                                 |
 | `async`/`await` + `Task<T>`       | `async`/`await` + `Promise<T>`                                       |
 | `HttpClient`                      | `fetch`                                                              |
+| MVC routes / Blazor `@page`       | `react-router`: `<Route path="tournaments/:id">`, `useParams()`      |
+| `_Layout.cshtml` / `@Body`        | A layout route that renders `<Outlet />`                             |
 | `IMemoryCache` for server data    | TanStack Query cache                                                 |
 | `using` / DI container            | Import modules; pass dependencies as arguments                       |
 | `ILogger<T>` + logging scope      | pino logger; `requestLogger(res, logger)` adds the request id        |

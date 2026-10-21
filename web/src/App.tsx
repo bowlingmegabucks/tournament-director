@@ -1,21 +1,23 @@
-import logo from './assets/logo.png'
-import styles from './App.module.css'
-import { HealthCheckButton } from './features/health/HealthCheckButton'
-import { TournamentList } from './features/tournaments/TournamentList'
+import { Route, Routes } from 'react-router'
+import { HomePage } from './features/home/HomePage'
+import { TournamentLayout } from './features/tournaments/TournamentLayout'
+import { TournamentOverview } from './features/tournaments/TournamentOverview'
+import { TournamentsPage } from './features/tournaments/TournamentsPage'
+import { AppShell } from './shared/AppShell'
+import { NotFoundPage } from './shared/NotFoundPage'
 
+/** The routes. `main.tsx` supplies the router, and tests supply a memory router. */
 export default function App() {
   return (
-    <>
-      <header className={styles.header}>
-        <div className={styles.headerInner}>
-          <img className={styles.logo} src={logo} alt="Northeast MegaBuck$ Tournament" />
-        </div>
-      </header>
-      <main className={styles.main}>
-        <h1>Tournament Management</h1>
-        <HealthCheckButton />
-        <TournamentList />
-      </main>
-    </>
+    <Routes>
+      <Route element={<AppShell />}>
+        <Route index element={<HomePage />} />
+        <Route path="tournaments" element={<TournamentsPage />} />
+        <Route path="tournaments/:id" element={<TournamentLayout />}>
+          <Route index element={<TournamentOverview />} />
+        </Route>
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
   )
 }

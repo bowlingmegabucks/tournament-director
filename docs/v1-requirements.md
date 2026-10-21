@@ -29,6 +29,8 @@ Version numbers follow content, not a countdown. 0.10.0 is fine.
 - [ ] Rollback plan written.
 - [ ] Rename the misspelled `SuperSweeperCashRatio` column (legacy issue #101) after WinForms is off, and remove the mapping workaround in the API.
 - [ ] One real tournament run end to end on the new app.
+- [ ] Remove the Check API button from Home once the API reads the production database (D-29).
+- [ ] Deep links such as `/tournaments/abc` load on the GreenGeeks host (`.htaccess` rewrite, `base: '/'`). Check after the first deploy; the fallback is a hash router. See [deployment.md](deployment.md).
 
 ## Legacy issues
 
@@ -53,7 +55,7 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 ## Security
 
 - [ ] Auth approach decided and built (0.3.0).
-- [ ] Every route declares its access; undeclared routes deny.
+- [x] Every route declares its access; undeclared routes deny (`API-15`, D-27). Only `public` exists until sign-in (0.3.0); recheck then.
 - [ ] Roles and permissions reviewed against [security.md](migration/security.md).
 - [ ] Personal data (bowler records) is behind auth.
 - [ ] `npm audit` clean; pinned-version overrides in CLAUDE.md reviewed.

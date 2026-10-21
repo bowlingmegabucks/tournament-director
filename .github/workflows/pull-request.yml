@@ -21,15 +21,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: web/.nvmrc
           cache: npm
           cache-dependency-path: web/package-lock.json
 
       - run: npm ci --ignore-scripts
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck
@@ -48,7 +49,7 @@ jobs:
 
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: web-playwright-traces
           path: web/test-results
@@ -56,7 +57,7 @@ jobs:
 
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: web-coverage
           path: web/coverage
@@ -73,9 +74,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: web/.nvmrc
           cache: npm
@@ -86,7 +87,7 @@ jobs:
 
       - name: Upload mutation report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: web-mutation-report
           path: web/reports/mutation
@@ -100,24 +101,46 @@ jobs:
       run:
         working-directory: api
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: api/.nvmrc
           cache: npm
           cache-dependency-path: api/package-lock.json
 
       - run: npm ci --ignore-scripts
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck
       - run: npm run test:coverage
       - run: npm run build
 
+      # Starts the built app the way Azure does, so a bad --import path or a broken telemetry start
+      # fails here, not after deploy. The connection string turns the SDK and Azure exporters on;
+      # its endpoint refuses connections, so nothing leaves the runner. Then SIGTERM must exit 0.
+      - name: Smoke test the build
+        env:
+          PORT: "3999"
+          APPLICATIONINSIGHTS_CONNECTION_STRING: "InstrumentationKey=00000000-0000-0000-0000-000000000000;IngestionEndpoint=https://127.0.0.1:1/"
+        run: |
+          node --import ./dist/instrumentation.js dist/server.js > server.log 2>&1 &
+          server=$!
+          healthy=false
+          for _ in $(seq 1 20); do
+            if curl -fsS http://localhost:3999/health; then healthy=true; break; fi
+            sleep 0.5
+          done
+          kill -TERM "$server" || true
+          status=0
+          wait "$server" || status=$?
+          cat server.log
+          [ "$healthy" = true ] && [ "$status" = 0 ]
+
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: api-coverage
           path: api/coverage
@@ -131,9 +154,9 @@ jobs:
       run:
         working-directory: api
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: api/.nvmrc
           cache: npm
@@ -144,7 +167,7 @@ jobs:
 
       - name: Upload mutation report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: api-mutation-report
           path: api/reports/mutation

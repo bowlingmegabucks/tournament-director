@@ -10,6 +10,7 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 3. Build `api/` (Express + TypeScript). **Skeleton done on branch `api`:** health and tournament list routes (random demo data, 3 to 7 per call), tests, skills, CI. **Wired on the same branch:** `npm run dev` at the root starts both; Vite proxies `/api` to the API.
 4. Deploy `api/`. **Done.** Azure App Service (Web App `app-tournamentdirector-prod`, free tier: slow after idle). The `deploy-api` job in `deploy.yml` runs before `deploy-web`, both on `main` only. The production web build has no mocks; it calls the API at the `API_BASE_URL` variable. See [docs/deployment.md](docs/deployment.md).
 5. Theming and polish. **Done on branch `uiTheming`:** tokens, light/dark, logo header, `ui-standards` skill, a11y checks.
+6. API hardening. **Done on branch `apiHardening`:** request logging and ids, rate limiting, OpenTelemetry (Seq locally, Application Insights in production), crash and shutdown handling.
 
 Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, TypeScript, testing, composition) and stricter ESLint rules.
 
@@ -37,12 +38,13 @@ Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, 
 
 The root `package.json` only holds shortcuts. It is not an npm workspace; `web/` and `api/` keep their own `package.json` and lockfile.
 
-| Command             | Does                                                                                               |
-| ------------------- | -------------------------------------------------------------------------------------------------- |
-| `npm run setup`     | `npm ci` in the root, `api/`, and `web/`                                                           |
-| `npm run dev`       | API (port 3000) and web (port 5173) together; web proxies `/api`                                   |
-| `npm run dev:mocks` | Web only, with MSW mocks (no API needed). "Check API" fails half the time, to show the error toast |
-| `npm run check`     | lint, format check, typecheck, and tests in `api/` and `web/`                                      |
+| Command                                 | Does                                                                                                 |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `npm run setup`                         | `npm ci` in the root, `api/`, and `web/`                                                             |
+| `npm run dev`                           | API (port 3000) and web (port 5173) together; web proxies `/api`                                     |
+| `npm run services:up` / `services:down` | Start / stop the Docker Compose services (Seq now, a database later). Seq UI: http://localhost:15380 |
+| `npm run dev:mocks`                     | Web only, with MSW mocks (no API needed). "Check API" fails half the time, to show the error toast   |
+| `npm run check`                         | lint, format check, typecheck, and tests in `api/` and `web/`                                        |
 
 ## Commands (run in `web/`; `api/` has the same names, minus e2e)
 
@@ -65,6 +67,7 @@ The root `package.json` only holds shortcuts. It is not an npm workspace; `web/`
 - **MSW 3** renamed `onUnhandledRequest` to `onUnhandledFrame`. Docs older than 2026 show the old name.
 - **`eslint-plugin-jsx-a11y` override in `web/package.json`.** The plugin lists ESLint up to 9 as a peer, and we use 10. The override (`"eslint": "$eslint"`) lets it install. The rules work on 10. Remove the override once the plugin supports ESLint 10.
 - **`qs` override in `web/package.json`.** Stryker 10.0.0 pulls `qs` 6.15.1 (through `typed-rest-client`), which has moderate advisories. The override forces 6.16.1. Dev-only. Remove it once a Stryker release ships a fixed `qs`, then run `npm audit`.
+- **`@azure/monitor-opentelemetry-exporter` is pinned to `1.0.0-beta.46` (no caret).** Beta versions can change between releases, and this one is built on OpenTelemetry 2.x while the app uses the 3.x SDK. `api/src/telemetryExport.test.ts` sends a span through it to a local server. Bump the pin on purpose, run that test, and unpin once the exporter ships a stable release on OpenTelemetry 3.x.
 - Node 24 (`web/.nvmrc`).
 - Mocks are on when `VITE_USE_MOCKS=true` (`.env.mocks`, and the pull request build). `npm run dev` uses the real API through the Vite proxy; `npm run dev:mocks` and e2e use mocks. The production build has no mocks: it calls the API at `VITE_API_BASE_URL`, which the deploy sets from the `API_BASE_URL` variable.
 - `vite.config.ts` sets `base: './'` so the build works from any folder on the host.
@@ -79,6 +82,11 @@ Details in [docs/api-standards.md](docs/api-standards.md).
 - `createApp(deps)` takes its dependencies as arguments. Only `server.ts` builds the real ones.
 - Routes are thin: validate input with Zod, call the repository, send the result. Throw `HttpError` for expected failures. Errors are `{ message }`.
 - Read `process.env` only in `config.ts`. ESLint enforces it.
+- Log with the injected pino `logger`, never `console`. Fields first, then a constant message. In a handler use `requestLogger(res, logger)` so the line has the request id. `requestLogging` is the first middleware and sets the `x-request-id` header.
+- Metrics: HTTP and Node runtime metrics are automatic. Custom ones are named `tournament_director.<area>.<thing>`; see the Metrics section of `docs/api-standards.md`.
+- Throw a Zod error from a route and it becomes a 400. A crash or SIGTERM goes through `handleProcessEvents` (logs, flushes telemetry, exits).
+- Rate limiting is per client IP (`RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_SECONDS`). Set `TRUST_PROXY=1` on Azure or every caller shares one bucket.
+- Telemetry is OpenTelemetry, loaded by `src/instrumentation.ts` before the app. Seq locally (`npm run services:up`), Application Insights in production; each turns on only when its env var is set.
 - Keep `helmet` and the CORS allow-list. The web `Tournament` shape and the API's must match.
 - Test with Vitest + Supertest through `createApp`. Mutation: Stryker, same thresholds as `web/`.
 - `qs` override in `api/package.json`: same Stryker advisory as `web/`. Remove it in both places together.
@@ -125,6 +133,7 @@ Claude loads a skill when the task matches its description. The rules above stay
 | `ui-standards`                  | Designing or styling any screen: tokens, CSS Modules, semantic HTML, forms, WCAG 2.2 AA checklist        |
 | `api-patterns`                  | Routes, repositories, Zod validation, errors, config in `api/`                                           |
 | `api-testing-patterns`          | Vitest + Supertest, factories, error-path tests, Stryker survivors in `api/`                             |
+| `api-observability`             | What to log, which level, when to add a metric or span, what never to log, checking it in Seq            |
 | `pull-request-prep`, `write-pr` | Review and describe a branch before the PR                                                               |
 
 Read any third-party skill before you add it. A skill steers Claude like code. Do not add skills that fetch their instructions from a URL at run time.

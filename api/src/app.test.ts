@@ -1,7 +1,8 @@
 import request from 'supertest'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { createInMemoryTournamentRepository } from './features/tournaments/repository.ts'
-import { createTournaments } from './test/factories.ts'
+import { createConfig, createTournaments } from './test/factories.ts'
+import { createCapturedLogger } from './test/logger.ts'
 import { createTestApp } from './test/testApp.ts'
 
 describe('GET /health', () => {
@@ -35,7 +36,7 @@ describe('CORS', () => {
   const origin = 'https://app.example'
 
   it('allows a configured origin', async () => {
-    const app = createTestApp({ config: { port: 0, corsOrigins: [origin] } })
+    const app = createTestApp({ config: createConfig({ corsOrigins: [origin] }) })
 
     const response = await request(app).get('/health').set('Origin', origin)
 
@@ -43,7 +44,7 @@ describe('CORS', () => {
   })
 
   it('does not allow an origin that is not configured', async () => {
-    const app = createTestApp({ config: { port: 0, corsOrigins: [origin] } })
+    const app = createTestApp({ config: createConfig({ corsOrigins: [origin] }) })
 
     const response = await request(app).get('/health').set('Origin', 'https://evil.example')
 
@@ -59,8 +60,9 @@ describe('CORS', () => {
 
 describe('server errors', () => {
   it('turns a failing repository into a 500 without leaking the cause', async () => {
-    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const { logger, records } = createCapturedLogger()
     const app = createTestApp({
+      logger,
       tournaments: { list: () => Promise.reject(new Error('db password is hunter2')) },
     })
 
@@ -68,8 +70,29 @@ describe('server errors', () => {
 
     expect(response.status).toBe(500)
     expect(response.body).toEqual({ message: 'Internal server error' })
-    expect(error).toHaveBeenCalled()
-    error.mockRestore()
+    const requestId = response.headers['x-request-id']
+    expect(records()).toMatchObject([
+      { msg: 'Unhandled error', requestId },
+      { msg: 'Request completed', status: 500, requestId },
+    ])
+  })
+})
+
+describe('request id', () => {
+  const origin = 'https://app.example'
+
+  it('lets a browser on an allowed origin read the header', async () => {
+    const app = createTestApp({ config: createConfig({ corsOrigins: [origin] }) })
+
+    const response = await request(app).get('/health').set('Origin', origin)
+
+    expect(response.headers['access-control-expose-headers']).toBe('x-request-id')
+  })
+
+  it('is set on a 404', async () => {
+    const response = await request(createTestApp()).get('/nope')
+
+    expect(response.headers['x-request-id']).toBeDefined()
   })
 })
 

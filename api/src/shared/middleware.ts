@@ -1,16 +1,35 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express'
+import { ZodError } from 'zod'
 import { HttpError } from './errors.ts'
+import type { Logger } from './logger.ts'
+import { requestLogger } from './requestLogging.ts'
 
 export const notFound: RequestHandler = (_req, res) => {
   res.status(404).json({ message: 'Not found' })
 }
 
 // Express knows an error handler by its four parameters, so `_next` must stay.
-export const errorHandler: ErrorRequestHandler = (err: unknown, _req, res, _next) => {
-  if (err instanceof HttpError) {
-    res.status(err.status).json({ message: err.message })
-    return
+export function createErrorHandler(logger: Logger): ErrorRequestHandler {
+  return (err: unknown, _req, res, next) => {
+    // Too late for a JSON body. Let Express close the connection.
+    if (res.headersSent) {
+      next(err)
+      return
+    }
+    if (err instanceof HttpError) {
+      res.status(err.status).json({ message: err.message })
+      return
+    }
+    // A route's Zod schema rejected the input. Our own messages, so safe to show.
+    if (err instanceof ZodError) {
+      const problems = err.issues.map(
+        (issue) => `${issue.path.join('.') || 'request'}: ${issue.message}`,
+      )
+      res.status(400).json({ message: `Invalid request. ${problems.join('; ')}` })
+      return
+    }
+    // The cause goes to the log, never to the client.
+    requestLogger(res, logger).error({ err }, 'Unhandled error')
+    res.status(500).json({ message: 'Internal server error' })
   }
-  console.error(err)
-  res.status(500).json({ message: 'Internal server error' })
 }

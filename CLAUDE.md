@@ -81,6 +81,7 @@ Details in [docs/api-standards.md](docs/api-standards.md).
 - Routes are thin: validate input with Zod, call the repository, send the result. Throw `HttpError` for expected failures. Errors are `{ message }`.
 - Read `process.env` only in `config.ts`. ESLint enforces it.
 - Log with the injected pino `logger`, never `console`. Fields first, then a constant message. In a handler use `requestLogger(res, logger)` so the line has the request id. `requestLogging` is the first middleware and sets the `x-request-id` header.
+- Metrics: HTTP and Node runtime metrics are automatic. Custom ones are named `tournament_director.<area>.<thing>`; see the Metrics section of `docs/api-standards.md`.
 - Throw a Zod error from a route and it becomes a 400. A crash or SIGTERM goes through `handleProcessEvents` (logs, flushes telemetry, exits).
 - Rate limiting is per client IP (`RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_SECONDS`). Set `TRUST_PROXY=1` on Azure or every caller shares one bucket.
 - Telemetry is OpenTelemetry, loaded by `src/instrumentation.ts` before the app. Seq locally (`npm run services:up`), Application Insights in production; each turns on only when its env var is set.

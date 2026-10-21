@@ -1,5 +1,6 @@
 import { NodeSDK, type NodeSDKConfiguration } from '@opentelemetry/sdk-node'
 import type { Instrumentation } from '@opentelemetry/instrumentation'
+import { RuntimeNodeInstrumentation } from '@opentelemetry/instrumentation-runtime-node'
 import { PinoInstrumentation } from '@opentelemetry/instrumentation-pino'
 import { HttpInstrumentation } from '@opentelemetry/instrumentation-http'
 import { ExpressInstrumentation } from '@opentelemetry/instrumentation-express'
@@ -47,6 +48,8 @@ export function createInstrumentations(): Instrumentation[] {
     new ExpressInstrumentation(),
     // Adds trace_id and span_id to each log line and sends the line to the OTel log pipeline.
     new PinoInstrumentation(),
+    // Event loop delay and use, garbage collection, and heap size. 100 ms keeps the sampling cheap.
+    new RuntimeNodeInstrumentation({ monitoringPrecision: 100 }),
   ]
 }
 

@@ -1,3 +1,9 @@
+import {
+  InMemoryMetricExporter,
+  MeterProvider,
+  PeriodicExportingMetricReader,
+  AggregationTemporality,
+} from '@opentelemetry/sdk-metrics'
 import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 import { createConfig } from '../test/factories.ts'
@@ -111,6 +117,64 @@ describe('rate limit', () => {
       .set('X-Forwarded-For', '198.51.100.8, 203.0.113.1')
 
     expect(response.status).toBe(429)
+  })
+})
+
+describe('rejection metric', () => {
+  async function setup(max: number) {
+    const exporter = new InMemoryMetricExporter(AggregationTemporality.CUMULATIVE)
+    const provider = new MeterProvider({
+      readers: [new PeriodicExportingMetricReader({ exporter, exportIntervalMillis: 60_000 })],
+    })
+    const app = createTestApp({
+      config: createConfig({ rateLimit: { max, windowSeconds: 60 } }),
+      meter: provider.getMeter('test'),
+    })
+    async function find() {
+      await provider.forceFlush()
+      return exporter
+        .getMetrics()
+        .flatMap((data) => data.scopeMetrics)
+        .flatMap((scope) => scope.metrics)
+        .findLast((m) => m.descriptor.name === 'tournament_director.rate_limit.rejections')
+    }
+    // Sum of the counter, or 0 when it never recorded anything.
+    async function rejections(): Promise<number> {
+      const metric = await find()
+      return metric?.dataPoints.reduce((sum, point) => sum + Number(point.value), 0) ?? 0
+    }
+    return { app, rejections, find }
+  }
+
+  it('counts each request turned away', async () => {
+    const { app, rejections } = await setup(1)
+
+    await request(app).get('/tournaments')
+    await request(app).get('/tournaments')
+    await request(app).get('/tournaments')
+
+    expect(await rejections()).toBe(2)
+  })
+
+  it('describes the metric', async () => {
+    const { app, find } = await setup(1)
+    await request(app).get('/tournaments')
+    await request(app).get('/tournaments')
+
+    const metric = await find()
+
+    expect(metric?.descriptor).toMatchObject({
+      unit: '{request}',
+      description: expect.stringContaining('429') as string,
+    })
+  })
+
+  it('does not count requests that got through', async () => {
+    const { app, rejections } = await setup(5)
+
+    await request(app).get('/tournaments')
+
+    expect(await rejections()).toBe(0)
   })
 })
 

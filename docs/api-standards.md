@@ -53,6 +53,16 @@ Use the `pino` logger. It is like an `ILogger<T>` that you pass in: `createApp({
 - `LOG_LEVEL` sets the level (default `info`). Tests use `silent`, or `createCapturedLogger()` from `src/test/logger.ts` to check what was logged.
 - Do not log secrets, tokens, or whole request bodies.
 
+## Metrics
+
+Metrics ride the same OpenTelemetry pipeline as traces and logs, so Seq and App Insights get them with no extra setup.
+
+- **Automatic:** `http.server.request.duration` (a histogram, so it also gives request counts by route and status) from the HTTP instrumentation, and Node runtime metrics (`nodejs.eventloop.*`, `v8js.gc.duration`, `v8js.memory.*`) from `RuntimeNodeInstrumentation`. Do not add a hand-made request counter or timer; they would duplicate these.
+- **Custom:** `tournament_director.rate_limit.rejections` (a counter) counts 429s from the rate limiter. The HTTP metric cannot tell those from other 429s.
+- To add one: take a `Meter` as a dependency (`createApp` has an optional `meter`, which defaults to the global one), create the instrument when the middleware or router is built, and name it `tournament_director.<area>.<thing>` with a unit. Keep attributes few and fixed. Never use an IP, id, or user as an attribute: each new value makes a new series.
+- Test a metric with `MeterProvider` and `InMemoryMetricExporter` (see `shared/rateLimit.test.ts`).
+- In Seq, query them with `from series`, for example `select sum(value) from series where @Metric = 'tournament_director.rate_limit.rejections'`.
+
 ## Request logging and request id
 
 `requestLogging(logger)` in `src/shared/requestLogging.ts` is the first middleware in `createApp`.
@@ -85,6 +95,5 @@ Use the `pino` logger. It is like an `ILogger<T>` that you pass in: `createApp({
 ## Not built yet
 
 - Database (see "Revisit later" in `CLAUDE.md`)
-- Custom metrics (next part of `apiHardening`)
 - Authentication
 - Write routes (POST, PUT, DELETE) and `express.json()`

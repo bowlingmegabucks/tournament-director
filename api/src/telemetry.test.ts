@@ -85,6 +85,7 @@ describe('createTelemetryOptions', () => {
       '@opentelemetry/instrumentation-http',
       '@opentelemetry/instrumentation-express',
       '@opentelemetry/instrumentation-pino',
+      '@opentelemetry/instrumentation-runtime-node',
     ])
   })
 })
@@ -96,6 +97,17 @@ describe('the http instrumentation', () => {
       http.getConfig().ignoreIncomingRequestHook?.({ url } as IncomingMessage)
     expect(skips('/health')).toBe(true)
     expect(skips('/tournaments')).toBe(false)
+  })
+})
+
+describe('the runtime instrumentation', () => {
+  it('samples the event loop every 100 ms', () => {
+    const runtime = createInstrumentations().find(
+      (instrumentation) =>
+        instrumentation.instrumentationName === '@opentelemetry/instrumentation-runtime-node',
+    )
+
+    expect(runtime?.getConfig()).toMatchObject({ monitoringPrecision: 100 })
   })
 })
 

@@ -1,3 +1,4 @@
+import { metrics, type Meter } from '@opentelemetry/api'
 import cors from 'cors'
 import express from 'express'
 import helmet from 'helmet'
@@ -13,10 +14,18 @@ export interface AppDependencies {
   config: Config
   logger: Logger
   tournaments: TournamentRepository
+  /** Where custom metrics go. The default sends to the OpenTelemetry SDK, or nowhere if it is off. */
+  meter?: Meter
 }
 
 /** Build the app without starting it, so tests can call it with fake dependencies. */
-export function createApp({ config, logger, tournaments }: AppDependencies): express.Express {
+export function createApp({
+  config,
+  logger,
+  tournaments,
+  // Stryker disable next-line StringLiteral: the scope name only labels the metrics.
+  meter = metrics.getMeter('tournament-director-api'),
+}: AppDependencies): express.Express {
   const app = express()
   // Without this, req.ip is the proxy's address.
   app.set('trust proxy', config.trustProxy)
@@ -29,7 +38,7 @@ export function createApp({ config, logger, tournaments }: AppDependencies): exp
   app.use(cors({ origin: config.corsOrigins, exposedHeaders: [requestIdHeader] }))
 
   // After CORS, so a 429 still carries the CORS headers and the browser can read it.
-  app.use(createRateLimiter(config.rateLimit))
+  app.use(createRateLimiter(config.rateLimit, meter))
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok' })

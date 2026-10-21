@@ -28,6 +28,7 @@
     "@opentelemetry/instrumentation-express": "^0.72.0",
     "@opentelemetry/instrumentation-http": "^0.300.0",
     "@opentelemetry/instrumentation-pino": "^0.70.0",
+    "@opentelemetry/instrumentation-runtime-node": "^0.37.0",
     "@opentelemetry/resources": "^3.0.0",
     "@opentelemetry/sdk-logs": "^3.0.0",
     "@opentelemetry/sdk-metrics": "^3.0.0",

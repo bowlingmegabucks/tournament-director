@@ -21,17 +21,19 @@ Check Context7 for Express 5 and Zod 4 before you use an API from memory. Both c
 ## Routes: thin
 
 ```ts
-export function createTournamentRouter(repository: TournamentRepository): Router {
-  const router = Router()
+export function createTournamentRouter(
+  repository: TournamentRepository,
+): Router {
+  const router = Router();
 
-  router.get('/:id', async (req, res) => {
-    const { id } = idParams.parse(req.params) // ZodError -> 400, see below
-    const tournament = await repository.get(id)
-    if (!tournament) throw new HttpError(404, 'Tournament not found')
-    res.json(tournament)
-  })
+  router.get("/:id", async (req, res) => {
+    const { id } = idParams.parse(req.params); // ZodError -> 400, see below
+    const tournament = await repository.get(id);
+    if (!tournament) throw new HttpError(404, "Tournament not found");
+    res.json(tournament);
+  });
 
-  return router
+  return router;
 }
 ```
 
@@ -43,12 +45,12 @@ export function createTournamentRouter(repository: TournamentRepository): Router
 Parse at the edge. `parse` throws; map the failure to a 400 in one place.
 
 ```ts
-const createBody = z.object({ name: z.string().min(1), date: z.iso.date() })
+const createBody = z.object({ name: z.string().min(1), date: z.iso.date() });
 
-router.post('/', async (req, res) => {
-  const input = createBody.parse(req.body)
-  res.status(201).json(await repository.create(input))
-})
+router.post("/", async (req, res) => {
+  const input = createBody.parse(req.body);
+  res.status(201).json(await repository.create(input));
+});
 ```
 
 When the first write route arrives, add `express.json()` in `app.ts` and teach `errorHandler` to turn `ZodError` into `400 { message }` (use `z.prettifyError`). Add a test for each.
@@ -57,7 +59,16 @@ When the first write route arrives, add `express.json()` in `app.ts` and teach `
 
 - Expected failure: `throw new HttpError(404, 'Not found')`.
 - Unexpected: let it throw. `errorHandler` logs it and sends `500 { message: 'Internal server error' }`. Never send `err.message` for unknown errors; it can leak internals.
+- A `ZodError` from `schema.parse(...)` becomes a 400 on its own. Do not catch it.
 - Body shape is always `{ message }`.
+
+## Logging, metrics, and limits
+
+- Log with the injected pino `logger`, never `console`. Fields first, constant message second: `logger.info({ port }, 'API listening')`. In a handler use `requestLogger(res, logger)` so the line carries `requestId`.
+- Do not log secrets, tokens, request bodies, or query strings.
+- Custom metrics: take a `Meter`, name it `tournament_director.<area>.<thing>`, and keep attributes few and fixed (never an IP or id). The HTTP and runtime metrics are automatic.
+- Every route sits behind the rate limiter and `requestLogging` already; add nothing per route. A route that must skip the limiter (like `/health`) is a decision for `docs/api-standards.md`, not a quiet `skip`.
+- Telemetry is configured in `instrumentation.ts` and `telemetry.ts` only. Do not start a second SDK.
 
 ## Dependencies and config
 
@@ -70,6 +81,7 @@ When the first write route arrives, add `express.json()` in `app.ts` and teach `
 - Does the route call only the repository, with validated input?
 - Does every expected failure have an `HttpError` and a test?
 - Does an unexpected failure return a generic 500?
+- Does it log through the injected logger (no `console`), with no secrets?
 - Is a response shape change mirrored in `web/`?
 - Is `server.ts` still free of logic?
 - Does the new file use `.ts` import extensions and erasable syntax only?

@@ -1,4 +1,5 @@
 import { ipKeyGenerator, rateLimit } from 'express-rate-limit'
+import type { Meter } from '@opentelemetry/api'
 import type { RequestHandler } from 'express'
 import type { RateLimitConfig } from '../config.ts'
 import { HttpError } from './errors.ts'
@@ -20,8 +21,17 @@ export function clientKey(ip: string): string {
  *
  * A request over the limit gets a 429 through the error handler (body `{ message }`), with
  * `Retry-After` and `RateLimit` headers. `/health` never counts, so probes cannot lock out a deploy.
+ * Each rejection adds one to the `tournament_director.rate_limit.rejections` metric.
  */
-export function createRateLimiter({ max, windowSeconds }: RateLimitConfig): RequestHandler {
+export function createRateLimiter(
+  { max, windowSeconds }: RateLimitConfig,
+  meter: Meter,
+): RequestHandler {
+  const rejections = meter.createCounter('tournament_director.rate_limit.rejections', {
+    description: 'Requests turned away with a 429 because the client went over the limit.',
+    unit: '{request}',
+  })
+
   return rateLimit({
     limit: max,
     windowMs: windowSeconds * 1000,
@@ -33,6 +43,7 @@ export function createRateLimiter({ max, windowSeconds }: RateLimitConfig): Requ
     // The library reads the function text for `ipKeyGenerator`. We call it inside clientKey.
     validate: { keyGeneratorIpFallback: false },
     handler: (_req, _res, next) => {
+      rejections.add(1)
       next(new HttpError(429, 'Too many requests. Try again later.'))
     },
   })

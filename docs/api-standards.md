@@ -43,10 +43,19 @@ OpenTelemetry covers traces, metrics, and logs. Seq is the local backend; Applic
 - Local: `npm run services:up` at the repo root, copy `.env.example` to `.env`, then open Seq at http://localhost:15380.
 - `OTEL_EXPORTER_OTLP_HEADERS` (an API key, for example) is read by the exporters, not by `config.ts`.
 
+## Logging
+
+Use the `pino` logger. It is like an `ILogger<T>` that you pass in: `createApp({ config, logger, ... })` takes it, and only `server.ts` builds the real one (`createLogger(config)` in `src/shared/logger.ts`).
+
+- Never use `console.log` or `console.error` in `src/`. Write `logger.info({ port }, 'API listening')`: fields first, then a short constant message. Put values in fields, not in the message, so Seq can filter on them.
+- Output is JSON lines on stdout. With telemetry on, the same lines also go to Seq or Application Insights with `trace_id` and `span_id` attached (`@opentelemetry/instrumentation-pino`).
+- `LOG_LEVEL` sets the level (default `info`). Tests use `silent`, or `createCapturedLogger()` from `src/test/logger.ts` to check what was logged.
+- Do not log secrets, tokens, or whole request bodies.
+
 ## Not built yet
 
 - Database (see "Revisit later" in `CLAUDE.md`)
-- Structured logging, request logging, and custom metrics (next parts of `apiHardening`)
+- Request logging and custom metrics (next parts of `apiHardening`)
 - Rate limiting
 - Authentication
 - Write routes (POST, PUT, DELETE) and `express.json()`

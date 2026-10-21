@@ -20,6 +20,7 @@ export function createTournaments(count = 5): Tournament[] {
 export function createConfig(overrides: Partial<Config> = {}): Config {
   return {
     port: 0,
+    logLevel: 'silent',
     corsOrigins: [],
     telemetry: {
       serviceName: 'test-api',

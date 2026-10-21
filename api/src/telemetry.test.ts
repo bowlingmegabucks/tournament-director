@@ -84,6 +84,7 @@ describe('createTelemetryOptions', () => {
     expect(names).toEqual([
       '@opentelemetry/instrumentation-http',
       '@opentelemetry/instrumentation-express',
+      '@opentelemetry/instrumentation-pino',
     ])
   })
 })

@@ -1,5 +1,6 @@
 import { NodeSDK, type NodeSDKConfiguration } from '@opentelemetry/sdk-node'
 import type { Instrumentation } from '@opentelemetry/instrumentation'
+import { PinoInstrumentation } from '@opentelemetry/instrumentation-pino'
 import { HttpInstrumentation } from '@opentelemetry/instrumentation-http'
 import { ExpressInstrumentation } from '@opentelemetry/instrumentation-express'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
@@ -44,6 +45,8 @@ export function createInstrumentations(): Instrumentation[] {
       ignoreIncomingRequestHook: (request) => isQuietPath(request.url),
     }),
     new ExpressInstrumentation(),
+    // Adds trace_id and span_id to each log line and sends the line to the OTel log pipeline.
+    new PinoInstrumentation(),
   ]
 }
 

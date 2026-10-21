@@ -1,7 +1,8 @@
 import request from 'supertest'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { createInMemoryTournamentRepository } from './features/tournaments/repository.ts'
 import { createConfig, createTournaments } from './test/factories.ts'
+import { createCapturedLogger } from './test/logger.ts'
 import { createTestApp } from './test/testApp.ts'
 
 describe('GET /health', () => {
@@ -59,8 +60,9 @@ describe('CORS', () => {
 
 describe('server errors', () => {
   it('turns a failing repository into a 500 without leaking the cause', async () => {
-    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const { logger, records } = createCapturedLogger()
     const app = createTestApp({
+      logger,
       tournaments: { list: () => Promise.reject(new Error('db password is hunter2')) },
     })
 
@@ -68,8 +70,7 @@ describe('server errors', () => {
 
     expect(response.status).toBe(500)
     expect(response.body).toEqual({ message: 'Internal server error' })
-    expect(error).toHaveBeenCalled()
-    error.mockRestore()
+    expect(records()).toMatchObject([{ msg: 'Unhandled error' }])
   })
 })
 

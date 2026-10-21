@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+const logLevels = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const
+
 // An empty value in .env or App Service settings means "not set".
 const optionalText = z
   .string()
@@ -11,6 +13,7 @@ const envSchema = z.object({
   // Comma-separated list. Empty means same-origin only.
   CORS_ORIGIN: z.string().default(''),
   NODE_ENV: z.string().default('development'),
+  LOG_LEVEL: z.enum(logLevels).default('info'),
   OTEL_SERVICE_NAME: z.string().default('tournament-director-api'),
   // Base OTLP URL, for example http://localhost:15341/ingest/otlp (Seq). The exporters add
   // /v1/traces, /v1/metrics, and /v1/logs, and read OTEL_EXPORTER_OTLP_HEADERS themselves.
@@ -31,8 +34,11 @@ export interface TelemetryConfig {
   appInsightsConnectionString: string | undefined
 }
 
+export type LogLevel = (typeof logLevels)[number]
+
 export interface Config {
   port: number
+  logLevel: LogLevel
   corsOrigins: string[]
   telemetry: TelemetryConfig
 }
@@ -46,6 +52,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const data = result.data
   return {
     port: data.PORT,
+    logLevel: data.LOG_LEVEL,
     corsOrigins: data.CORS_ORIGIN.split(',')
       .map((origin) => origin.trim())
       .filter((origin) => origin !== ''),

@@ -5,6 +5,7 @@ describe('loadConfig', () => {
   it('uses defaults for an empty environment', () => {
     expect(loadConfig({})).toEqual({
       port: 3000,
+      logLevel: 'info',
       corsOrigins: [],
       telemetry: {
         serviceName: 'tournament-director-api',
@@ -23,6 +24,14 @@ describe('loadConfig', () => {
   it('splits CORS_ORIGIN on commas and trims blanks', () => {
     const config = loadConfig({ CORS_ORIGIN: ' https://a.example , https://b.example ,, ' })
     expect(config.corsOrigins).toEqual(['https://a.example', 'https://b.example'])
+  })
+
+  it('reads the log level', () => {
+    expect(loadConfig({ LOG_LEVEL: 'debug' }).logLevel).toBe('debug')
+  })
+
+  it('rejects an unknown log level', () => {
+    expect(() => loadConfig({ LOG_LEVEL: 'loud' })).toThrow(/Invalid environment/)
   })
 
   it.each(['abc', '0', '70000', '1.5'])('rejects PORT=%s', (port) => {

@@ -63,7 +63,7 @@ A squad has no game count. It always uses the tournament's `games`.
 
 | ID | Rule |
 | --- | --- |
-| SQD-14 | Legacy can only **add** squads and sweepers. No edit or delete. **D-12:** the new app adds editing; a squad or sweeper with any scores is locked from editing. Field-by-field rules are decided when we build it. |
+| SQD-14 | Legacy can only **add** squads and sweepers. No edit or delete. **D-12:** the new app adds editing; a squad or sweeper with any scores is locked from editing. Field-by-field rules are decided when we build it. **D-15:** deleting is allowed too; when, and what happens to registrations, is part of the same discussion. |
 | SQD-15 | **Complete a squad.** Confirm: "Are you sure you want to complete this squad?" Sets `complete`. Then, for every bowler registered to the squad who has **no** scores in it, saves a score of **0** for each game 1 to `tournament.games`. Bowlers with some games entered get nothing filled in. |
 | SQD-16 | **Complete a sweeper.** Sets `complete` only. No zeros are filled in. The menu item hides once the sweeper is complete; the squad menu item does not hide. |
 | SQD-17 | **What "complete" locks.** On the desk: lane assignment is read-only, and score paste and save are off. The add registration screen hides complete sessions. API update refuses to add complete sessions (`REG-33`). Adding super sweeper is refused if any of the bowler's sweepers are complete (`REG-17`). The **server** does not block score saves or lane moves on complete sessions; only the screens do. **D-10:** the new server locks a complete session: no score changes, lane moves, removals, or refunds. |

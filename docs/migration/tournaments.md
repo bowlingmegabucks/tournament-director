@@ -32,8 +32,8 @@ The screen limits: fee up to 999.99, games up to 99, ratios up to 99.9.
 | TRN-06 | Cash ratio must be greater than 1. "Cash ratio must be greater than 1" |
 | TRN-07 | Bowling center is required. "Bowling center is required" |
 | TRN-08 | A new tournament cannot be marked completed. "Tournament is already completed" |
-| TRN-09 | Super sweeper cash ratio has **no** validation and defaults to 0. **Defect:** with 0, super sweeper results divide by zero and fail. **D-13:** the new app requires at least 1. See Q-25 for existing data. |
-| TRN-10 | Legacy can only **create** and **list** tournaments. There is no edit, delete, or "complete tournament" action. The `Completed` flag is never set to true. **D-12:** the new app adds editing; which fields lock when is decided when we build it. Delete and "complete" are open (Q-03). |
+| TRN-09 | Super sweeper cash ratio has **no** validation and defaults to 0. **Defect:** with 0, super sweeper results divide by zero and fail. **D-13:** the new app requires at least 1 on save. **D-17:** existing 0 values stay in the database; their super sweeper results show a clear message instead of crashing. |
+| TRN-10 | Legacy can only **create** and **list** tournaments. There is no edit, delete, or "complete tournament" action. The `Completed` flag is never set to true. **D-12, D-15:** the new app adds editing and deleting; when each is allowed, and what it affects, is decided when we build it. "Complete tournament" is open (Q-03). |
 | TRN-11 | The list shows every tournament. The server applies no filter or sort. |
 | TRN-12 | **Effective values for a squad:** fee = squad fee if set, else tournament fee. Finals ratio and cash ratio work the same way. At-large and seeding always use the tournament finals ratio (`RES-12`). |
 

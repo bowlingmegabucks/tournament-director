@@ -19,14 +19,16 @@ One list for everything the new app must decide. When a question is answered, mo
 | D-12 | **Tournaments, divisions, squads, and sweepers can be edited** (legacy can only add them). Which fields, and when, is settled per feature as we build it. General rule: **a squad or sweeper with scores is locked from editing.** Editing a division's criteria after bowlers are registered shows a warning: the change is not retroactive, already-registered bowlers may no longer fit, and the director must review them by hand. | Owner decision. Details to discuss feature by feature. | `TRN-10`, `DIV-12`, `SQD-14` | 2026-10-20 |
 | D-13 | **Super sweeper cash ratio must be at least 1.** | Owner decision. Stops the divide-by-zero crash. Note: other ratios must be **greater than** 1; with 1, every super sweeper bowler cashes. Existing rows may hold the legacy default 0. | `TRN-09`, `RES-28` | 2026-10-20 |
 | D-14 | **Ties at the cut are settled by the tie-breakers, as in legacy.** The number who advance never grows because of a tie. The **cut line always divides** advancers (above) from non-advancers (below); the cash line works the same way. When the last spot above a line was won on a tie-breaker (equal total), the standings mark the bowlers on both sides of the line who share that total, and say which tie-breaker decided it. | Owner decision; legacy behavior confirmed in tests (`NoPreviousAdvancers_TieForLastAdvancer`). Owner was unsure whether all tied bowlers should advance; legacy does not do that. | `SCR-11`, `RES-07`, `RES-11` | 2026-10-20 |
+| D-15 | **Tournaments, divisions, squads, and sweepers can be deleted.** When, and what happens to related data, is settled per feature in the same discussion as editing (D-12). | Owner decision. | `TRN-10`, `DIV-12`, `SQD-14` | 2026-10-20 |
+| D-16 | **A full tie at a line** (equal on every tie-breaker) is flagged on the standings and the director picks. No extra automation. | Owner agreed; expected to be very rare. | `SCR-11`, D-14 | 2026-10-20 |
+| D-17 | **Leave existing super sweeper cash ratios of 0 in the database.** Only saving is checked: a new or edited tournament must have at least 1 (D-13). Results for an old tournament with 0 must show a clear message instead of crashing. | Owner decision. The old value is invalid but historical. | `TRN-09`, `RES-28` | 2026-10-20 |
 | D-09 | **The integration API matches legacy as exactly as it can.** Any change the registration site would notice needs a reason, a discussion, and a written change doc for the vendor before we build it. Candidates are listed in [integration-api.md](integration-api.md#candidate-vendor-changes). | Owner decision. The vendor's system depends on the current contract. | `API-*` | 2026-10-20 |
 
 ## Open questions
 
 | ID | Question | Legacy today | Suggested answer | Rules |
 | --- | --- | --- | --- | --- |
-| Q-03 | Should the new app also **delete** tournaments, divisions, squads, and sweepers? What does "complete tournament" do? (Editing is settled in D-12.) | Add only; `Completed` unused | Delete only when nothing hangs off it; "complete" makes the tournament read-only | `TRN-10`, `DIV-12`, `SQD-14` |
-| Q-25 | Existing tournaments may have super sweeper cash ratio 0 (legacy default). Fix the data to 1 (or another value), or only require ≥ 1 on new and edited tournaments? | Default 0 | Require on save; show an error on results until it is fixed | `TRN-09`, D-13 |
+| Q-03 | What does **"complete tournament"** do? (Edit and delete are settled in D-12 and D-15.) | `Completed` exists but is never set | Makes the tournament read-only | `TRN-10` |
 | Q-05 | USBC ID for handicap divisions: warn like D-01, or block? | Block | Warn (the API requires a USBC ID anyway) | `REG-05` |
 | Q-07 | When should super sweeper changes lock: once **any** sweeper score exists in the tournament, or once **this bowler** has one? | API: any. Desk: this bowler | This bowler | `REG-18`, `REG-36` |
 | Q-08 | Should changing an average re-check division limits (as a warning)? Lock once scores exist? | No check; allowed any time | Warn; allow with a confirm after scores, since it changes handicap and results | `REG-16`, `REG-38` |
@@ -37,10 +39,9 @@ One list for everything the new app must decide. When a question is answered, mo
 | Q-16 | A payment arrives with a confirmation code already on file. Error, or treat as a retry and ignore? | Database error, HTTP 500 | Treat as a retry (idempotent) | `PAY-03` |
 | Q-17 | Desk registrations save a $0 `Manual_` payment. Keep? Should the desk record real cash or check payments? | $0 placeholder | Ask | `PAY-01a` |
 | Q-19 | Which scoring system gets the copied lane assignments and returns scores? Must the tab format stay? | Tab-separated clipboard | Keep until we know | `RPT-06`, `RPT-07` |
-| Q-20 | A **full tie** at the cut: equal on total, high game, and every other game. Legacy has no rule left and picks one at random (sort order). What should happen: both advance, a roll-off, or the director picks? (Ties settled by a tie-breaker are covered by D-14.) | Order not defined | Flag it and let the director pick | `SCR-11`, D-14 |
 | Q-21 | Bowlers with more games entered rank above those with fewer, whatever the pins. Fine for live standings? | Yes | Keep, but show "games bowled" | `SCR-11` |
 | Q-22 | Who may see SSNs in the new app, and do we need a 1099 report? | No one sees them; verify by retyping | Ask; see proposed features | `SEC-10` |
-Answered and moved to Decisions: Q-01 (D-03), Q-04 (D-04), Q-06 (D-05), Q-09 (D-06), Q-12 (D-07), Q-15 (D-08), Q-18 (D-09), Q-23 (D-10), Q-24 (D-11), Q-02 (D-13). Q-03 and Q-20 were narrowed by D-12 and D-14.
+Answered and moved to Decisions: Q-01 (D-03), Q-04 (D-04), Q-06 (D-05), Q-09 (D-06), Q-12 (D-07), Q-15 (D-08), Q-18 (D-09), Q-23 (D-10), Q-24 (D-11), Q-02 (D-13), Q-20 (D-14, D-16), Q-25 (D-17). Q-03 was narrowed by D-12 and D-15.
 
 ## Defects index
 

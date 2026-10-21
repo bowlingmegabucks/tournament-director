@@ -69,7 +69,7 @@ Every results list (squad, at-large, seeding, sweeper, super sweeper) uses this 
 2. **Higher total with handicap.**
 3. **Higher high game with handicap** (best scratch game + handicap).
 4. **Higher 2nd-best scratch game**, then 3rd-best, and so on through the games.
-5. Still equal: a full tie. The order between them is not defined (Q-20).
+5. Still equal: a full tie. Legacy leaves the order undefined. **D-16:** the new app flags a full tie at a line and the director picks. Expected to be very rare.
 
 **Ties at a line are not widened.** If two bowlers tie on total for the last advancing spot, the tie-breakers pick one; the other does not advance. The legacy test `NoPreviousAdvancers_TieForLastAdvancer` shows it: 109 vs 109, high game 38 beats 37, and only 5 advance. **D-14:** keep this, and mark tie-breaker decisions on the standings (`RES-11`).
 

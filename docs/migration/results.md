@@ -110,4 +110,4 @@ Running the finals is out of scope. The app stops at the seeding list.
 
 - Bonus pins for the combined entry come from the bowler's **first** sweeper score row and are applied to every game. If a division's bonus pins differ between sweepers, the total is wrong. Use each sweeper's own pins.
 - The ranking's game count uses distinct game numbers, so it does not see that a bowler missed a whole sweeper (`SCR-11` note). Nothing checks that the bowler bowled every sweeper. See Q-14.
-- With `superSweeperCashRatio = 0`, results fail with divide by zero (`TRN-09`).
+- With `superSweeperCashRatio = 0`, results fail with divide by zero (`TRN-09`). **D-17:** old tournaments keep 0; the new app shows a clear message for them instead of crashing.

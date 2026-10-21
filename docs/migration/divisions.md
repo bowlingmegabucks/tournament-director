@@ -57,7 +57,7 @@ These rules run when a bowler registers or changes division. The full logic, inc
 
 | ID | Rule |
 | --- | --- |
-| DIV-12 | Legacy can only **add** and **list** divisions. No edit or delete. **D-12:** the new app adds editing. Changing criteria (age, average, gender) after bowlers are registered shows a warning: the change is not retroactive, registered bowlers may no longer fit, and the director must review them by hand. Field-by-field rules are decided when we build it. |
+| DIV-12 | Legacy can only **add** and **list** divisions. No edit or delete. **D-12:** the new app adds editing. Changing criteria (age, average, gender) after bowlers are registered shows a warning: the change is not retroactive, registered bowlers may no longer fit, and the director must review them by hand. Field-by-field rules are decided when we build it. **D-15:** deleting is allowed too; when, and what happens to registrations, is part of the same discussion. |
 | DIV-13 | Lists sort by `number` on the registration screen. |
 | DIV-14 | Adding a sweeper lists all divisions so the desk can set bonus pins for each (`SQD-13`). |
 

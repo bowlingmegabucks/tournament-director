@@ -1,0 +1,35 @@
+name: Dependency audit
+
+# Full audit (dev dependencies, every severity). The pull request gate only checks
+# production dependencies at high severity, so this catches the rest without blocking PRs.
+on:
+  schedule:
+    - cron: "0 13 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Audit ${{ matrix.folder }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        folder: [web, api]
+    defaults:
+      run:
+        working-directory: ${{ matrix.folder }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ${{ matrix.folder }}/.nvmrc
+          cache: npm
+          cache-dependency-path: ${{ matrix.folder }}/package-lock.json
+
+      - run: npm ci --ignore-scripts
+      - run: npm audit

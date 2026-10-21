@@ -22,9 +22,9 @@ export function Toast({ kind, children, onDismiss, autoDismissMs }: Readonly<Toa
   const Container = kind === 'error' ? 'div' : 'output'
 
   return (
-    // Stryker disable next-line StringLiteral: the class names only style the toast, which jsdom cannot check.
     <Container
       role={kind === 'error' ? 'alert' : undefined}
+      // Stryker disable next-line StringLiteral: the class names only style the toast, which jsdom cannot check.
       className={`${styles.toast} ${styles[kind]}`}
     >
       <span aria-hidden="true" className={styles.icon}>

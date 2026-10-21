@@ -16,6 +16,7 @@ describe('Toast', () => {
     )
 
     expect(screen.getByRole('status')).toHaveTextContent('Saved')
+    expect(screen.getByRole('status').tagName).toBe('OUTPUT')
     expect(screen.getByText('✓')).toBeInTheDocument()
     expect(screen.queryByText('✕')).not.toBeInTheDocument()
   })
@@ -28,6 +29,7 @@ describe('Toast', () => {
     )
 
     expect(screen.getByRole('alert')).toHaveTextContent('Failed')
+    expect(screen.getByRole('alert').tagName).toBe('DIV')
     expect(screen.getByText('✕')).toBeInTheDocument()
     expect(screen.queryByText('✓')).not.toBeInTheDocument()
   })

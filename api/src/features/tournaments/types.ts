@@ -1,11 +1,21 @@
 import { z } from 'zod'
 
-/** The shape `web/src/features/tournaments/types.ts` expects. Change both together. */
+/**
+ * The tournament summary the registration site already reads (`API-03`, `API-04`).
+ * `web/src/features/tournaments/types.ts` expects this shape. Change both together,
+ * and only after a vendor change doc (D-09).
+ */
 export const tournamentSchema = z.object({
   id: z.uuid(),
   name: z.string().min(1),
-  date: z.iso.date(),
-  entrants: z.number().int().nonnegative(),
+  startDate: z.iso.date(),
+  endDate: z.iso.date(),
+  entryFee: z.number().positive(),
+  bowlingCenter: z.string().min(1),
 })
 
 export type Tournament = z.infer<typeof tournamentSchema>
+
+export const tournamentListSchema = z.object({ tournaments: z.array(tournamentSchema) })
+
+export const tournamentDetailSchema = z.object({ tournament: tournamentSchema })

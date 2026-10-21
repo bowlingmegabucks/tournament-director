@@ -20,18 +20,18 @@ describe('rate limit', () => {
   it('allows requests up to the limit', async () => {
     const app = limitedApp(2)
 
-    const first = await request(app).get('/tournaments')
-    const second = await request(app).get('/tournaments')
+    const first = await request(app).get('/v1/tournaments')
+    const second = await request(app).get('/v1/tournaments')
 
     expect([first.status, second.status]).toEqual([200, 200])
   })
 
   it('answers 429 over the limit, in the standard error shape', async () => {
     const app = limitedApp(2)
-    await request(app).get('/tournaments')
-    await request(app).get('/tournaments')
+    await request(app).get('/v1/tournaments')
+    await request(app).get('/v1/tournaments')
 
-    const response = await request(app).get('/tournaments')
+    const response = await request(app).get('/v1/tournaments')
 
     expect(response.status).toBe(429)
     expect(response.body).toEqual({ message: 'Too many requests. Try again later.' })
@@ -39,16 +39,16 @@ describe('rate limit', () => {
 
   it('tells the caller when to retry', async () => {
     const app = limitedApp(1)
-    await request(app).get('/tournaments')
+    await request(app).get('/v1/tournaments')
 
-    const response = await request(app).get('/tournaments')
+    const response = await request(app).get('/v1/tournaments')
 
     expect(Number(response.headers['retry-after'])).toBeGreaterThan(0)
     expect(Number(response.headers['retry-after'])).toBeLessThanOrEqual(60)
   })
 
   it('reports the limit on every response', async () => {
-    const response = await request(limitedApp(5)).get('/tournaments')
+    const response = await request(limitedApp(5)).get('/v1/tournaments')
 
     expect(response.headers['ratelimit-policy']).toBe('5;w=60')
     expect(response.headers['ratelimit']).toContain('remaining=4')
@@ -62,7 +62,7 @@ describe('rate limit', () => {
     for (let i = 0; i < 3; i++) statuses.push((await request(app).get('/health')).status)
 
     expect(statuses).toEqual([200, 200, 200])
-    expect((await request(app).get('/tournaments')).status).toBe(200)
+    expect((await request(app).get('/v1/tournaments')).status).toBe(200)
   })
 
   it('keeps the CORS headers on a 429', async () => {
@@ -70,9 +70,9 @@ describe('rate limit', () => {
     const app = createTestApp({
       config: createConfig({ corsOrigins: [origin], rateLimit: { max: 1, windowSeconds: 60 } }),
     })
-    await request(app).get('/tournaments').set('Origin', origin)
+    await request(app).get('/v1/tournaments').set('Origin', origin)
 
-    const response = await request(app).get('/tournaments').set('Origin', origin)
+    const response = await request(app).get('/v1/tournaments').set('Origin', origin)
 
     expect(response.status).toBe(429)
     expect(response.headers['access-control-allow-origin']).toBe(origin)
@@ -80,10 +80,14 @@ describe('rate limit', () => {
 
   it('counts each client address on its own behind a proxy', async () => {
     const app = limitedApp(1, 1)
-    await request(app).get('/tournaments').set('X-Forwarded-For', '203.0.113.1')
+    await request(app).get('/v1/tournaments').set('X-Forwarded-For', '203.0.113.1')
 
-    const sameClient = await request(app).get('/tournaments').set('X-Forwarded-For', '203.0.113.1')
-    const otherClient = await request(app).get('/tournaments').set('X-Forwarded-For', '203.0.113.2')
+    const sameClient = await request(app)
+      .get('/v1/tournaments')
+      .set('X-Forwarded-For', '203.0.113.1')
+    const otherClient = await request(app)
+      .get('/v1/tournaments')
+      .set('X-Forwarded-For', '203.0.113.2')
 
     expect([sameClient.status, otherClient.status]).toEqual([429, 200])
   })
@@ -109,9 +113,9 @@ describe('rate limit', () => {
     },
   ])('$name', async ({ trustProxy, first, second }) => {
     const app = limitedApp(1, trustProxy)
-    await request(app).get('/tournaments').set('X-Forwarded-For', first)
+    await request(app).get('/v1/tournaments').set('X-Forwarded-For', first)
 
-    const response = await request(app).get('/tournaments').set('X-Forwarded-For', second)
+    const response = await request(app).get('/v1/tournaments').set('X-Forwarded-For', second)
 
     expect(response.status).toBe(429)
   })
@@ -146,17 +150,17 @@ describe('rejection metric', () => {
   it('counts each request turned away', async () => {
     const { app, rejections } = await setup(1)
 
-    await request(app).get('/tournaments')
-    await request(app).get('/tournaments')
-    await request(app).get('/tournaments')
+    await request(app).get('/v1/tournaments')
+    await request(app).get('/v1/tournaments')
+    await request(app).get('/v1/tournaments')
 
     expect(await rejections()).toBe(2)
   })
 
   it('describes the metric', async () => {
     const { app, find } = await setup(1)
-    await request(app).get('/tournaments')
-    await request(app).get('/tournaments')
+    await request(app).get('/v1/tournaments')
+    await request(app).get('/v1/tournaments')
 
     const metric = await find()
 
@@ -169,7 +173,7 @@ describe('rejection metric', () => {
   it('does not count requests that got through', async () => {
     const { app, rejections } = await setup(5)
 
-    await request(app).get('/tournaments')
+    await request(app).get('/v1/tournaments')
 
     expect(await rejections()).toBe(0)
   })
@@ -180,7 +184,7 @@ describe('rate limit setup', () => {
     // express-rate-limit reports a setup problem with console.error, once, on the first request.
     const warn = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     try {
-      await request(limitedApp(2)).get('/tournaments')
+      await request(limitedApp(2)).get('/v1/tournaments')
 
       expect(warn).not.toHaveBeenCalled()
     } finally {

@@ -2,6 +2,7 @@ import { createApp } from './app.ts'
 import { loadConfig } from './config.ts'
 import { createRandomTournamentRepository } from './features/tournaments/randomRepository.ts'
 import { createLogger } from './shared/logger.ts'
+import { handleProcessEvents } from './shared/processEvents.ts'
 import { shutdownTelemetry } from './telemetry.ts'
 
 const config = loadConfig()
@@ -17,10 +18,11 @@ const server = app.listen(config.port, () => {
 })
 
 // Finish open requests and send buffered telemetry before exit, so a deploy does not cut them off.
-for (const signal of ['SIGINT', 'SIGTERM'] as const) {
-  process.on(signal, () => {
-    server.close(() => {
-      void shutdownTelemetry().finally(() => process.exit(0))
-    })
-  })
-}
+// Also logs a crash before the process dies.
+handleProcessEvents(process, {
+  logger,
+  server,
+  flush: shutdownTelemetry,
+  exit: (code) => process.exit(code),
+  forceExitMs: 10_000,
+})

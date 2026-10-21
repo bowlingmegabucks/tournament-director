@@ -25,6 +25,7 @@ api/src/
 - **Routes are thin.** Parse input, call the repository, send the result. Storage code stays behind the repository interface so a database replaces the in-memory version without touching routes.
 - **Validate input at the edge with Zod.** Body, params, query, and the environment. Never trust `req.body` as typed.
 - **Errors:** throw `HttpError(status, message)` for expected failures (404, 409). Anything else becomes a 500 with a generic message; the cause goes to the log, never to the client. Express 5 forwards rejected promises from async handlers, so do not wrap handlers in try/catch.
+- **Zod errors are 400s.** If a route's schema throws a `ZodError`, the error handler answers 400 with `Invalid request. field: reason; ...`. Use `schema.parse(...)` and let it throw; do not catch it.
 - **Error body:** `{ "message": string }`, for every status. The web `api.ts` files check the status first.
 - **Routes live at the root** (`/health`, `/tournaments`), with no `/api` prefix: in production the API has its own host. In dev the Vite proxy takes `/api/...` and strips the prefix.
 - **Contract with `web/`.** The `Tournament` shape is in `api/src/features/tournaments/types.ts` and `web/src/features/tournaments/types.ts`. Change both together. (No shared package: two folders, no workspaces.)
@@ -71,6 +72,15 @@ Use the `pino` logger. It is like an `ILogger<T>` that you pass in: `createApp({
 - Azure can write the client as `ip:port`. The port changes on each connection, so `clientKey` strips it. IPv6 clients share a bucket per /56 network.
 - Counts live in memory. That is right for one server (the free plan). If the API ever runs on more than one instance, each counts alone, so move the counts to a shared store (Redis).
 - Neba also gives signed-in users their own higher limit. We have no sign-in yet; add that when we do.
+
+## Process lifecycle and health
+
+`handleProcessEvents` in `src/shared/processEvents.ts` is called from `server.ts`.
+
+- SIGINT and SIGTERM (a deploy): log, stop taking connections, let open requests finish, send buffered telemetry, exit 0. If that takes over 10 seconds, log and exit 1.
+- `uncaughtException` and `unhandledRejection`: log at `fatal` (so it reaches Seq and App Insights), send telemetry, exit 1. Azure restarts the app. Do not try to carry on after one.
+- `GET /health` answers `{ "status": "ok" }` and is the liveness check. It is outside the rate limit and the traces, and its request line logs at `debug`.
+- **Readiness comes with the database.** Neba has a second endpoint (`/alive` is liveness, `/health` is readiness and runs every check). When `api/` gets a database, add a readiness route that pings it and returns 503 while it is down, and keep `/health` as plain liveness so a database outage does not restart the app.
 
 ## Not built yet
 

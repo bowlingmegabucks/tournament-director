@@ -21,6 +21,9 @@ export function createConfig(overrides: Partial<Config> = {}): Config {
   return {
     port: 0,
     logLevel: 'silent',
+    // High enough that no test hits it by accident. Tests of the limit set their own.
+    rateLimit: { max: 1000, windowSeconds: 60 },
+    trustProxy: 0,
     corsOrigins: [],
     telemetry: {
       serviceName: 'test-api',

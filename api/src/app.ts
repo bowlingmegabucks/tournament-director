@@ -3,6 +3,7 @@ import express from 'express'
 import helmet from 'helmet'
 import type { Config } from './config.ts'
 import type { Logger } from './shared/logger.ts'
+import { createRateLimiter } from './shared/rateLimit.ts'
 import { requestIdHeader, requestLogging } from './shared/requestLogging.ts'
 import { createTournamentRouter } from './features/tournaments/routes.ts'
 import type { TournamentRepository } from './features/tournaments/repository.ts'
@@ -17,6 +18,8 @@ export interface AppDependencies {
 /** Build the app without starting it, so tests can call it with fake dependencies. */
 export function createApp({ config, logger, tournaments }: AppDependencies): express.Express {
   const app = express()
+  // Without this, req.ip is the proxy's address.
+  app.set('trust proxy', config.trustProxy)
 
   // First, so every request gets an id and a log line, even one that CORS or a 404 turns away.
   app.use(requestLogging(logger))
@@ -24,6 +27,9 @@ export function createApp({ config, logger, tournaments }: AppDependencies): exp
   app.use(helmet())
   // An empty list allows no cross-origin caller.
   app.use(cors({ origin: config.corsOrigins, exposedHeaders: [requestIdHeader] }))
+
+  // After CORS, so a 429 still carries the CORS headers and the browser can read it.
+  app.use(createRateLimiter(config.rateLimit))
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok' })

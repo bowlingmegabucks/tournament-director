@@ -61,10 +61,20 @@ Use the `pino` logger. It is like an `ILogger<T>` that you pass in: `createApp({
 - In a handler, log with `requestLogger(res, logger)` so lines carry the `requestId`. Error bodies stay `{ message }`; the id travels in the header.
 - To find one request in Seq, filter on `requestId = '...'`. The `TraceId` on each line opens the whole trace.
 
+## Rate limiting
+
+`createRateLimiter` in `src/shared/rateLimit.ts` (the `express-rate-limit` package) runs after CORS and before the routes.
+
+- One fixed window per client IP: `RATE_LIMIT_MAX` requests (default 100) per `RATE_LIMIT_WINDOW_SECONDS` (default 60). Neba uses the same numbers. Over the limit, the client gets a 429 with `{ "message": "Too many requests. Try again later." }`, a `Retry-After` header, and `RateLimit` / `RateLimit-Policy` headers (IETF draft-7).
+- `/health` never counts, so probes cannot lock out a deploy.
+- **`TRUST_PROXY` must match the hosting.** It is the number of reverse proxies in front of the API. `0` locally. **`1` on Azure App Service**: set it as an application setting. At 0 on Azure, every caller looks like the same Azure address and shares one bucket. Too high lets a caller fake their address with a forged `X-Forwarded-For`.
+- Azure can write the client as `ip:port`. The port changes on each connection, so `clientKey` strips it. IPv6 clients share a bucket per /56 network.
+- Counts live in memory. That is right for one server (the free plan). If the API ever runs on more than one instance, each counts alone, so move the counts to a shared store (Redis).
+- Neba also gives signed-in users their own higher limit. We have no sign-in yet; add that when we do.
+
 ## Not built yet
 
 - Database (see "Revisit later" in `CLAUDE.md`)
 - Custom metrics (next part of `apiHardening`)
-- Rate limiting
 - Authentication
 - Write routes (POST, PUT, DELETE) and `express.json()`

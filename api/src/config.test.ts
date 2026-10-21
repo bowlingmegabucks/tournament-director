@@ -6,6 +6,8 @@ describe('loadConfig', () => {
     expect(loadConfig({})).toEqual({
       port: 3000,
       logLevel: 'info',
+      rateLimit: { max: 100, windowSeconds: 60 },
+      trustProxy: 0,
       corsOrigins: [],
       telemetry: {
         serviceName: 'tournament-director-api',
@@ -24,6 +26,25 @@ describe('loadConfig', () => {
   it('splits CORS_ORIGIN on commas and trims blanks', () => {
     const config = loadConfig({ CORS_ORIGIN: ' https://a.example , https://b.example ,, ' })
     expect(config.corsOrigins).toEqual(['https://a.example', 'https://b.example'])
+  })
+
+  it('reads the rate limit', () => {
+    const config = loadConfig({ RATE_LIMIT_MAX: '5', RATE_LIMIT_WINDOW_SECONDS: '10' })
+    expect(config.rateLimit).toEqual({ max: 5, windowSeconds: 10 })
+  })
+
+  it('reads the number of trusted proxies', () => {
+    expect(loadConfig({ TRUST_PROXY: '1' }).trustProxy).toBe(1)
+  })
+
+  it.each([
+    ['RATE_LIMIT_MAX', '0'],
+    ['RATE_LIMIT_WINDOW_SECONDS', '0'],
+    ['TRUST_PROXY', '-1'],
+    ['TRUST_PROXY', '6'],
+    ['TRUST_PROXY', 'yes'],
+  ])('rejects %s=%s', (name, value) => {
+    expect(() => loadConfig({ [name]: value })).toThrow(/Invalid environment/)
   })
 
   it('reads the log level', () => {

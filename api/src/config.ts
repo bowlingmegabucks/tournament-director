@@ -14,6 +14,11 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default(''),
   NODE_ENV: z.string().default('development'),
   LOG_LEVEL: z.enum(logLevels).default('info'),
+  RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(100),
+  RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().min(1).default(60),
+  // How many reverse proxies sit in front of the API. 0 for local dev, 1 on Azure App Service.
+  // Too low and every caller shares the proxy's address; too high and callers can fake theirs.
+  TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(0),
   OTEL_SERVICE_NAME: z.string().default('tournament-director-api'),
   // Base OTLP URL, for example http://localhost:15341/ingest/otlp (Seq). The exporters add
   // /v1/traces, /v1/metrics, and /v1/logs, and read OTEL_EXPORTER_OTLP_HEADERS themselves.
@@ -34,11 +39,19 @@ export interface TelemetryConfig {
   appInsightsConnectionString: string | undefined
 }
 
+export interface RateLimitConfig {
+  /** Requests allowed per client in one window. */
+  max: number
+  windowSeconds: number
+}
+
 export type LogLevel = (typeof logLevels)[number]
 
 export interface Config {
   port: number
   logLevel: LogLevel
+  rateLimit: RateLimitConfig
+  trustProxy: number
   corsOrigins: string[]
   telemetry: TelemetryConfig
 }
@@ -53,6 +66,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   return {
     port: data.PORT,
     logLevel: data.LOG_LEVEL,
+    rateLimit: { max: data.RATE_LIMIT_MAX, windowSeconds: data.RATE_LIMIT_WINDOW_SECONDS },
+    trustProxy: data.TRUST_PROXY,
     corsOrigins: data.CORS_ORIGIN.split(',')
       .map((origin) => origin.trim())
       .filter((origin) => origin !== ''),

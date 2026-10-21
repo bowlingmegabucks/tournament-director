@@ -21,16 +21,16 @@ Source: `api/` (FastEndpoints). Production host: `api.bowlingmegabucks.com` (Azu
 
 ## Endpoints
 
-| ID | Method and path | Auth | Purpose |
-| --- | --- | --- | --- |
-| API-01 | `GET /` | none | `{ name: "Northeast Megabuck Tournament API", version: "v1", status: "OK", documentation: "/openapi/v1.json" }` |
-| API-02 | `GET /health` | none | Health check (database, Key Vault, App Insights) |
-| API-03 | `GET /v1/tournaments` | none | List of tournament summaries |
-| API-04 | `GET /v1/tournaments/{id}` | none | Tournament detail with divisions, squads, sweepers. 404 if not found |
-| API-05 | `POST /v1/registrations` | key | Create, or append when the bowler is already registered |
-| API-06 | `GET /v1/registrations/{id}` | key | Registration detail. 404 if not found |
-| API-07 | `PATCH /v1/registrations/{id}` | key | Change squads, sweepers, super sweeper, division, average; add a payment |
-| API-08 | `DELETE /v1/registrations/{id}` | key | Delete. 204, 404, or 400 if scores exist |
+| ID | Method and path | Auth | Purpose | Status |
+| --- | --- | --- | --- | --- |
+| API-01 | `GET /` | none | `{ name: "Northeast Megabuck Tournament API", version: "v1", status: "OK", documentation: "/openapi/v1.json" }` |  |
+| API-02 | `GET /health` | none | Health check (database, Key Vault, App Insights) |  |
+| API-03 | `GET /v1/tournaments` | none | List of tournament summaries | Done |
+| API-04 | `GET /v1/tournaments/{id}` | none | Tournament detail with divisions, squads, sweepers. 404 if not found | Done, differs (D-25) |
+| API-05 | `POST /v1/registrations` | key | Create, or append when the bowler is already registered |  |
+| API-06 | `GET /v1/registrations/{id}` | key | Registration detail. 404 if not found |  |
+| API-07 | `PATCH /v1/registrations/{id}` | key | Change squads, sweepers, super sweeper, division, average; add a payment |  |
+| API-08 | `DELETE /v1/registrations/{id}` | key | Delete. 204, 404, or 400 if scores exist |  |
 
 ## Shapes
 

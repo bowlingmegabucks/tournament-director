@@ -9,7 +9,7 @@ Ideas from the old `rewrite/REWRITE_SPEC.md` and from this review. **None of the
 | Edit tournaments, divisions, squads, sweepers | rewrite spec §6, `plan/01-tournaments.md` | **Approved (D-12).** Field rules per feature |
 | Delete tournaments, divisions, squads, sweepers | rewrite spec §6 | **Approved (D-15).** Rules per feature, discussed with editing |
 | Tie-breaker marks on standings | review | **Approved (D-14)** |
-| Tournament list filter by year or active | rewrite spec §6.1 | Legacy shows all |
+| Tournament list filter by year or active | rewrite spec §6.1 | **Built in part (D-20).** The list groups into Current and upcoming over Past, by date. No year filter or search yet. Legacy shows all |
 | Bowler search by USBC ID on screen | rewrite spec §6.3 | Legacy desk searches by name and email only |
 | Bowler profile showing all their tournaments | rewrite spec §6.3 | |
 | Payment list per registration; paid vs owed | rewrite spec §6.9 | Legacy stores payments but never shows them (`PAY-01`, `PAY-05`) |

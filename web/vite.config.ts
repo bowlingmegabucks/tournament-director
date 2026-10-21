@@ -3,9 +3,10 @@ import { defineConfig } from 'vitest/config'
 
 // https://vite.dev/config/
 export default defineConfig({
-  // Absolute base: deep links such as /tournaments/abc load assets from /assets/..., so the site
-  // must sit at the domain root. public/.htaccess sends those links to index.html.
-  base: '/',
+  // Absolute base: deep links such as /tournaments/abc load assets from <base>assets/..., so it must
+  // match where the site sits. Local runs use '/'; the deploy sets WEB_BASE_PATH=/tournament-director/.
+  // public/.htaccess sends deep links to index.html.
+  base: process.env.WEB_BASE_PATH ?? '/',
   plugins: [react()],
   server: {
     // The browser calls /api/... on the dev server (VITE_API_BASE_URL=/api in .env.development).

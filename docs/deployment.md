@@ -11,7 +11,7 @@
    - Variables: `FTP_SERVER`, `FTP_SERVER_DIR` (remote folder, must end with `/`, for example `public_html/`).
      The job runs only on `main`, and a step fails the run if `FTP_SERVER_DIR` does not end with `/`.
 4. First run: use "Run workflow" with `dry_run` on to check the file list. If an upload fails midway, run the workflow again by hand.
-5. The site has client-side routes (`react-router`), so `web/public/.htaccess` rewrites any address that is not a file or folder to `index.html`, and `base` in `vite.config.ts` is `'/'`. The site must sit at the domain root. **Check after the first deploy:** open a deep link such as `/tournaments/abc` directly. The "Tournament not found" page should show, not a host 404. If the host ignores `.htaccess`, switch `main.tsx` to `createHashRouter` (addresses become `/#/tournaments/abc`); nothing else changes.
+5. The site has client-side routes (`react-router`), so `web/public/.htaccess` rewrites any address that is not a file or folder to `index.html`, and `base` in `vite.config.ts` comes from `WEB_BASE_PATH` (`/` locally; the deploy sets `/tournament-director/`, the folder the site sits in). The router reads the same value as its `basename`. Without it, assets load from the domain root and 404. **Check after the first deploy:** open a deep link such as `/tournaments/abc` directly. The "Tournament not found" page should show, not a host 404. If the host ignores `.htaccess`, switch `main.tsx` to `createHashRouter` (addresses become `/#/tournaments/abc`); nothing else changes.
 
 The mock bundle is large (faker). That is acceptable for the throwaway demo. The real build drops it.
 

@@ -13,6 +13,8 @@ The legacy code lives in the `tournament-manager` repo under `legacy/source/`. E
   - **Defect**: legacy crashes or gives a wrong answer. Do not copy it.
 - All decisions and questions live in [decisions-and-questions.md](decisions-and-questions.md).
 - "Source" lines name the legacy files, in case you must check. Paths start at `legacy/source/`.
+- **Status column.** Once we build a rule, its table gets a Status column: `Done`, `Done, differs (D-xx)`, or `Dropped (D-xx)`. Blank means not started. The built rule's lasting record moves to [docs/requirements/](../requirements/README.md). When every rule in a file is done, we delete the file.
+- Use `/migrate-feature <feature>` to port a feature. It settles the open questions, plans, builds, and updates these docs.
 
 ## Contents
 

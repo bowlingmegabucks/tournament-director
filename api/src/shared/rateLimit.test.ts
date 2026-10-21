@@ -88,33 +88,30 @@ describe('rate limit', () => {
     expect([sameClient.status, otherClient.status]).toEqual([429, 200])
   })
 
-  it('counts one client once when the proxy adds a changing port', async () => {
-    const app = limitedApp(1, 1)
-    await request(app).get('/tournaments').set('X-Forwarded-For', '203.0.113.1:50001')
+  it.each([
+    {
+      name: 'counts one client once when the proxy adds a changing port',
+      trustProxy: 1,
+      first: '203.0.113.1:50001',
+      second: '203.0.113.1:50002',
+    },
+    {
+      name: 'ignores X-Forwarded-For when no proxy is trusted',
+      trustProxy: 0,
+      first: '203.0.113.1',
+      second: '203.0.113.2',
+    },
+    {
+      name: 'does not trust a forged left-hand address when one proxy is trusted',
+      trustProxy: 1,
+      first: '198.51.100.7, 203.0.113.1',
+      second: '198.51.100.8, 203.0.113.1',
+    },
+  ])('$name', async ({ trustProxy, first, second }) => {
+    const app = limitedApp(1, trustProxy)
+    await request(app).get('/tournaments').set('X-Forwarded-For', first)
 
-    const response = await request(app)
-      .get('/tournaments')
-      .set('X-Forwarded-For', '203.0.113.1:50002')
-
-    expect(response.status).toBe(429)
-  })
-
-  it('ignores X-Forwarded-For when no proxy is trusted', async () => {
-    const app = limitedApp(1, 0)
-    await request(app).get('/tournaments').set('X-Forwarded-For', '203.0.113.1')
-
-    const response = await request(app).get('/tournaments').set('X-Forwarded-For', '203.0.113.2')
-
-    expect(response.status).toBe(429)
-  })
-
-  it('does not trust a forged left-hand address when one proxy is trusted', async () => {
-    const app = limitedApp(1, 1)
-    await request(app).get('/tournaments').set('X-Forwarded-For', '198.51.100.7, 203.0.113.1')
-
-    const response = await request(app)
-      .get('/tournaments')
-      .set('X-Forwarded-For', '198.51.100.8, 203.0.113.1')
+    const response = await request(app).get('/tournaments').set('X-Forwarded-For', second)
 
     expect(response.status).toBe(429)
   })

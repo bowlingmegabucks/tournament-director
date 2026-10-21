@@ -33,9 +33,7 @@ export function requestLogging(logger: Logger): RequestHandler {
       const status = res.statusCode
       // Path only. A query string can hold personal data.
       const path = req.originalUrl.split('?')[0]
-      const level =
-        status >= 500 ? 'error' : status >= 400 ? 'warn' : path === quietPath ? 'debug' : 'info'
-      requestLogger(res, logger)[level](
+      requestLogger(res, logger)[levelFor(status, path)](
         {
           method: req.method,
           path,
@@ -50,6 +48,12 @@ export function requestLogging(logger: Logger): RequestHandler {
 
     next()
   }
+}
+
+function levelFor(status: number, path: string | undefined): 'error' | 'warn' | 'debug' | 'info' {
+  if (status >= 500) return 'error'
+  if (status >= 400) return 'warn'
+  return path === quietPath ? 'debug' : 'info'
 }
 
 /** The logger for this request (it carries `requestId`), or `fallback` outside a request. */

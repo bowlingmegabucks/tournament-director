@@ -5,7 +5,7 @@ import {
   AggregationTemporality,
 } from '@opentelemetry/sdk-metrics'
 import request from 'supertest'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createConfig } from '../test/factories.ts'
 import { createTestApp } from '../test/testApp.ts'
 import { clientKey } from './rateLimit.ts'
@@ -175,6 +175,18 @@ describe('rejection metric', () => {
     await request(app).get('/tournaments')
 
     expect(await rejections()).toBe(0)
+  })
+})
+
+describe('rate limit setup', () => {
+  it('raises no key generator warning on the first request', async () => {
+    // express-rate-limit reports a setup problem with console.error, once, on the first request.
+    const warn = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    await request(limitedApp(2)).get('/tournaments')
+
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
   })
 })
 

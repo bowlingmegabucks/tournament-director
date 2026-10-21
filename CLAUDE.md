@@ -10,6 +10,7 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 3. Build `api/` (Express + TypeScript). **Skeleton done on branch `api`:** health and tournament list routes (random demo data, 3 to 7 per call), tests, skills, CI. **Wired on the same branch:** `npm run dev` at the root starts both; Vite proxies `/api` to the API.
 4. Deploy `api/`. **Done.** Azure App Service (Web App `app-tournamentdirector-prod`, free tier: slow after idle). The `deploy-api` job in `deploy.yml` runs before `deploy-web`, both on `main` only. The production web build has no mocks; it calls the API at the `API_BASE_URL` variable. See [docs/deployment.md](docs/deployment.md).
 5. Theming and polish. **Done on branch `uiTheming`:** tokens, light/dark, logo header, `ui-standards` skill, a11y checks.
+6. API hardening. **Done on branch `apiHardening`:** request logging and ids, rate limiting, OpenTelemetry (Seq locally, Application Insights in production), crash and shutdown handling.
 
 Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, TypeScript, testing, composition) and stricter ESLint rules.
 

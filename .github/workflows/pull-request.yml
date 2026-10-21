@@ -115,6 +115,21 @@ jobs:
       - run: npm run test:coverage
       - run: npm run build
 
+      # Starts the built app the way Azure does, so a bad --import path fails here, not after deploy.
+      - name: Smoke test the build
+        env:
+          PORT: "3999"
+        run: |
+          npm start &
+          server=$!
+          healthy=false
+          for _ in $(seq 1 20); do
+            if curl -fsS http://localhost:3999/health; then healthy=true; break; fi
+            sleep 0.5
+          done
+          kill "$server"
+          [ "$healthy" = true ]
+
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4

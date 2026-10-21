@@ -131,6 +131,7 @@ Claude loads a skill when the task matches its description. The rules above stay
 | `ui-standards`                  | Designing or styling any screen: tokens, CSS Modules, semantic HTML, forms, WCAG 2.2 AA checklist        |
 | `api-patterns`                  | Routes, repositories, Zod validation, errors, config in `api/`                                           |
 | `api-testing-patterns`          | Vitest + Supertest, factories, error-path tests, Stryker survivors in `api/`                             |
+| `api-observability`             | What to log, which level, when to add a metric or span, what never to log, checking it in Seq            |
 | `pull-request-prep`, `write-pr` | Review and describe a branch before the PR                                                               |
 
 Read any third-party skill before you add it. A skill steers Claude like code. Do not add skills that fetch their instructions from a URL at run time.

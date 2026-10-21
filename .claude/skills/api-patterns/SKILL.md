@@ -64,6 +64,8 @@ When the first write route arrives, add `express.json()` in `app.ts` and teach `
 
 ## Logging, metrics, and limits
 
+What to log, at which level, and when to add a metric: see `api-observability`.
+
 - Log with the injected pino `logger`, never `console`. Fields first, constant message second: `logger.info({ port }, 'API listening')`. In a handler use `requestLogger(res, logger)` so the line carries `requestId`.
 - Do not log secrets, tokens, request bodies, or query strings.
 - Custom metrics: take a `Meter`, name it `tournament_director.<area>.<thing>`, and keep attributes few and fixed (never an IP or id). The HTTP and runtime metrics are automatic.

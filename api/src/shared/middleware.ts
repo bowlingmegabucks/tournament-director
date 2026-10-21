@@ -1,6 +1,7 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express'
 import { HttpError } from './errors.ts'
 import type { Logger } from './logger.ts'
+import { requestLogger } from './requestLogging.ts'
 
 export const notFound: RequestHandler = (_req, res) => {
   res.status(404).json({ message: 'Not found' })
@@ -14,7 +15,7 @@ export function createErrorHandler(logger: Logger): ErrorRequestHandler {
       return
     }
     // The cause goes to the log, never to the client.
-    logger.error({ err }, 'Unhandled error')
+    requestLogger(res, logger).error({ err }, 'Unhandled error')
     res.status(500).json({ message: 'Internal server error' })
   }
 }

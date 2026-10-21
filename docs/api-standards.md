@@ -52,10 +52,19 @@ Use the `pino` logger. It is like an `ILogger<T>` that you pass in: `createApp({
 - `LOG_LEVEL` sets the level (default `info`). Tests use `silent`, or `createCapturedLogger()` from `src/test/logger.ts` to check what was logged.
 - Do not log secrets, tokens, or whole request bodies.
 
+## Request logging and request id
+
+`requestLogging(logger)` in `src/shared/requestLogging.ts` is the first middleware in `createApp`.
+
+- Every request gets an id: the caller's `x-request-id` if it is 1 to 64 plain characters (letters, digits, `_`, `.`, `-`), else a new UUID. The id goes back in the `x-request-id` response header (CORS exposes it, so the web app can read it), onto the trace span as `request.id`, and into every log line for the request.
+- One `Request completed` line per request: `method`, `path` (no query string, which can hold personal data), `status`, `durationMs`, `aborted` (the caller hung up). The level is `error` for 5xx, `warn` for 4xx, `info` otherwise. `/health` logs at `debug`.
+- In a handler, log with `requestLogger(res, logger)` so lines carry the `requestId`. Error bodies stay `{ message }`; the id travels in the header.
+- To find one request in Seq, filter on `requestId = '...'`. The `TraceId` on each line opens the whole trace.
+
 ## Not built yet
 
 - Database (see "Revisit later" in `CLAUDE.md`)
-- Request logging and custom metrics (next parts of `apiHardening`)
+- Custom metrics (next part of `apiHardening`)
 - Rate limiting
 - Authentication
 - Write routes (POST, PUT, DELETE) and `express.json()`

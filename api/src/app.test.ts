@@ -70,7 +70,29 @@ describe('server errors', () => {
 
     expect(response.status).toBe(500)
     expect(response.body).toEqual({ message: 'Internal server error' })
-    expect(records()).toMatchObject([{ msg: 'Unhandled error' }])
+    const requestId = response.headers['x-request-id']
+    expect(records()).toMatchObject([
+      { msg: 'Unhandled error', requestId },
+      { msg: 'Request completed', status: 500, requestId },
+    ])
+  })
+})
+
+describe('request id', () => {
+  const origin = 'https://app.example'
+
+  it('lets a browser on an allowed origin read the header', async () => {
+    const app = createTestApp({ config: createConfig({ corsOrigins: [origin] }) })
+
+    const response = await request(app).get('/health').set('Origin', origin)
+
+    expect(response.headers['access-control-expose-headers']).toBe('x-request-id')
+  })
+
+  it('is set on a 404', async () => {
+    const response = await request(createTestApp()).get('/nope')
+
+    expect(response.headers['x-request-id']).toBeDefined()
   })
 })
 

@@ -3,6 +3,7 @@ import express from 'express'
 import helmet from 'helmet'
 import type { Config } from './config.ts'
 import type { Logger } from './shared/logger.ts'
+import { requestIdHeader, requestLogging } from './shared/requestLogging.ts'
 import { createTournamentRouter } from './features/tournaments/routes.ts'
 import type { TournamentRepository } from './features/tournaments/repository.ts'
 import { createErrorHandler, notFound } from './shared/middleware.ts'
@@ -17,10 +18,12 @@ export interface AppDependencies {
 export function createApp({ config, logger, tournaments }: AppDependencies): express.Express {
   const app = express()
 
+  // First, so every request gets an id and a log line, even one that CORS or a 404 turns away.
+  app.use(requestLogging(logger))
   // helmet also removes x-powered-by.
   app.use(helmet())
   // An empty list allows no cross-origin caller.
-  app.use(cors({ origin: config.corsOrigins }))
+  app.use(cors({ origin: config.corsOrigins, exposedHeaders: [requestIdHeader] }))
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok' })

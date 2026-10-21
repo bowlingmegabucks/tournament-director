@@ -28,7 +28,7 @@
 - Compare to .NET Stryker.NET. Same idea and same tool family.
 - Read `reports/mutation/mutation.html` to see survivors line by line.
 - The 10 "errors" in a run are mutants that fail TypeScript checks. They are normal.
-- Run it before a PR for changed features, and in CI on a schedule (it is slow).
+- Run it before a PR for changed features. It is slow. Pull requests run it without reporting. A push to `main` runs it again and sends the result to the [Stryker Dashboard](https://dashboard.stryker-mutator.io/reports/github.com/bowlingmegabucks/tournament-director/main) as modules `web` and `api` (set in each `stryker.config.json`), using the `STRYKER_DASHBOARD_API_KEY` Actions secret. Only the workflow adds the `dashboard` reporter (a command-line flag), so local runs never report.
 
 ## API (`api/`)
 

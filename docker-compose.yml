@@ -1,0 +1,29 @@
+# Local services. `npm run services:up` starts them. Add the database here later.
+# Host ports are non-standard (15xxx) so a global Seq or database can keep the defaults.
+name: tournament-director
+
+services:
+  seq:
+    container_name: tournament-director-seq
+    image: datalust/seq:2026.1
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      # Local only: no login. Do not copy this setting to a shared host.
+      SEQ_FIRSTRUN_NOAUTHENTICATION: "true"
+    ports:
+      # Web UI: http://localhost:15380
+      - "15380:80"
+      # OTLP and Seq ingestion: http://localhost:15341/ingest/otlp (logs, traces, metrics)
+      - "15341:5341"
+    volumes:
+      - seq-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/api"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  seq-data:
+    name: tournament-director-seq-data

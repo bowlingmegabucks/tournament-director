@@ -37,12 +37,13 @@ Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, 
 
 The root `package.json` only holds shortcuts. It is not an npm workspace; `web/` and `api/` keep their own `package.json` and lockfile.
 
-| Command             | Does                                                                                               |
-| ------------------- | -------------------------------------------------------------------------------------------------- |
-| `npm run setup`     | `npm ci` in the root, `api/`, and `web/`                                                           |
-| `npm run dev`       | API (port 3000) and web (port 5173) together; web proxies `/api`                                   |
-| `npm run dev:mocks` | Web only, with MSW mocks (no API needed). "Check API" fails half the time, to show the error toast |
-| `npm run check`     | lint, format check, typecheck, and tests in `api/` and `web/`                                      |
+| Command                                 | Does                                                                                                 |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `npm run setup`                         | `npm ci` in the root, `api/`, and `web/`                                                             |
+| `npm run dev`                           | API (port 3000) and web (port 5173) together; web proxies `/api`                                     |
+| `npm run services:up` / `services:down` | Start / stop the Docker Compose services (Seq now, a database later). Seq UI: http://localhost:15380 |
+| `npm run dev:mocks`                     | Web only, with MSW mocks (no API needed). "Check API" fails half the time, to show the error toast   |
+| `npm run check`                         | lint, format check, typecheck, and tests in `api/` and `web/`                                        |
 
 ## Commands (run in `web/`; `api/` has the same names, minus e2e)
 

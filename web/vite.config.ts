@@ -3,8 +3,9 @@ import { defineConfig } from 'vitest/config'
 
 // https://vite.dev/config/
 export default defineConfig({
-  // Relative base: the build works from any folder on the host (public_html/ or a subfolder).
-  base: './',
+  // Absolute base: deep links such as /tournaments/abc load assets from /assets/..., so the site
+  // must sit at the domain root. public/.htaccess sends those links to index.html.
+  base: '/',
   plugins: [react()],
   server: {
     // The browser calls /api/... on the dev server (VITE_API_BASE_URL=/api in .env.development).

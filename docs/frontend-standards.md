@@ -4,8 +4,8 @@
 
 ```
 web/src/
-  main.tsx               entry: providers, mock setup
-  App.tsx                top-level layout
+  main.tsx               entry: providers (query client, router), mock setup
+  App.tsx                the routes
   features/<name>/       one folder per feature
     api.ts               fetch calls, return typed data, throw on !ok
     types.ts             shapes shared inside the feature
@@ -16,6 +16,16 @@ web/src/
   test/                  test setup and helpers
   shared/                code two or more features use (create when needed)
 ```
+
+## Routing and layout
+
+- **Router:** `react-router` (declarative: `BrowserRouter` in `main.tsx`, `Routes` in `App.tsx`). Tests render the whole app with `renderApp(route)` (`src/test/renderApp.tsx`), which uses a memory router.
+- **The URL holds what is in context** (D-21): `/tournaments/{id}/…`. Never keep the selected tournament in `useState` or a context. A page reads `useParams`.
+- **Three levels of navigation** (D-22): the main menu in `AppShell` (every page), the tournament sidebar in `TournamentLayout` (only under `/tournaments/{id}`), and, for a squad or sweeper, a page header with a breadcrumb and tabs (not built yet; see the mockup in the migration plan history).
+- **Add a page inside a tournament** as a child route of `tournaments/:id` in `App.tsx`, and add its link to the sidebar. A child page reads the tournament with `useOutletContext<Tournament>()`.
+- **Hide, do not disable** (D-19). A link the user cannot use is not rendered. The API still enforces access.
+- Links to other pages are router `Link` or `NavLink` elements (`NavLink` sets `aria-current="page"`). Each page sets its own `<title>`.
+- **Hosting:** the site sits at the domain root and `public/.htaccess` sends deep links to `index.html` (see `docs/deployment.md`).
 
 ## TypeScript
 

@@ -13,6 +13,7 @@ import { useTournament } from './useTournaments'
  * pages as child routes.
  */
 export function TournamentLayout() {
+  // Stryker disable next-line StringLiteral: the route always has an :id; this only satisfies the type.
   const { id = '' } = useParams()
   const { data, isPending, error, refetch } = useTournament(id)
   const titleId = useId()

@@ -2,3 +2,13 @@
 <FilesMatch "^\.">
   Require all denied
 </FilesMatch>
+
+# Single-page app: a deep link such as /tournaments/abc has no file on the host, so serve the
+# app and let the router read the address. Real files (assets) are still served as they are.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ index.html [L]
+</IfModule>

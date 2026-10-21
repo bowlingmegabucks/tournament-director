@@ -33,6 +33,7 @@ describe('tournament pages', () => {
     renderApp(`/tournaments/${tournament.id}`)
 
     expect(await screen.findByRole('heading', { name: 'Spring Open', level: 1 })).toBeVisible()
+    expect(document.title).toBe('Spring Open · Tournament Director')
     expect(screen.getByText('Oct 23 to Oct 25, 2026', { selector: 'dd' })).toBeVisible()
     expect(screen.getByText('Spare Time Lanes, Worcester MA')).toBeVisible()
     expect(screen.getByText('$50.00')).toBeVisible()

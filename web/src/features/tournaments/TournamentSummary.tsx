@@ -6,6 +6,9 @@ import type { Tournament } from './types'
 
 const badgeText = { 'in-progress': 'In progress', upcoming: 'Upcoming' } as const
 
+// Stryker disable next-line StringLiteral: class names only style the badge.
+const badgeClass = (status: keyof typeof badgeText) => `${styles.badge} ${styles[status]}`
+
 interface TournamentSummaryProps {
   tournament: Tournament
   /** `YYYY-MM-DD`, from `todayLocal()`. */
@@ -26,7 +29,7 @@ export function TournamentSummary({
     <article className={styles.card}>
       {status !== 'past' && (
         <p className={styles.badgeRow}>
-          <span className={`${styles.badge} ${styles[status]}`}>{badgeText[status]}</span>
+          <span className={badgeClass(status)}>{badgeText[status]}</span>
         </p>
       )}
       <Heading className={styles.name}>

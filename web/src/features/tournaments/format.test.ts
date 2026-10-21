@@ -1,7 +1,17 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { formatDateRange, formatFee } from './format'
 
 describe('formatDateRange', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('does not move the dates in a time zone west of UTC', () => {
+    vi.stubEnv('TZ', 'America/Los_Angeles')
+
+    expect(formatDateRange('2026-10-23', '2026-10-25')).toBe('Oct 23 to Oct 25, 2026')
+  })
+
   it.each([
     ['2026-10-23', '2026-10-25', 'Oct 23 to Oct 25, 2026'],
     ['2026-10-01', '2026-10-01', 'Oct 1, 2026'],

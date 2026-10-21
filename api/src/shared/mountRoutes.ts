@@ -6,7 +6,7 @@ import type { Express, Router } from 'express'
  */
 export type Access = 'public'
 
-const accessLabels: readonly string[] = ['public']
+const accessLabels: ReadonlySet<string> = new Set(['public'])
 
 export interface RouteGroup {
   path: string
@@ -17,7 +17,7 @@ export interface RouteGroup {
 /** Every route group declares its access (D-27). A group with none, or an unknown one, stops startup. */
 export function mountRoutes(app: Express, groups: RouteGroup[]): void {
   for (const { path, access, router } of groups) {
-    if (!accessLabels.includes(access)) {
+    if (!accessLabels.has(access)) {
       throw new Error(`Route group "${path}" needs an access label`)
     }
     app.use(path, router)

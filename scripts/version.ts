@@ -6,9 +6,9 @@ export interface VersionInput {
   /** `version` in web/package.json */
   web: string
   /** `version` on the base branch (main). Leave out when it cannot be read. */
-  base?: string | undefined
+  base?: string
   /** The newest release tag, such as `v0.1.0`. Leave out when there is none. */
-  latestTag?: string | undefined
+  latestTag?: string
 }
 
 export interface VersionResult {
@@ -39,6 +39,30 @@ export function formatVersion(version: Version): string {
 const nextPatch = ([major, minor, patch]: Version): Version => [major, minor, patch + 1]
 const nextMinor = ([major, minor]: Version): Version => [major, minor + 1, 0]
 
+/** Error text when the version is not above the newest release, else undefined. */
+function releasedError(version: Version, api: string, latestTag?: string): string | undefined {
+  const released = latestTag === undefined ? undefined : parseVersion(latestTag.replace(/^v/, ''))
+  if (!released || compareVersions(version, released) > 0) return undefined
+  const suggestion = version[0] === 0 ? nextMinor(released) : nextPatch(released)
+  return `Version ${api} is already released (${latestTag}). Set api and web to a higher version, such as ${formatVersion(suggestion)}.`
+}
+
+function mainCheck(version: Version, api: string, base: string | undefined): VersionResult {
+  const errors: string[] = []
+  const warnings: string[] = []
+  const main = base === undefined ? undefined : parseVersion(base)
+  if (!main) return { errors, warnings }
+
+  const order = compareVersions(version, main)
+  if (order < 0) {
+    errors.push(`Version ${api} is lower than the version on main (${base}).`)
+  } else if (order === 0) {
+    const message = `Version ${api} is the same as on main. Consider bumping to ${formatVersion(nextPatch(version))}.`
+    ;(version[0] === 0 ? warnings : errors).push(message)
+  }
+  return { errors, warnings }
+}
+
 /**
  * Rules for a pull request to main.
  * - api and web carry the same `x.y.z`.
@@ -49,38 +73,18 @@ const nextMinor = ([major, minor]: Version): Version => [major, minor + 1, 0]
  */
 export function checkVersion({ api, web, base, latestTag }: VersionInput): VersionResult {
   const errors: string[] = []
-  const warnings: string[] = []
-
   const apiVersion = parseVersion(api)
   const webVersion = parseVersion(web)
   if (!apiVersion) errors.push(`api/package.json version "${api}" must look like 1.2.3.`)
   if (!webVersion) errors.push(`web/package.json version "${web}" must look like 1.2.3.`)
-  if (!apiVersion || !webVersion) return { errors, warnings }
+  if (!apiVersion || !webVersion) return { errors, warnings: [] }
   if (compareVersions(apiVersion, webVersion) !== 0) {
     errors.push(`api (${api}) and web (${web}) must have the same version.`)
-    return { errors, warnings }
-  }
-  const version = apiVersion
-
-  const released = latestTag === undefined ? undefined : parseVersion(latestTag.replace(/^v/, ''))
-  if (released && compareVersions(version, released) <= 0) {
-    const suggestion = version[0] === 0 ? nextMinor(released) : nextPatch(released)
-    errors.push(
-      `Version ${api} is already released (${latestTag}). Set api and web to a higher version, such as ${formatVersion(suggestion)}.`,
-    )
-    return { errors, warnings }
+    return { errors, warnings: [] }
   }
 
-  const main = base === undefined ? undefined : parseVersion(base)
-  if (!main) return { errors, warnings }
+  const releasedMessage = releasedError(apiVersion, api, latestTag)
+  if (releasedMessage) return { errors: [releasedMessage], warnings: [] }
 
-  const order = compareVersions(version, main)
-  if (order < 0) {
-    errors.push(`Version ${api} is lower than the version on main (${base}).`)
-  } else if (order === 0) {
-    const message = `Version ${api} is the same as on main. Consider bumping to ${formatVersion(nextPatch(version))}.`
-    if (version[0] === 0) warnings.push(message)
-    else errors.push(message)
-  }
-  return { errors, warnings }
+  return mainCheck(apiVersion, api, base)
 }

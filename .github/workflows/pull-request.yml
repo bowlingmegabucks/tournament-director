@@ -35,8 +35,8 @@ jobs:
 
       # In 0.x a missing bump is a warning on the pull request. A released version, a mismatch
       # between api and web, or a version below main fails the job. From 1.0.0 a missing bump fails too.
-      - run: npm ci
-      - run: npx prettier --check scripts
+      - run: npm ci --ignore-scripts
+      - run: npm run format:scripts:check
       - run: npm run test:scripts
       - run: npm run check:version -- --base origin/main
 

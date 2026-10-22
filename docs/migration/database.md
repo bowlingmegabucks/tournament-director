@@ -192,7 +192,7 @@ Handle each of these in the new repository layer.
 
 ## Plan for the new app
 
-- The live schema is the starting point. Prisma introspects it (see the earlier `plan/01-tournaments.md` in the `tournament-manager` repo).
+- The live schema is the starting point. Prisma maps it with a hand-written `api/prisma/schema.prisma` that models only the tables a shipped feature reads (D-30). We never run `prisma migrate` against it.
 - Rename in the mapping layer (`superSweeperCashRatio`), not in the database, until a planned migration.
 - Forward-only migrations.
 - The new app must keep reading SSNs written by legacy. See [security.md](security.md).

@@ -10,6 +10,8 @@ const optionalText = z
 
 const envSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+  // mariadb://USER:PASSWORD@HOST:3306/DATABASE. Required: there is no demo-data fallback (D-33).
+  DATABASE_URL: z.string().regex(/^(mariadb|mysql):\/\//, 'must start with mariadb:// or mysql://'),
   // Comma-separated list. Empty means same-origin only.
   CORS_ORIGIN: z.string().default(''),
   NODE_ENV: z.string().default('development'),
@@ -49,6 +51,8 @@ export type LogLevel = (typeof logLevels)[number]
 
 export interface Config {
   port: number
+  /** Connection string for the legacy MariaDB database. Holds the password: never log it. */
+  databaseUrl: string
   logLevel: LogLevel
   rateLimit: RateLimitConfig
   trustProxy: number
@@ -65,6 +69,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const data = result.data
   return {
     port: data.PORT,
+    databaseUrl: data.DATABASE_URL,
     logLevel: data.LOG_LEVEL,
     rateLimit: { max: data.RATE_LIMIT_MAX, windowSeconds: data.RATE_LIMIT_WINDOW_SECONDS },
     trustProxy: data.TRUST_PROXY,

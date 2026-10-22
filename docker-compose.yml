@@ -1,4 +1,4 @@
-# Local services. `npm run services:up` starts them. Add the database here later.
+# Local services. `npm run services:up` starts them.
 # Host ports are non-standard (15xxx) so a global Seq or database can keep the defaults.
 name: tournament-director
 
@@ -24,6 +24,30 @@ services:
       timeout: 3s
       retries: 5
 
+  database:
+    container_name: tournament-director-db
+    # The version the legacy repo pins (D-34). Check production with SELECT VERSION().
+    image: mariadb:11.4.7
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: bowling_megabucks
+      MARIADB_USER: megabucks
+      # Local only. api/.env.example holds the matching DATABASE_URL.
+      MARIADB_PASSWORD: bowling4money
+      MARIADB_RANDOM_ROOT_PASSWORD: "yes"
+    ports:
+      # mariadb://megabucks:bowling4money@localhost:15306/bowling_megabucks
+      - "15306:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   seq-data:
     name: tournament-director-seq-data
+  db-data:
+    name: tournament-director-db-data

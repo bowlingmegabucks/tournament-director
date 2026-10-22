@@ -10,12 +10,15 @@ import { createTournamentRouter } from './features/tournaments/routes.ts'
 import type { TournamentRepository } from './features/tournaments/repository.ts'
 import { createErrorHandler, notFound } from './shared/middleware.ts'
 import { createHealthRouter } from './shared/healthRoutes.ts'
+import { createReadyRouter } from './shared/readyRoutes.ts'
 import { mountRoutes } from './shared/mountRoutes.ts'
 
 export interface AppDependencies {
   config: Config
   logger: Logger
   tournaments: TournamentRepository
+  /** Resolves when the database answers; rejects (a 503) when it does not. Feeds `GET /ready`. */
+  checkDatabase: () => Promise<void>
   /** Where custom metrics go. The default sends to the OpenTelemetry SDK, or nowhere if it is off. */
   meter?: Meter
 }
@@ -25,6 +28,7 @@ export function createApp({
   config,
   logger,
   tournaments,
+  checkDatabase,
   // Stryker disable next-line StringLiteral: the scope name only labels the metrics.
   meter = metrics.getMeter('tournament-director-api'),
 }: AppDependencies): express.Express {
@@ -45,6 +49,7 @@ export function createApp({
   // Every group declares its access (D-27). Anything not mounted here is a 404.
   mountRoutes(app, [
     { path: '/health', access: 'public', router: createHealthRouter() },
+    { path: '/ready', access: 'public', router: createReadyRouter(checkDatabase) },
     { path: '/v1/tournaments', access: 'public', router: createTournamentRouter(tournaments) },
   ])
 

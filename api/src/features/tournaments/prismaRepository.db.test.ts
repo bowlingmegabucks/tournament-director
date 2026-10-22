@@ -104,7 +104,11 @@ describe('Prisma tournament repository', () => {
     const { repository } = setup()
 
     await expect(repository.get(bad.id)).rejects.toThrow(
-      new RegExp(`^Stored tournament ${bad.id} breaks the vendor shape: \\w+: .+; \\w+: .+$`),
+      new Error(
+        `Stored tournament ${bad.id} breaks the vendor shape: ` +
+          'entryFee: Too small: expected number to be >0; ' +
+          'bowlingCenter: Too small: expected string to have >=1 characters',
+      ),
     )
   })
 

@@ -40,7 +40,7 @@ export function createPrismaTournamentRepository(
   }
 }
 
-function describeIssue(issue: { path: PropertyKey[]; message: string }): string {
-  // Stryker disable next-line StringLiteral: a flat row gives one-element paths, so '.' and '' match.
+/** One line per validation problem: `path: message`, with nested paths joined by dots. */
+export function describeIssue(issue: { path: PropertyKey[]; message: string }): string {
   return `${issue.path.map(String).join('.')}: ${issue.message}`
 }

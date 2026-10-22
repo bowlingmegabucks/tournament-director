@@ -77,6 +77,7 @@ describe('Prisma tournament repository', () => {
       {
         level: 40,
         tournamentId: bad.id,
+        msg: 'Skipped a stored tournament that breaks the vendor shape',
         problems: ['entryFee: Too small: expected number to be >0'],
       },
     ])
@@ -98,12 +99,12 @@ describe('Prisma tournament repository', () => {
   })
 
   it('throws for a stored row that breaks the vendor shape (D-31)', async () => {
-    const bad = createTournament({ bowlingCenter: '' })
+    const bad = createTournament({ bowlingCenter: '', entryFee: 0 })
     await insert(bad)
     const { repository } = setup()
 
     await expect(repository.get(bad.id)).rejects.toThrow(
-      `Stored tournament ${bad.id} breaks the vendor shape: bowlingCenter:`,
+      new RegExp(`^Stored tournament ${bad.id} breaks the vendor shape: \\w+: .+; \\w+: .+$`),
     )
   })
 

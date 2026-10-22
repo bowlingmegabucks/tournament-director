@@ -20,7 +20,8 @@ export default async function setup(project: TestProject): Promise<() => Promise
   const client = createDatabaseClient(databaseUrl)
   try {
     for (const statement of legacySchemaSql) {
-      await client.$executeRawUnsafe(statement)
+      // In order: a table with a foreign key needs the table it points to first.
+      await client.$executeRawUnsafe(statement) // NOSONAR: order matters
     }
   } finally {
     await client.$disconnect()

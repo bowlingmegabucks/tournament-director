@@ -22,18 +22,21 @@ function midnight(time: number): Date {
 export async function seedTournaments(client: PrismaClient, now = new Date()): Promise<number> {
   const newestStart = midnight(now.getTime()).getTime() + 2 * MS_PER_DAY
 
-  for (const [index, { id, center, fee }] of samples.entries()) {
-    const start = midnight(newestStart - index * 365 * MS_PER_DAY)
-    const end = new Date(start.getTime() + (TOURNAMENT_DAYS - 1) * MS_PER_DAY)
-    const name = `${start.getUTCFullYear()} Northeast MegaBuck$ Tournament`
-    // Raw SQL: the Prisma model holds only the columns the app reads, and the table needs the rest.
-    await client.$executeRaw`
-      INSERT INTO Tournaments
-        (Id, Name, Start, End, EntryFee, Games, FinalsRatio, CashRatio, BowlingCenter, Completed)
-      VALUES (${id}, ${name}, ${start}, ${end}, ${fee}, 6, 7.0, 5.0, ${center}, 0)
-      ON DUPLICATE KEY UPDATE
-        Name = VALUES(Name), Start = VALUES(Start), End = VALUES(End),
-        EntryFee = VALUES(EntryFee), BowlingCenter = VALUES(BowlingCenter)`
-  }
+  // The rows do not depend on each other, so the inserts run together.
+  await Promise.all(
+    samples.map(({ id, center, fee }, index) => {
+      const start = midnight(newestStart - index * 365 * MS_PER_DAY)
+      const end = new Date(start.getTime() + (TOURNAMENT_DAYS - 1) * MS_PER_DAY)
+      const name = `${start.getUTCFullYear()} Northeast MegaBuck$ Tournament`
+      // Raw SQL: the Prisma model holds only the columns the app reads, and the table needs the rest.
+      return client.$executeRaw`
+        INSERT INTO Tournaments
+          (Id, Name, Start, End, EntryFee, Games, FinalsRatio, CashRatio, BowlingCenter, Completed)
+        VALUES (${id}, ${name}, ${start}, ${end}, ${fee}, 6, 7.0, 5.0, ${center}, 0)
+        ON DUPLICATE KEY UPDATE
+          Name = VALUES(Name), Start = VALUES(Start), End = VALUES(End),
+          EntryFee = VALUES(EntryFee), BowlingCenter = VALUES(BowlingCenter)`
+    }),
+  )
   return samples.length
 }

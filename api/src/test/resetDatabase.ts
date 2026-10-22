@@ -14,8 +14,9 @@ export async function resetDatabase(client: PrismaClient): Promise<void> {
   await client.$transaction(async (tx) => {
     await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 0')
     for (const { name } of tables) {
-      // Names come from information_schema, not from a caller.
-      await tx.$executeRawUnsafe(`DELETE FROM \`${name}\``)
+      // Names come from information_schema, not from a caller. One at a time: a transaction
+      // runs on one connection, which takes one statement at once.
+      await tx.$executeRawUnsafe(`DELETE FROM \`${name}\``) // NOSONAR: one connection
     }
     await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 1')
   })

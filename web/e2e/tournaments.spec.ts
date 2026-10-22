@@ -39,11 +39,3 @@ test('a deep link to an unknown tournament shows not found', async ({ page }) =>
 
   await expect(page.getByRole('heading', { name: 'Tournament not found' })).toBeVisible()
 })
-
-test('check API shows a success toast', async ({ page }) => {
-  await page.goto('/')
-
-  await page.getByRole('button', { name: 'Check API' }).click()
-
-  await expect(page.getByRole('status')).toContainText('API is healthy')
-})

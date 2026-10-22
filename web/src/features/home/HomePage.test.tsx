@@ -125,12 +125,12 @@ describe('HomePage', () => {
     expect(await screen.findByRole('link', { name: 'All tournaments' })).toBeVisible()
   })
 
-  it('keeps the Check API button until the database is read (D-29)', async () => {
+  it('has no Check API button now that the API reads the database (D-29)', async () => {
     serve([])
 
     renderApp('/')
 
-    expect(screen.getByRole('button', { name: 'Check API' })).toBeVisible()
     await screen.findByText('No tournaments yet.')
+    expect(screen.queryByRole('button', { name: 'Check API' })).not.toBeInTheDocument()
   })
 })

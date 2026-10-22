@@ -5,7 +5,6 @@ import { createDemoTournaments } from './data'
 const tournaments = createDemoTournaments()
 
 export const handlers = [
-  http.get('/health', () => HttpResponse.json({ status: 'ok' })),
   http.get('/v1/tournaments', () => HttpResponse.json({ tournaments })),
   http.get('/v1/tournaments/:id', ({ params }) => {
     const tournament = tournaments.find((candidate) => candidate.id === params.id)

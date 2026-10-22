@@ -2,7 +2,6 @@ import { Link } from 'react-router'
 import { Page } from '../../shared/Page'
 import { QueryError } from '../../shared/QueryError'
 import { todayLocal } from '../../shared/today'
-import { HealthCheckButton } from '../health/HealthCheckButton'
 import { currentTournament } from '../tournaments/groupTournaments'
 import { TournamentSummary } from '../tournaments/TournamentSummary'
 import { useTournaments } from '../tournaments/useTournaments'
@@ -14,11 +13,6 @@ export function HomePage() {
       <title>Tournament Director</title>
       <h1>Tournament Management</h1>
       <CurrentTournament />
-      {/* Remove with the API's first read of the production database (D-29). */}
-      <section aria-labelledby="system-heading">
-        <h2 id="system-heading">System</h2>
-        <HealthCheckButton />
-      </section>
     </Page>
   )
 }

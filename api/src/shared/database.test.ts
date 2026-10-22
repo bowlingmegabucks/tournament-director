@@ -34,7 +34,24 @@ describe('isDatabaseUnavailable', () => {
     },
   )
 
+  it('is true for a raw query that lost its connection (P2010 with driver code 45028)', () => {
+    const error = { code: 'P2010', meta: { driverAdapterError: { cause: { code: 45028 } } } }
+
+    expect(isDatabaseUnavailable(error)).toBe(true)
+  })
+
   it.each([
+    [
+      'a raw query that failed for another reason',
+      { code: 'P2010', meta: { driverAdapterError: { cause: { code: 1064 } } } },
+    ],
+    [
+      'another code with the same driver detail',
+      { code: 'P2021', meta: { driverAdapterError: { cause: { code: 45028 } } } },
+    ],
+    ['a raw query with no driver detail', { code: 'P2010' }],
+    ['a raw query with no cause', { code: 'P2010', meta: { driverAdapterError: {} } }],
+    ['a raw query with empty meta', { code: 'P2010', meta: {} }],
     ['a missing table', { code: 'P2021' }],
     ['an error with no code', new Error('boom')],
     ['a code that is not text', { code: 2039 }],
@@ -62,7 +79,9 @@ describe('withDatabaseErrors', () => {
 
     expect(failure).toBeInstanceOf(HttpError)
     expect(failure).toMatchObject({ status: 503, message: 'Database unavailable' })
-    expect(records()).toMatchObject([{ level: 50, msg: 'Database unavailable' }])
+    expect(records()).toMatchObject([
+      { level: 50, msg: 'Database unavailable', err: { message: 'pool failed' } },
+    ])
   })
 
   it('lets any other error through unchanged', async () => {

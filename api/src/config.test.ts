@@ -28,10 +28,12 @@ describe('loadConfig', () => {
     expect(() => loadConfig({})).toThrow(/Invalid environment: .*DATABASE_URL/s)
   })
 
-  it.each(['', 'postgres://u:secret@host/db', 'localhost:3306'])(
+  it.each(['', 'postgres://u:secret@host/db', 'localhost:3306', 'not-mariadb://u:p@host/db'])(
     'rejects DATABASE_URL=%s (D-33)',
     (url) => {
-      expect(() => loadConfig({ DATABASE_URL: url })).toThrow(/DATABASE_URL/)
+      expect(() => loadConfig({ DATABASE_URL: url })).toThrow(
+        /must start with mariadb:\/\/ or mysql:\/\/.*DATABASE_URL/s,
+      )
     },
   )
 

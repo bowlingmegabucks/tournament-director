@@ -120,6 +120,8 @@ jobs:
           cache-dependency-path: api/package-lock.json
 
       - run: npm ci --ignore-scripts
+      # --ignore-scripts skips Prisma's own generate step, so run it here.
+      - run: npm run db:generate
       - run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm run format:check

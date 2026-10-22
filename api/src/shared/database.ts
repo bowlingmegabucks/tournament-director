@@ -18,6 +18,7 @@ export function withConnectionDefaults(databaseUrl: string): string {
   return url.toString()
 }
 
+// Stryker disable all: these two need a real database; src/shared/database.db.test.ts covers them.
 /**
  * Build the Prisma client for the legacy database (the Node twin of a .NET `DbContext`).
  * Only `server.ts` and the database tests call this; everything else receives the client.
@@ -27,18 +28,28 @@ export function createDatabaseClient(databaseUrl: string): PrismaClient {
   return new PrismaClient({ adapter: new PrismaMariaDb(withConnectionDefaults(databaseUrl)) })
 }
 
+// Stryker restore all
+
 // Prisma error codes for "cannot reach the database": P2039 is the MariaDB adapter's pool failing
 // to connect (refused, wrong password, unknown database); the rest are the general codes.
 const unavailableCodes = new Set(['P2039', 'P2024', 'P1001', 'P1002', 'P1008', 'P1017'])
 
+// A raw query (`$queryRaw`, used by the ping) reports the same failure as P2010 and puts the
+// driver's code inside: 45028 is the mariadb driver's "no connection from the pool".
+const driverPoolFailure = 45028
+
+function hasProperty<K extends string>(value: unknown, key: K): value is Record<K, unknown> {
+  return typeof value === 'object' && value !== null && key in value
+}
+
 export function isDatabaseUnavailable(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    typeof error.code === 'string' &&
-    unavailableCodes.has(error.code)
-  )
+  if (!hasProperty(error, 'code') || typeof error.code !== 'string') return false
+  if (unavailableCodes.has(error.code)) return true
+  if (error.code !== 'P2010') return false
+  const meta = hasProperty(error, 'meta') ? error.meta : undefined
+  const adapterError = hasProperty(meta, 'driverAdapterError') ? meta.driverAdapterError : undefined
+  const cause = hasProperty(adapterError, 'cause') ? adapterError.cause : undefined
+  return hasProperty(cause, 'code') && cause.code === driverPoolFailure
 }
 
 /**
@@ -55,6 +66,7 @@ export async function withDatabaseErrors<T>(logger: Logger, run: () => Promise<T
   }
 }
 
+// Stryker disable all: needs a real database; src/shared/database.db.test.ts covers it.
 /** Ask the database a trivial question. Throws a 503 when it does not answer (D-32). */
 export async function pingDatabase(client: PrismaClient, logger: Logger): Promise<void> {
   await withDatabaseErrors(logger, () => client.$queryRaw`SELECT 1`)

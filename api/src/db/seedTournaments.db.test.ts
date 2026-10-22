@@ -26,9 +26,9 @@ describe('seedTournaments', () => {
     const repository = createPrismaTournamentRepository(client, createCapturedLogger().logger)
     const tournaments = await repository.list()
     expect(tournaments.map((tournament) => tournament.startDate).sort()).toEqual([
-      '2023-10-24',
-      '2024-10-23',
-      '2025-10-23',
+      '2023-10-25',
+      '2024-10-24',
+      '2025-10-24',
       '2026-10-24',
     ])
     expect(tournaments.every((tournament) => tournament.endDate > tournament.startDate)).toBe(true)

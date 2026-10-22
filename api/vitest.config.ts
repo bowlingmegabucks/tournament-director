@@ -20,6 +20,8 @@ export default defineConfig({
           include: ['src/**/*.db.test.ts'],
           globalSetup: ['src/test/dbGlobalSetup.ts'],
           testTimeout: 30_000,
+          // The files share one database and each resets it, so they run one after another.
+          fileParallelism: false,
         },
       },
     ],
@@ -30,6 +32,7 @@ export default defineConfig({
         'src/generated/**',
         'src/server.ts',
         'src/instrumentation.ts',
+        'src/db/seed.ts',
         'src/test/**',
         'src/**/*.test.ts',
       ],

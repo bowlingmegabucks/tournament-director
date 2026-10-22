@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "node --watch --env-file-if-exists=.env --import ./src/instrumentation.ts src/server.ts",
     "db:generate": "prisma generate",
+    "db:seed": "node --env-file-if-exists=.env src/db/seed.ts",
     "build": "rm -rf dist && tsc -p tsconfig.build.json",
     "start": "node --import ./dist/instrumentation.js dist/server.js",
     "lint": "eslint .",

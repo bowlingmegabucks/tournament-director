@@ -9,6 +9,7 @@
     "!src/server.ts",
     "!src/instrumentation.ts",
     "!src/test/**",
+    "!src/db/seed.ts",
     "!src/generated/**"
   ],
   "reporters": ["clear-text", "html"],

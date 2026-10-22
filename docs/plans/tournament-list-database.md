@@ -103,7 +103,7 @@ New dependencies (and the alternative for each):
 | Rule | Test |
 | --- | --- |
 | TRN-11 maps a stored row to the vendor shape | `tournamentRow.test.ts`: "converts midnight start and end to dates, a decimal fee to a number (TRN-11)" |
-| TRN-11 bad row | `tournamentRow.test.ts`: "rejects a row with an empty name, end before start, or fee 0 (D-31)" |
+| TRN-11 bad row | `tournamentRow.test.ts`: "rejects a row with an empty name, fee 0, or an unreadable date (D-31)". The vendor schema does not check end against start, so neither does the mapping |
 | TRN-11 list from a real database | `prismaRepository.db.test.ts`: "lists every stored tournament with no filter (TRN-11)"; "skips a bad row and logs its id (D-31)" |
 | TRN-15 detail | `prismaRepository.db.test.ts`: "gets one tournament; unknown id gives undefined (TRN-15)"; "throws for a bad row (D-31)" |
 | Outage on the repository | `prismaRepository.db.test.ts`: "turns a refused connection into a 503 (D-32)" (client pointed at a closed port) |
@@ -115,10 +115,11 @@ New dependencies (and the alternative for each):
 
 Test setup (D-36):
 
+- The `db` files share one database, so they run one at a time (`fileParallelism: false`).
 - Vitest gets two projects: `unit` (everything but `*.db.test.ts`) and `db` (`*.db.test.ts`, with `globalSetup`). Only `db` starts a container, so route tests stay fast.
 - `src/test/dbGlobalSetup.ts` starts `MariaDbContainer("mariadb:11.4.7")`, creates the `Tournaments` table from `database.md`, and exposes the URL with `provide`.
 - `src/test/resetDatabase.ts` lists tables from `information_schema`, turns off foreign key checks, truncates each, turns checks on. Called in `beforeEach`.
-- Mutation: the mapping lives in the pure `toTournament`, which Stryker covers through the `unit` project. `prismaRepository.ts`, `database.ts`, `seed.ts` are excluded from `mutate`, and Stryker runs only the `unit` project. This avoids a database per worker.
+- Mutation: the mapping lives in the pure `toTournament`, which Stryker covers through the `unit` project. `prismaRepository.ts`, `database.ts`, `seed.ts` are excluded from `mutate`, and Stryker runs only the `unit` project (`vitest.stryker.config.ts`). This avoids a database per worker. `database.ts`'s client builder and ping are marked `Stryker disable`; `database.db.test.ts` covers them.
 - Coverage counts both projects. CI needs Docker (included on `ubuntu-latest`).
 
 ## Steps

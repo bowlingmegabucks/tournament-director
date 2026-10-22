@@ -32,15 +32,17 @@
 
 ## API (`api/`)
 
-| Level              | Tool               | Where                 | Run (in `api/`)         |
-| ------------------ | ------------------ | --------------------- | ----------------------- |
-| Unit / integration | Vitest + Supertest | `src/**/*.test.ts`    | `npm test`              |
-| Mutation           | Stryker            | `stryker.config.json` | `npm run test:mutation` |
+| Level              | Tool                    | Where                 | Run (in `api/`)           |
+| ------------------ | ----------------------- | --------------------- | ------------------------- |
+| Unit / integration | Vitest + Supertest      | `src/**/*.test.ts`    | `npm test`                |
+| Database           | Vitest + Testcontainers | `src/**/*.db.test.ts` | `npm test` (needs Docker) |
+| Mutation           | Stryker                 | `stryker.config.json` | `npm run test:mutation`   |
 
 - Test through `createApp` with Supertest. It sends real HTTP requests in memory, so no port opens. Fake only storage: pass an in-memory or failing repository.
 - Factories are in `src/test/factories.ts`. Override only the fields a test cares about.
 - Cover happy path, empty result, bad input, missing resource, and storage failure (generic 500, no leaked detail).
 - Config tests pass an object to `loadConfig`. They never set `process.env`.
 - Coverage fails under 80%. Mutation thresholds match `web/` (break at 50, aim for 80).
-- When the database arrives, test the real repository against a throwaway database, and keep the in-memory one for route tests.
+- Test the real repository against a throwaway MariaDB 11.4.7 that Testcontainers starts once per run (the `db` Vitest project, files named `*.db.test.ts`). Call `resetDatabase(client)` in `beforeEach`; insert the rows each test needs. Keep these tests few: only what a fake cannot prove (type mapping, bad rows, outage, the ping). Route tests use the in-memory repository.
+- The `db` files share one database, so they run one at a time. Stryker runs only the `unit` project (`vitest.stryker.config.ts`).
 - See the `api-testing-patterns` skill for examples.

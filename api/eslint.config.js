@@ -5,7 +5,7 @@ import tseslint from 'typescript-eslint'
 import prettier from 'eslint-config-prettier'
 
 export default defineConfig(
-  { ignores: ['dist', 'coverage', 'reports', '.stryker-tmp'] },
+  { ignores: ['dist', 'coverage', 'reports', '.stryker-tmp', 'src/generated'] },
   {
     files: ['**/*.ts'],
     extends: [js.configs.recommended, ...tseslint.configs.recommended, prettier],

@@ -120,6 +120,8 @@ jobs:
           cache-dependency-path: api/package-lock.json
 
       - run: npm ci --ignore-scripts
+      # --ignore-scripts skips Prisma's own generate step, so run it here.
+      - run: npm run db:generate
       - run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm run format:check
@@ -130,9 +132,12 @@ jobs:
       # Starts the built app the way Azure does, so a bad --import path or a broken telemetry start
       # fails here, not after deploy. The connection string turns the SDK and Azure exporters on;
       # its endpoint refuses connections, so nothing leaves the runner. Then SIGTERM must exit 0.
+      # DATABASE_URL is required at start but the database connects on first query, and /health
+      # does not query, so a URL with no server behind it is enough.
       - name: Smoke test the build
         env:
           PORT: "3999"
+          DATABASE_URL: "mariadb://smoke:smoke@127.0.0.1:1/smoke"
           APPLICATIONINSIGHTS_CONNECTION_STRING: "InstrumentationKey=00000000-0000-0000-0000-000000000000;IngestionEndpoint=https://127.0.0.1:1/"
         run: |
           node --import ./dist/instrumentation.js dist/server.js > server.log 2>&1 &

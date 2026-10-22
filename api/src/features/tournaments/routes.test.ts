@@ -1,5 +1,6 @@
 import request from 'supertest'
 import { describe, expect, it } from 'vitest'
+import { HttpError } from '../../shared/errors.ts'
 import { createInMemoryTournamentRepository } from './repository.ts'
 import { tournamentDetailSchema, tournamentListSchema } from './types.ts'
 import { createTournament } from '../../test/factories.ts'
@@ -83,5 +84,41 @@ describe('GET /v1/tournaments/:id', () => {
 
     expect(response.status).toBe(400)
     expect(response.body.message).toMatch(/^Invalid request\. id:/)
+  })
+})
+
+describe('when storage fails', () => {
+  const database = { code: 503, message: 'Database unavailable' }
+
+  function failingRepository(error: Error) {
+    return {
+      list: () => Promise.reject(error),
+      get: () => Promise.reject(error),
+    }
+  }
+
+  it.each(['/v1/tournaments', '/v1/tournaments/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01'])(
+    'GET %s answers 503 when the database is down (D-32)',
+    async (path) => {
+      const app = createTestApp({
+        tournaments: failingRepository(new HttpError(database.code, database.message)),
+      })
+
+      const response = await request(app).get(path)
+
+      expect(response.status).toBe(503)
+      expect(response.body).toEqual({ message: 'Database unavailable' })
+    },
+  )
+
+  it('answers 500 for a stored row that breaks the vendor shape, without the cause (D-31)', async () => {
+    const app = createTestApp({
+      tournaments: failingRepository(new Error('Stored tournament x breaks the vendor shape')),
+    })
+
+    const response = await request(app).get('/v1/tournaments/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01')
+
+    expect(response.status).toBe(500)
+    expect(response.body).toEqual({ message: 'Internal server error' })
   })
 })

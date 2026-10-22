@@ -8,9 +8,22 @@
     "!src/**/*.test.ts",
     "!src/server.ts",
     "!src/instrumentation.ts",
-    "!src/test/**"
+    "!src/test/**",
+    "!src/db/seed.ts",
+    "!src/generated/**",
+    "!src/features/tournaments/prismaRepository.ts",
+    "!src/db/seedTournaments.ts"
   ],
   "reporters": ["clear-text", "html"],
-  "dashboard": { "module": "api" },
-  "thresholds": { "high": 80, "low": 60, "break": 50 }
+  "dashboard": {
+    "module": "api"
+  },
+  "thresholds": {
+    "high": 80,
+    "low": 60,
+    "break": 50
+  },
+  "vitest": {
+    "configFile": "vitest.stryker.config.ts"
+  }
 }

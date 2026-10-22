@@ -1,0 +1,24 @@
+// Maps the legacy MariaDB schema (docs/migration/database.md). Models only the tables a
+// shipped feature reads (D-30). WinForms owns the schema: never run `prisma migrate` here.
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  moduleFormat           = "esm"
+  importFileExtension    = "ts"
+  generatedFileExtension = "ts"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Tournament {
+  id            String   @id @db.Char(36) @map("Id")
+  name          String   @map("Name") @db.LongText
+  start         DateTime @map("Start") @db.DateTime(6)
+  end           DateTime @map("End") @db.DateTime(6)
+  entryFee      Decimal  @map("EntryFee") @db.Decimal(5, 2)
+  bowlingCenter String   @map("BowlingCenter") @db.LongText
+
+  @@map("Tournaments")
+}

@@ -92,10 +92,21 @@ Metrics ride the same OpenTelemetry pipeline as traces and logs, so Seq and App 
 - SIGINT and SIGTERM (a deploy): log, stop taking connections, let open requests finish, send buffered telemetry, exit 0. If that takes over 10 seconds, log and exit 1.
 - `uncaughtException` and `unhandledRejection`: log at `fatal` (so it reaches Seq and App Insights), send telemetry, exit 1. Azure restarts the app. Do not try to carry on after one.
 - `GET /health` answers `{ "status": "ok" }` and is the liveness check. It is outside the rate limit and the traces, and its request line logs at `debug`.
-- **Readiness comes with the database.** Neba has a second endpoint (`/alive` is liveness, `/health` is readiness and runs every check). When `api/` gets a database, add a readiness route that pings it and returns 503 while it is down, and keep `/health` as plain liveness so a database outage does not restart the app.
+- **Readiness.** `GET /ready` runs `SELECT 1` and answers 503 `{ message }` while the database is down (D-32). `/health` stays plain liveness and never touches the database, so an outage does not restart the app. Neba's twin: `/alive` and `/health`.
+
+## Database
+
+The legacy MariaDB database, read through Prisma (D-30). The .NET twin: `PrismaClient` is the `DbContext`, `schema.prisma` the model.
+
+- `DATABASE_URL` is required: `mariadb://USER:PASSWORD@HOST:3306/DATABASE`. Add `?ssl=true` for TLS; the host name must match the certificate. It holds the password: never log it. Without it the API does not start (D-33).
+- `api/prisma/schema.prisma` models only the tables a shipped feature reads, with `@map` for legacy names. The client is generated into `src/generated/` (ignored by git). Run `npm run db:generate` after `npm ci` and after any schema change. `npm ci --ignore-scripts` skips Prisma's own generate step, and CI and deploy call it. Never run `prisma migrate` here: WinForms owns the schema until it is sunset.
+- Only `server.ts` builds the client (`createDatabaseClient`). Repositories receive it, as with the other real dependencies. The client adds 2 second connection timeouts to the URL, or a down database holds each request for 20 seconds.
+- A repository wraps each call in `withDatabaseErrors(logger, ...)`. An unreachable database becomes a 503 `Database unavailable` with the cause in the log; any other database error is a 500 (a missing table is a setup fault, not an outage).
+- A row that breaks the API shape is skipped and logged on a list; a single-row read of it answers 500 (D-31). `toTournament` in `tournamentRow.ts` does the mapping and is a pure function.
+- Local: `npm run services:up` starts MariaDB 11.4.7 (host port 15306). You create the tables from `docs/migration/database.md`; `npm run db:seed` (root or `api/`) adds sample tournaments.
+- Tests: files named `*.db.test.ts` run in the `db` Vitest project against a real MariaDB that Testcontainers starts once per run (needs Docker). `resetDatabase` empties every table before each test; files run one at a time because they share the database. Everything else runs in the `unit` project with the in-memory repository. Stryker runs `unit` only (`vitest.stryker.config.ts`), and `prismaRepository.ts` and `seedTournaments.ts` are outside its `mutate` list.
 
 ## Not built yet
 
-- Database (see "Revisit later" in `CLAUDE.md`)
 - Authentication
 - Write routes (POST, PUT, DELETE) and `express.json()`

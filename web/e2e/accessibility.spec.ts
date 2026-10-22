@@ -52,14 +52,6 @@ for (const colorScheme of colorSchemes) {
 
       await expectNoViolations(page)
     })
-
-    test('home page (success toast) has no WCAG 2.2 AA violations', async ({ page }) => {
-      await page.goto('/')
-      await page.getByRole('button', { name: 'Check API' }).click()
-      await expect(page.getByRole('status')).toContainText('API is healthy')
-
-      await expectNoViolations(page)
-    })
   })
 }
 
@@ -87,19 +79,6 @@ test.describe('other states', () => {
       await page.emulateMedia({ colorScheme })
       await page.goto('/tournaments')
       await expect(page.getByRole('alert')).toBeVisible()
-
-      await expectNoViolations(page)
-    })
-
-    test(`home page (error toast) has no WCAG 2.2 AA violations in ${colorScheme} mode`, async ({
-      page,
-    }) => {
-      await page.route('**/v1/tournaments', (route) => route.fulfill({ json: { tournaments: [] } }))
-      await page.route('**/health', (route) => route.fulfill({ status: 503, body: '' }))
-      await page.emulateMedia({ colorScheme })
-      await page.goto('/')
-      await page.getByRole('button', { name: 'Check API' }).click()
-      await expect(page.getByRole('alert').filter({ hasText: '503' })).toBeVisible()
 
       await expectNoViolations(page)
     })

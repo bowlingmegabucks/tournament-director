@@ -11,7 +11,8 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 4. Deploy `api/`. **Done.** Azure App Service (Web App `app-tournamentdirector-prod`, free tier: slow after idle). The `deploy-api` job in `deploy.yml` runs before `deploy-web`, both on `main` only. The production web build has no mocks; it calls the API at the `API_BASE_URL` variable. See [docs/deployment.md](docs/deployment.md).
 5. Theming and polish. **Done on branch `uiTheming`:** tokens, light/dark, logo header, `ui-standards` skill, a11y checks.
 6. API hardening. **Done on branch `apiHardening`:** request logging and ids, rate limiting, OpenTelemetry (Seq locally, Application Insights in production), crash and shutdown handling.
-7. Landing page and shell (0.2.0 work). **Done on branch `landingPage`:** Home with the current tournament, grouped tournament list, tournament overview, router with a top bar and tournament sidebar, vendor routes `/v1/tournaments`, route access labels, and a version check on pull requests. Demo data only; the legacy database is the next run. See [docs/requirements/](docs/requirements/README.md).
+7. Landing page and shell (0.2.0 work). **Done on branch `landingPage`:** Home with the current tournament, grouped tournament list, tournament overview, router with a top bar and tournament sidebar, vendor routes `/v1/tournaments`, route access labels, and a version check on pull requests. See [docs/requirements/](docs/requirements/README.md).
+8. Tournament list on the database. **Done on branch `tournamentList`:** the API reads the legacy MariaDB `Tournaments` table through Prisma (Compose service, `GET /ready`, `db:seed`, Testcontainers tests); the Check API button is gone. Reads for other tables come one feature at a time.
 
 Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, TypeScript, testing, composition) and stricter ESLint rules.
 
@@ -27,7 +28,7 @@ Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, 
 ## Revisit later
 
 - **Dev container.** Not needed now: one developer, Node 24 from `web/.nvmrc`, and CI tests a clean environment. Raise it with the owner when any of these happens:
-  - `api/` needs a database or other services (a dev container with Docker Compose starts them together).
+  - ~~`api/` needs a database or other services.~~ Happened with the tournament list on the database. The owner deferred a dev container on 2026-10-22: Compose already starts MariaDB, and Testcontainers inside a dev container needs the Docker socket and `TESTCONTAINERS_HOST_OVERRIDE`.
   - A second contributor joins.
   - The owner wants to run Claude with broad permissions in a sandbox.
 
@@ -43,21 +44,23 @@ Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, 
 | Lint / format | ESLint + Prettier                                                                         |
 | Tests         | Vitest, Testing Library, MSW, Playwright, Stryker (web); Vitest, Supertest, Stryker (api) |
 | API libraries | Zod (validation), helmet (headers), cors                                                  |
+| Database      | Legacy MariaDB 11.4.7 through Prisma 7 (hand-written schema, no `prisma migrate`)         |
 
 ## Root commands
 
 The root `package.json` only holds shortcuts. It is not an npm workspace; `web/` and `api/` keep their own `package.json` and lockfile.
 
-| Command                                 | Does                                                                                                 |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `npm run setup`                         | `npm ci` in the root, `api/`, and `web/`                                                             |
-| `npm run dev`                           | API (port 3000) and web (port 5173) together; web proxies `/api`                                     |
-| `npm run services:up` / `services:down` | Start / stop the Docker Compose services (Seq now, a database later). Seq UI: http://localhost:15380 |
-| `npm run dev:mocks`                     | Web only, with MSW mocks (no API needed). "Check API" fails half the time, to show the error toast   |
-| `npm run check`                         | script tests, then lint, format check, typecheck, and tests in `api/` and `web/`                     |
-| `npm run check:version`                 | Compare the version in `api/` and `web/` with `main` and the newest release tag                      |
-| `npm run test:scripts`                  | Tests for the files in `scripts/`                                                                    |
-| `npm run format:scripts`                | Prettier on `scripts/` (root `.prettierrc.json`; `check` also checks it)                             |
+| Command                                 | Does                                                                                                                                    |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run setup`                         | `npm ci` in the root, `api/`, and `web/`                                                                                                |
+| `npm run dev`                           | API (port 3000) and web (port 5173) together; web proxies `/api`                                                                        |
+| `npm run services:up` / `services:down` | Start / stop the Docker Compose services (Seq and MariaDB). Seq UI: http://localhost:15380; database on port 15306                      |
+| `npm run db:seed`                       | Add sample tournaments to the local database (you create the tables first; see [docs/api-standards.md](docs/api-standards.md#database)) |
+| `npm run dev:mocks`                     | Web only, with MSW mocks (no API needed).                                                                                               |
+| `npm run check`                         | script tests, then lint, format check, typecheck, and tests in `api/` and `web/`                                                        |
+| `npm run check:version`                 | Compare the version in `api/` and `web/` with `main` and the newest release tag                                                         |
+| `npm run test:scripts`                  | Tests for the files in `scripts/`                                                                                                       |
+| `npm run format:scripts`                | Prettier on `scripts/` (root `.prettierrc.json`; `check` also checks it)                                                                |
 
 ## Commands (run in `web/`; `api/` has the same names, minus e2e)
 
@@ -100,6 +103,7 @@ Details in [docs/api-standards.md](docs/api-standards.md).
 - Throw a Zod error from a route and it becomes a 400. A crash or SIGTERM goes through `handleProcessEvents` (logs, flushes telemetry, exits).
 - Rate limiting is per client IP (`RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_SECONDS`). Set `TRUST_PROXY=1` on Azure or every caller shares one bucket.
 - Telemetry is OpenTelemetry, loaded by `src/instrumentation.ts` before the app. Seq locally (`npm run services:up`), Application Insights in production; each turns on only when its env var is set.
+- Database: Prisma over the legacy MariaDB (see [docs/api-standards.md](docs/api-standards.md#database)). `DATABASE_URL` is required. Run `npm run db:generate` in `api/` after `npm ci` (CI and deploy do). Wrap repository calls in `withDatabaseErrors`. Never run `prisma migrate`: WinForms owns the schema. Tests named `*.db.test.ts` need Docker (Testcontainers).
 - Keep `helmet` and the CORS allow-list. The web `Tournament` shape and the API's must match.
 - Test with Vitest + Supertest through `createApp`. Mutation: Stryker, same thresholds as `web/`.
 - `qs` override in `api/package.json`: same Stryker advisory as `web/`. Remove it in both places together.

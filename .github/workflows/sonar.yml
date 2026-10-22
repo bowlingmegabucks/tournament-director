@@ -42,6 +42,7 @@ jobs:
         working-directory: api
         run: |
           npm ci --ignore-scripts
+          npm run db:generate
           npm run test:coverage -- --coverage.reporter=lcov
 
       - name: Cache SonarQube packages

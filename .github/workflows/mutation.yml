@@ -39,6 +39,11 @@ jobs:
 
       - run: npm ci --ignore-scripts
 
+      # --ignore-scripts skips Prisma's own generate step, and only api has a Prisma schema.
+      - name: Generate the Prisma client
+        if: ${{ inputs.folder == 'api' }}
+        run: npm run db:generate
+
       # Each folder sets its dashboard module in stryker.config.json (badges take ?module=web and ?module=api).
       # Without the key the dashboard reporter would fail after the full run, so skip it and warn.
       - name: Run mutation tests

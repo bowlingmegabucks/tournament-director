@@ -18,10 +18,11 @@ export function createTournaments(count = 5): Tournament[] {
   return Array.from({ length: count }, () => createTournament())
 }
 
-/** A config with no CORS origins and no telemetry destination. */
+/** A config with no CORS origins and no telemetry destination. The database URL points nowhere real. */
 export function createConfig(overrides: Partial<Config> = {}): Config {
   return {
     port: 0,
+    databaseUrl: 'mariadb://user:password@localhost:3306/test',
     logLevel: 'silent',
     // High enough that no test hits it by accident. Tests of the limit set their own.
     rateLimit: { max: 1000, windowSeconds: 60 },

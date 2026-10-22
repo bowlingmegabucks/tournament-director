@@ -49,18 +49,22 @@ jobs:
           cache-dependency-path: api/package-lock.json
 
       - run: npm ci --ignore-scripts
+      # --ignore-scripts skips Prisma's own generate step, so run it here.
+      - run: npm run db:generate
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
 
-      # Ship only what runs: the build and production dependencies.
+      # Ship only what runs: the build and production dependencies. --omit=optional leaves out the
+      # Prisma command-line tools, which npm counts as optional peers of @prisma/client. The build
+      # already holds the generated client, so they add about 250 MB and no function.
       - name: Stage package
         run: |
           mkdir ../api-package
           cp -r dist package.json package-lock.json ../api-package/
-          npm ci --omit=dev --ignore-scripts --prefix ../api-package
+          npm ci --omit=dev --omit=optional --ignore-scripts --prefix ../api-package
 
       - name: Sign in to Azure
         if: ${{ inputs.dry_run != true }}

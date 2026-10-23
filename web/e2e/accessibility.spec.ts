@@ -39,6 +39,18 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('divisions page (loaded) has no WCAG 2.2 AA violations', async ({ page }) => {
+      await page.goto('/tournaments')
+      await page.getByRole('article').first().getByRole('link').click()
+      await page
+        .getByRole('navigation', { name: /Northeast MegaBuck/ })
+        .getByRole('link', { name: 'Divisions' })
+        .click()
+      await expect(page.getByRole('table')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
     test('tournament not found has no WCAG 2.2 AA violations', async ({ page }) => {
       await page.goto('/tournaments/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01')
       await expect(page.getByRole('heading', { name: 'Tournament not found' })).toBeVisible()
@@ -79,6 +91,62 @@ test.describe('other states', () => {
       await page.emulateMedia({ colorScheme })
       await page.goto('/tournaments')
       await expect(page.getByRole('alert')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
+    test(`divisions page (empty) has no WCAG 2.2 AA violations in ${colorScheme} mode`, async ({
+      page,
+    }) => {
+      const id = '7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01'
+      await page.route(`**/v1/tournaments/${id}`, (route) =>
+        route.fulfill({
+          json: {
+            tournament: {
+              id,
+              name: 'Spring Open',
+              startDate: '2026-10-23',
+              endDate: '2026-10-25',
+              entryFee: 50,
+              bowlingCenter: 'Spare Time Lanes, Worcester MA',
+            },
+          },
+        }),
+      )
+      await page.route(`**/v1/tournaments/${id}/divisions`, (route) =>
+        route.fulfill({ json: { divisions: [] } }),
+      )
+      await page.emulateMedia({ colorScheme })
+      await page.goto(`/tournaments/${id}/divisions`)
+      await expect(page.getByText('No divisions yet.')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
+    test(`divisions page (error) has no WCAG 2.2 AA violations in ${colorScheme} mode`, async ({
+      page,
+    }) => {
+      const id = '7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01'
+      await page.route(`**/v1/tournaments/${id}`, (route) =>
+        route.fulfill({
+          json: {
+            tournament: {
+              id,
+              name: 'Spring Open',
+              startDate: '2026-10-23',
+              endDate: '2026-10-25',
+              entryFee: 50,
+              bowlingCenter: 'Spare Time Lanes, Worcester MA',
+            },
+          },
+        }),
+      )
+      await page.route(`**/v1/tournaments/${id}/divisions`, (route) =>
+        route.fulfill({ status: 503, body: '' }),
+      )
+      await page.emulateMedia({ colorScheme })
+      await page.goto(`/tournaments/${id}/divisions`)
+      await expect(page.getByRole('alert')).toBeVisible({ timeout: 5000 })
 
       await expectNoViolations(page)
     })

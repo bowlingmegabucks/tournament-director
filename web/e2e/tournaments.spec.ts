@@ -39,3 +39,18 @@ test('a deep link to an unknown tournament shows not found', async ({ page }) =>
 
   await expect(page.getByRole('heading', { name: 'Tournament not found' })).toBeVisible()
 })
+
+test('a tournament sidebar leads to its divisions table (DIV-12, DIV-13)', async ({ page }) => {
+  await page.goto('/tournaments')
+  await page.getByRole('article').first().getByRole('link').click()
+
+  await page
+    .getByRole('navigation', { name: /Northeast MegaBuck/ })
+    .getByRole('link', { name: 'Divisions' })
+    .click()
+
+  await expect(page.getByRole('heading', { name: 'Divisions', level: 1 })).toBeVisible()
+  const names = page.getByRole('rowheader')
+  await expect(names).toHaveText(['Open', 'Women', 'Seniors', 'Scratch'])
+  await expect(page.getByRole('row', { name: /Women/ })).toContainText('90% of 220, max 40 a game')
+})

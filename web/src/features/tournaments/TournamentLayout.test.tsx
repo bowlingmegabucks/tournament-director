@@ -67,6 +67,28 @@ describe('tournament pages', () => {
     expect(within(main).getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current')
   })
 
+  it('links to Divisions in the sidebar and marks it on its own page (D-40)', async () => {
+    serveTournament()
+    server.use(
+      http.get('/v1/tournaments/:id/divisions', () => HttpResponse.json({ divisions: [] })),
+    )
+
+    renderApp(`/tournaments/${tournament.id}`)
+    const link = await within(
+      await screen.findByRole('navigation', { name: 'Spring Open' }),
+    ).findByRole('link', { name: 'Divisions' })
+    expect(link).toHaveAttribute('href', `/tournaments/${tournament.id}/divisions`)
+    expect(link).not.toHaveAttribute('aria-current')
+
+    await userEvent.click(link)
+
+    expect(await screen.findByRole('heading', { name: 'Divisions', level: 1 })).toBeVisible()
+    expect(within(sidebar()).getByRole('link', { name: 'Divisions' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+  })
+
   it.each(['/', '/tournaments', '/nowhere'])(
     'shows no tournament sidebar at %s (NAV-02)',
     async (path) => {

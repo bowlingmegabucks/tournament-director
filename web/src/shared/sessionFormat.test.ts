@@ -47,6 +47,7 @@ describe('formatLanes', () => {
 
   it('says Not set for the legacy default of 0 lanes', () => {
     expect(formatLanes(0, 0)).toBe('Not set')
+    expect(formatLanes(1, 0)).toBe('Not set')
     expect(formatLanes(1, -2)).toBe('Not set')
   })
 

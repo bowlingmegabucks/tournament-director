@@ -13,6 +13,7 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 6. API hardening. **Done on branch `apiHardening`:** request logging and ids, rate limiting, OpenTelemetry (Seq locally, Application Insights in production), crash and shutdown handling.
 7. Landing page and shell (0.2.0 work). **Done on branch `landingPage`:** Home with the current tournament, grouped tournament list, tournament overview, router with a top bar and tournament sidebar, vendor routes `/v1/tournaments`, route access labels, and a version check on pull requests. See [docs/requirements/](docs/requirements/README.md).
 8. Tournament list on the database. **Done on branch `tournamentList`:** the API reads the legacy MariaDB `Tournaments` table through Prisma (Compose service, `GET /ready`, `db:seed`, Testcontainers tests); the Check API button is gone. Reads for other tables come one feature at a time.
+9. Divisions list. **Done on branch `tournamentDivisionsList`:** the API reads the legacy `Divisions` table (web-only `GET /v1/tournaments/{id}/divisions`, and a vendor-shape `divisions` array on the tournament detail), and the web app has a Divisions table page and a sidebar link. Add, edit, and delete come later. See [docs/requirements/divisions.md](docs/requirements/divisions.md).
 
 Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, TypeScript, testing, composition) and stricter ESLint rules.
 

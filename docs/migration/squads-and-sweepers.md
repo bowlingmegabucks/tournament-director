@@ -52,24 +52,24 @@ A squad has no game count. It always uses the tournament's `games`.
 
 ## Validation when adding a sweeper
 
-| ID | Rule | Message |
-| --- | --- | --- |
-| SQD-10 | Same as `SQD-01`, `SQD-03` to `SQD-07` (with "Sweeper" in the messages) | |
-| SQD-11 | Cash ratio > 1 (required) | "Cash ratio must be greater than 1" |
-| SQD-12 | Games > 0; entry fee > 0 | "Games must be greater than 0", "Entry fee must be greater than $0" |
-| SQD-13 | The add screen lists every division of the tournament with a bonus-pins box. Each saves as a `SweeperDivision` row. **D-45:** the sweeper list shows each division with pins other than 0 (read part built). | |
+| ID | Rule | Message | Status |
+| --- | --- | --- | --- |
+| SQD-10 | Same as `SQD-01`, `SQD-03` to `SQD-07` (with "Sweeper" in the messages) | | |
+| SQD-11 | Cash ratio > 1 (required) | "Cash ratio must be greater than 1" | |
+| SQD-12 | Games > 0; entry fee > 0 | "Games must be greater than 0", "Entry fee must be greater than $0" | |
+| SQD-13 | The add screen lists every division of the tournament with a bonus-pins box. Each saves as a `SweeperDivision` row. **D-45:** the sweeper list shows each division with pins other than 0 (read part built). | | |
 
 ## Behavior
 
-| ID | Rule |
-| --- | --- |
-| SQD-14 | Legacy can only **add** squads and sweepers. No edit or delete. **D-12:** the new app adds editing; a squad or sweeper with any scores is locked from editing. Field-by-field rules are decided when we build it. **D-41 to D-45:** the read-only lists are built (`SQD-21`, `SQD-22`). **D-15:** deleting is allowed too; when, and what happens to registrations, is part of the same discussion. |
-| SQD-15 | **Complete a squad.** Confirm: "Are you sure you want to complete this squad?" Sets `complete`. Then, for every bowler registered to the squad who has **no** scores in it, saves a score of **0** for each game 1 to `tournament.games`. Bowlers with some games entered get nothing filled in. |
-| SQD-16 | **Complete a sweeper.** Sets `complete` only. No zeros are filled in. The menu item hides once the sweeper is complete; the squad menu item does not hide. |
-| SQD-17 | **What "complete" locks.** On the desk: lane assignment is read-only, and score paste and save are off. The add registration screen hides complete sessions. API update refuses to add complete sessions (`REG-33`). Adding super sweeper is refused if any of the bowler's sweepers are complete (`REG-17`). The **server** does not block score saves or lane moves on complete sessions; only the screens do. **D-10:** the new server locks a complete session: no score changes, lane moves, removals, or refunds. |
-| SQD-18 | There is no way to undo "complete". |
-| SQD-19 | Results do not wait for "complete". They use whatever scores exist (`RES-01`). |
-| SQD-20 | Order between squads is by `date`. "Earlier squad" in the results rules means an earlier `date`. Two squads with the same date and time have no defined order. **D-45:** the new app breaks a tie by `startingLane`, then `id`. |
+| ID | Rule | Status |
+| --- | --- | --- |
+| SQD-14 | Legacy can only **add** squads and sweepers. No edit or delete. **D-12:** the new app adds editing; a squad or sweeper with any scores is locked from editing. Field-by-field rules are decided when we build it. **D-41 to D-45:** the read-only lists are built (`SQD-21`, `SQD-22`). **D-15:** deleting is allowed too; when, and what happens to registrations, is part of the same discussion. |  |
+| SQD-15 | **Complete a squad.** Confirm: "Are you sure you want to complete this squad?" Sets `complete`. Then, for every bowler registered to the squad who has **no** scores in it, saves a score of **0** for each game 1 to `tournament.games`. Bowlers with some games entered get nothing filled in. |  |
+| SQD-16 | **Complete a sweeper.** Sets `complete` only. No zeros are filled in. The menu item hides once the sweeper is complete; the squad menu item does not hide. |  |
+| SQD-17 | **What "complete" locks.** On the desk: lane assignment is read-only, and score paste and save are off. The add registration screen hides complete sessions. API update refuses to add complete sessions (`REG-33`). Adding super sweeper is refused if any of the bowler's sweepers are complete (`REG-17`). The **server** does not block score saves or lane moves on complete sessions; only the screens do. **D-10:** the new server locks a complete session: no score changes, lane moves, removals, or refunds. |  |
+| SQD-18 | There is no way to undo "complete". |  |
+| SQD-19 | Results do not wait for "complete". They use whatever scores exist (`RES-01`). |  |
+| SQD-20 | Order between squads is by `date`. "Earlier squad" in the results rules means an earlier `date`. Two squads with the same date and time have no defined order. **D-45:** the new app breaks a tie by `startingLane`, then `id`. | Done, differs (D-45) |
 
 **Why zeros for no-shows matter:** the zeros make the no-show an entry. Entries drive how many advance and cash (`RES-02`). So a paid no-show still adds to the prize spots. **D-06:** keep this. A refunded entry is removed from the squad instead, so it stops counting. Refunds must happen before the squad is completed (D-10, D-11).
 
@@ -77,10 +77,10 @@ A squad has no game count. It always uses the tournament's `games`.
 
 Legacy has no list rule; the desk picks a session from a list screen (see [screens.md](screens.md)). These two rules are new (D-41 to D-45).
 
-| ID | Rule |
-| --- | --- |
-| SQD-21 | **Squad list.** `GET /v1/tournaments/{id}/squads` returns the tournament's squads sorted by `date` (`SQD-20`, D-45), with the effective fee and ratios and override flags (D-43). Unreadable rows are skipped (D-42). |
-| SQD-22 | **Sweeper list.** `GET /v1/tournaments/{id}/sweepers` returns the sweepers the same way, each with its bonus pins, listing only divisions where they are not 0 (D-45). |
+| ID | Rule | Status |
+| --- | --- | --- |
+| SQD-21 | **Squad list.** `GET /v1/tournaments/{id}/squads` returns the tournament's squads sorted by `date` (`SQD-20`, D-45), with the effective fee and ratios and override flags (D-43). Unreadable rows are skipped (D-42). | Done, differs (D-41 to D-45) |
+| SQD-22 | **Sweeper list.** `GET /v1/tournaments/{id}/sweepers` returns the sweepers the same way, each with its bonus pins, listing only divisions where they are not 0 (D-45). | Done, differs (D-41 to D-45) |
 
 ## Squad portal
 

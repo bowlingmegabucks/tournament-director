@@ -50,4 +50,4 @@ Both are public (D-27). The API's `types.ts` and the web app's `types.ts` carry 
 
 ## Not built yet
 
-`DIV-01` to `DIV-11` (add and their checks), `DIV-12` add, edit, and delete (D-12, D-15), `DIV-14` (sweeper bonus pins), `DIV-15` (new: a unique number per tournament on add and edit, D-38; the database key waits for 1.0.0), eligibility checks at registration, and the handicap formula.
+`DIV-01` to `DIV-11` (add and their checks), `DIV-12` add, edit, and delete (D-12, D-15), `DIV-14` (the add screen's pins box; the read part is in [squads-and-sweepers.md](squads-and-sweepers.md)), `DIV-15` (new: a unique number per tournament on add and edit, D-38; the database key waits for 1.0.0), eligibility checks at registration, and the handicap formula.

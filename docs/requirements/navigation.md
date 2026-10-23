@@ -18,7 +18,7 @@ Top bar for the app, sidebar for the tournament, page header for a squad or swee
 
 `NAV-04` (Later; D-22, D-23). Build it with the squad feature.
 
-- The sidebar's **Squads** and **Sweepers** items open a **card list** of sessions: date and time, entries, lanes, and an Open or Complete badge. An Add button on the list comes with commands (0.4.0 and up).
+- The sidebar's **Squads** and **Sweepers** items open a **card list** of sessions: date and time, Open or Complete, lanes, fee, and ratios (entry counts wait for registrations). An Add button on the list comes with commands (0.4.0 and up).
 - Inside one squad or sweeper, the sidebar does not change, with its parent item marked `aria-current="location"`. The page header has a **breadcrumb** (Squads / the session), the **name** with its status badge, a **Complete** button (a complete squad is locked, D-10), and **tabs** for that session's pages: Lane assignments, Scores, Results.
 - A sweeper uses the same header. **Super sweeper results** are reached from the sweeper card list, not from the sidebar's results group (D-23).
 - URL shape: `/tournaments/{id}/squads/{squadId}/scores` and `/tournaments/{id}/sweepers/{sweeperId}/…`.

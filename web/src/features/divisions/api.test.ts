@@ -15,7 +15,8 @@ describe('fetchDivisions', () => {
   it('reads the divisions in the order sent (DIV-12, DIV-13)', async () => {
     const divisions = [
       createDivision({ number: 1, gender: 'Female', handicapPercentage: 90 }),
-      createDivision({ number: 2 }),
+      createDivision({ number: 2, gender: 'Male' }),
+      createDivision({ number: 3 }),
     ]
     respondWith({ divisions })
 

@@ -38,6 +38,7 @@ describe('DivisionsPage', () => {
     open()
 
     const table = await screen.findByRole('table', { name: 'Divisions in Spring Open' })
+    expect(screen.queryByText('No divisions yet.')).not.toBeInTheDocument()
     const rows = within(table).getAllByRole('row').slice(1)
     expect(rows.map((row) => within(row).getByRole('rowheader').textContent)).toEqual([
       'Open',

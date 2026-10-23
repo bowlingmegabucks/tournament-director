@@ -13,7 +13,7 @@ datasource db {
 }
 
 model Tournament {
-  id            String   @id @db.Char(36) @map("Id")
+  id            String   @id @map("Id") @db.Char(36)
   name          String   @map("Name") @db.LongText
   start         DateTime @map("Start") @db.DateTime(6)
   end           DateTime @map("End") @db.DateTime(6)
@@ -21,4 +21,22 @@ model Tournament {
   bowlingCenter String   @map("BowlingCenter") @db.LongText
 
   @@map("Tournaments")
+}
+
+model Division {
+  id                     String   @id @map("Id") @db.Char(36)
+  name                   String   @map("Name") @db.LongText
+  number                 Int      @map("Number") @db.SmallInt
+  tournamentId           String   @map("TournamentId") @db.Char(36)
+  minimumAge             Int?     @map("MinimumAge") @db.SmallInt
+  maximumAge             Int?     @map("MaximumAge") @db.SmallInt
+  minimumAverage         Int?     @map("MinimumAverage")
+  maximumAverage         Int?     @map("MaximumAverage")
+  handicapPercentage     Decimal? @map("HandicapPercentage") @db.Decimal(3, 2)
+  handicapBase           Int?     @map("HandicapBase")
+  maximumHandicapPerGame Int?     @map("MaximumHandicapPerGame")
+  /// 0 = Male, 1 = Female, NULL = any gender (docs/migration/database.md)
+  gender                 Int?     @map("Gender")
+
+  @@map("Divisions")
 }

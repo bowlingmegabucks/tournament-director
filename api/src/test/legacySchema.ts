@@ -17,4 +17,20 @@ export const legacySchemaSql = [
     \`SuperSweperCashRatio\` decimal(3,1) NOT NULL DEFAULT 0.0,
     PRIMARY KEY (\`Id\`)
   )`,
+  `CREATE TABLE \`Divisions\` (
+    \`Id\`                     char(36)     NOT NULL,
+    \`Name\`                   longtext     NOT NULL,
+    \`Number\`                 smallint     NOT NULL,
+    \`TournamentId\`           char(36)     NOT NULL,
+    \`MinimumAge\`             smallint     NULL,
+    \`MaximumAge\`             smallint     NULL,
+    \`MinimumAverage\`         int          NULL,
+    \`MaximumAverage\`         int          NULL,
+    \`HandicapPercentage\`     decimal(3,2) NULL,
+    \`HandicapBase\`           int          NULL,
+    \`MaximumHandicapPerGame\` int          NULL,
+    \`Gender\`                 int          NULL,
+    PRIMARY KEY (\`Id\`),
+    FOREIGN KEY (\`TournamentId\`) REFERENCES \`Tournaments\` (\`Id\`) ON DELETE CASCADE
+  )`,
 ]

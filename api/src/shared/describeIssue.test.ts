@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { describeIssue } from './prismaRepository.ts'
+import { describeIssue } from './describeIssue.ts'
 
 describe('describeIssue', () => {
   it('shows the field and the message', () => {

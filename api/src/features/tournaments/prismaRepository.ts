@@ -1,4 +1,5 @@
 import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
+import { describeIssue } from '../../shared/describeIssue.ts'
 import type { Logger } from '../../shared/logger.ts'
 import type { TournamentRepository } from './repository.ts'
 import { toTournament } from './tournamentRow.ts'
@@ -38,9 +39,4 @@ export function createPrismaTournamentRepository(
       return result.data
     },
   }
-}
-
-/** One line per validation problem: `path: message`, with nested paths joined by dots. */
-export function describeIssue(issue: { path: PropertyKey[]; message: string }): string {
-  return `${issue.path.map(String).join('.')}: ${issue.message}`
 }

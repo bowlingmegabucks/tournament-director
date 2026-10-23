@@ -1,13 +1,7 @@
 import { apiUrl } from '../../shared/apiUrl'
 import { readJson } from '../../shared/readJson'
+import { TournamentNotFoundError } from '../../shared/tournamentQuery'
 import type { Tournament } from './types'
-
-/** The API has no tournament with this id (404), or the id is not valid (400). */
-export class TournamentNotFoundError extends Error {
-  constructor() {
-    super('Tournament not found')
-  }
-}
 
 function field(value: unknown, key: string): unknown {
   return typeof value === 'object' && value !== null ? Reflect.get(value, key) : undefined

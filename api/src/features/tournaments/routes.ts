@@ -21,10 +21,13 @@ export function createTournamentRouter(
 
   router.get('/:id', async (req, res) => {
     const { id } = idParams.parse(req.params)
-    const tournament = await repository.get(id)
+    // Both reads start together. An unknown tournament costs one wasted read and still gives 404.
+    const [tournament, stored] = await Promise.all([
+      repository.get(id),
+      divisions.listByTournament(id),
+    ])
     if (!tournament) throw new HttpError(404, 'Tournament not found')
     // D-25, D-37: the detail carries the vendor-shape divisions (API-04).
-    const stored = await divisions.listByTournament(id)
     res.json({ tournament: { ...tournament, divisions: stored.map(toVendorDivision) } })
   })
 

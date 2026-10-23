@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { http, HttpResponse, type JsonBodyType } from 'msw'
 import { server } from '../../mocks/server'
 import { createDivision } from '../../mocks/data'
-import { TournamentNotFoundError } from '../tournaments/api'
+import { TournamentNotFoundError } from '../../shared/tournamentQuery'
 import { fetchDivisions } from './api'
 
 const path = '/v1/tournaments/:id/divisions'

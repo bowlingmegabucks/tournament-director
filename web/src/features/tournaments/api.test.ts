@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { http, HttpResponse, type JsonBodyType } from 'msw'
 import { server } from '../../mocks/server'
 import { createTournament } from '../../mocks/data'
-import { fetchTournament, fetchTournaments, TournamentNotFoundError } from './api'
+import { TournamentNotFoundError } from '../../shared/tournamentQuery'
+import { fetchTournament, fetchTournaments } from './api'
 
 function respondWith(body: JsonBodyType) {
   server.use(http.get('/v1/tournaments', () => HttpResponse.json(body)))

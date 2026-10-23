@@ -1,6 +1,6 @@
 import { apiUrl } from '../../shared/apiUrl'
 import { readJson } from '../../shared/readJson'
-import { TournamentNotFoundError } from '../tournaments/api'
+import { TournamentNotFoundError } from '../../shared/tournamentQuery'
 import type { Division } from './types'
 
 function field(value: unknown, key: string): unknown {

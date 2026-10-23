@@ -19,9 +19,13 @@ export function createDivisionRouter(
   // Stryker disable next-line StringLiteral: '' and '/' match the same path.
   router.get('/', async (req, res) => {
     const { id } = idParams.parse(req.params)
-    // An unknown tournament is a 404, not an empty list. Same wording as TRN-15.
-    if (!(await tournaments.get(id))) throw new HttpError(404, 'Tournament not found')
-    res.json({ divisions: await divisions.listByTournament(id) })
+    // Both reads start together. An unknown tournament is a 404, not an empty list (same wording as TRN-15).
+    const [tournament, stored] = await Promise.all([
+      tournaments.get(id),
+      divisions.listByTournament(id),
+    ])
+    if (!tournament) throw new HttpError(404, 'Tournament not found')
+    res.json({ divisions: stored })
   })
 
   return router

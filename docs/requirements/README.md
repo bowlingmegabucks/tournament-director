@@ -44,5 +44,6 @@ What the user sees and can do.
 | Feature | File |
 | --- | --- |
 | Tournaments (list, Home card, overview) | [tournaments.md](tournaments.md) |
+| Divisions (list) | [divisions.md](divisions.md) |
 | Navigation and layout | [navigation.md](navigation.md) |
 | API route access | [api-access.md](api-access.md) |

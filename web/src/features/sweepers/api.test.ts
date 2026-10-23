@@ -120,7 +120,7 @@ describe('fetchSweepers', () => {
     ['a null entry', null],
   ])('rejects bonus pins with a wrong %s', async (_field, override) => {
     const entry = override === null ? null : { ...pins, ...override }
-    respondWith({ sweepers: [createSweeper({ bonusPins: [entry as never] })] })
+    respondWith({ sweepers: [{ ...createSweeper(), bonusPins: [entry] }] })
 
     await expect(fetchSweepers('t1')).rejects.toThrow('unexpected response')
   })

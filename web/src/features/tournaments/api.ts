@@ -1,11 +1,8 @@
 import { apiUrl } from '../../shared/apiUrl'
+import { field } from '../../shared/field'
 import { readJson } from '../../shared/readJson'
 import { TournamentNotFoundError } from '../../shared/tournamentQuery'
 import type { Tournament } from './types'
-
-function field(value: unknown, key: string): unknown {
-  return typeof value === 'object' && value !== null ? Reflect.get(value, key) : undefined
-}
 
 function isTournament(value: unknown): value is Tournament {
   return (

@@ -44,12 +44,18 @@ export const sessionFields = {
   maxPerPair: z.number().int(),
 }
 
+// Plain character order, so a tie on date and lane breaks the same way in tests and in the app.
+function compareText(a: string, b: string): number {
+  if (a < b) return -1
+  return a > b ? 1 : 0
+}
+
 /** SQD-20, D-45: by date, then starting lane, then id, so two sessions at one time keep a stable order. */
 export function compareSessions(
   a: { date: string; startingLane: number; id: string },
   b: { date: string; startingLane: number; id: string },
 ): number {
-  return a.date.localeCompare(b.date) || a.startingLane - b.startingLane || a.id.localeCompare(b.id)
+  return compareText(a.date, b.date) || a.startingLane - b.startingLane || compareText(a.id, b.id)
 }
 
 export function toNumber(value: StoredDecimal | null): number | null {

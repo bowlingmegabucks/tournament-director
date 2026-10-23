@@ -9,3 +9,4 @@ reports
 !.env.example
 # Made by `npm run db:generate`; CI and deploy run it.
 src/generated
+*.tsbuildinfo

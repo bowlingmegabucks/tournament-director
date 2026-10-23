@@ -18,6 +18,9 @@ model Tournament {
   start         DateTime @map("Start") @db.DateTime(6)
   end           DateTime @map("End") @db.DateTime(6)
   entryFee      Decimal  @map("EntryFee") @db.Decimal(5, 2)
+  /// 1 in N advance. A squad may override it; the squad list needs the default (TRN-12).
+  finalsRatio   Decimal  @map("FinalsRatio") @db.Decimal(3, 1)
+  cashRatio     Decimal  @map("CashRatio") @db.Decimal(3, 1)
   bowlingCenter String   @map("BowlingCenter") @db.LongText
 
   @@map("Tournaments")
@@ -39,4 +42,35 @@ model Division {
   gender                 Int?     @map("Gender")
 
   @@map("Divisions")
+}
+
+/// Squads and sweepers share this table (EF "table per hierarchy"): squadType 0 is a squad,
+/// 1 is a sweeper. Columns that do not apply to a row's type are NULL.
+model Squad {
+  id              String   @id @map("Id") @db.Char(36)
+  tournamentId    String   @map("TournamentId") @db.Char(36)
+  squadType       Int      @map("SquadType")
+  date            DateTime @map("Date") @db.DateTime(6)
+  /// Squad: optional override. Sweeper: its own required cash ratio.
+  cashRatio       Decimal? @map("CashRatio") @db.Decimal(3, 1)
+  maxPerPair      Int      @map("MaxPerPair") @db.SmallInt
+  startingLane    Int      @map("StartingLane") @db.SmallInt
+  numberOfLanes   Int      @map("NumberOfLanes") @db.SmallInt
+  complete        Boolean  @map("Complete")
+  finalsRatio     Decimal? @map("FinalsRatio") @db.Decimal(3, 1)
+  squadEntryFee   Decimal? @map("SquadEntryFee") @db.Decimal(5, 2)
+  sweeperEntryFee Decimal? @map("SweeperEntryFee") @db.Decimal(5, 2)
+  games           Int?     @map("Games") @db.SmallInt
+
+  @@map("Squads")
+}
+
+/// Bonus pins per game for one division in one sweeper. NULL counts as 0.
+model SweeperDivision {
+  sweeperId        String @map("SweeperId") @db.Char(36)
+  divisionId       String @map("DivisionId") @db.Char(36)
+  bonusPinsPerGame Int?   @map("BonusPinsPerGame")
+
+  @@id([sweeperId, divisionId])
+  @@map("SweeperDivision")
 }

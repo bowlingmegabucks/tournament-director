@@ -2,9 +2,16 @@ import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 import { HttpError } from '../../shared/errors.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
+import { createInMemorySquadRepository } from '../squads/repository.ts'
+import { createInMemorySweeperRepository } from '../sweepers/repository.ts'
 import { createInMemoryTournamentRepository } from './repository.ts'
 import { tournamentDetailSchema, tournamentListSchema } from './types.ts'
-import { createDivision, createTournament } from '../../test/factories.ts'
+import {
+  createDivision,
+  createSquad,
+  createSweeper,
+  createTournament,
+} from '../../test/factories.ts'
 import { createTestApp } from '../../test/testApp.ts'
 
 describe('GET /v1/tournaments', () => {
@@ -67,7 +74,9 @@ describe('GET /v1/tournaments/:id', () => {
     const response = await request(app).get(`/v1/tournaments/${tournament.id}`)
 
     expect(response.status).toBe(200)
-    expect(response.body).toEqual({ tournament: { ...tournament, divisions: [] } })
+    expect(response.body).toEqual({
+      tournament: { ...tournament, divisions: [], squads: [], sweepers: [] },
+    })
     expect(tournamentDetailSchema.safeParse(response.body).success).toBe(true)
   })
 
@@ -105,6 +114,36 @@ describe('GET /v1/tournaments/:id', () => {
         maximumAverage: null,
         gender: 'Female',
       },
+    ])
+    expect(tournamentDetailSchema.safeParse(response.body).success).toBe(true)
+  })
+
+  it('lists squads and sweepers in the vendor shape and no more (API-04, D-41)', async () => {
+    const tournament = createTournament()
+    const own = createSquad({ date: '2026-10-24T13:00:00', entryFee: 60, entryFeeOverridden: true })
+    const inherits = createSquad({ date: '2026-10-24T09:00:00', complete: true })
+    const sweeper = createSweeper({ date: '2026-10-24T18:00:00', entryFee: 25, games: 3 })
+    const app = createTestApp({
+      tournaments: createInMemoryTournamentRepository([tournament]),
+      squads: createInMemorySquadRepository([
+        { tournamentId: tournament.id, squad: own },
+        { tournamentId: tournament.id, squad: inherits },
+        { tournamentId: createTournament().id, squad: createSquad() },
+      ]),
+      sweepers: createInMemorySweeperRepository([
+        { tournamentId: tournament.id, sweeper },
+        { tournamentId: createTournament().id, sweeper: createSweeper() },
+      ]),
+    })
+
+    const response = await request(app).get(`/v1/tournaments/${tournament.id}`)
+
+    expect(response.body.tournament.squads).toEqual([
+      { id: inherits.id, date: '2026-10-24T09:00:00', entryFee: null },
+      { id: own.id, date: '2026-10-24T13:00:00', entryFee: 60 },
+    ])
+    expect(response.body.tournament.sweepers).toEqual([
+      { id: sweeper.id, date: '2026-10-24T18:00:00', entryFee: 25, games: 3 },
     ])
     expect(tournamentDetailSchema.safeParse(response.body).success).toBe(true)
   })

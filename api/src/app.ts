@@ -8,6 +8,10 @@ import { createRateLimiter } from './shared/rateLimit.ts'
 import { requestIdHeader, requestLogging } from './shared/requestLogging.ts'
 import { createDivisionRouter } from './features/divisions/routes.ts'
 import type { DivisionRepository } from './features/divisions/repository.ts'
+import { createSquadRouter } from './features/squads/routes.ts'
+import type { SquadRepository } from './features/squads/repository.ts'
+import { createSweeperRouter } from './features/sweepers/routes.ts'
+import type { SweeperRepository } from './features/sweepers/repository.ts'
 import { createTournamentRouter } from './features/tournaments/routes.ts'
 import type { TournamentRepository } from './features/tournaments/repository.ts'
 import { createErrorHandler, notFound } from './shared/middleware.ts'
@@ -20,6 +24,8 @@ export interface AppDependencies {
   logger: Logger
   tournaments: TournamentRepository
   divisions: DivisionRepository
+  squads: SquadRepository
+  sweepers: SweeperRepository
   /** Resolves when the database answers; rejects (a 503) when it does not. Feeds `GET /ready`. */
   checkDatabase: () => Promise<void>
   /** Where custom metrics go. The default sends to the OpenTelemetry SDK, or nowhere if it is off. */
@@ -32,6 +38,8 @@ export function createApp({
   logger,
   tournaments,
   divisions,
+  squads,
+  sweepers,
   checkDatabase,
   // Stryker disable next-line StringLiteral: the scope name only labels the metrics.
   meter = metrics.getMeter('tournament-director-api'),
@@ -60,9 +68,19 @@ export function createApp({
       router: createDivisionRouter(divisions, tournaments),
     },
     {
+      path: '/v1/tournaments/:id/squads',
+      access: 'public',
+      router: createSquadRouter(squads, tournaments),
+    },
+    {
+      path: '/v1/tournaments/:id/sweepers',
+      access: 'public',
+      router: createSweeperRouter(sweepers, tournaments),
+    },
+    {
       path: '/v1/tournaments',
       access: 'public',
-      router: createTournamentRouter(tournaments, divisions),
+      router: createTournamentRouter(tournaments, divisions, squads, sweepers),
     },
   ])
 

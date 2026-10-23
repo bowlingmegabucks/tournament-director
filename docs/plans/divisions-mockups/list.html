@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Divisions page mockup · Tournament Director</title>
+    <link rel="stylesheet" href="../../../web/src/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../web/src/styles/base.css" />
+    <style>
+      .spec { max-inline-size: var(--layout-width); margin-inline: auto; padding: var(--space-4); }
+      .spec > h2 { margin-block: var(--space-8) var(--space-2); border-block-end: var(--border-width) solid var(--color-border); }
+      .note { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+
+      /* Same frame as TournamentLayout */
+      .shell { display: grid; max-inline-size: var(--layout-width); margin-inline: auto; border: var(--border-width) solid var(--color-border); }
+      .side { padding: var(--space-4); background: var(--color-surface); border-block-end: var(--border-width) solid var(--color-border); }
+      .side h3 { margin-block: 0 var(--space-1); font-size: var(--font-size-lg); }
+      .meta { margin-block: 0 var(--space-4); color: var(--color-text-muted); font-size: var(--font-size-sm); }
+      .side ul { margin: 0 0 var(--space-4); padding: 0; list-style: none; }
+      .side a { display: block; padding-block: var(--space-2); }
+      .side a[aria-current='page'] { font-weight: 700; text-decoration: none; border-inline-start: 4px solid var(--color-accent); padding-inline-start: var(--space-2); color: var(--color-text); }
+      .content { padding: var(--space-6) var(--space-4); }
+      @media (min-width: 40rem) {
+        .shell { grid-template-columns: var(--sidebar-width) 1fr; }
+        .side { border-block-end: 0; border-inline-end: var(--border-width) solid var(--color-border); }
+      }
+
+      /* DivisionsPage.module.css */
+      .tableWrap { margin-block-end: var(--space-6); }
+      table { inline-size: 100%; border-collapse: collapse; }
+      th, td { padding: var(--space-2) var(--space-3); text-align: start; vertical-align: top; border-block-end: var(--border-width) solid var(--color-border); }
+      thead th { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+      .num { inline-size: 3rem; }
+      .hidden { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+      @media (max-width: 39.99rem) {
+        thead { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+        tr { display: block; margin-block-end: var(--space-3); padding: var(--space-3); background: var(--color-surface); border: var(--border-width) solid var(--color-border); border-radius: var(--radius); }
+        th, td { display: block; padding: var(--space-1) 0; border: 0; }
+        td::before { content: attr(data-label) ': '; color: var(--color-text-muted); }
+        th[scope='row'] { font-size: var(--font-size-lg); }
+      }
+
+      .error { padding: var(--space-4); border: var(--border-width) solid var(--color-danger); border-radius: var(--radius); }
+      .error p { margin-block: 0 var(--space-3); }
+    </style>
+  </head>
+  <body>
+    <div class="spec">
+      <h1>Divisions page</h1>
+      <p class="note">Job: a director or bowler sees the brackets of a tournament. Read only; no add, edit, or delete button until auth (D-21).</p>
+
+      <h2>1. Filled</h2>
+      <p class="note">Sorted by number, then name (DIV-13, D-38). Sample data: Open, Women, Seniors, Scratch.</p>
+      <div class="shell">
+        <nav class="side" aria-label="2026 Northeast MegaBuck$ Tournament">
+          <h3>2026 Northeast MegaBuck$ Tournament</h3>
+          <p class="meta">Oct 25 to 27, 2026</p>
+          <ul>
+            <li><a href="#filled" aria-current="page">Divisions</a></li>
+          </ul>
+          <a href="#">Change tournament</a>
+        </nav>
+        <main class="content" id="filled">
+          <h1>Divisions</h1>
+          <div class="tableWrap">
+            <table>
+              <caption class="hidden">Divisions in 2026 Northeast MegaBuck$ Tournament</caption>
+              <thead>
+                <tr>
+                  <th scope="col" class="num">#</th>
+                  <th scope="col">Name</th>
+                  <th scope="col">Gender</th>
+                  <th scope="col">Ages</th>
+                  <th scope="col">Averages</th>
+                  <th scope="col">Handicap</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td data-label="Number">1</td>
+                  <th scope="row">Open</th>
+                  <td data-label="Gender">Any</td>
+                  <td data-label="Ages">Any</td>
+                  <td data-label="Averages">Any</td>
+                  <td data-label="Handicap">90% of 220</td>
+                </tr>
+                <tr>
+                  <td data-label="Number">2</td>
+                  <th scope="row">Women</th>
+                  <td data-label="Gender">Female</td>
+                  <td data-label="Ages">Any</td>
+                  <td data-label="Averages">Up to 199</td>
+                  <td data-label="Handicap">90% of 220, max 40 a game</td>
+                </tr>
+                <tr>
+                  <td data-label="Number">3</td>
+                  <th scope="row">Seniors</th>
+                  <td data-label="Gender">Any</td>
+                  <td data-label="Ages">50 and up</td>
+                  <td data-label="Averages">150 to 189</td>
+                  <td data-label="Handicap">80% of 210</td>
+                </tr>
+                <tr>
+                  <td data-label="Number">4</td>
+                  <th scope="row">Scratch</th>
+                  <td data-label="Gender">Any</td>
+                  <td data-label="Ages">18 to 39</td>
+                  <td data-label="Averages">200 and up</td>
+                  <td data-label="Handicap">Scratch</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </main>
+      </div>
+
+      <h2>2. Loading</h2>
+      <div class="shell">
+        <nav class="side" aria-label="2026 Northeast MegaBuck$ Tournament">
+          <h3>2026 Northeast MegaBuck$ Tournament</h3>
+          <p class="meta">Oct 25 to 27, 2026</p>
+          <ul><li><a href="#loading" aria-current="page">Divisions</a></li></ul>
+          <a href="#">Change tournament</a>
+        </nav>
+        <main class="content" id="loading">
+          <h1>Divisions</h1>
+          <output>Loading divisions…</output>
+        </main>
+      </div>
+
+      <h2>3. Empty</h2>
+      <div class="shell">
+        <nav class="side" aria-label="2026 Northeast MegaBuck$ Tournament">
+          <h3>2026 Northeast MegaBuck$ Tournament</h3>
+          <p class="meta">Oct 25 to 27, 2026</p>
+          <ul><li><a href="#empty" aria-current="page">Divisions</a></li></ul>
+          <a href="#">Change tournament</a>
+        </nav>
+        <main class="content" id="empty">
+          <h1>Divisions</h1>
+          <p>No divisions yet.</p>
+        </main>
+      </div>
+
+      <h2>4. Error</h2>
+      <p class="note">Same block as the other data views (QueryError). An outage gives this, not an empty table.</p>
+      <div class="shell">
+        <nav class="side" aria-label="2026 Northeast MegaBuck$ Tournament">
+          <h3>2026 Northeast MegaBuck$ Tournament</h3>
+          <p class="meta">Oct 25 to 27, 2026</p>
+          <ul><li><a href="#error" aria-current="page">Divisions</a></li></ul>
+          <a href="#">Change tournament</a>
+        </nav>
+        <main class="content" id="error">
+          <h1>Divisions</h1>
+          <div class="error" role="alert">
+            <p>Could not load divisions. Failed to load divisions (503).</p>
+            <button type="button">Try again</button>
+          </div>
+        </main>
+      </div>
+
+      <h2>5. Narrow screen (under 40rem)</h2>
+      <p class="note">Narrow your window to see this: the table headers hide, and each row becomes a card with labels, so there is no sideways scroll at 320px. Screen readers still read it as a table.</p>
+    </div>
+  </body>
+</html>

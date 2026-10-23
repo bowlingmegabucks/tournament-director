@@ -10,7 +10,7 @@ Source: `business logic/Divisions/`, `business logic/Models/DivisionModel.cs`, `
 | --- | --- | --- | --- |
 | `id` | UUID | yes | |
 | `tournamentId` | UUID | yes | |
-| `number` | integer | yes | Display order. Not checked for uniqueness |
+| `number` | integer | yes | Display order. Legacy does not check uniqueness. **D-38:** unique per tournament in the new app (`DIV-15`); the database key comes at 1.0.0 |
 | `name` | text | yes | |
 | `minimumAge`, `maximumAge` | integer | no | Age on the tournament start date |
 | `minimumAverage`, `maximumAverage` | integer | no | Compared with the registration average |
@@ -25,7 +25,7 @@ A **handicap division** is one with `handicapPercentage` set. A **scratch divisi
 
 | ID | Rule |
 | --- | --- |
-| DIV-01 | Number must be greater than 0. |
+| DIV-01 | Number must be greater than 0. **D-38:** and unique within the tournament (new rule `DIV-15`: "Division number is already used in this tournament"). |
 | DIV-02 | Name is required. |
 | DIV-03 | Tournament is required. |
 | DIV-04 | Minimum age, if set, is greater than 0. Maximum age, if set, is greater than 0. |
@@ -57,8 +57,9 @@ These rules run when a bowler registers or changes division. The full logic, inc
 
 | ID | Rule |
 | --- | --- |
-| DIV-12 | Legacy can only **add** and **list** divisions. No edit or delete. **D-12:** the new app adds editing. Changing criteria (age, average, gender) after bowlers are registered shows a warning: the change is not retroactive, registered bowlers may no longer fit, and the director must review them by hand. Field-by-field rules are decided when we build it. **D-15:** deleting is allowed too; when, and what happens to registrations, is part of the same discussion. |
-| DIV-13 | Lists sort by `number` on the registration screen. |
+| DIV-12 | Legacy can only **add** and **list** divisions. No edit or delete. **D-12:** the new app adds editing. Changing criteria (age, average, gender) after bowlers are registered shows a warning: the change is not retroactive, registered bowlers may no longer fit, and the director must review them by hand. Field-by-field rules are decided when we build it. **D-15:** deleting is allowed too; when, and what happens to registrations, is part of the same discussion. **D-37, D-39, D-40:** the list is built first: two routes, bad rows skipped, a table page. |
+| DIV-13 | Lists sort by `number` on the registration screen. **D-38:** the API sorts by `number`, then `name`, since old rows may share a number. |
+| DIV-15 | New. Division `number` is unique within a tournament (D-38). Checked on add and edit; the database key waits for 1.0.0. Later, with create. |
 | DIV-14 | Adding a sweeper lists all divisions so the desk can set bonus pins for each (`SQD-13`). |
 
 ## Handicap

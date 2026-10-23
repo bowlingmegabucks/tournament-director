@@ -59,7 +59,7 @@ These rules run when a bowler registers or changes division. The full logic, inc
 | --- | --- | --- |
 | DIV-12 | Legacy can only **add** and **list** divisions. No edit or delete. **D-12:** the new app adds editing. Changing criteria (age, average, gender) after bowlers are registered shows a warning: the change is not retroactive, registered bowlers may no longer fit, and the director must review them by hand. Field-by-field rules are decided when we build it. **D-15:** deleting is allowed too; when, and what happens to registrations, is part of the same discussion. **D-37, D-39, D-40:** the list is built first: two routes, bad rows skipped, a table page. | List done, differs (D-37, D-39, D-40); add, edit, delete later |
 | DIV-13 | Lists sort by `number` on the registration screen. **D-38:** the API sorts by `number`, then `name`, since old rows may share a number. | Done, differs (D-38) |
-| DIV-14 | Adding a sweeper lists all divisions so the desk can set bonus pins for each (`SQD-13`). |  |
+| DIV-14 | Adding a sweeper lists all divisions so the desk can set bonus pins for each (`SQD-13`). **D-45:** the read part is built with the sweeper list (`SQD-22`). |  |
 | DIV-15 | New. Division `number` is unique within a tournament (D-38). Checked on add and edit; the database key waits for 1.0.0. Later, with create. |  |
 
 ## Handicap

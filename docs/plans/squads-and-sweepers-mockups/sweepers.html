@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sweepers · Mockup</title>
+<link rel="stylesheet" href="../../../web/src/styles/tokens.css">
+<link rel="stylesheet" href="../../../web/src/styles/base.css">
+<style>
+  /* Mockup only. The real page uses SessionList.module.css. */
+  .shell { display: grid; max-inline-size: var(--layout-width); margin-inline: auto; }
+  .side { padding: var(--space-4); background: var(--color-surface); border-block-end: var(--border-width) solid var(--color-border); }
+  .side ul { margin: 0 0 var(--space-4); padding: 0; list-style: none; }
+  .side a { display: block; padding-block: var(--space-2); }
+  .side a[aria-current="page"] { padding-inline-start: var(--space-2); border-inline-start: var(--marker-width) solid var(--color-accent); color: var(--color-text); font-weight: 700; text-decoration: none; }
+  .content { padding: var(--space-6) var(--space-4); }
+  .state { margin-block: var(--space-8) var(--space-3); padding-block-start: var(--space-3); border-block-start: var(--border-width) dashed var(--color-border); color: var(--color-text-muted); font-size: var(--font-size-sm); }
+  .list { display: grid; gap: var(--space-3); margin: 0 0 var(--space-6); padding: 0; list-style: none; }
+  .card { padding: var(--space-4); background: var(--color-surface); border: var(--border-width) solid var(--color-border); border-radius: var(--radius); }
+  .card h2 { margin: 0; font-size: var(--font-size-lg); }
+  .status { margin-inline-start: var(--space-2); font-size: var(--font-size-sm); color: var(--color-text-muted); }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: var(--space-2) var(--space-4); margin: var(--space-3) 0 0; }
+  .facts dt { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+  .facts dd { margin: 0; }
+  .pins { margin: var(--space-3) 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  .pins li { padding: var(--space-1) var(--space-2); border: var(--border-width) solid var(--color-border); border-radius: var(--radius); font-size: var(--font-size-sm); }
+  .error { padding: var(--space-4); border: var(--border-width) solid var(--color-danger); border-radius: var(--radius); }
+  @media (min-width: 40rem) { .shell { grid-template-columns: var(--sidebar-width) 1fr; } .side { border-block-end: 0; border-inline-end: var(--border-width) solid var(--color-border); } }
+</style>
+</head>
+<body>
+<div class="shell">
+<nav aria-label="Tournament" class="side">
+  <h2 style="margin:0 0 var(--space-1);font-size:var(--font-size-lg)">Northeast MegaBuck$ 2026</h2>
+  <p style="margin:0 0 var(--space-4);color:var(--color-text-muted);font-size:var(--font-size-sm)">Oct 10 to 12, 2026</p>
+  <ul>
+    <li><a href="#">Divisions</a></li>
+    <li><a href="#">Squads</a></li>
+    <li><a href="#" aria-current="page">Sweepers</a></li>
+  </ul>
+  <p><a href="#">Change tournament</a></p>
+</nav>
+<main class="content">
+<h1>Sweepers</h1>
+<p class="state">State: loaded (a division with no row or 0 pins is not listed; the second sweeper has no Open bonus)</p>
+<ul class="list">
+  <li class="card"><h2>Sat 10/10/2026 6:00 PM <span class="status">Open</span></h2>
+    <dl class="facts"><div><dt>Lanes</dt><dd>1 to 12 (12 lanes)</dd></div><div><dt>Per pair</dt><dd>Up to 4</dd></div><div><dt>Entry fee</dt><dd>$25.00</dd></div><div><dt>Games</dt><dd>3</dd></div><div><dt>Cash ratio</dt><dd>1 in 4.0</dd></div></dl>
+    <h3 style="margin:var(--space-3) 0 0;font-size:var(--font-size-base)">Bonus pins per game</h3>
+    <ul class="pins"><li>Open: +10</li><li>Women: +6</li></ul></li>
+  <li class="card"><h2>Sun 10/11/2026 5:00 PM <span class="status">Complete</span></h2>
+    <dl class="facts"><div><dt>Lanes</dt><dd>1 to 12 (12 lanes)</dd></div><div><dt>Per pair</dt><dd>Up to 4</dd></div><div><dt>Entry fee</dt><dd>$30.00</dd></div><div><dt>Games</dt><dd>4</dd></div><div><dt>Cash ratio</dt><dd>1 in 5.0</dd></div></dl>
+    <h3 style="margin:var(--space-3) 0 0;font-size:var(--font-size-base)">Bonus pins per game</h3>
+    <ul class="pins"><li>Women: +6</li></ul></li>
+</ul>
+<p class="state">State: loaded, no bonus pins on this sweeper</p>
+<ul class="list"><li class="card"><h2>Sun 10/11/2026 8:00 PM <span class="status">Open</span></h2>
+    <dl class="facts"><div><dt>Lanes</dt><dd>1 to 12 (12 lanes)</dd></div><div><dt>Per pair</dt><dd>Up to 4</dd></div><div><dt>Entry fee</dt><dd>$20.00</dd></div><div><dt>Games</dt><dd>2</dd></div><div><dt>Cash ratio</dt><dd>1 in 5.0</dd></div></dl>
+    <h3 style="margin:var(--space-3) 0 0;font-size:var(--font-size-base)">Bonus pins per game</h3>
+    <p style="margin:var(--space-1) 0 0">No bonus pins</p></li></ul>
+<p class="state">State: loading</p>
+<output>Loading sweepers…</output>
+<p class="state">State: empty</p>
+<p>No sweepers yet.</p>
+<p class="state">State: error</p>
+<div class="error" role="alert"><p>Could not load sweepers. Try again in a moment.</p><button type="button">Try again</button></div>
+</main>
+</div>
+</body>
+</html>

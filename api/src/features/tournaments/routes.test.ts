@@ -1,9 +1,10 @@
 import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 import { HttpError } from '../../shared/errors.ts'
+import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
 import { createInMemoryTournamentRepository } from './repository.ts'
 import { tournamentDetailSchema, tournamentListSchema } from './types.ts'
-import { createTournament } from '../../test/factories.ts'
+import { createDivision, createTournament } from '../../test/factories.ts'
 import { createTestApp } from '../../test/testApp.ts'
 
 describe('GET /v1/tournaments', () => {
@@ -66,7 +67,45 @@ describe('GET /v1/tournaments/:id', () => {
     const response = await request(app).get(`/v1/tournaments/${tournament.id}`)
 
     expect(response.status).toBe(200)
-    expect(response.body).toEqual({ tournament })
+    expect(response.body).toEqual({ tournament: { ...tournament, divisions: [] } })
+    expect(tournamentDetailSchema.safeParse(response.body).success).toBe(true)
+  })
+
+  it('lists the tournament divisions in the vendor shape and no more (DIV-12, D-37)', async () => {
+    const tournament = createTournament()
+    const second = createDivision({ number: 2, name: 'Women', gender: 'Female', handicapBase: 220 })
+    const first = createDivision({ number: 1, name: 'Open', maximumAverage: 200 })
+    const app = createTestApp({
+      tournaments: createInMemoryTournamentRepository([tournament]),
+      divisions: createInMemoryDivisionRepository([
+        { tournamentId: tournament.id, division: second },
+        { tournamentId: tournament.id, division: first },
+        { tournamentId: createTournament().id, division: createDivision() },
+      ]),
+    })
+
+    const response = await request(app).get(`/v1/tournaments/${tournament.id}`)
+
+    expect(response.body.tournament.divisions).toEqual([
+      {
+        id: first.id,
+        name: 'Open',
+        minimumAge: null,
+        maximumAge: null,
+        minimumAverage: null,
+        maximumAverage: 200,
+        gender: null,
+      },
+      {
+        id: second.id,
+        name: 'Women',
+        minimumAge: null,
+        maximumAge: null,
+        minimumAverage: null,
+        maximumAverage: null,
+        gender: 'Female',
+      },
+    ])
     expect(tournamentDetailSchema.safeParse(response.body).success).toBe(true)
   })
 

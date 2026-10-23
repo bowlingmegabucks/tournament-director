@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { vendorDivisionSchema } from '../divisions/types.ts'
 
 /**
  * The tournament summary the registration site already reads (`API-03`, `API-04`).
@@ -18,4 +19,6 @@ export type Tournament = z.infer<typeof tournamentSchema>
 
 export const tournamentListSchema = z.object({ tournaments: z.array(tournamentSchema) })
 
-export const tournamentDetailSchema = z.object({ tournament: tournamentSchema })
+export const tournamentDetailSchema = z.object({
+  tournament: tournamentSchema.extend({ divisions: z.array(vendorDivisionSchema) }),
+})

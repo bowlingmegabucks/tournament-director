@@ -6,6 +6,8 @@ import type { Config } from './config.ts'
 import type { Logger } from './shared/logger.ts'
 import { createRateLimiter } from './shared/rateLimit.ts'
 import { requestIdHeader, requestLogging } from './shared/requestLogging.ts'
+import { createDivisionRouter } from './features/divisions/routes.ts'
+import type { DivisionRepository } from './features/divisions/repository.ts'
 import { createTournamentRouter } from './features/tournaments/routes.ts'
 import type { TournamentRepository } from './features/tournaments/repository.ts'
 import { createErrorHandler, notFound } from './shared/middleware.ts'
@@ -17,6 +19,7 @@ export interface AppDependencies {
   config: Config
   logger: Logger
   tournaments: TournamentRepository
+  divisions: DivisionRepository
   /** Resolves when the database answers; rejects (a 503) when it does not. Feeds `GET /ready`. */
   checkDatabase: () => Promise<void>
   /** Where custom metrics go. The default sends to the OpenTelemetry SDK, or nowhere if it is off. */
@@ -28,6 +31,7 @@ export function createApp({
   config,
   logger,
   tournaments,
+  divisions,
   checkDatabase,
   // Stryker disable next-line StringLiteral: the scope name only labels the metrics.
   meter = metrics.getMeter('tournament-director-api'),
@@ -50,7 +54,16 @@ export function createApp({
   mountRoutes(app, [
     { path: '/health', access: 'public', router: createHealthRouter() },
     { path: '/ready', access: 'public', router: createReadyRouter(checkDatabase) },
-    { path: '/v1/tournaments', access: 'public', router: createTournamentRouter(tournaments) },
+    {
+      path: '/v1/tournaments/:id/divisions',
+      access: 'public',
+      router: createDivisionRouter(divisions, tournaments),
+    },
+    {
+      path: '/v1/tournaments',
+      access: 'public',
+      router: createTournamentRouter(tournaments, divisions),
+    },
   ])
 
   app.use(notFound)

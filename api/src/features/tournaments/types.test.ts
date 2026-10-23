@@ -25,7 +25,10 @@ describe('tournament schema', () => {
 
     expect(tournamentListSchema.safeParse({ tournaments: [tournament] }).success).toBe(true)
     expect(tournamentListSchema.safeParse([tournament]).success).toBe(false)
-    expect(tournamentDetailSchema.safeParse({ tournament }).success).toBe(true)
+    expect(
+      tournamentDetailSchema.safeParse({ tournament: { ...tournament, divisions: [] } }).success,
+    ).toBe(true)
+    expect(tournamentDetailSchema.safeParse({ tournament }).success).toBe(false)
     expect(tournamentDetailSchema.safeParse(tournament).success).toBe(false)
     expect(tournamentListSchema.safeParse({}).success).toBe(false)
     expect(tournamentDetailSchema.safeParse({}).success).toBe(false)

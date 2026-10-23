@@ -1,0 +1,73 @@
+/*
+ * Element selectors (th, td, tr) sit under .table on purpose: a table needs them to restyle its
+ * cells on narrow screens without a class on every cell, and they cannot leak out of this module.
+ */
+
+.table {
+  inline-size: 100%;
+  margin-block-end: var(--space-6);
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--space-2) var(--space-3);
+  text-align: start;
+  vertical-align: top;
+  border-block-end: var(--border-width) solid var(--color-border);
+}
+
+.table thead th {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.number {
+  inline-size: 3rem;
+}
+
+/* Read by screen readers, not shown. A one-pixel box is the usual size for this. */
+.hidden {
+  position: absolute;
+  inline-size: var(--border-width);
+  block-size: var(--border-width);
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Narrow screens: each row becomes a card, so nothing scrolls sideways. */
+@media (max-width: 39.99rem) {
+  .table thead {
+    position: absolute;
+    inline-size: var(--border-width);
+    block-size: var(--border-width);
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .table tr {
+    display: block;
+    margin-block-end: var(--space-3);
+    padding: var(--space-3);
+    background: var(--color-surface);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius);
+  }
+
+  .table th,
+  .table td {
+    display: block;
+    padding: var(--space-1) 0;
+    border: 0;
+  }
+
+  .table td::before {
+    content: attr(data-label) ': ';
+    color: var(--color-text-muted);
+  }
+
+  .table tbody th {
+    font-size: var(--font-size-lg);
+  }
+}

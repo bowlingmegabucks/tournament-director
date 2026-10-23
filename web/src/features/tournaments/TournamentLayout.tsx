@@ -1,8 +1,8 @@
 import { useId } from 'react'
-import { Link, Outlet, useParams } from 'react-router'
+import { Link, NavLink, Outlet, useParams } from 'react-router'
 import { Page } from '../../shared/Page'
 import { QueryError } from '../../shared/QueryError'
-import { TournamentNotFoundError } from './api'
+import { TournamentNotFoundError } from '../../shared/tournamentQuery'
 import { formatDateRange } from './format'
 import styles from './TournamentLayout.module.css'
 import { useTournament } from './useTournaments'
@@ -57,6 +57,11 @@ export function TournamentLayout() {
           {data.name}
         </h2>
         <p className={styles.meta}>{formatDateRange(data.startDate, data.endDate)}</p>
+        <ul className={styles.items}>
+          <li>
+            <NavLink to={`/tournaments/${data.id}/divisions`}>Divisions</NavLink>
+          </li>
+        </ul>
         <p>
           <Link to="/tournaments">Change tournament</Link>
         </p>

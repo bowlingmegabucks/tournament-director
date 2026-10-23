@@ -1,11 +1,16 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { HttpError } from '../../shared/errors.ts'
+import { toVendorDivision } from '../divisions/types.ts'
+import type { DivisionRepository } from '../divisions/repository.ts'
 import type { TournamentRepository } from './repository.ts'
 
 const idParams = z.object({ id: z.uuid() })
 
-export function createTournamentRouter(repository: TournamentRepository): Router {
+export function createTournamentRouter(
+  repository: TournamentRepository,
+  divisions: DivisionRepository,
+): Router {
   const router = Router()
 
   // Express 5 sends a rejected promise to the error handler, so no try/catch here.
@@ -16,9 +21,14 @@ export function createTournamentRouter(repository: TournamentRepository): Router
 
   router.get('/:id', async (req, res) => {
     const { id } = idParams.parse(req.params)
-    const tournament = await repository.get(id)
+    // Both reads start together. An unknown tournament costs one wasted read and still gives 404.
+    const [tournament, stored] = await Promise.all([
+      repository.get(id),
+      divisions.listByTournament(id),
+    ])
     if (!tournament) throw new HttpError(404, 'Tournament not found')
-    res.json({ tournament })
+    // D-25, D-37: the detail carries the vendor-shape divisions (API-04).
+    res.json({ tournament: { ...tournament, divisions: stored.map(toVendorDivision) } })
   })
 
   return router

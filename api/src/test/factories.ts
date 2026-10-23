@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker'
 import type { Config } from '../config.ts'
+import type { Division } from '../features/divisions/types.ts'
 import type { Tournament } from '../features/tournaments/types.ts'
 
 export function createTournament(overrides: Partial<Tournament> = {}): Tournament {
@@ -16,6 +17,23 @@ export function createTournament(overrides: Partial<Tournament> = {}): Tournamen
 
 export function createTournaments(count = 5): Tournament[] {
   return Array.from({ length: count }, () => createTournament())
+}
+
+export function createDivision(overrides: Partial<Division> = {}): Division {
+  return {
+    id: faker.string.uuid(),
+    number: faker.number.int({ min: 1, max: 20 }),
+    name: faker.word.noun(),
+    gender: null,
+    minimumAge: null,
+    maximumAge: null,
+    minimumAverage: null,
+    maximumAverage: null,
+    handicapPercentage: null,
+    handicapBase: null,
+    maximumHandicapPerGame: null,
+    ...overrides,
+  }
 }
 
 /** A config with no CORS origins and no telemetry destination. The database URL points nowhere real. */

@@ -1,4 +1,5 @@
 import { faker } from '@faker-js/faker'
+import type { Division } from '../features/divisions/types'
 import type { Tournament } from '../features/tournaments/types'
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
@@ -13,6 +14,55 @@ export function createTournament(overrides: Partial<Tournament> = {}): Tournamen
     bowlingCenter: `${faker.company.name()} Lanes`,
     ...overrides,
   }
+}
+
+export function createDivision(overrides: Partial<Division> = {}): Division {
+  return {
+    id: faker.string.uuid(),
+    number: faker.number.int({ min: 1, max: 20 }),
+    name: faker.word.noun(),
+    gender: null,
+    minimumAge: null,
+    maximumAge: null,
+    minimumAverage: null,
+    maximumAverage: null,
+    handicapPercentage: null,
+    handicapBase: null,
+    maximumHandicapPerGame: null,
+    ...overrides,
+  }
+}
+
+/** For the mock server: Open, Women, Seniors, and Scratch, as a bowling center might set them up. */
+export function createDemoDivisions(): Division[] {
+  return [
+    createDivision({ number: 1, name: 'Open', handicapPercentage: 90, handicapBase: 220 }),
+    createDivision({
+      number: 2,
+      name: 'Women',
+      gender: 'Female',
+      maximumAverage: 199,
+      handicapPercentage: 90,
+      handicapBase: 220,
+      maximumHandicapPerGame: 40,
+    }),
+    createDivision({
+      number: 3,
+      name: 'Seniors',
+      minimumAge: 50,
+      minimumAverage: 150,
+      maximumAverage: 189,
+      handicapPercentage: 80,
+      handicapBase: 210,
+    }),
+    createDivision({
+      number: 4,
+      name: 'Scratch',
+      minimumAge: 18,
+      maximumAge: 39,
+      minimumAverage: 200,
+    }),
+  ]
 }
 
 export function createTournaments(count = 5): Tournament[] {

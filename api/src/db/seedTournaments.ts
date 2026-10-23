@@ -4,7 +4,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000
 const TOURNAMENT_DAYS = 3
 
 // Fixed ids, so running the seed twice updates these rows and adds none.
-const samples = [
+export const samples = [
   { id: '7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01', center: 'Spare Time Lanes, Worcester MA', fee: 50 },
   { id: '2b9d6f3e-8a14-4e77-b0c2-5e1a9d7c3f02', center: 'Spare Time Lanes, Worcester MA', fee: 50 },
   { id: 'c4f8a1d7-6e90-4b3a-8d25-9a0e7b1c5d03', center: 'Lucky Strike Bowl, Nashua NH', fee: 45 },

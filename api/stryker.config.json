@@ -12,7 +12,9 @@
     "!src/db/seed.ts",
     "!src/generated/**",
     "!src/features/tournaments/prismaRepository.ts",
-    "!src/db/seedTournaments.ts"
+    "!src/features/divisions/prismaRepository.ts",
+    "!src/db/seedTournaments.ts",
+    "!src/db/seedDivisions.ts"
   ],
   "reporters": ["clear-text", "html"],
   "dashboard": {

@@ -51,6 +51,25 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    for (const [name, label] of [
+      ['Squads', 'squads'],
+      ['Sweepers', 'sweepers'],
+    ] as const) {
+      test(`${label} page (loaded) has no WCAG 2.2 AA violations`, async ({ page }) => {
+        await page.goto('/tournaments')
+        await page.getByRole('article').first().getByRole('link').click()
+        await page
+          .getByRole('navigation', { name: /Northeast MegaBuck/ })
+          .getByRole('link', { name })
+          .click()
+        await expect(
+          page.getByRole('heading', { level: 2, name: /\d{2}\/\d{2}\/\d{4}/ }).first(),
+        ).toBeVisible()
+
+        await expectNoViolations(page)
+      })
+    }
+
     test('tournament not found has no WCAG 2.2 AA violations', async ({ page }) => {
       await page.goto('/tournaments/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01')
       await expect(page.getByRole('heading', { name: 'Tournament not found' })).toBeVisible()

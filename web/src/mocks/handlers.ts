@@ -1,9 +1,16 @@
 import { http, HttpResponse } from 'msw'
-import { createDemoDivisions, createDemoTournaments } from './data'
+import {
+  createDemoDivisions,
+  createDemoSquads,
+  createDemoSweepers,
+  createDemoTournaments,
+} from './data'
 
 // Built once so refetches return the same list, as a real API would.
 const tournaments = createDemoTournaments()
 const divisions = createDemoDivisions()
+const squads = createDemoSquads()
+const sweepers = createDemoSweepers(divisions)
 
 export const handlers = [
   http.get('/v1/tournaments', () => HttpResponse.json({ tournaments })),
@@ -16,6 +23,16 @@ export const handlers = [
   http.get('/v1/tournaments/:id/divisions', ({ params }) =>
     tournaments.some((candidate) => candidate.id === params.id)
       ? HttpResponse.json({ divisions })
+      : HttpResponse.json({ message: 'Tournament not found' }, { status: 404 }),
+  ),
+  http.get('/v1/tournaments/:id/squads', ({ params }) =>
+    tournaments.some((candidate) => candidate.id === params.id)
+      ? HttpResponse.json({ squads })
+      : HttpResponse.json({ message: 'Tournament not found' }, { status: 404 }),
+  ),
+  http.get('/v1/tournaments/:id/sweepers', ({ params }) =>
+    tournaments.some((candidate) => candidate.id === params.id)
+      ? HttpResponse.json({ sweepers })
       : HttpResponse.json({ message: 'Tournament not found' }, { status: 404 }),
   ),
 ]

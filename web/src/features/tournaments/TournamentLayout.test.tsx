@@ -89,6 +89,29 @@ describe('tournament pages', () => {
     )
   })
 
+  it.each([
+    ['Squads', 'squads'],
+    ['Sweepers', 'sweepers'],
+  ])('links to %s in the sidebar and marks it on its own page (D-44)', async (name, segment) => {
+    serveTournament()
+    server.use(
+      http.get('/v1/tournaments/:id/squads', () => HttpResponse.json({ squads: [] })),
+      http.get('/v1/tournaments/:id/sweepers', () => HttpResponse.json({ sweepers: [] })),
+    )
+
+    renderApp(`/tournaments/${tournament.id}`)
+    const link = await within(
+      await screen.findByRole('navigation', { name: 'Spring Open' }),
+    ).findByRole('link', { name })
+    expect(link).toHaveAttribute('href', `/tournaments/${tournament.id}/${segment}`)
+    expect(link).not.toHaveAttribute('aria-current')
+
+    await userEvent.click(link)
+
+    expect(await screen.findByRole('heading', { name, level: 1 })).toBeVisible()
+    expect(within(sidebar()).getByRole('link', { name })).toHaveAttribute('aria-current', 'page')
+  })
+
   it.each(['/', '/tournaments', '/nowhere'])(
     'shows no tournament sidebar at %s (NAV-02)',
     async (path) => {

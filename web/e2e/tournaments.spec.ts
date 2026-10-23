@@ -54,3 +54,26 @@ test('a tournament sidebar leads to its divisions table (DIV-12, DIV-13)', async
   await expect(names).toHaveText(['Open', 'Women', 'Seniors', 'Scratch'])
   await expect(page.getByRole('row', { name: /Women/ })).toContainText('90% of 220, max 40 a game')
 })
+
+test('a tournament sidebar leads to its squads and sweepers (SQD-21, SQD-22)', async ({ page }) => {
+  await page.goto('/tournaments')
+  await page.getByRole('article').first().getByRole('link').click()
+  const sidebar = page.getByRole('navigation', { name: /Northeast MegaBuck/ })
+
+  await sidebar.getByRole('link', { name: 'Squads' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Squads', level: 1 })).toBeVisible()
+  const squads = page.getByRole('heading', { level: 2, name: /\d{2}\/\d{2}\/\d{4}/ })
+  await expect(squads).toHaveText([
+    'Sat 10/24/2026 9:00 AMComplete',
+    'Sat 10/24/2026 1:00 PMOpen',
+    'Sun 10/25/2026 9:00 AMOpen',
+  ])
+  await expect(page.getByText('$60.00 (override)')).toBeVisible()
+
+  await sidebar.getByRole('link', { name: 'Sweepers' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Sweepers', level: 1 })).toBeVisible()
+  await expect(page.getByText('Open: +10')).toBeVisible()
+  await expect(page.getByText('Women: +6')).toHaveCount(2)
+})

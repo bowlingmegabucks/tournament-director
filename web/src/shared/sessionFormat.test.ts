@@ -49,6 +49,12 @@ describe('formatLanes', () => {
     expect(formatLanes(0, 0)).toBe('Not set')
     expect(formatLanes(1, -2)).toBe('Not set')
   })
+
+  it('says Not set when the first lane is the legacy default of 0, not a range from lane 0', () => {
+    expect(formatLanes(0, 24)).toBe('Not set')
+    expect(formatLanes(-1, 4)).toBe('Not set')
+    expect(formatLanes(1, 24)).toBe('1 to 24 (24 lanes)')
+  })
 })
 
 describe('other formats', () => {

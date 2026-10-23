@@ -27,7 +27,7 @@ What `GET /v1/tournaments/{id}/sweepers` returns for a sweeper.
 
 The vendor detail route (`API-04`) carries only `id, date, entryFee` per squad (`entryFee` is `null` when the squad uses the tournament fee) and `id, date, entryFee, games` per sweeper (D-41, D-09).
 
-A stored row is read when it has a UUID `id` and a valid date; a sweeper also needs a fee, games, and a cash ratio. Any other row is skipped and logged with its id (D-42). A row whose `SquadType` is not 0 (squad) or 1 (sweeper) is never read. `SQD-01` to `SQD-12` run on save, not on read, so an odd lane count or a date outside the tournament still shows.
+A stored row is read when it has a UUID `id` and a valid date; a sweeper also needs a fee, games, and a cash ratio. Any other row is skipped and logged with its id (D-42). The vendor arrays on the tournament detail come from the same read, so a skipped row is missing there too. A row whose `SquadType` is not 0 (squad) or 1 (sweeper) is never read. `SQD-01` to `SQD-12` run on save, not on read, so an odd lane count or a date outside the tournament still shows.
 
 ## Rules
 

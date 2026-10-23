@@ -15,35 +15,42 @@ export function createPrismaSweeperRepository(
   return {
     async listByTournament(tournamentId) {
       const { rows, divisions, pins } = await withDatabaseErrors(logger, async () => {
-        const sweepers = await client.squad.findMany({
-          where: { tournamentId, squadType: sweeperType },
-          // SQD-20, D-45.
-          orderBy: [{ date: 'asc' }, { startingLane: 'asc' }, { id: 'asc' }],
-        })
-        return {
-          rows: sweepers,
+        // The sweepers and the divisions do not depend on each other, so they load together.
+        const [sweepers, tournamentDivisions] = await Promise.all([
+          client.squad.findMany({
+            where: { tournamentId, squadType: sweeperType },
+            // SQD-20, D-45.
+            orderBy: [{ date: 'asc' }, { startingLane: 'asc' }, { id: 'asc' }],
+          }),
           // The tournament's own divisions, in DIV-13 order. A pin row for any other division is ignored.
-          divisions: await client.division.findMany({
+          client.division.findMany({
             where: { tournamentId },
             select: { id: true, name: true },
             orderBy: [{ number: 'asc' }, { name: 'asc' }],
           }),
-          pins: await client.sweeperDivision.findMany({
-            where: { sweeperId: { in: sweepers.map((sweeper) => sweeper.id) } },
-          }),
-        }
+        ])
+        const pinRows = await client.sweeperDivision.findMany({
+          where: { sweeperId: { in: sweepers.map((sweeper) => sweeper.id) } },
+        })
+        return { rows: sweepers, divisions: tournamentDivisions, pins: pinRows }
       })
 
+      // Group once: sweeper id, then division id, then the stored pins.
+      const pinsBySweeper = new Map<string, Map<string, number | null>>()
+      for (const { sweeperId, divisionId, bonusPinsPerGame } of pins) {
+        const own = pinsBySweeper.get(sweeperId) ?? new Map<string, number | null>()
+        own.set(divisionId, bonusPinsPerGame)
+        pinsBySweeper.set(sweeperId, own)
+      }
+
       return rows.flatMap((row) => {
-        const own = new Map(
-          pins.filter((pin) => pin.sweeperId === row.id).map((pin) => [pin.divisionId, pin]),
-        )
+        const own = pinsBySweeper.get(row.id)
         const result = toSweeper(
           row,
           divisions.map(({ id, name }) => ({
             divisionId: id,
             divisionName: name,
-            bonusPinsPerGame: own.get(id)?.bonusPinsPerGame,
+            bonusPinsPerGame: own?.get(id),
           })),
         )
         if (result.success) return [result.data]

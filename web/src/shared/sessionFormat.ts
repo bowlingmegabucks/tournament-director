@@ -18,9 +18,9 @@ export function formatSessionDate(value: string): string {
   return `${weekday} ${month}/${day}/${year} ${clock}`
 }
 
-/** "1 to 24 (24 lanes)", "Lane 5", or "Not set" for the legacy default of 0 lanes. */
+/** "1 to 24 (24 lanes)", "Lane 5", or "Not set" for the legacy default of 0 (no lanes or no first lane). */
 export function formatLanes(startingLane: number, numberOfLanes: number): string {
-  if (numberOfLanes <= 0) return 'Not set'
+  if (numberOfLanes <= 0 || startingLane <= 0) return 'Not set'
   if (numberOfLanes === 1) return `Lane ${startingLane}`
   return `${startingLane} to ${startingLane + numberOfLanes - 1} (${numberOfLanes} lanes)`
 }

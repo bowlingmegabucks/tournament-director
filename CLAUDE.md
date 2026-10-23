@@ -51,17 +51,17 @@ Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, 
 
 The root `package.json` only holds shortcuts. It is not an npm workspace; `web/` and `api/` keep their own `package.json` and lockfile.
 
-| Command                                 | Does                                                                                                                                    |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run setup`                         | `npm ci` in the root, `api/`, and `web/`                                                                                                |
-| `npm run dev`                           | API (port 3000) and web (port 5173) together; web proxies `/api`                                                                        |
-| `npm run services:up` / `services:down` | Start / stop the Docker Compose services (Seq and MariaDB). Seq UI: http://localhost:15380; database on port 15306                      |
-| `npm run db:seed`                       | Add sample tournaments to the local database (you create the tables first; see [docs/api-standards.md](docs/api-standards.md#database)) |
-| `npm run dev:mocks`                     | Web only, with MSW mocks (no API needed).                                                                                               |
-| `npm run check`                         | script tests, then lint, format check, typecheck, and tests in `api/` and `web/`                                                        |
-| `npm run check:version`                 | Compare the version in `api/` and `web/` with `main` and the newest release tag                                                         |
-| `npm run test:scripts`                  | Tests for the files in `scripts/`                                                                                                       |
-| `npm run format:scripts`                | Prettier on `scripts/` (root `.prettierrc.json`; `check` also checks it)                                                                |
+| Command                                 | Does                                                                                                                                                  |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run setup`                         | `npm ci` in the root, `api/`, and `web/`                                                                                                              |
+| `npm run dev`                           | API (port 3000) and web (port 5173) together; web proxies `/api`                                                                                      |
+| `npm run services:up` / `services:down` | Start / stop the Docker Compose services (Seq and MariaDB). Seq UI: http://localhost:15380; database on port 15306                                    |
+| `npm run db:seed`                       | Add sample tournaments and divisions to the local database (you create the tables first; see [docs/api-standards.md](docs/api-standards.md#database)) |
+| `npm run dev:mocks`                     | Web only, with MSW mocks (no API needed).                                                                                                             |
+| `npm run check`                         | script tests, then lint, format check, typecheck, and tests in `api/` and `web/`                                                                      |
+| `npm run check:version`                 | Compare the version in `api/` and `web/` with `main` and the newest release tag                                                                       |
+| `npm run test:scripts`                  | Tests for the files in `scripts/`                                                                                                                     |
+| `npm run format:scripts`                | Prettier on `scripts/` (root `.prettierrc.json`; `check` also checks it)                                                                              |
 
 ## Commands (run in `web/`; `api/` has the same names, minus e2e)
 

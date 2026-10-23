@@ -17,6 +17,7 @@
 | `HttpClient`                      | `fetch`                                                              |
 | MVC routes / Blazor `@page`       | `react-router`: `<Route path="tournaments/:id">`, `useParams()`      |
 | `_Layout.cshtml` / `@Body`        | A layout route that renders `<Outlet />`                             |
+| EF Core table-per-hierarchy       | One table with a type column (`Squads.SquadType`): one Prisma model, and each repository filters on the type |
 | `IMemoryCache` for server data    | TanStack Query cache                                                 |
 | `using` / DI container            | Import modules; pass dependencies as arguments                       |
 | `ILogger<T>` + logging scope      | pino logger; `requestLogger(res, logger)` adds the request id        |

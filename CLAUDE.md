@@ -15,6 +15,7 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 8. Tournament list on the database. **Done on branch `tournamentList`:** the API reads the legacy MariaDB `Tournaments` table through Prisma (Compose service, `GET /ready`, `db:seed`, Testcontainers tests); the Check API button is gone. Reads for other tables come one feature at a time.
 9. Divisions list. **Done on branch `tournamentDivisionsList`:** the API reads the legacy `Divisions` table (web-only `GET /v1/tournaments/{id}/divisions`, and a vendor-shape `divisions` array on the tournament detail), and the web app has a Divisions table page and a sidebar link. Add, edit, and delete come later. See [docs/requirements/divisions.md](docs/requirements/divisions.md).
 10. Squads and sweepers lists. **Done on branch `squadSweeperList`:** the API reads the legacy `Squads` and `SweeperDivision` tables (web-only `GET /v1/tournaments/{id}/squads` and `/sweepers`, plus vendor-shape `squads` and `sweepers` arrays on the tournament detail), and the web app has card-list pages and sidebar links. Add, edit, delete, and Complete come later. See [docs/requirements/squads-and-sweepers.md](docs/requirements/squads-and-sweepers.md).
+11. Registrations list. **Done on branch `registration-list`:** the API reads the legacy `Registrations`, `SquadRegistration`, and `Bowlers` tables (no SSN column) and serves web-only `GET /v1/tournaments/{id}/registrations` with a summary; the web app has a Registrations page with one filter box. Public for 0.2.0; locked down in the release right after 0.3.0 (D-46, D-52). A shared `Loading` indicator now covers every inline loading state (D-53). See [docs/requirements/registrations.md](docs/requirements/registrations.md).
 
 Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, TypeScript, testing, composition) and stricter ESLint rules.
 
@@ -123,7 +124,7 @@ Details in [docs/frontend-standards.md](docs/frontend-standards.md).
 - Name components `PascalCase.tsx`, hooks `useThing.ts`, everything else `camelCase.ts`. Put a test next to its file: `Thing.test.tsx`.
 - No `useEffect` to derive state or fetch data. Compute during render or use a query.
 - Every list needs a stable `key` (an id, not the index).
-- Handle loading, error, and empty states on every data view.
+- Handle loading, error, and empty states on every data view. Show loading with `Loading` (`src/shared/Loading.tsx`: dots, the words, and optional placeholder `rows`), not bare text.
 - Use `Toast` (`src/shared/Toast.tsx`) for alerts and notices that are not part of a data view. Errors stay until dismissed. Pass `autoDismissMs` to make a toast close itself (success toasts do).
 - Use semantic HTML and labels. Tests query by role and text, so the UI stays accessible. Target WCAG 2.2 AA. ESLint (`jsx-a11y`) and the axe e2e test enforce it.
 - Style with CSS Modules and the tokens in `src/styles/tokens.css`. No raw colors in component CSS.

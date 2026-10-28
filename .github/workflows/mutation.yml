@@ -44,6 +44,17 @@ jobs:
         if: ${{ inputs.folder == 'api' }}
         run: npm run db:generate
 
+      # Stryker's incremental mode reuses the results of the last run and tests again only the mutants
+      # whose code, or whose covering tests, changed. The file is cached: a pull request starts from
+      # the newest one (its own branch first, then main). The run that has none does a full run.
+      # The score and the threshold still cover the whole project.
+      - name: Restore the incremental mutation result
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ inputs.folder }}/reports/stryker-incremental.json
+          key: stryker-${{ inputs.folder }}-${{ github.run_id }}
+          restore-keys: stryker-${{ inputs.folder }}-
+
       # Each folder sets its dashboard module in stryker.config.json (badges take ?module=web and ?module=api).
       # Without the key the dashboard reporter would fail after the full run, so skip it and warn.
       - name: Run mutation tests
@@ -59,7 +70,7 @@ jobs:
               echo "::warning::STRYKER_DASHBOARD_API_KEY is not set, so the result is not sent to the Stryker Dashboard."
             fi
           fi
-          npm run test:mutation -- --reporters "$reporters"
+          npm run test:mutation -- --incremental --reporters "$reporters"
 
       - name: Upload mutation report
         if: always()

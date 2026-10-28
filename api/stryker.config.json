@@ -13,8 +13,11 @@
     "!src/generated/**",
     "!src/features/tournaments/prismaRepository.ts",
     "!src/features/divisions/prismaRepository.ts",
+    "!src/features/squads/prismaRepository.ts",
+    "!src/features/sweepers/prismaRepository.ts",
     "!src/db/seedTournaments.ts",
-    "!src/db/seedDivisions.ts"
+    "!src/db/seedDivisions.ts",
+    "!src/db/seedSessions.ts"
   ],
   "reporters": ["clear-text", "html"],
   "dashboard": {

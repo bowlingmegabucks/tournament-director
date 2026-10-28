@@ -140,6 +140,9 @@ test('a squad count opens a popup that lists the squads, and Escape closes it (R
   const popup = page.getByRole('dialog', { name: 'Dana Abbott: squads' })
   await expect(popup).toBeVisible()
   await expect(popup.getByText('2 of 3 squads')).toBeVisible()
+  // A click on the popup's own edge is inside it, not on the backdrop.
+  await popup.click({ position: { x: 2, y: 2 } })
+  await expect(popup).toBeVisible()
   await expect(popup.getByRole('listitem')).toHaveText([
     'Sat 10/24/2026 9:00 AMComplete',
     'Sat 10/24/2026 1:00 PMOpen',

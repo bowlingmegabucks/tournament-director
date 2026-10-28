@@ -410,6 +410,18 @@ describe('RegistrationsPage', () => {
       expect(screen.getByRole('dialog')).toBeVisible()
     })
 
+    it('stays open when the click lands on the padding around the content (REG-28)', async () => {
+      serveSessions()
+      open()
+      await userEvent.click(await countButton('2 squads, show list'))
+      const content = (await screen.findByRole('dialog')).firstElementChild
+      if (!content) throw new Error('The popup has no content wrapper')
+
+      await userEvent.click(content)
+
+      expect(screen.getByRole('dialog')).toBeVisible()
+    })
+
     it('shows no popup until a count is clicked (REG-28)', async () => {
       serveSessions()
       open()

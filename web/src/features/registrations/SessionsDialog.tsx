@@ -43,34 +43,37 @@ export function SessionsDialog({
       aria-labelledby={titleId}
       onClose={onClose}
       onClick={(event) => {
-        // The box fills the dialog, so a click on the dialog itself is a click on the backdrop.
+        // The dialog has no padding of its own: the content wrapper fills it. So a click that
+        // lands on the dialog element itself is a click on the backdrop.
         if (event.target === event.currentTarget) event.currentTarget.close()
       }}
     >
-      <h2 id={titleId}>
-        {bowlerName}: {kind}
-      </h2>
-      <p className={styles.subtitle}>
-        {listed.length} of {all.length} {all.length === 1 ? noun : `${noun}s`}
-      </p>
-      <ul>
-        {listed.map((session) => (
-          <li key={session.id}>
-            <span>{formatSessionDate(session.date)}</span>
-            <span className={styles.status}>{session.complete ? 'Complete' : 'Open'}</span>
-          </li>
-        ))}
-      </ul>
-      <div className={styles.actions}>
-        <button
-          type="button"
-          className={styles.secondary}
-          onClick={(event) => {
-            event.currentTarget.closest('dialog')?.close()
-          }}
-        >
-          Close
-        </button>
+      <div className={styles.content}>
+        <h2 id={titleId} className={styles.title}>
+          {bowlerName}: {kind}
+        </h2>
+        <p className={styles.subtitle}>
+          {listed.length} of {all.length} {all.length === 1 ? noun : `${noun}s`}
+        </p>
+        <ul className={styles.list}>
+          {listed.map((session) => (
+            <li key={session.id} className={styles.item}>
+              <span>{formatSessionDate(session.date)}</span>
+              <span className={styles.status}>{session.complete ? 'Complete' : 'Open'}</span>
+            </li>
+          ))}
+        </ul>
+        <div className={styles.actions}>
+          <button
+            type="button"
+            className={styles.secondary}
+            onClick={(event) => {
+              event.currentTarget.closest('dialog')?.close()
+            }}
+          >
+            Close
+          </button>
+        </div>
       </div>
     </dialog>
   )

@@ -40,6 +40,7 @@ web/src/
 - State: keep it as local as you can. Lift it only when siblings need it. Reach for context only for truly global values.
 - Effects sync with things outside React (timers, subscriptions). They are not for data flow.
 - Do not mutate state or props. Return new objects and arrays.
+- Loading: an inline loading state uses `Loading` from `src/shared/Loading.tsx` (D-53). It shows three pulsing dots and the words, and a list page passes `rows` for gray placeholder bars. The dots and bars are hidden from screen readers and stand still when the user asks for less motion. It lives in `shared/` because every data view uses it.
 - Alerts and notices: use `Toast` from `src/shared/Toast.tsx`. It is the app's one alert component, so it stays in `shared/` with one caller. Errors use `role="alert"` and stay until dismissed; success uses `role="status"`. A toast stays until dismissed unless you pass `autoDismissMs`; `Toast` owns the timer.
 
 ## Data fetching
@@ -63,7 +64,7 @@ Plain CSS with custom properties (no Tailwind, no component library). Palette co
 
 - No hex, `rgb()`, or pixel values for color or spacing in component CSS. Use `var(--color-*)` and `var(--space-*)`.
 - Add a new token to `tokens.css` before you use a new value. Give a color token a dark and a light value.
-- Style with classes, not element selectors or ids. No `!important`.
+- Style with classes, not element selectors or ids. No `!important`. One exception: a table may use `th`, `td`, `tr`, and `thead` selectors under its own `.table` class, so it can restyle its cells on narrow screens without a class on every cell. Say so in a comment at the top of the module, as `DivisionsPage.module.css` does.
 - Use logical properties (`margin-inline`, `padding-block`, `inline-size`) and `rem`, not `px`, so layout follows text size and writing direction.
 - Mobile first. Add `min-width` media queries only when the layout needs them.
 - Dark and light follow the OS (`prefers-color-scheme`). No manual toggle yet.

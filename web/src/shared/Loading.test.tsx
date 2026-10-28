@@ -16,6 +16,12 @@ describe('Loading (D-53)', () => {
     expect(dots?.children).toHaveLength(3)
   })
 
+  it('draws at most twelve bars', () => {
+    const { container } = render(<Loading label="Loading squads…" rows={20} />)
+
+    expect(container.querySelector('div[aria-hidden="true"]')?.children).toHaveLength(12)
+  })
+
   it('draws no placeholder bars by default', () => {
     const { container } = render(<Loading label="Loading squads…" />)
 

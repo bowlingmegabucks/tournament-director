@@ -1,7 +1,7 @@
 /*
- * Element selectors (th, td, tr, span, li) sit under a class on purpose: a table needs them to
- * restyle its cells on narrow screens without a class on every cell, and they cannot leak out of
- * this module.
+ * Only the table uses element selectors (th, td, tr, thead), under .table on purpose: it needs them
+ * to restyle its cells on narrow screens without a class on every cell, and they cannot leak out
+ * of this module (the same as DivisionsPage.module.css).
  */
 
 .summary {
@@ -17,16 +17,16 @@
   margin: 0;
 }
 
-.totals div {
+.total {
   display: grid;
 }
 
-.totals dt {
+.totalLabel {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
 
-.totals dd {
+.totalValue {
   margin: 0;
   font-size: var(--font-size-xl);
   font-weight: 700;
@@ -44,18 +44,18 @@
   border-radius: var(--radius);
 }
 
-.breakdown h3 {
+.breakdownTitle {
   margin-block: 0 var(--space-2);
   font-size: var(--font-size-base);
 }
 
-.breakdown ul {
+.breakdownList {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.breakdown li {
+.breakdownItem {
   display: flex;
   justify-content: space-between;
   gap: var(--space-4);
@@ -79,7 +79,7 @@
   gap: var(--space-1);
 }
 
-.field input {
+.input {
   min-block-size: var(--target-min);
   padding: var(--space-2) var(--space-3);
   border: var(--border-width) solid var(--color-border);

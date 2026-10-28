@@ -84,6 +84,7 @@ export function RegistrationsPage() {
               <label htmlFor="registration-filter">Filter by name or USBC ID</label>
               <input
                 id="registration-filter"
+                className={styles.input}
                 type="search"
                 value={filter}
                 onChange={(event) => {

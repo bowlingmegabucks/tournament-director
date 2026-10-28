@@ -59,7 +59,7 @@ The root `package.json` only holds shortcuts. It is not an npm workspace; `web/`
 | `npm run setup`                         | `npm ci` in the root, `api/`, and `web/`                                                                                                              |
 | `npm run dev`                           | API (port 3000) and web (port 5173) together; web proxies `/api`                                                                                      |
 | `npm run services:up` / `services:down` | Start / stop the Docker Compose services (Seq and MariaDB). Seq UI: http://localhost:15380; database on port 15306                                    |
-| `npm run db:seed`                       | Add sample tournaments, divisions, squads, and sweepers to the local database (you create the tables first; see [docs/api-standards.md](docs/api-standards.md#database)) |
+| `npm run db:seed`                       | Add sample tournaments, divisions, squads, sweepers, and registrations (with their bowlers) to the local database (you create the tables first; see [docs/api-standards.md](docs/api-standards.md#database)) |
 | `npm run dev:mocks`                     | Web only, with MSW mocks (no API needed).                                                                                                             |
 | `npm run check`                         | script tests, then lint, format check, typecheck, and tests in `api/` and `web/`                                                                      |
 | `npm run check:version`                 | Compare the version in `api/` and `web/` with `main` and the newest release tag                                                                       |

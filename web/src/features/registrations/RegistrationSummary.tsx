@@ -10,10 +10,12 @@ function Breakdown({
   const titleId = useId()
   return (
     <section className={styles.breakdown} aria-labelledby={titleId}>
-      <h3 id={titleId}>{title}</h3>
-      <ul>
+      <h3 id={titleId} className={styles.breakdownTitle}>
+        {title}
+      </h3>
+      <ul className={styles.breakdownList}>
         {rows.map((row) => (
-          <li key={row.key}>
+          <li key={row.key} className={styles.breakdownItem}>
             <span>{row.label}</span>
             <span>{row.entries}</span>
           </li>
@@ -33,13 +35,13 @@ export function RegistrationSummary({ summary }: Readonly<{ summary: Summary }>)
     <section className={styles.summary} aria-labelledby={titleId}>
       <h2 id={titleId}>Entries in this tournament</h2>
       <dl className={styles.totals}>
-        <div>
-          <dt>Bowlers registered</dt>
-          <dd>{summary.registrations}</dd>
+        <div className={styles.total}>
+          <dt className={styles.totalLabel}>Bowlers registered</dt>
+          <dd className={styles.totalValue}>{summary.registrations}</dd>
         </div>
-        <div>
-          <dt>Super sweeper</dt>
-          <dd>{summary.superSweepers}</dd>
+        <div className={styles.total}>
+          <dt className={styles.totalLabel}>Super sweeper</dt>
+          <dd className={styles.totalValue}>{summary.superSweepers}</dd>
         </div>
       </dl>
       <div className={styles.breakdowns}>

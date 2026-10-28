@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import {
   createDemoDivisions,
+  createDemoRegistrationList,
   createDemoSquads,
   createDemoSweepers,
   createDemoTournaments,
@@ -11,6 +12,7 @@ const tournaments = createDemoTournaments()
 const divisions = createDemoDivisions()
 const squads = createDemoSquads()
 const sweepers = createDemoSweepers(divisions)
+const registrations = createDemoRegistrationList(divisions, squads, sweepers)
 
 export const handlers = [
   http.get('/v1/tournaments', () => HttpResponse.json({ tournaments })),
@@ -28,6 +30,11 @@ export const handlers = [
   http.get('/v1/tournaments/:id/squads', ({ params }) =>
     tournaments.some((candidate) => candidate.id === params.id)
       ? HttpResponse.json({ squads })
+      : HttpResponse.json({ message: 'Tournament not found' }, { status: 404 }),
+  ),
+  http.get('/v1/tournaments/:id/registrations', ({ params }) =>
+    tournaments.some((candidate) => candidate.id === params.id)
+      ? HttpResponse.json(registrations)
       : HttpResponse.json({ message: 'Tournament not found' }, { status: 404 }),
   ),
   http.get('/v1/tournaments/:id/sweepers', ({ params }) =>

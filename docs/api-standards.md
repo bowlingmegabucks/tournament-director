@@ -103,7 +103,7 @@ The legacy MariaDB database, read through Prisma (D-30). The .NET twin: `PrismaC
 - Only `server.ts` builds the client (`createDatabaseClient`). Repositories receive it, as with the other real dependencies. The client adds 2 second connection timeouts to the URL, or a down database holds each request for 20 seconds.
 - A repository wraps each call in `withDatabaseErrors(logger, ...)`. An unreachable database becomes a 503 `Database unavailable` with the cause in the log; any other database error is a 500 (a missing table is a setup fault, not an outage).
 - A row that breaks the API shape is skipped and logged on a list; a single-row read of it answers 500 (D-31). `toTournament` in `tournamentRow.ts` does the mapping and is a pure function.
-- Local: `npm run services:up` starts MariaDB 11.4.7 (host port 15306). You create the tables from `docs/migration/database.md`; `npm run db:seed` (root or `api/`) adds sample tournaments, divisions, squads, and sweepers.
+- Local: `npm run services:up` starts MariaDB 11.4.7 (host port 15306). You create the tables from `docs/migration/database.md`; `npm run db:seed` (root or `api/`) adds sample tournaments, divisions, squads, sweepers, and registrations with their bowlers.
 - Tests: files named `*.db.test.ts` run in the `db` Vitest project against a real MariaDB that Testcontainers starts once per run (needs Docker). `resetDatabase` empties every table before each test; files run one at a time because they share the database. Everything else runs in the `unit` project with the in-memory repository. Stryker runs `unit` only (`vitest.stryker.config.ts`), and `prismaRepository.ts`, `seedTournaments.ts`, and `seedDivisions.ts` are outside its `mutate` list.
 
 ## Not built yet

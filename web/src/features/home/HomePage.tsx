@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { Loading } from '../../shared/Loading'
 import { Page } from '../../shared/Page'
 import { QueryError } from '../../shared/QueryError'
 import { todayLocal } from '../../shared/today'
@@ -20,7 +21,7 @@ export function HomePage() {
 function CurrentTournament() {
   const { data, isPending, error, refetch } = useTournaments()
 
-  if (isPending) return <output>Loading tournaments…</output>
+  if (isPending) return <Loading label="Loading tournaments…" />
   if (error) {
     return (
       <QueryError

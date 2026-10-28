@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import { Link, NavLink, Outlet, useParams } from 'react-router'
+import { Loading } from '../../shared/Loading'
 import { Page } from '../../shared/Page'
 import { QueryError } from '../../shared/QueryError'
 import { TournamentNotFoundError } from '../../shared/tournamentQuery'
@@ -21,7 +22,7 @@ export function TournamentLayout() {
   if (isPending) {
     return (
       <Page>
-        <output>Loading tournament…</output>
+        <Loading label="Loading tournament…" />
       </Page>
     )
   }
@@ -66,6 +67,9 @@ export function TournamentLayout() {
           </li>
           <li>
             <NavLink to={`/tournaments/${data.id}/sweepers`}>Sweepers</NavLink>
+          </li>
+          <li>
+            <NavLink to={`/tournaments/${data.id}/registrations`}>Registrations</NavLink>
           </li>
         </ul>
         <p>

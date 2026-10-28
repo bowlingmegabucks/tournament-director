@@ -77,3 +77,95 @@ test('a tournament sidebar leads to its squads and sweepers (SQD-21, SQD-22)', a
   await expect(page.getByText('Open: +10')).toBeVisible()
   await expect(page.getByText('Women: +6')).toHaveCount(2)
 })
+
+test('a tournament sidebar leads to its registrations, which a filter narrows (REG-23, REG-24)', async ({
+  page,
+}) => {
+  await page.goto('/tournaments')
+  await page.getByRole('article').first().getByRole('link').click()
+
+  await page
+    .getByRole('navigation', { name: /Northeast MegaBuck/ })
+    .getByRole('link', { name: 'Registrations' })
+    .click()
+
+  await expect(page.getByRole('heading', { name: 'Registrations', level: 1 })).toBeVisible()
+  const names = page.getByRole('rowheader')
+  await expect(names).toHaveText([
+    'Dana Abbott',
+    'Ray Baptiste, Jr',
+    'Maria Chen',
+    'Tom Delgado',
+    'Joe Fontaine',
+    'Joe Fontaine',
+  ])
+  await expect(page.getByRole('heading', { name: 'By division' })).toBeVisible()
+
+  await page.getByRole('searchbox', { name: 'Filter by name or USBC ID' }).fill('joe 2045')
+
+  await expect(names).toHaveText(['Joe Fontaine'])
+  await expect(page.getByText('Showing 1 of 6 registrations.')).toBeVisible()
+  // The summary counts the whole tournament, filtered or not.
+  await expect(page.getByRole('term').filter({ hasText: 'Bowlers registered' })).toBeVisible()
+})
+
+test('on a narrow screen the card leaves out a blank super sweeper (REG-23, D-47)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 })
+  await page.goto('/tournaments')
+  await page.getByRole('article').first().getByRole('link').click()
+  await page.getByRole('link', { name: 'Registrations' }).click()
+  await expect(page.getByRole('heading', { name: 'Registrations', level: 1 })).toBeVisible()
+
+  const lastCell = (name: string) =>
+    page.getByRole('rowheader', { name }).locator('xpath=..').locator('td').last()
+
+  await expect(lastCell('Dana Abbott')).toBeVisible()
+  await expect(lastCell('Ray Baptiste, Jr')).toBeHidden()
+})
+
+test('a squad count opens a popup that lists the squads, and Escape closes it (REG-28)', async ({
+  page,
+}) => {
+  await page.goto('/tournaments')
+  await page.getByRole('article').first().getByRole('link').click()
+  await page.getByRole('link', { name: 'Registrations' }).click()
+  const count = page
+    .getByRole('row', { name: /Dana Abbott/ })
+    .getByRole('button', { name: '2 squads, show list' })
+
+  await count.click()
+
+  const popup = page.getByRole('dialog', { name: 'Dana Abbott: squads' })
+  await expect(popup).toBeVisible()
+  await expect(popup.getByText('2 of 3 squads')).toBeVisible()
+  // A click on the popup's own edge is inside it, not on the backdrop.
+  await popup.click({ position: { x: 2, y: 2 } })
+  await expect(popup).toBeVisible()
+  await expect(popup.getByRole('listitem')).toHaveText([
+    'Sat 10/24/2026 9:00 AMComplete',
+    'Sat 10/24/2026 1:00 PMOpen',
+  ])
+
+  await page.keyboard.press('Escape')
+
+  await expect(popup).toBeHidden()
+  await expect(count).toBeFocused()
+})
+
+test('a click outside the popup closes it (REG-28)', async ({ page }) => {
+  await page.goto('/tournaments')
+  await page.getByRole('article').first().getByRole('link').click()
+  await page.getByRole('link', { name: 'Registrations' }).click()
+  await page
+    .getByRole('row', { name: /Dana Abbott/ })
+    .getByRole('button', { name: '2 sweepers, show list' })
+    .click()
+  const popup = page.getByRole('dialog', { name: 'Dana Abbott: sweepers' })
+  await expect(popup).toBeVisible()
+
+  await page.mouse.click(5, 5)
+
+  await expect(popup).toBeHidden()
+})

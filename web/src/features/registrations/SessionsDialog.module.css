@@ -1,0 +1,58 @@
+.dialog {
+  inline-size: min(28rem, calc(100vw - 2 * var(--space-4)));
+  padding: 0;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-elevated);
+}
+
+.dialog::backdrop {
+  background: var(--color-backdrop);
+}
+
+/* The dialog has no padding, so a click on the dialog element itself can only be on the backdrop. */
+.content {
+  padding: var(--space-4);
+}
+
+.title {
+  margin-block: 0 var(--space-1);
+  font-size: var(--font-size-lg);
+}
+
+.subtitle {
+  margin-block: 0 var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.list {
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-block: var(--space-2);
+  border-block-end: var(--border-width) solid var(--color-border);
+}
+
+.status {
+  color: var(--color-text-muted);
+}
+
+.actions {
+  display: flex;
+  justify-content: end;
+}
+
+/* Outline button: the base style is the primary one. */
+.secondary {
+  background: transparent;
+  color: var(--color-accent);
+}

@@ -20,6 +20,7 @@
 - Playwright builds the app with `--mode mocks` and serves it with `vite preview` on port 4173.
 - Once the API deploys, add a second project that starts the real API (and a test database, if there is one) and checks one journey end to end. The current project stays on mocks.
 - `e2e/accessibility.spec.ts` scans pages with axe (`@axe-core/playwright`) for WCAG 2.2 AA violations in dark and light mode, for the loaded, empty, and error states. Add each new page or route to it, with its states. jsdom cannot check contrast, so this runs in the browser.
+- jsdom has no `<dialog>.showModal()` or `close()`. `web/src/test/setup.ts` stands in for both, enough to open, close, and fire `close`. Escape, the backdrop, and focus return are not simulated, so cover them in e2e (see the squad popup in `e2e/tournaments.spec.ts`).
 - Keep e2e tests few and about user journeys. Logic belongs in unit tests.
 
 ## Mutation testing
@@ -28,7 +29,8 @@
 - Compare to .NET Stryker.NET. Same idea and same tool family.
 - Read `reports/mutation/mutation.html` to see survivors line by line.
 - The 10 "errors" in a run are mutants that fail TypeScript checks. They are normal.
-- Run it before a PR for changed features. It is slow. Pull requests run it without reporting. A push to `main` runs it again and sends the result to the [Stryker Dashboard](https://dashboard.stryker-mutator.io/reports/github.com/bowlingmegabucks/tournament-director/main) as modules `web` and `api` (set in each `stryker.config.json`), using the `STRYKER_DASHBOARD_API_KEY` Actions secret. Only the workflow adds the `dashboard` reporter (a command-line flag), so local runs never report.
+- Run it before a PR for changed features. A full run is slow, so add `-- --incremental` (`npm run test:mutation -- --incremental`): the first run writes `reports/stryker-incremental.json`, and later runs test again only the mutants whose code or covering tests changed (13 seconds instead of 80 in `api/` after a one-file change). The score still covers the whole project. Delete the file to force a full run.
+- Pull requests and `main` use `--incremental` too, with the file kept in the Actions cache: a run starts from the newest cached file (its own branch, then `main`), so a pull request tests only what it changes. A run with no cached file does a full run. Pull requests run it without reporting. A push to `main` runs it again and sends the result to the [Stryker Dashboard](https://dashboard.stryker-mutator.io/reports/github.com/bowlingmegabucks/tournament-director/main) as modules `web` and `api` (set in each `stryker.config.json`), using the `STRYKER_DASHBOARD_API_KEY` Actions secret. Only the workflow adds the `dashboard` reporter (a command-line flag), so local runs never report.
 
 ## API (`api/`)
 

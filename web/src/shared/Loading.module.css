@@ -1,0 +1,67 @@
+.loading {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.dots {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.dot {
+  inline-size: var(--space-2);
+  block-size: var(--space-2);
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.rows {
+  display: grid;
+  gap: var(--space-2);
+  margin-block-start: var(--space-4);
+}
+
+.bar {
+  block-size: 1.25rem;
+  border-radius: var(--radius);
+  background: var(--color-border);
+  opacity: 0.4;
+}
+
+/* Motion only when the user has not asked for less. Otherwise the dots and bars sit still. */
+@media (prefers-reduced-motion: no-preference) {
+  .dot {
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+
+  .dot:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+
+  .dot:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+
+  .bar {
+    animation: fade 1.4s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%,
+    80%,
+    100% {
+      opacity: 0.25;
+    }
+
+    40% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade {
+    50% {
+      opacity: 0.15;
+    }
+  }
+}

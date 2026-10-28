@@ -21,14 +21,14 @@ Built on branch `migrate-<feature>`. Migration source: [docs/migration/<feature>
 ## Fields
 
 | Field | Type | Required | Notes |
-| --- | --- | --- | --- |
+| ----- | ---- | -------- | ----- |
 
 ## Rules
 
-| ID | Requirement | Differs from legacy | Tests |
-| --- | --- | --- | --- |
-| TRN-01 | Name is required. Message: "Name is required" | | `api/src/features/tournaments/routes.test.ts` |
-| TRN-09 | Super sweeper cash ratio must be at least 1 on save | Yes: legacy has no check (D-13) | ... |
+| ID     | Requirement                                         | Differs from legacy             | Tests                                         |
+| ------ | --------------------------------------------------- | ------------------------------- | --------------------------------------------- |
+| TRN-01 | Name is required. Message: "Name is required"       |                                 | `api/src/features/tournaments/routes.test.ts` |
+| TRN-09 | Super sweeper cash ratio must be at least 1 on save | Yes: legacy has no check (D-13) | ...                                           |
 
 ## API
 
@@ -41,10 +41,11 @@ What the user sees and can do.
 
 ## Index
 
-| Feature | File |
-| --- | --- |
-| Tournaments (list, Home card, overview) | [tournaments.md](tournaments.md) |
-| Divisions (list) | [divisions.md](divisions.md) |
-| Squads and sweepers (lists) | [squads-and-sweepers.md](squads-and-sweepers.md) |
-| Navigation and layout | [navigation.md](navigation.md) |
-| API route access | [api-access.md](api-access.md) |
+| Feature                                 | File                                             |
+| --------------------------------------- | ------------------------------------------------ |
+| Tournaments (list, Home card, overview) | [tournaments.md](tournaments.md)                 |
+| Divisions (list)                        | [divisions.md](divisions.md)                     |
+| Squads and sweepers (lists)             | [squads-and-sweepers.md](squads-and-sweepers.md) |
+| Registrations (list)                    | [registrations.md](registrations.md)             |
+| Navigation and layout                   | [navigation.md](navigation.md)                   |
+| API route access                        | [api-access.md](api-access.md)                   |

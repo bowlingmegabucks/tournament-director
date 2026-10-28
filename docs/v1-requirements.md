@@ -11,7 +11,8 @@ Feature-level work (ports of legacy rules) lives in [docs/migration/](migration/
 | 0.1.0   | Structure. Done.                                                |
 | 0.2.0   | Read-only views on the existing database. Public routes only.   |
 | 0.3.0   | Authentication and authorization, with a ping route to test it. |
-| 0.4.0+  | Commands, one feature area per release.                         |
+| Next    | Lock down the read routes and pages that are public in 0.2.0. Before any command. |
+| Then    | Commands, one feature area per release (0.4.0+ in the old plan). |
 | 1.0.0   | Every item below is checked.                                    |
 
 Version numbers follow content, not a countdown. 0.10.0 is fine.
@@ -58,6 +59,8 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 - [x] Every route declares its access; undeclared routes deny (`API-15`, D-27). Only `public` exists until sign-in (0.3.0); recheck then.
 - [ ] Roles and permissions reviewed against [security.md](migration/security.md).
 - [ ] Personal data (bowler records) is behind auth.
+- [ ] Lock-down release done before any command route (D-52): every public read route and page reviewed, and those that should not be public put behind auth.
+- [ ] Registrations list (`GET /v1/tournaments/{id}/registrations` and its page) is signed-in only. It ships public in 0.2.0 (D-46); lock it down once 0.3.0 has auth, and hide the sidebar link when signed out.
 - [ ] `npm audit` clean; pinned-version overrides in CLAUDE.md reviewed.
 
 ## Production readiness

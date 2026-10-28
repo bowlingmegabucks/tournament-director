@@ -63,7 +63,7 @@ const sweepers = [
 
 // A fixed id per tournament and number, so running the seed twice updates these rows and adds none.
 // `a` is a squad and `b` a sweeper; both are hex, so the id stays a valid UUID.
-function sessionId(tournamentId: string, kind: 'a' | 'b', n: number): string {
+export function sessionId(tournamentId: string, kind: 'a' | 'b', n: number): string {
   return `${tournamentId.slice(0, -4)}${kind}00${n}`
 }
 

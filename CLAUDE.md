@@ -15,6 +15,7 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 8. Tournament list on the database. **Done on branch `tournamentList`:** the API reads the legacy MariaDB `Tournaments` table through Prisma (Compose service, `GET /ready`, `db:seed`, Testcontainers tests); the Check API button is gone. Reads for other tables come one feature at a time.
 9. Divisions list. **Done on branch `tournamentDivisionsList`:** the API reads the legacy `Divisions` table (web-only `GET /v1/tournaments/{id}/divisions`, and a vendor-shape `divisions` array on the tournament detail), and the web app has a Divisions table page and a sidebar link. Add, edit, and delete come later. See [docs/requirements/divisions.md](docs/requirements/divisions.md).
 10. Squads and sweepers lists. **Done on branch `squadSweeperList`:** the API reads the legacy `Squads` and `SweeperDivision` tables (web-only `GET /v1/tournaments/{id}/squads` and `/sweepers`, plus vendor-shape `squads` and `sweepers` arrays on the tournament detail), and the web app has card-list pages and sidebar links. Add, edit, delete, and Complete come later. See [docs/requirements/squads-and-sweepers.md](docs/requirements/squads-and-sweepers.md).
+11. Registrations list. **Done on branch `registration-list`:** the API reads the legacy `Registrations`, `SquadRegistration`, and `Bowlers` tables (no SSN column) and serves web-only `GET /v1/tournaments/{id}/registrations` with a summary; the web app has a Registrations page with one filter box. Public for 0.2.0; locked down in the release right after 0.3.0 (D-46, D-52). A shared `Loading` indicator now covers every inline loading state (D-53). See [docs/requirements/registrations.md](docs/requirements/registrations.md).
 
 Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, TypeScript, testing, composition) and stricter ESLint rules.
 
@@ -24,6 +25,7 @@ Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, 
 
 - **0.2.0:** read-only views (GET routes) on the existing legacy database; the WinForms app will be sunset. Public routes only. Bowler GETs wait for auth. Every route declares its access; undeclared routes deny.
 - **0.3.0:** authentication and authorization, with a ping-style route to test it. Decide the approach (hosted provider, Keycloak, or self-rolled) after the 0.2.0 tag. Also set the rules for what the UI shows when signed in or out (no permission, no Add button). The API still enforces access.
+- **Lock-down release (right after 0.3.0, before any command route):** review every read route and page that is public in 0.2.0 and put the ones that should not be public behind auth, starting with the registrations list (D-46). Vendor routes follow D-09. No POST, PATCH, or DELETE route ships before this is done (D-52).
 - **0.4.0 and up:** commands (create tournament, edit division), one feature area per release.
 - **1.0.0:** every item in [docs/v1-requirements.md](docs/v1-requirements.md) is checked. Keep that file current: check items off as they land and add items as we find them. It includes a review of open issues in the legacy `tournament-manager` repo.
 
@@ -57,7 +59,7 @@ The root `package.json` only holds shortcuts. It is not an npm workspace; `web/`
 | `npm run setup`                         | `npm ci` in the root, `api/`, and `web/`                                                                                                              |
 | `npm run dev`                           | API (port 3000) and web (port 5173) together; web proxies `/api`                                                                                      |
 | `npm run services:up` / `services:down` | Start / stop the Docker Compose services (Seq and MariaDB). Seq UI: http://localhost:15380; database on port 15306                                    |
-| `npm run db:seed`                       | Add sample tournaments, divisions, squads, and sweepers to the local database (you create the tables first; see [docs/api-standards.md](docs/api-standards.md#database)) |
+| `npm run db:seed`                       | Add sample tournaments, divisions, squads, sweepers, and registrations (with their bowlers) to the local database (you create the tables first; see [docs/api-standards.md](docs/api-standards.md#database)) |
 | `npm run dev:mocks`                     | Web only, with MSW mocks (no API needed).                                                                                                             |
 | `npm run check`                         | script tests, then lint, format check, typecheck, and tests in `api/` and `web/`                                                                      |
 | `npm run check:version`                 | Compare the version in `api/` and `web/` with `main` and the newest release tag                                                                       |
@@ -122,7 +124,7 @@ Details in [docs/frontend-standards.md](docs/frontend-standards.md).
 - Name components `PascalCase.tsx`, hooks `useThing.ts`, everything else `camelCase.ts`. Put a test next to its file: `Thing.test.tsx`.
 - No `useEffect` to derive state or fetch data. Compute during render or use a query.
 - Every list needs a stable `key` (an id, not the index).
-- Handle loading, error, and empty states on every data view.
+- Handle loading, error, and empty states on every data view. Show loading with `Loading` (`src/shared/Loading.tsx`: dots, the words, and optional placeholder `rows`), not bare text.
 - Use `Toast` (`src/shared/Toast.tsx`) for alerts and notices that are not part of a data view. Errors stay until dismissed. Pass `autoDismissMs` to make a toast close itself (success toasts do).
 - Use semantic HTML and labels. Tests query by role and text, so the UI stays accessible. Target WCAG 2.2 AA. ESLint (`jsx-a11y`) and the axe e2e test enforce it.
 - Style with CSS Modules and the tokens in `src/styles/tokens.css`. No raw colors in component CSS.

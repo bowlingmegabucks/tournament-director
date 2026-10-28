@@ -1,6 +1,7 @@
 import { createApp } from './app.ts'
 import { loadConfig } from './config.ts'
 import { createPrismaDivisionRepository } from './features/divisions/prismaRepository.ts'
+import { createPrismaRegistrationRepository } from './features/registrations/prismaRepository.ts'
 import { createPrismaSquadRepository } from './features/squads/prismaRepository.ts'
 import { createPrismaSweeperRepository } from './features/sweepers/prismaRepository.ts'
 import { createPrismaTournamentRepository } from './features/tournaments/prismaRepository.ts'
@@ -17,6 +18,7 @@ const app = createApp({
   logger,
   tournaments: createPrismaTournamentRepository(database, logger),
   divisions: createPrismaDivisionRepository(database, logger),
+  registrations: createPrismaRegistrationRepository(database, logger),
   squads: createPrismaSquadRepository(database, logger),
   sweepers: createPrismaSweeperRepository(database, logger),
   checkDatabase: () => pingDatabase(database, logger),

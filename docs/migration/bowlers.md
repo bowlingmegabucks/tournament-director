@@ -46,11 +46,11 @@ Zip is only checked when a street is given. A city with no street needs a state 
 
 ## Formatting and derived values
 
-| ID | Rule |
-| --- | --- |
-| BWL-07a | **Phone storage.** Keep digits only. Drop a leading `1` country code (when the input starts with `+1` or `1 `, or when there are 11 digits starting with 1). Store exactly 10 digits, or `''` if there are not 10. Extensions are dropped. |
-| BWL-09 | **Age on a date** = years between date of birth and that date, minus 1 if the birthday has not come yet that year. No date of birth means no age. Eligibility uses the tournament start date. |
-| BWL-13 | **Display name** = `First Last`, plus `, Suffix` if there is one. Example: `John Smith, Jr`. Used on every screen and report. Middle initial is never shown. |
+| ID | Rule | Status |
+| --- | --- | --- |
+| BWL-07a | **Phone storage.** Keep digits only. Drop a leading `1` country code (when the input starts with `+1` or `1 `, or when there are 11 digits starting with 1). Store exactly 10 digits, or `''` if there are not 10. Extensions are dropped. |  |
+| BWL-09 | **Age on a date** = years between date of birth and that date, minus 1 if the birthday has not come yet that year. No date of birth means no age. Eligibility uses the tournament start date. |  |
+| BWL-13 | **Display name** = `First Last`, plus `, Suffix` if there is one. Example: `John Smith, Jr`. Used on every screen and report. Middle initial is never shown. The registration list uses it (D-47). | Done |
 
 ## Search
 
@@ -58,14 +58,14 @@ The desk searches bowlers before registering or adding one to a squad.
 
 | ID | Rule |
 | --- | --- |
-| BWL-14 | Filters, all optional and combined with AND: last name **starts with**; first name **starts with**; email **equals**; registered in tournament X; not registered in tournament X; not already on any of squads Y; USBC ID **equals** (code only); bowler id (code only). Case follows the database collation (case-insensitive by default). |
+| BWL-14 | Filters, all optional and combined with AND: last name **starts with**; first name **starts with**; email **equals**; registered in tournament X; not registered in tournament X; not already on any of squads Y; USBC ID **equals** (code only); bowler id (code only). Case follows the database collation (case-insensitive by default). **D-49:** the registration grid has one box that matches first name, last name, and USBC ID by word prefix in the browser; the rest of BWL-14 waits for add registration. |
 
 ## Identity and updates
 
-| ID | Rule |
-| --- | --- |
-| BWL-15 | A bowler is global. The API finds an existing bowler only by exact USBC ID. The desk picks a bowler from search, or creates a new one. Nothing stops two records for the same person. |
-| BWL-16 | Two desk edits: **name only** (first, middle, last, suffix) and **full update** (every field). Full update replaces every field, including SSN, gender, and date of birth. |
-| BWL-16a | A new registration for an existing USBC ID **overwrites** that bowler's details with the submitted ones (`REG-07`). Through the API this erases the stored SSN; see the defect under `REG-07`. **D-05:** the new app patches only the fields sent. |
-| BWL-17 | The SSN is never displayed. The field shows a dummy masked value when one is stored. Staff can check a value by retyping it; the app encrypts the retyped value, decrypts both, and says "Matches" or "Does Not Match". |
-| BWL-18 | Changing division on a registration also saves gender, date of birth, and USBC ID onto the bowler (`REG-15`). |
+| ID | Rule | Status |
+| --- | --- | --- |
+| BWL-15 | A bowler is global. The API finds an existing bowler only by exact USBC ID. The desk picks a bowler from search, or creates a new one. Nothing stops two records for the same person. |  |
+| BWL-16 | Two desk edits: **name only** (first, middle, last, suffix) and **full update** (every field). Full update replaces every field, including SSN, gender, and date of birth. |  |
+| BWL-16a | A new registration for an existing USBC ID **overwrites** that bowler's details with the submitted ones (`REG-07`). Through the API this erases the stored SSN; see the defect under `REG-07`. **D-05:** the new app patches only the fields sent. |  |
+| BWL-17 | The SSN is never displayed. The field shows a dummy masked value when one is stored. Staff can check a value by retyping it; the app encrypts the retyped value, decrypts both, and says "Matches" or "Does Not Match". **D-47:** the new read model never selects the column. | Done (display only; Verify later) |
+| BWL-18 | Changing division on a registration also saves gender, date of birth, and USBC ID onto the bowler (`REG-15`). |  |

@@ -1,4 +1,5 @@
 import { useOutletContext, useParams } from 'react-router'
+import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { Fact, SessionCard, SessionList } from '../../shared/SessionCard'
 import { formatFee, formatRatio, withOverride } from '../../shared/sessionFormat'
@@ -16,7 +17,7 @@ export function SquadsPage() {
     <>
       <title>{`Squads · ${tournament.name} · Tournament Director`}</title>
       <h1>Squads</h1>
-      {isPending && <output>Loading squads…</output>}
+      {isPending && <Loading label="Loading squads…" rows={6} />}
       {error && (
         <QueryError
           error={error}

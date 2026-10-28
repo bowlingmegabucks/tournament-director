@@ -21,7 +21,7 @@ Every data view handles loading, error, and empty states.
 export function TournamentList() {
   const { data, isPending, isError, error } = useTournaments()
 
-  if (isPending) return <p role="status">Loading tournaments…</p>
+  if (isPending) return <Loading label="Loading tournaments…" rows={3} />
   if (isError) return <p role="alert">Could not load tournaments: {error.message}</p>
   if (data.length === 0) return <p>No tournaments yet.</p>
 

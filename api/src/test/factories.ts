@@ -1,6 +1,7 @@
 import { faker } from '@faker-js/faker'
 import type { Config } from '../config.ts'
 import type { Division } from '../features/divisions/types.ts'
+import type { Registration } from '../features/registrations/types.ts'
 import type { Squad } from '../features/squads/types.ts'
 import type { Sweeper } from '../features/sweepers/types.ts'
 import type { Tournament } from '../features/tournaments/types.ts'
@@ -68,6 +69,27 @@ export function createSweeper(overrides: Partial<Sweeper> = {}): Sweeper {
     games: 3,
     cashRatio: 4,
     bonusPins: [],
+    ...overrides,
+  }
+}
+
+export function createRegistration(overrides: Partial<Registration> = {}): Registration {
+  const firstName = faker.person.firstName()
+  const lastName = faker.person.lastName()
+  return {
+    id: faker.string.uuid(),
+    bowler: {
+      id: faker.string.uuid(),
+      name: `${firstName} ${lastName}`,
+      firstName,
+      lastName,
+      usbcId: `${faker.string.numeric(4)}-${faker.string.numeric(5)}`,
+    },
+    divisionId: faker.string.uuid(),
+    divisionName: 'Open',
+    superSweeper: false,
+    squadIds: [],
+    sweeperIds: [],
     ...overrides,
   }
 }

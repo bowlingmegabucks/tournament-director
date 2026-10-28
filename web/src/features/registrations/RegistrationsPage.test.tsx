@@ -79,6 +79,8 @@ describe('RegistrationsPage', () => {
         .map((header) => header.textContent),
     ).toEqual(['Bowler', 'USBC ID', 'Division', 'Squads', 'Sweepers', 'Super sweeper'])
     expect(names()).toEqual(['Dana Abbott', 'Ray Baptiste, Jr', 'Maria Chen'])
+    expect(screen.queryByText('No registrations yet.')).not.toBeInTheDocument()
+    expect(screen.queryByText('No registrations match the filter.')).not.toBeInTheDocument()
   })
 
   it('shows the USBC ID, division, and counts of each bowler (REG-23)', async () => {
@@ -259,10 +261,26 @@ describe('RegistrationsPage', () => {
     it('does not submit the form on Enter', async () => {
       serve(everyone())
       open()
+      const submitted: boolean[] = []
+      // React listens at the root, so a listener on the document sees the event after its handler.
+      document.addEventListener('submit', (event) => submitted.push(event.defaultPrevented), {
+        once: true,
+      })
 
       await userEvent.type(await filterBox(), 'dana{Enter}')
 
+      expect(submitted).toEqual([true])
       expect(names()).toEqual(['Dana Abbott'])
+    })
+
+    it('counts text of only spaces as no filter', async () => {
+      serve(everyone())
+      open()
+
+      await userEvent.type(await filterBox(), '  ')
+
+      expect(names()).toHaveLength(3)
+      expect(screen.getByRole('status')).toHaveTextContent('Showing all 3 registrations.')
     })
 
     it('uses the singular for one registration', async () => {
@@ -301,6 +319,7 @@ describe('RegistrationsPage', () => {
     await screen.findByRole('heading', { name: 'Registrations', level: 1 })
 
     expect(screen.getByRole('status')).toHaveTextContent('Loading registrations')
+    expect(screen.queryByText('No registrations yet.')).not.toBeInTheDocument()
     await screen.findByRole('table')
     expect(screen.queryByText(/Loading registrations/)).not.toBeInTheDocument()
   })
@@ -325,6 +344,7 @@ describe('RegistrationsPage', () => {
     expect(await screen.findByRole('alert', {}, { timeout: 3000 })).toHaveTextContent(
       'Failed to load registrations (503)',
     )
+    expect(screen.queryByText('No registrations yet.')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
 
     expect(await screen.findByRole('rowheader', { name: 'Dana Abbott' })).toBeVisible()

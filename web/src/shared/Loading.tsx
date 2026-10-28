@@ -13,7 +13,6 @@ interface LoadingProps {
  * the user asks for less motion.
  */
 export function Loading({ label, rows = 0 }: Readonly<LoadingProps>) {
-  const bars = Array.from({ length: rows }, (_, row) => row)
   return (
     <>
       <output className={styles.loading}>
@@ -24,9 +23,9 @@ export function Loading({ label, rows = 0 }: Readonly<LoadingProps>) {
         </span>
         {label}
       </output>
-      {bars.length > 0 && (
+      {rows > 0 && (
         <div className={styles.rows} aria-hidden="true">
-          {bars.map((row) => (
+          {Array.from({ length: rows }, (_, row) => (
             <span key={row} />
           ))}
         </div>

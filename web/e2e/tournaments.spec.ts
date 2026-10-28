@@ -108,3 +108,19 @@ test('a tournament sidebar leads to its registrations, which a filter narrows (R
   // The summary counts the whole tournament, filtered or not.
   await expect(page.getByRole('term').filter({ hasText: 'Bowlers registered' })).toBeVisible()
 })
+
+test('on a narrow screen the card leaves out a blank super sweeper (REG-23, D-47)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 })
+  await page.goto('/tournaments')
+  await page.getByRole('article').first().getByRole('link').click()
+  await page.getByRole('link', { name: 'Registrations' }).click()
+  await expect(page.getByRole('heading', { name: 'Registrations', level: 1 })).toBeVisible()
+
+  const lastCell = (name: string) =>
+    page.getByRole('rowheader', { name }).locator('xpath=..').locator('td').last()
+
+  await expect(lastCell('Dana Abbott')).toBeVisible()
+  await expect(lastCell('Ray Baptiste, Jr')).toBeHidden()
+})

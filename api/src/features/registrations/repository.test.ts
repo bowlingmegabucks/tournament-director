@@ -25,10 +25,18 @@ describe('compareRegistrations', () => {
     expect(sorted.map((r) => r.bowler.firstName)).toEqual(['Bob', 'amy'])
   })
 
+  it('treats a last name that differs only in case as the same, so the first name decides (REG-23)', () => {
+    const sorted = [named('Bob', 'adams'), named('Amy', 'Adams')].sort(compareRegistrations)
+
+    expect(sorted.map((r) => r.bowler.firstName)).toEqual(['Amy', 'Bob'])
+  })
+
   it('breaks a tie on the registration id (REG-23, D-51)', () => {
     const later = named('Joe', 'Fontaine', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')
     const earlier = named('Joe', 'Fontaine', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')
 
+    expect(compareRegistrations(earlier, later)).toBeLessThan(0)
+    expect(compareRegistrations(later, earlier)).toBeGreaterThan(0)
     expect([later, earlier].sort(compareRegistrations)).toEqual([earlier, later])
     expect([earlier, later].sort(compareRegistrations)).toEqual([earlier, later])
   })

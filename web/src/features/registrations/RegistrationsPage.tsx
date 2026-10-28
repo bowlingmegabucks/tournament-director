@@ -123,6 +123,7 @@ export function RegistrationsPage() {
                         <span className={styles.hidden}>Yes</span>
                       </td>
                     ) : (
+                      // Stryker disable next-line StringLiteral: the class only hides a blank cell on narrow screens; e2e checks it at 320px.
                       <td data-label="Super sweeper" className={`${styles.center} ${styles.no}`}>
                         <span className={styles.hidden}>No</span>
                       </td>

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lane assignments, layout B (mockup)</title>
+    <link rel="stylesheet" href="../../../web/src/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../web/src/styles/base.css" />
+    <link rel="stylesheet" href="mockup.css" />
+  </head>
+  <body>
+    <p class="note">
+      <strong>Layout B (alternative): unassigned list above the pairs.</strong> Uses the full width
+      for the pairs, so a long lane list wraps into more columns. The unassigned list scrolls away
+      when you scroll to far pairs, so a long drag has to carry the bowler down the page. On a phone
+      both layouts become one column in this order, so A and B look alike there.
+    </p>
+
+    <section class="state" aria-labelledby="s1">
+      <h2 class="state-title" id="s1">Open squad, filled</h2>
+      <div class="content">
+        <p class="crumbs">
+          <a href="#">Northeast MegaBuck$ Tournament</a> / <a href="#">Squads</a> / Sat 10/24/2026 9:00 AM
+        </p>
+        <h1 class="portal-title">Sat 10/24/2026 9:00 AM <span class="status">Open</span></h1>
+        <nav aria-label="Squad pages">
+          <ul class="tabs">
+            <li><a href="#" aria-current="page">Lane assignments</a></li>
+          </ul>
+        </nav>
+        <ul class="strip" aria-label="Bowlers per division">
+          <li>Open: 12</li>
+          <li>Women/Senior: 5</li>
+          <li>Scratch: 3</li>
+          <li><strong>20 bowlers, 4 need a lane</strong></li>
+        </ul>
+
+        <section class="unassigned unassigned-wide" aria-labelledby="u1">
+          <h2 class="area-title" id="u1">Unassigned (4)</h2>
+          <ul class="bowlers">
+            <li class="bowler">
+              <button type="button" class="handle" aria-label="Drag Pat Nguyen">⠿</button>
+              <div><span class="who">Pat Nguyen</span><p class="meta">Women/Senior · avg 168 · hdcp 47</p></div>
+              <div class="actions"><button type="button" class="secondary">Assign to lanes</button></div>
+            </li>
+            <li class="bowler">
+              <button type="button" class="handle" aria-label="Drag Carl Dubois">⠿</button>
+              <div><span class="who">Carl Dubois</span><p class="meta">Open · avg 205 · hdcp 14</p></div>
+              <div class="actions"><button type="button" class="secondary">Assign to lanes</button></div>
+            </li>
+            <li class="bowler">
+              <button type="button" class="handle" aria-label="Drag Rosa Delgado">⠿</button>
+              <div><span class="who">Rosa Delgado</span><p class="meta">Scratch · avg 231 · hdcp 0</p></div>
+              <div class="actions"><button type="button" class="secondary">Assign to lanes</button></div>
+            </li>
+            <li class="bowler">
+              <button type="button" class="handle" aria-label="Drag Wes Tanaka">⠿</button>
+              <div><span class="who">Wes Tanaka</span><p class="meta">Open · avg 190 · hdcp 27</p></div>
+              <div class="actions"><button type="button" class="secondary">Assign to lanes</button></div>
+            </li>
+          </ul>
+        </section>
+
+        <section aria-labelledby="p1" style="margin-block-start: var(--space-4)">
+          <h2 class="area-title" id="p1">Lanes (1 to 10)</h2>
+          <ul class="pairs">
+            <li class="pair">
+              <h3>Lanes 1-2 <span class="count">5 of 5, full</span></h3>
+              <ul class="bowlers">
+                <li class="bowler"><span class="pos">1A</span><div><span class="who">Joe Fontaine</span><p class="meta">Open · hdcp 0</p></div></li>
+                <li class="bowler"><span class="pos">1B</span><div><span class="who">Dana Whitcomb</span><p class="meta">Open · hdcp 21</p></div></li>
+                <li class="bowler"><span class="pos">2C</span><div><span class="who">Mary Alvarez</span><p class="meta">Women/Senior · hdcp 33</p></div></li>
+                <li class="bowler"><span class="pos">2D</span><div><span class="who">Tom Brandt</span><p class="meta">Open · hdcp 9</p></div></li>
+                <li class="bowler"><span class="pos">2E</span><div><span class="who">Sue Okafor</span><p class="meta">Scratch · hdcp 0</p></div></li>
+              </ul>
+            </li>
+            <li class="pair">
+              <h3>Lanes 3-4 <span class="count">2 of 5</span></h3>
+              <ul class="bowlers">
+                <li class="bowler"><span class="pos">3A</span><div><span class="who">Ray Kowalski</span><p class="meta">Open · hdcp 12</p></div></li>
+                <li class="bowler"><span class="pos">4C</span><div><span class="who">Lena Park</span><p class="meta">Women/Senior · hdcp 40</p></div></li>
+              </ul>
+            </li>
+            <li class="pair">
+              <h3>Lanes 5-6 <span class="count">3 of 5</span></h3>
+              <ul class="bowlers">
+                <li class="bowler"><span class="pos">5A</span><div><span class="who">Ben Cho</span><p class="meta">Open · hdcp 18</p></div></li>
+                <li class="bowler"><span class="pos">5B</span><div><span class="who">Hal Dixon</span><p class="meta">Open · hdcp 6</p></div></li>
+                <li class="bowler"><span class="pos">6C</span><div><span class="who">Ivy Marsh</span><p class="meta">Women/Senior · hdcp 29</p></div></li>
+              </ul>
+            </li>
+            <li class="pair"><h3>Lanes 7-8 <span class="count">0 of 5</span></h3><p class="empty">No one yet.</p></li>
+            <li class="pair"><h3>Lanes 9-10 <span class="count">0 of 5</span></h3><p class="empty">No one yet.</p></li>
+          </ul>
+        </section>
+      </div>
+    </section>
+  </body>
+</html>

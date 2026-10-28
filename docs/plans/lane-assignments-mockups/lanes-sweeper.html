@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lane assignments, sweeper (mockup)</title>
+    <link rel="stylesheet" href="../../../web/src/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../web/src/styles/base.css" />
+    <link rel="stylesheet" href="mockup.css" />
+  </head>
+  <body>
+    <p class="note">
+      <strong>Sweeper variant.</strong> Same page, same component (D-60). A sweeper shows bonus
+      pins where a squad shows handicap, plus Y or N for the super sweeper (LAN-11). Its URL is
+      <code>/tournaments/{id}/sweepers/{sweeperId}/lanes</code>.
+    </p>
+
+    <section class="state" aria-labelledby="s1">
+      <h2 class="state-title" id="s1">Open sweeper, filled</h2>
+      <div class="content">
+        <p class="crumbs">
+          <a href="#">Northeast MegaBuck$ Tournament</a> / <a href="#">Sweepers</a> / Sat 10/24/2026 1:00 PM
+        </p>
+        <h1 class="portal-title">Sat 10/24/2026 1:00 PM <span class="status">Open</span></h1>
+        <nav aria-label="Sweeper pages">
+          <ul class="tabs">
+            <li><a href="#" aria-current="page">Lane assignments</a></li>
+          </ul>
+        </nav>
+        <ul class="strip" aria-label="Bowlers per division">
+          <li>Open: 9</li>
+          <li>Women/Senior: 4</li>
+          <li>Scratch: 2</li>
+          <li><strong>15 bowlers, 3 need a lane</strong></li>
+        </ul>
+
+        <div class="layout-a">
+          <section class="unassigned" aria-labelledby="u1">
+            <h2 class="area-title" id="u1">Unassigned (3)</h2>
+            <ul class="bowlers">
+              <li class="bowler">
+                <button type="button" class="handle" aria-label="Drag Pat Nguyen">⠿</button>
+                <div>
+                  <span class="who">Pat Nguyen</span>
+                  <p class="meta">Women/Senior · avg 168 · +10 pins · super sweeper: Y</p>
+                </div>
+                <div class="actions"><button type="button" class="secondary">Assign to lanes</button></div>
+              </li>
+              <li class="bowler">
+                <button type="button" class="handle" aria-label="Drag Carl Dubois">⠿</button>
+                <div>
+                  <span class="who">Carl Dubois</span>
+                  <p class="meta">Open · avg 205 · +0 pins · super sweeper: N</p>
+                </div>
+                <div class="actions"><button type="button" class="secondary">Assign to lanes</button></div>
+              </li>
+              <li class="bowler">
+                <button type="button" class="handle" aria-label="Drag Rosa Delgado">⠿</button>
+                <div>
+                  <span class="who">Rosa Delgado</span>
+                  <p class="meta">Scratch · avg 231 · +0 pins · super sweeper: Y</p>
+                </div>
+                <div class="actions"><button type="button" class="secondary">Assign to lanes</button></div>
+              </li>
+            </ul>
+          </section>
+
+          <section aria-labelledby="p1">
+            <h2 class="area-title" id="p1">Lanes (11 to 20)</h2>
+            <ul class="pairs">
+              <li class="pair">
+                <h3>Lanes 11-12 <span class="count">2 of 4</span></h3>
+                <ul class="bowlers">
+                  <li class="bowler"><span class="pos">11A</span><div><span class="who">Joe Fontaine</span><p class="meta">Open · +0 pins · Y</p></div></li>
+                  <li class="bowler"><span class="pos">12C</span><div><span class="who">Mary Alvarez</span><p class="meta">Women/Senior · +10 pins · N</p></div></li>
+                </ul>
+              </li>
+              <li class="pair"><h3>Lanes 13-14 <span class="count">0 of 4</span></h3><p class="empty">No one yet.</p></li>
+              <li class="pair"><h3>Lanes 15-16 <span class="count">0 of 4</span></h3><p class="empty">No one yet.</p></li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </section>
+  </body>
+</html>

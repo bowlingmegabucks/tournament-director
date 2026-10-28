@@ -22,4 +22,4 @@ Ideas from the old `rewrite/REWRITE_SPEC.md` and from this review. **None of the
 | Cut-off for the registration site once the tournament starts | rewrite spec §8 | Legacy has no cut-off; the API key works at any time |
 | Mobile-friendly score entry | rewrite spec post-MVP | |
 | Live standings for bowlers (public results page) | review | Results are computed live already, so this is mostly a page |
-| Drag-and-drop lane assignment in the browser | rewrite spec §6.6 | Legacy already drags and drops on the desk |
+| Drag-and-drop lane assignment in the browser | rewrite spec §6.6 | **Approved (D-55 to D-58).** Legacy drags a bowler onto a lane; the new app drags onto a pair and the API picks the seat. The page is built first with a stub drop; the command comes after lock-down |

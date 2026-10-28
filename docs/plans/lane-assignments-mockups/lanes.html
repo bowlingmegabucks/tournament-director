@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lane assignments, layout A (mockup)</title>
+    <link rel="stylesheet" href="../../../web/src/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../web/src/styles/base.css" />
+    <link rel="stylesheet" href="mockup.css" />
+  </head>
+  <body>
+    <p class="note">
+      <strong>Layout A (chosen): unassigned list beside the pairs.</strong> Like legacy, the
+      bowlers who need a lane stay in view while you drop them. Each area scrolls on its own, so
+      a long list in one never moves the other. Each block below is one state of
+      the same page, inside the content area next to the tournament sidebar. The sidebar is left out.
+    </p>
+
+    <!-- ===== 1. Filled ===== -->
+    <section class="state" aria-labelledby="s1">
+      <h2 class="state-title" id="s1">1. Open squad, filled</h2>
+      <div class="content">
+        <p class="crumbs">
+          <a href="#">Northeast MegaBuck$ Tournament</a> / <a href="#">Squads</a> / Sat 10/24/2026 9:00 AM
+        </p>
+        <h1 class="portal-title">Sat 10/24/2026 9:00 AM <span class="status">Open</span></h1>
+        <nav aria-label="Squad pages">
+          <ul class="tabs">
+            <li><a href="#" aria-current="page">Lane assignments</a></li>
+          </ul>
+        </nav>
+
+        <ul class="strip" aria-label="Bowlers per division">
+          <li>Open: 12</li>
+          <li>Women/Senior: 5</li>
+          <li>Scratch: 3</li>
+          <li><strong>20 bowlers, 4 need a lane</strong></li>
+        </ul>
+
+        <div class="layout-a">
+          <section class="unassigned" aria-labelledby="u1">
+            <h2 class="area-title" id="u1">Unassigned (4)</h2>
+            <div class="scroll" tabindex="0" role="region" aria-label="Unassigned bowlers, scrolls">
+            <ul class="bowlers">
+              <li class="bowler">
+                <button type="button" class="handle" aria-label="Drag Pat Nguyen">⠿</button>
+                <div>
+                  <span class="who">Pat Nguyen</span>
+                  <p class="meta">Women/Senior · avg 168 · hdcp 47</p>
+                </div>
+                <div class="actions"><button type="button" class="secondary">Assign to lanes</button></div>
+              </li>
+              <li class="bowler">
+                <button type="button" class="handle" aria-label="Drag Carl Dubois">⠿</button>
+                <div>
+                  <span class="who">Carl Dubois</span>
+                  <p class="meta">Open · avg 205 · hdcp 14</p>
+                </div>
+                <div class="actions"><button type="button" class="secondary">Assign to lanes</button></div>
+              </li>
+              <li class="bowler">
+                <button type="button" class="handle" aria-label="Drag Rosa Delgado">⠿</button>
+                <div>
+                  <span class="who">Rosa Delgado</span>
+                  <p class="meta">Scratch · avg 231 · hdcp 0</p>
+                </div>
+                <div class="actions"><button type="button" class="secondary">Assign to lanes</button></div>
+              </li>
+              <li class="bowler">
+                <button type="button" class="handle" aria-label="Drag Wes Tanaka">⠿</button>
+                <div>
+                  <span class="who">Wes Tanaka</span>
+                  <p class="meta">Open · avg 190 · hdcp 27</p>
+                </div>
+                <div class="actions"><button type="button" class="secondary">Assign to lanes</button></div>
+              </li>
+            </ul>
+            </div>
+          </section>
+
+          <section aria-labelledby="p1">
+            <h2 class="area-title" id="p1">Lanes (1 to 10)</h2>
+            <div class="scroll" tabindex="0" role="region" aria-label="Lane pairs, scrolls">
+            <ul class="pairs">
+              <li class="pair">
+                <h3>Lanes 1-2 <span class="count">5 of 5, full</span></h3>
+                <ul class="bowlers">
+                  <li class="bowler"><span class="pos">1A</span><div><span class="who">Joe Fontaine</span><p class="meta">Open · hdcp 0</p></div></li>
+                  <li class="bowler"><span class="pos">1B</span><div><span class="who">Dana Whitcomb</span><p class="meta">Open · hdcp 21</p></div></li>
+                  <li class="bowler"><span class="pos">2C</span><div><span class="who">Mary Alvarez</span><p class="meta">Women/Senior · hdcp 33</p></div></li>
+                  <li class="bowler"><span class="pos">2D</span><div><span class="who">Tom Brandt</span><p class="meta">Open · hdcp 9</p></div></li>
+                  <li class="bowler"><span class="pos">2E</span><div><span class="who">Sue Okafor</span><p class="meta">Scratch · hdcp 0</p></div></li>
+                </ul>
+              </li>
+              <li class="pair">
+                <h3>Lanes 3-4 <span class="count">2 of 5</span></h3>
+                <ul class="bowlers">
+                  <li class="bowler"><span class="pos">3A</span><div><span class="who">Ray Kowalski</span><p class="meta">Open · hdcp 12</p></div></li>
+                  <li class="bowler"><span class="pos">4C</span><div><span class="who">Lena Park</span><p class="meta">Women/Senior · hdcp 40</p></div></li>
+                </ul>
+              </li>
+              <li class="pair">
+                <h3>Lanes 5-6 <span class="count">3 of 5</span></h3>
+                <ul class="bowlers">
+                  <li class="bowler"><span class="pos">5A</span><div><span class="who">Ben Cho</span><p class="meta">Open · hdcp 18</p></div></li>
+                  <li class="bowler"><span class="pos">5B</span><div><span class="who">Hal Dixon</span><p class="meta">Open · hdcp 6</p></div></li>
+                  <li class="bowler"><span class="pos">6C</span><div><span class="who">Ivy Marsh</span><p class="meta">Women/Senior · hdcp 29</p></div></li>
+                </ul>
+              </li>
+              <li class="pair">
+                <h3>Lanes 7-8 <span class="count">0 of 5</span></h3>
+                <p class="empty">No one yet.</p>
+              </li>
+              <li class="pair">
+                <h3>Lanes 9-10 <span class="count">0 of 5</span></h3>
+                <p class="empty">No one yet.</p>
+              </li>
+            </ul>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 2. Dragging ===== -->
+    <section class="state" aria-labelledby="s2">
+      <h2 class="state-title" id="s2">
+        2. Dragging Pat Nguyen: pairs with room turn green, the full pair turns red
+      </h2>
+      <div class="content">
+        <div class="layout-a">
+          <section class="unassigned" aria-labelledby="u2">
+            <h2 class="area-title" id="u2">Unassigned (4)</h2>
+            <ul class="bowlers">
+              <li class="bowler dragging">
+                <button type="button" class="handle" aria-label="Drag Pat Nguyen">⠿</button>
+                <div>
+                  <span class="who">Pat Nguyen</span>
+                  <p class="meta">Women/Senior · avg 168 · hdcp 47</p>
+                </div>
+              </li>
+              <li class="bowler">
+                <button type="button" class="handle" aria-label="Drag Carl Dubois">⠿</button>
+                <div>
+                  <span class="who">Carl Dubois</span>
+                  <p class="meta">Open · avg 205 · hdcp 14</p>
+                </div>
+              </li>
+            </ul>
+          </section>
+          <section aria-labelledby="p2">
+            <h2 class="area-title" id="p2">Lanes (1 to 10)</h2>
+            <ul class="pairs">
+              <li class="pair cannot-drop">
+                <h3>Lanes 1-2 <span class="count">5 of 5, full</span></h3>
+                <p class="empty">Joe, Dana, Mary, Tom, Sue</p>
+                <span class="cue">Full: cannot drop here</span>
+              </li>
+              <li class="pair can-drop">
+                <h3>Lanes 3-4 <span class="count">2 of 5</span></h3>
+                <p class="empty">Ray, Lena</p>
+                <span class="cue">Drop here: 3 seats left</span>
+              </li>
+              <li class="pair can-drop">
+                <h3>Lanes 5-6 <span class="count">3 of 5</span></h3>
+                <p class="empty">Ben, Hal, Ivy</p>
+                <span class="cue">Drop here: 2 seats left</span>
+              </li>
+              <li class="pair can-drop">
+                <h3>Lanes 7-8 <span class="count">0 of 5</span></h3>
+                <p class="empty">No one yet.</p>
+                <span class="cue">Drop here: 5 seats left</span>
+              </li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 3. Assign modal ===== -->
+    <section class="state" aria-labelledby="s3">
+      <h2 class="state-title" id="s3">
+        3. "Assign to lanes" (no dragging needed): a modal dialog listing the pairs, full ones disabled
+      </h2>
+      <div class="modal-wrap">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="m3">
+          <h2 id="m3">Assign Pat Nguyen to lanes</h2>
+          <p class="who-line">Women/Senior · avg 168 · hdcp 47</p>
+          <ul class="pair-list" tabindex="0" aria-label="Lane pairs, scrolls">
+            <li><button type="button" disabled><span>Lanes 1-2</span><span>Full (5 of 5)</span></button></li>
+            <li><button type="button"><span>Lanes 3-4</span><span><strong>3 seats left</strong> (2 of 5)</span></button></li>
+            <li><button type="button"><span>Lanes 5-6</span><span><strong>2 seats left</strong> (3 of 5)</span></button></li>
+            <li><button type="button"><span>Lanes 7-8</span><span><strong>5 seats left</strong> (0 of 5)</span></button></li>
+            <li><button type="button"><span>Lanes 9-10</span><span><strong>5 seats left</strong> (0 of 5)</span></button></li>
+          </ul>
+          <div class="footer"><button type="button" class="secondary">Cancel</button></div>
+        </div>
+      </div>
+      <p class="meta" style="color: var(--color-text-muted)">
+        A native modal <code>&lt;dialog&gt;</code>, like the Registrations popup (D-54): Esc, Cancel,
+        or a click outside closes it, and focus returns to the "Assign to lanes" button. Picking a
+        pair closes it and does what a drop does: the not-built toast (this release), or the move
+        (slice two). A full pair stays in the list, disabled, so the director sees why it is out.
+      </p>
+    </section>
+
+    <!-- ===== 4. Toasts ===== -->
+    <section class="state" aria-labelledby="s4">
+      <h2 class="state-title" id="s4">
+        4. After a drop or a menu pick: the stub error (this release), and the full-pair error
+      </h2>
+      <div class="content">
+        <div class="toast" role="alert">
+          <span aria-hidden="true">✕</span>
+          <p>Lane assignment is not built yet. Nothing was saved.</p>
+          <button type="button" aria-label="Dismiss">×</button>
+        </div>
+        <div class="toast" role="alert">
+          <span aria-hidden="true">✕</span>
+          <p>Lanes 1-2 are full (5 of 5). Pick another pair.</p>
+          <button type="button" aria-label="Dismiss">×</button>
+        </div>
+        <p class="meta" style="color: var(--color-text-muted)">
+          The real toast sits top right and stays until dismissed (an error, per the Toast rules).
+          The stub text is deliberately blunt so no one mistakes it for a saved move.
+        </p>
+      </div>
+    </section>
+  </body>
+</html>

@@ -60,6 +60,7 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 - [ ] Roles and permissions reviewed against [security.md](migration/security.md).
 - [ ] Personal data (bowler records) is behind auth.
 - [ ] Lock-down release done before any command route (D-52): every public read route and page reviewed, and those that should not be public put behind auth.
+- [ ] Lane assignments page and its route are signed-in only (D-59). They ship public in 0.2.0; label them in the lock-down release and hide the link when signed out.
 - [ ] Registrations list (`GET /v1/tournaments/{id}/registrations` and its page) is signed-in only. It ships public in 0.2.0 (D-46); lock it down once 0.3.0 has auth, and hide the sidebar link when signed out.
 - [ ] `npm audit` clean; pinned-version overrides in CLAUDE.md reviewed.
 

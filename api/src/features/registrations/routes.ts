@@ -7,7 +7,6 @@ import type { SweeperRepository } from '../sweepers/repository.ts'
 import type { TournamentRepository } from '../tournaments/repository.ts'
 import type { RegistrationRepository } from './repository.ts'
 import { summarize } from './summary.ts'
-import type { Registration } from './types.ts'
 
 const idParams = z.object({ id: z.uuid() })
 
@@ -40,11 +39,7 @@ export function createRegistrationRouter(
     if (!tournament) throw new HttpError(404, 'Tournament not found')
 
     res.json({
-      registrations: stored.map(({ squadIds, sweeperIds, ...registration }): Registration => ({
-        ...registration,
-        squads: squadIds.length,
-        sweepers: sweeperIds.length,
-      })),
+      registrations: stored,
       summary: summarize(stored, tournamentDivisions, tournamentSquads, tournamentSweepers),
     })
   })

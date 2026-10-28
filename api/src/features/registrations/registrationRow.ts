@@ -1,4 +1,4 @@
-import { storedRegistrationSchema } from './types.ts'
+import { registrationSchema } from './types.ts'
 
 /** `Squads.SquadType` values. Any other value is not read (D-42, D-51). */
 const squadType = 0
@@ -47,7 +47,7 @@ export function toRegistration(row: RegistrationRow, tournamentId: string) {
     .filter((squad) => squad.tournamentId === tournamentId)
   const idsOfType = (type: number) =>
     ofThisTournament.filter((squad) => squad.squadType === type).map((squad) => squad.id)
-  return storedRegistrationSchema.safeParse({
+  return registrationSchema.safeParse({
     id: row.id,
     bowler: {
       id: row.bowler.id,

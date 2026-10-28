@@ -129,6 +129,30 @@
   text-align: center;
 }
 
+/* The count is a button that looks like a link. A 0 has nothing to open but sits in the same 44px box, so the column lines up. */
+.countButton {
+  min-block-size: var(--target-min);
+  min-inline-size: var(--target-min);
+  padding: 0 var(--space-2);
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.countButton:hover {
+  border-color: var(--color-accent);
+  filter: none;
+}
+
+.zero {
+  display: inline-block;
+  min-inline-size: var(--target-min);
+  padding: 0 var(--space-2);
+  text-align: center;
+}
+
 /* Read by screen readers, not shown. A one-pixel box is the usual size for this. */
 .hidden {
   position: absolute;

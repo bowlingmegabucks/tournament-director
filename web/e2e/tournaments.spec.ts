@@ -124,3 +124,45 @@ test('on a narrow screen the card leaves out a blank super sweeper (REG-23, D-47
   await expect(lastCell('Dana Abbott')).toBeVisible()
   await expect(lastCell('Ray Baptiste, Jr')).toBeHidden()
 })
+
+test('a squad count opens a popup that lists the squads, and Escape closes it (REG-28)', async ({
+  page,
+}) => {
+  await page.goto('/tournaments')
+  await page.getByRole('article').first().getByRole('link').click()
+  await page.getByRole('link', { name: 'Registrations' }).click()
+  const count = page
+    .getByRole('row', { name: /Dana Abbott/ })
+    .getByRole('button', { name: '2 squads, show list' })
+
+  await count.click()
+
+  const popup = page.getByRole('dialog', { name: 'Dana Abbott: squads' })
+  await expect(popup).toBeVisible()
+  await expect(popup.getByText('2 of 3 squads')).toBeVisible()
+  await expect(popup.getByRole('listitem')).toHaveText([
+    'Sat 10/24/2026 9:00 AMComplete',
+    'Sat 10/24/2026 1:00 PMOpen',
+  ])
+
+  await page.keyboard.press('Escape')
+
+  await expect(popup).toBeHidden()
+  await expect(count).toBeFocused()
+})
+
+test('a click outside the popup closes it (REG-28)', async ({ page }) => {
+  await page.goto('/tournaments')
+  await page.getByRole('article').first().getByRole('link').click()
+  await page.getByRole('link', { name: 'Registrations' }).click()
+  await page
+    .getByRole('row', { name: /Dana Abbott/ })
+    .getByRole('button', { name: '2 sweepers, show list' })
+    .click()
+  const popup = page.getByRole('dialog', { name: 'Dana Abbott: sweepers' })
+  await expect(popup).toBeVisible()
+
+  await page.mouse.click(5, 5)
+
+  await expect(popup).toBeHidden()
+})

@@ -58,8 +58,8 @@ function setup() {
 }
 
 describe('GET /v1/tournaments/:id/registrations', () => {
-  it('lists registrations with counts, sorted by name (REG-23, REG-26)', async () => {
-    const { app, tournament, division } = setup()
+  it('lists registrations with their squad and sweeper ids, sorted by name (REG-23, REG-28, REG-26)', async () => {
+    const { app, tournament, division, squad, sweeper } = setup()
 
     const response = await request(app).get(`/v1/tournaments/${tournament.id}/registrations`)
 
@@ -72,20 +72,11 @@ describe('GET /v1/tournaments/:id/registrations', () => {
     expect(response.body.registrations[1]).toMatchObject({
       divisionId: division.id,
       divisionName: 'Open',
-      squads: 1,
-      sweepers: 1,
+      squadIds: [squad.id],
+      sweeperIds: [sweeper.id],
       superSweeper: true,
     })
-    expect(response.body.registrations[0]).toMatchObject({ squads: 0, sweepers: 0 })
-  })
-
-  it('does not send the id lists behind the counts (REG-26)', async () => {
-    const { app, tournament } = setup()
-
-    const response = await request(app).get(`/v1/tournaments/${tournament.id}/registrations`)
-
-    expect(response.body.registrations[0]).not.toHaveProperty('squadIds')
-    expect(response.body.registrations[0]).not.toHaveProperty('sweeperIds')
+    expect(response.body.registrations[0]).toMatchObject({ squadIds: [], sweeperIds: [] })
   })
 
   it('sends the whole-tournament summary (REG-24, D-50)', async () => {
@@ -98,10 +89,10 @@ describe('GET /v1/tournaments/:id/registrations', () => {
       superSweepers: 1,
       divisions: [{ id: division.id, number: 1, name: 'Open', entries: 1 }],
       squads: [
-        { id: squad.id, date: squad.date, entries: 1 },
-        { id: idle.id, date: idle.date, entries: 0 },
+        { id: squad.id, date: squad.date, complete: false, entries: 1 },
+        { id: idle.id, date: idle.date, complete: false, entries: 0 },
       ],
-      sweepers: [{ id: sweeper.id, date: sweeper.date, entries: 1 }],
+      sweepers: [{ id: sweeper.id, date: sweeper.date, complete: false, entries: 1 }],
     })
   })
 

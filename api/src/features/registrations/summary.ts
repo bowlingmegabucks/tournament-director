@@ -1,7 +1,7 @@
 import type { Division } from '../divisions/types.ts'
 import type { Squad } from '../squads/types.ts'
 import type { Sweeper } from '../sweepers/types.ts'
-import type { StoredRegistration, Summary } from './types.ts'
+import type { Registration, Summary } from './types.ts'
 
 /**
  * Counts for the whole tournament (REG-24, D-50). Every division, squad, and sweeper is listed,
@@ -9,7 +9,7 @@ import type { StoredRegistration, Summary } from './types.ts'
  * `SquadRegistration` row exists, complete or not (D-06). A division counts squads, not sweepers.
  */
 export function summarize(
-  registrations: StoredRegistration[],
+  registrations: Registration[],
   divisions: Division[],
   squads: Squad[],
   sweepers: Sweeper[],
@@ -35,10 +35,16 @@ export function summarize(
       name,
       entries: squadEntriesByDivision.get(id) ?? 0,
     })),
-    squads: squads.map(({ id, date }) => ({ id, date, entries: entriesBySession.get(id) ?? 0 })),
-    sweepers: sweepers.map(({ id, date }) => ({
+    squads: squads.map(({ id, date, complete }) => ({
       id,
       date,
+      complete,
+      entries: entriesBySession.get(id) ?? 0,
+    })),
+    sweepers: sweepers.map(({ id, date, complete }) => ({
+      id,
+      date,
+      complete,
       entries: entriesBySession.get(id) ?? 0,
     })),
   }

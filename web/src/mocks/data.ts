@@ -157,8 +157,8 @@ export function createRegistration(overrides: Partial<Registration> = {}): Regis
     },
     divisionId: faker.string.uuid(),
     divisionName: 'Open',
-    squads: 1,
-    sweepers: 0,
+    squadIds: [],
+    sweeperIds: [],
     superSweeper: false,
     ...overrides,
   }
@@ -255,8 +255,8 @@ export function createDemoRegistrationList(
       },
       divisionId: divisions[division]?.id ?? '',
       divisionName: divisions[division]?.name ?? '',
-      squads: entered.squads.length,
-      sweepers: entered.sweepers.length,
+      squadIds: entered.squads.flatMap((position) => squads[position]?.id ?? []),
+      sweeperIds: entered.sweepers.flatMap((position) => sweepers[position]?.id ?? []),
       superSweeper: entered.superSweeper,
     })
   })
@@ -275,14 +275,16 @@ export function createDemoRegistrationList(
           .filter((bowler) => bowler.division === position)
           .reduce((total, bowler) => total + bowler.squads.length, 0),
       })),
-      squads: squads.map(({ id, date }, position) => ({
+      squads: squads.map(({ id, date, complete }, position) => ({
         id,
         date,
+        complete,
         entries: entries(position, 'squads'),
       })),
-      sweepers: sweepers.map(({ id, date }, position) => ({
+      sweepers: sweepers.map(({ id, date, complete }, position) => ({
         id,
         date,
+        complete,
         entries: entries(position, 'sweepers'),
       })),
     },

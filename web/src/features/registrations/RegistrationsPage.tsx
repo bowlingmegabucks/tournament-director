@@ -5,12 +5,37 @@ import { QueryError } from '../../shared/QueryError'
 import type { Tournament } from '../tournaments/types'
 import { filterRegistrations } from './filter'
 import { RegistrationSummary } from './RegistrationSummary'
+import { SessionsDialog } from './SessionsDialog'
 import styles from './RegistrationsPage.module.css'
+import type { Registration } from './types'
 import { useRegistrations } from './useRegistrations'
 
 function describeShown(shown: number, total: number, filtering: boolean): string {
   const noun = total === 1 ? 'registration' : 'registrations'
   return filtering ? `Showing ${shown} of ${total} ${noun}.` : `Showing all ${total} ${noun}.`
+}
+
+type Kind = 'squads' | 'sweepers'
+
+/** A count that opens the list behind it (REG-28, D-54). A 0 has nothing to open: plain text in the same box. */
+function SessionCount({
+  count,
+  kind,
+  onOpen,
+}: Readonly<{ count: number; kind: Kind; onOpen: () => void }>) {
+  if (count === 0) return <span className={styles.zero}>0</span>
+  const noun = kind === 'squads' ? 'squad' : 'sweeper'
+  return (
+    <button
+      type="button"
+      className={styles.countButton}
+      aria-haspopup="dialog"
+      aria-label={`${count} ${count === 1 ? noun : `${noun}s`}, show list`}
+      onClick={onOpen}
+    >
+      {count}
+    </button>
+  )
 }
 
 /**
@@ -24,6 +49,7 @@ export function RegistrationsPage() {
   const tournament = useOutletContext<Tournament>()
   const { data, isPending, error, refetch } = useRegistrations(id)
   const [filter, setFilter] = useState('')
+  const [popup, setPopup] = useState<{ registration: Registration; kind: Kind } | null>(null)
 
   const registrations = data?.registrations ?? []
   const shown = filterRegistrations(registrations, filter)
@@ -112,10 +138,22 @@ export function RegistrationsPage() {
                     <td data-label="USBC ID">{registration.bowler.usbcId || '–'}</td>
                     <td data-label="Division">{registration.divisionName}</td>
                     <td data-label="Squads" className={styles.count}>
-                      {registration.squads}
+                      <SessionCount
+                        count={registration.squadIds.length}
+                        kind="squads"
+                        onOpen={() => {
+                          setPopup({ registration, kind: 'squads' })
+                        }}
+                      />
                     </td>
                     <td data-label="Sweepers" className={styles.count}>
-                      {registration.sweepers}
+                      <SessionCount
+                        count={registration.sweeperIds.length}
+                        kind="sweepers"
+                        onOpen={() => {
+                          setPopup({ registration, kind: 'sweepers' })
+                        }}
+                      />
                     </td>
                     {registration.superSweeper ? (
                       <td data-label="Super sweeper" className={styles.center}>
@@ -132,6 +170,21 @@ export function RegistrationsPage() {
                 ))}
               </tbody>
             </table>
+          )}
+          {popup && (
+            <SessionsDialog
+              bowlerName={popup.registration.bowler.name}
+              kind={popup.kind}
+              all={data.summary[popup.kind]}
+              entered={
+                popup.kind === 'squads'
+                  ? popup.registration.squadIds
+                  : popup.registration.sweeperIds
+              }
+              onClose={() => {
+                setPopup(null)
+              }}
+            />
           )}
         </>
       )}

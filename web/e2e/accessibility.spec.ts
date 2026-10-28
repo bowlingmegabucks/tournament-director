@@ -87,6 +87,19 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('registrations squad popup (open) has no WCAG 2.2 AA violations', async ({ page }) => {
+      await page.goto('/tournaments')
+      await page.getByRole('article').first().getByRole('link').click()
+      await page.getByRole('link', { name: 'Registrations' }).click()
+      await page
+        .getByRole('row', { name: /Dana Abbott/ })
+        .getByRole('button', { name: '2 squads, show list' })
+        .click()
+      await expect(page.getByRole('dialog', { name: 'Dana Abbott: squads' })).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
     test('tournament not found has no WCAG 2.2 AA violations', async ({ page }) => {
       await page.goto('/tournaments/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01')
       await expect(page.getByRole('heading', { name: 'Tournament not found' })).toBeVisible()

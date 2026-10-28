@@ -60,6 +60,10 @@ async function cellsOf(name: string): Promise<(string | null)[]> {
 
 const names = () => screen.getAllByRole('rowheader').map((header) => header.textContent)
 
+function never(): never {
+  throw new Error('Expected a value')
+}
+
 const filterBox = () => screen.findByRole('searchbox', { name: 'Filter by name or USBC ID' })
 
 describe('RegistrationsPage', () => {
@@ -88,8 +92,8 @@ describe('RegistrationsPage', () => {
       named('Dana', 'Abbott', {
         usbcId: '4821-10394',
         divisionName: 'Women',
-        squads: 3,
-        sweepers: 2,
+        squadIds: ['s1', 's2', 's3'],
+        sweeperIds: ['w1', 'w2'],
       }),
     ])
 
@@ -147,8 +151,8 @@ describe('RegistrationsPage', () => {
         { id: 'd1', number: 1, name: 'Open', entries: 61 },
         { id: 'd2', number: 2, name: 'Women', entries: 0 },
       ],
-      squads: [{ id: 's1', date: '2026-10-24T09:00:00', entries: 28 }],
-      sweepers: [{ id: 'w1', date: '2026-10-23T19:00:00', entries: 35 }],
+      squads: [{ id: 's1', date: '2026-10-24T09:00:00', complete: true, entries: 28 }],
+      sweepers: [{ id: 'w1', date: '2026-10-23T19:00:00', complete: false, entries: 35 }],
     }
 
     function totals() {
@@ -299,6 +303,120 @@ describe('RegistrationsPage', () => {
 
       expect(await screen.findByRole('search', { name: 'Filter registrations' })).toBeVisible()
       expect(await filterBox()).toHaveAccessibleDescription(/Several words must all match/)
+    })
+  })
+
+  describe('squad and sweeper popup (REG-28, D-54)', () => {
+    const squads = [
+      { id: 's1', date: '2026-10-24T09:00:00', complete: true, entries: 2 },
+      { id: 's2', date: '2026-10-24T13:00:00', complete: false, entries: 1 },
+      { id: 's3', date: '2026-10-25T09:00:00', complete: false, entries: 0 },
+    ]
+    const sweepers = [
+      { id: 'w1', date: '2026-10-23T19:00:00', complete: false, entries: 1 },
+      { id: 'w2', date: '2026-10-25T12:00:00', complete: true, entries: 1 },
+    ]
+
+    function serveSessions() {
+      serve(
+        [
+          named('Dana', 'Abbott', { squadIds: ['s1', 's2'], sweeperIds: ['w2'] }),
+          named('Ray', 'Baptiste', { squadIds: ['s1'], sweeperIds: [] }),
+        ],
+        { squads, sweepers },
+      )
+    }
+
+    const countButton = (name: string) => screen.findByRole('button', { name })
+
+    it('makes a count above 0 a button and leaves a 0 as text (REG-28)', async () => {
+      serveSessions()
+      open()
+
+      expect(await countButton('2 squads, show list')).toBeVisible()
+      expect(await countButton('1 sweeper, show list')).toBeVisible()
+      expect(await countButton('1 squad, show list')).toBeVisible()
+      // Ray has no sweepers: a plain 0, nothing to open.
+      expect(screen.getAllByRole('button', { name: /show list/ })).toHaveLength(3)
+      const row = (await screen.findByRole('rowheader', { name: 'Ray Baptiste' })).closest('tr')
+      expect(within(row as HTMLElement).getByText('0')).toBeVisible()
+    })
+
+    it('opens a popup listing the squads the bowler entered, with their status (REG-28)', async () => {
+      serveSessions()
+      open()
+
+      await userEvent.click(await countButton('2 squads, show list'))
+
+      const popup = await screen.findByRole('dialog', { name: 'Dana Abbott: squads' })
+      expect(within(popup).getByText('2 of 3 squads')).toBeVisible()
+      expect(
+        within(popup)
+          .getAllByRole('listitem')
+          .map((item) => item.textContent),
+      ).toEqual(['Sat 10/24/2026 9:00 AMComplete', 'Sat 10/24/2026 1:00 PMOpen'])
+    })
+
+    it('lists the sweepers the same way (REG-28)', async () => {
+      serveSessions()
+      open()
+
+      await userEvent.click(await countButton('1 sweeper, show list'))
+
+      const popup = await screen.findByRole('dialog', { name: 'Dana Abbott: sweepers' })
+      expect(within(popup).getByText('1 of 2 sweepers')).toBeVisible()
+      expect(
+        within(popup)
+          .getAllByRole('listitem')
+          .map((item) => item.textContent),
+      ).toEqual(['Sun 10/25/2026 12:00 PMComplete'])
+    })
+
+    it('uses the singular when the tournament has one of them (REG-28)', async () => {
+      serve([named('Dana', 'Abbott', { sweeperIds: ['w1'] })], {
+        squads,
+        sweepers: [sweepers[0] ?? never()],
+      })
+      open()
+
+      await userEvent.click(await countButton('1 sweeper, show list'))
+
+      expect(await screen.findByText('1 of 1 sweeper')).toBeVisible()
+    })
+
+    it.each([
+      ['the Close button', () => userEvent.click(screen.getByRole('button', { name: 'Close' }))],
+      ['a click outside the box', () => userEvent.click(screen.getByRole('dialog'))],
+    ])('closes with %s', async (_label, close) => {
+      serveSessions()
+      open()
+      await userEvent.click(await countButton('2 squads, show list'))
+      await screen.findByRole('dialog')
+
+      await close()
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      // Closed means gone from the page, not just hidden.
+      expect(document.querySelector('dialog')).toBeNull()
+    })
+
+    it('stays open when the click lands inside the box (REG-28)', async () => {
+      serveSessions()
+      open()
+      await userEvent.click(await countButton('2 squads, show list'))
+
+      await userEvent.click(await screen.findByRole('heading', { name: 'Dana Abbott: squads' }))
+
+      expect(screen.getByRole('dialog')).toBeVisible()
+    })
+
+    it('shows no popup until a count is clicked (REG-28)', async () => {
+      serveSessions()
+      open()
+
+      await screen.findByRole('table')
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
   })
 

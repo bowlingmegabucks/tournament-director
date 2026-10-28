@@ -15,9 +15,9 @@ export interface Registration {
   }
   divisionId: string
   divisionName: string
-  /** Qualifying squads entered. */
-  squads: number
-  sweepers: number
+  /** The qualifying squads and sweepers entered. The page shows the counts and lists them in a popup (REG-28). */
+  squadIds: string[]
+  sweeperIds: string[]
   superSweeper: boolean
 }
 
@@ -27,8 +27,16 @@ export interface Summary {
   superSweepers: number
   /** Squads entered by the bowlers in the division. Sweepers do not count (REG-24). */
   divisions: { id: string; number: number; name: string; entries: number }[]
-  squads: { id: string; date: string; entries: number }[]
-  sweepers: { id: string; date: string; entries: number }[]
+  squads: SessionEntries[]
+  sweepers: SessionEntries[]
+}
+
+/** A squad or sweeper with its date and status, for the popup (REG-28). */
+export interface SessionEntries {
+  id: string
+  date: string
+  complete: boolean
+  entries: number
 }
 
 export interface RegistrationList {

@@ -15,8 +15,8 @@ function createList(overrides: Partial<RegistrationList> = {}): RegistrationList
       registrations: 1,
       superSweepers: 0,
       divisions: [{ id: 'd1', number: 1, name: 'Open', entries: 1 }],
-      squads: [{ id: 's1', date: '2026-10-24T09:00:00', entries: 1 }],
-      sweepers: [{ id: 'w1', date: '2026-10-24T18:00:00', entries: 0 }],
+      squads: [{ id: 's1', date: '2026-10-24T09:00:00', complete: true, entries: 1 }],
+      sweepers: [{ id: 'w1', date: '2026-10-24T18:00:00', complete: false, entries: 0 }],
     },
     ...overrides,
   }
@@ -116,8 +116,10 @@ describe('fetchRegistrations', () => {
     ['id', { id: 1 }],
     ['divisionId', { divisionId: null }],
     ['divisionName', { divisionName: 1 }],
-    ['squads', { squads: '1' }],
-    ['sweepers', { sweepers: '0' }],
+    ['squadIds', { squadIds: 'a' }],
+    ['a squad id that is not text', { squadIds: [1] }],
+    ['sweeperIds', { sweeperIds: null }],
+    ['a sweeper id that is not text', { sweeperIds: [2] }],
     ['superSweeper', { superSweeper: 'yes' }],
     ['bowler', { bowler: null }],
   ] as const
@@ -141,7 +143,7 @@ describe('fetchRegistrations', () => {
     },
   )
 
-  it.each(wrongRegistration.map(([name]) => name))(
+  it.each(['id', 'divisionId', 'divisionName', 'squadIds', 'sweeperIds', 'superSweeper', 'bowler'])(
     'rejects a registration with %s missing',
     async (name) => {
       const item: Record<string, unknown> = { ...createRegistration() }
@@ -164,14 +166,25 @@ describe('fetchRegistrations', () => {
     ['a division with a text id', { divisions: [{ id: 1, number: 1, name: 'x', entries: 1 }] }],
     ['a division with no entries', { divisions: [{ id: 'd', number: 1, name: 'x' }] }],
     ['squads', { squads: 'none' }],
-    ['a squad with a bad date', { squads: [{ id: 's', date: 'Sat', entries: 1 }] }],
-    ['a squad with a text id', { squads: [{ id: 1, date: '2026-10-24T09:00:00', entries: 1 }] }],
+    ['a squad with a bad date', { squads: [{ id: 's', date: 'Sat', complete: true, entries: 1 }] }],
+    [
+      'a squad with no complete flag',
+      { squads: [{ id: 's', date: '2026-10-24T09:00:00', entries: 1 }] },
+    ],
+    [
+      'a sweeper with a text complete flag',
+      { sweepers: [{ id: 'w', date: '2026-10-24T09:00:00', complete: 'no', entries: 1 }] },
+    ],
+    [
+      'a squad with a text id',
+      { squads: [{ id: 1, date: '2026-10-24T09:00:00', complete: true, entries: 1 }] },
+    ],
     [
       'a squad with text entries',
-      { squads: [{ id: 's', date: '2026-10-24T09:00:00', entries: '1' }] },
+      { squads: [{ id: 's', date: '2026-10-24T09:00:00', complete: true, entries: '1' }] },
     ],
     ['sweepers', { sweepers: null }],
-    ['a sweeper with a bad date', { sweepers: [{ id: 'w', date: 5, entries: 1 }] }],
+    ['a sweeper with a bad date', { sweepers: [{ id: 'w', date: 5, complete: true, entries: 1 }] }],
   ])('rejects a summary with a wrong %s', async (_name, override) => {
     const list = createList()
     respondWith({ ...list, summary: { ...list.summary, ...override } })

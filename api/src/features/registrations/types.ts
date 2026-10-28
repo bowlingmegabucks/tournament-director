@@ -20,25 +20,23 @@ export const registrationSchema = z.object({
   }),
   divisionId: z.uuid(),
   divisionName: z.string(),
-  /** Qualifying squads entered. */
-  squads: z.number().int().nonnegative(),
-  sweepers: z.number().int().nonnegative(),
+  /** The qualifying squads entered. The page shows their count and lists them in a popup (REG-28). */
+  squadIds: z.array(z.uuid()),
+  sweeperIds: z.array(z.uuid()),
   superSweeper: z.boolean(),
 })
 
 export type Registration = z.infer<typeof registrationSchema>
 
-/** What a repository returns: a registration with the ids behind the counts (REG-24). */
-export const storedRegistrationSchema = registrationSchema
-  .omit({ squads: true, sweepers: true })
-  .extend({
-    squadIds: z.array(z.uuid()),
-    sweeperIds: z.array(z.uuid()),
-  })
-
-export type StoredRegistration = z.infer<typeof storedRegistrationSchema>
-
 const entries = z.number().int().nonnegative()
+
+/** A squad or sweeper, with its date and status for the popup (REG-28). */
+const sessionEntries = z.object({
+  id: z.uuid(),
+  date: localDateTimeSchema,
+  complete: z.boolean(),
+  entries,
+})
 
 /** Counts for the whole tournament, not the filtered rows (REG-24, D-50). */
 export const summarySchema = z.object({
@@ -48,8 +46,8 @@ export const summarySchema = z.object({
   divisions: z.array(
     z.object({ id: z.uuid(), number: z.number().int(), name: z.string(), entries }),
   ),
-  squads: z.array(z.object({ id: z.uuid(), date: localDateTimeSchema, entries })),
-  sweepers: z.array(z.object({ id: z.uuid(), date: localDateTimeSchema, entries })),
+  squads: z.array(sessionEntries),
+  sweepers: z.array(sessionEntries),
 })
 
 export type Summary = z.infer<typeof summarySchema>

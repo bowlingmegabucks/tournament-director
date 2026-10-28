@@ -64,10 +64,12 @@ describe('summarize', () => {
     )
 
     expect(summary.squads).toEqual([
-      { id: first.id, date: first.date, entries: 2 },
-      { id: second.id, date: second.date, entries: 1 },
+      { id: first.id, date: first.date, complete: false, entries: 2 },
+      { id: second.id, date: second.date, complete: false, entries: 1 },
     ])
-    expect(summary.sweepers).toEqual([{ id: sweeper.id, date: sweeper.date, entries: 2 }])
+    expect(summary.sweepers).toEqual([
+      { id: sweeper.id, date: sweeper.date, complete: false, entries: 2 },
+    ])
   })
 
   it('lists a division, squad, and sweeper nobody entered with 0 (REG-24, D-50)', () => {
@@ -88,6 +90,17 @@ describe('summarize', () => {
     const summary = summarize([createRegistration({ squadIds: [squad.id] })], [], [squad], [])
 
     expect(summary.squads[0]?.entries).toBe(1)
+  })
+
+  it('carries whether each squad and sweeper is complete (REG-28)', () => {
+    const squad = createSquad({ complete: true })
+    const sweeper = createSweeper({ complete: true })
+    const open = createSquad({ complete: false })
+
+    const summary = summarize([], [], [squad, open], [sweeper])
+
+    expect(summary.squads.map((entry) => entry.complete)).toEqual([true, false])
+    expect(summary.sweepers.map((entry) => entry.complete)).toEqual([true])
   })
 
   it('keeps the order it is given (REG-24)', () => {

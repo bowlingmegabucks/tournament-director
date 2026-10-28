@@ -1,8 +1,8 @@
-import type { StoredRegistration } from './types.ts'
+import type { Registration } from './types.ts'
 
 /** What routes need from storage. Always sorted as `compareRegistrations` says (REG-23, D-51). */
 export interface RegistrationRepository {
-  listByTournament(tournamentId: string): Promise<StoredRegistration[]>
+  listByTournament(tournamentId: string): Promise<Registration[]>
 }
 
 // Ignores case and accents, as the database collation does (BWL-14).
@@ -14,7 +14,7 @@ function compareText(a: string, b: string): number {
  * REG-23, D-51: last name, then first name, then registration id, so two bowlers with one name
  * keep a stable order. The id is compared as plain text, the same way in tests and in the app.
  */
-export function compareRegistrations(a: StoredRegistration, b: StoredRegistration): number {
+export function compareRegistrations(a: Registration, b: Registration): number {
   const byName =
     compareText(a.bowler.lastName, b.bowler.lastName) ||
     compareText(a.bowler.firstName, b.bowler.firstName)
@@ -25,7 +25,7 @@ export function compareRegistrations(a: StoredRegistration, b: StoredRegistratio
 
 /** Registrations stored with the tournament that owns them. */
 export function createInMemoryRegistrationRepository(
-  seed: { tournamentId: string; registration: StoredRegistration }[],
+  seed: { tournamentId: string; registration: Registration }[],
 ): RegistrationRepository {
   return {
     listByTournament: (tournamentId) =>

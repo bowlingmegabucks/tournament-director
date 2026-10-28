@@ -7,6 +7,7 @@ import type { RegistrationList } from './types'
 
 const isText = (value: unknown) => typeof value === 'string'
 const isNumber = (value: unknown) => typeof value === 'number'
+const isTextList = (value: unknown) => Array.isArray(value) && value.every(isText)
 
 function isRegistration(value: unknown): boolean {
   const bowler = field(value, 'bowler')
@@ -19,8 +20,8 @@ function isRegistration(value: unknown): boolean {
     isText(field(bowler, 'usbcId')) &&
     isText(field(value, 'divisionId')) &&
     isText(field(value, 'divisionName')) &&
-    isNumber(field(value, 'squads')) &&
-    isNumber(field(value, 'sweepers')) &&
+    isTextList(field(value, 'squadIds')) &&
+    isTextList(field(value, 'sweeperIds')) &&
     typeof field(value, 'superSweeper') === 'boolean'
   )
 }
@@ -29,6 +30,7 @@ function isSessionCount(value: unknown): boolean {
   return (
     isText(field(value, 'id')) &&
     isSessionDate(field(value, 'date')) &&
+    typeof field(value, 'complete') === 'boolean' &&
     isNumber(field(value, 'entries'))
   )
 }

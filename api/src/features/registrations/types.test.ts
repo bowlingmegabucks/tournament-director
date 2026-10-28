@@ -6,10 +6,8 @@ const summary = { registrations: 0, superSweepers: 0, divisions: [], squads: [],
 
 describe('registrationListSchema', () => {
   it('wraps the registrations and the summary as the route does (REG-26)', () => {
-    const { squadIds, sweeperIds, ...registration } = createRegistration()
-
     const result = registrationListSchema.safeParse({
-      registrations: [{ ...registration, squads: squadIds.length, sweepers: sweeperIds.length }],
+      registrations: [createRegistration({ squadIds: [crypto.randomUUID()] })],
       summary,
     })
 

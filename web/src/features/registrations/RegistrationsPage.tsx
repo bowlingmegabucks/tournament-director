@@ -23,13 +23,14 @@ function SessionCount({
   onOpen,
 }: Readonly<{ count: number; kind: Kind; onOpen: () => void }>) {
   if (count === 0) return <span className={styles.zero}>0</span>
-  const noun = kind === 'squads' ? 'squad' : 'sweeper'
+  const singular = kind === 'squads' ? 'squad' : 'sweeper'
+  const noun = count === 1 ? singular : `${singular}s`
   return (
     <button
       type="button"
       className={styles.countButton}
       aria-haspopup="dialog"
-      aria-label={`${count} ${count === 1 ? noun : `${noun}s`}, show list`}
+      aria-label={`${count} ${noun}, show list`}
       onClick={onOpen}
     >
       {count}

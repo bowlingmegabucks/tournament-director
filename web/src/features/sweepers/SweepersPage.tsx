@@ -1,4 +1,5 @@
 import { useOutletContext, useParams } from 'react-router'
+import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { Fact, SessionCard, SessionList } from '../../shared/SessionCard'
 import { formatFee, formatRatio } from '../../shared/sessionFormat'
@@ -20,7 +21,7 @@ export function SweepersPage() {
     <>
       <title>{`Sweepers · ${tournament.name} · Tournament Director`}</title>
       <h1>Sweepers</h1>
-      {isPending && <output>Loading sweepers…</output>}
+      {isPending && <Loading label="Loading sweepers…" rows={6} />}
       {error && (
         <QueryError
           error={error}

@@ -1,3 +1,4 @@
+import { Loading } from '../../shared/Loading'
 import { Page } from '../../shared/Page'
 import { QueryError } from '../../shared/QueryError'
 import { todayLocal } from '../../shared/today'
@@ -19,7 +20,7 @@ export function TournamentsPage() {
 function TournamentGroups() {
   const { data, isPending, error, refetch } = useTournaments()
 
-  if (isPending) return <output>Loading tournaments…</output>
+  if (isPending) return <Loading label="Loading tournaments…" rows={3} />
   if (error) {
     return (
       <QueryError

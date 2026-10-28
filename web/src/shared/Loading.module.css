@@ -1,0 +1,72 @@
+/*
+ * Element selectors (span) sit under .dots and .rows on purpose: the dots and bars are plain
+ * spans that only this module styles, and they cannot leak out of it.
+ */
+
+.loading {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.dots {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.dots span {
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.rows {
+  display: grid;
+  gap: var(--space-2);
+  margin-block-start: var(--space-4);
+}
+
+.rows span {
+  block-size: 1.25rem;
+  border-radius: var(--radius);
+  background: var(--color-border);
+  opacity: 0.4;
+}
+
+/* Motion only when the user has not asked for less. Otherwise the dots and bars sit still. */
+@media (prefers-reduced-motion: no-preference) {
+  .dots span {
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+
+  .dots span:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+
+  .dots span:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+
+  .rows span {
+    animation: fade 1.4s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%,
+    80%,
+    100% {
+      opacity: 0.25;
+    }
+
+    40% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade {
+    50% {
+      opacity: 0.15;
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import { useParams, useOutletContext } from 'react-router'
+import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import type { Tournament } from '../tournaments/types'
 import styles from './DivisionsPage.module.css'
@@ -16,7 +17,7 @@ export function DivisionsPage() {
     <>
       <title>{`Divisions · ${tournament.name} · Tournament Director`}</title>
       <h1>Divisions</h1>
-      {isPending && <output>Loading divisions…</output>}
+      {isPending && <Loading label="Loading divisions…" rows={6} />}
       {error && (
         <QueryError
           error={error}

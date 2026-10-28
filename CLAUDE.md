@@ -24,6 +24,7 @@ Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, 
 
 - **0.2.0:** read-only views (GET routes) on the existing legacy database; the WinForms app will be sunset. Public routes only. Bowler GETs wait for auth. Every route declares its access; undeclared routes deny.
 - **0.3.0:** authentication and authorization, with a ping-style route to test it. Decide the approach (hosted provider, Keycloak, or self-rolled) after the 0.2.0 tag. Also set the rules for what the UI shows when signed in or out (no permission, no Add button). The API still enforces access.
+- **Lock-down release (right after 0.3.0, before any command route):** review every read route and page that is public in 0.2.0 and put the ones that should not be public behind auth, starting with the registrations list (D-46). Vendor routes follow D-09. No POST, PATCH, or DELETE route ships before this is done (D-52).
 - **0.4.0 and up:** commands (create tournament, edit division), one feature area per release.
 - **1.0.0:** every item in [docs/v1-requirements.md](docs/v1-requirements.md) is checked. Keep that file current: check items off as they land and add items as we find them. It includes a review of open issues in the legacy `tournament-manager` repo.
 

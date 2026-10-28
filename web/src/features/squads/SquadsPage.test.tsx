@@ -17,13 +17,17 @@ function serve(squads: Squad[]) {
 }
 
 /** The card titles are dates. The sidebar has a level 2 heading of its own, the tournament name. */
-const titles = () => screen.findAllByRole('heading', { level: 2, name: /\d{2}\/\d{2}\/\d{4}/ })
+// The first render in a file is slow under coverage, so wait longer than the default second.
+const titles = () =>
+  screen.findAllByRole('heading', { level: 2, name: /\d{2}\/\d{2}\/\d{4}/ }, { timeout: 3000 })
 
 const open = () => renderApp(`/tournaments/${tournament.id}/squads`)
 
 /** The card with this date as its title. */
 async function cardOf(title: string): Promise<HTMLElement> {
-  const card = (await screen.findByRole('heading', { name: new RegExp(title) })).closest('li')
+  const card = (
+    await screen.findByRole('heading', { name: new RegExp(title) }, { timeout: 3000 })
+  ).closest('li')
   if (!card) throw new Error(`No card for ${title}`)
   return card
 }

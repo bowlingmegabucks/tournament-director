@@ -58,4 +58,40 @@ export const legacySchemaSql = [
     FOREIGN KEY (\`DivisionId\`) REFERENCES \`Divisions\` (\`Id\`) ON DELETE CASCADE,
     FOREIGN KEY (\`SweeperId\`)  REFERENCES \`Squads\` (\`Id\`)    ON DELETE CASCADE
   )`,
+  `CREATE TABLE \`Bowlers\` (
+    \`Id\`                   char(36)    NOT NULL,
+    \`FirstName\`            longtext    NOT NULL,
+    \`MiddleInitial\`        char(1)     NOT NULL DEFAULT '',
+    \`LastName\`             longtext    NOT NULL,
+    \`Suffix\`               longtext    NOT NULL,
+    \`StreetAddress\`        longtext    NOT NULL,
+    \`CityAddress\`          longtext    NOT NULL,
+    \`StateAddress\`         char(2)     NOT NULL,
+    \`ZipCode\`              char(9)     NOT NULL,
+    \`EmailAddress\`         longtext    NOT NULL,
+    \`PhoneNumber\`          char(10)    NOT NULL,
+    \`USBCId\`               longtext    NOT NULL,
+    \`DateOfBirth\`          datetime(6) NULL,
+    \`Gender\`               int         NULL,
+    \`SocialSecurityNumber\` longtext    NOT NULL,
+    PRIMARY KEY (\`Id\`)
+  )`,
+  `CREATE TABLE \`Registrations\` (
+    \`Id\`           char(36)   NOT NULL,
+    \`BowlerId\`     char(36)   NOT NULL,
+    \`DivisionId\`   char(36)   NOT NULL,
+    \`Average\`      int        NULL,
+    \`SuperSweeper\` tinyint(1) NOT NULL,
+    PRIMARY KEY (\`Id\`),
+    FOREIGN KEY (\`BowlerId\`)   REFERENCES \`Bowlers\` (\`Id\`),
+    FOREIGN KEY (\`DivisionId\`) REFERENCES \`Divisions\` (\`Id\`)
+  )`,
+  `CREATE TABLE \`SquadRegistration\` (
+    \`RegistrationId\` char(36)   NOT NULL,
+    \`SquadId\`        char(36)   NOT NULL,
+    \`LaneAssignment\` varchar(3) NOT NULL DEFAULT '',
+    PRIMARY KEY (\`RegistrationId\`, \`SquadId\`),
+    FOREIGN KEY (\`RegistrationId\`) REFERENCES \`Registrations\` (\`Id\`),
+    FOREIGN KEY (\`SquadId\`)        REFERENCES \`Squads\` (\`Id\`)
+  )`,
 ]

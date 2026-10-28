@@ -8,6 +8,8 @@ import { createRateLimiter } from './shared/rateLimit.ts'
 import { requestIdHeader, requestLogging } from './shared/requestLogging.ts'
 import { createDivisionRouter } from './features/divisions/routes.ts'
 import type { DivisionRepository } from './features/divisions/repository.ts'
+import { createRegistrationRouter } from './features/registrations/routes.ts'
+import type { RegistrationRepository } from './features/registrations/repository.ts'
 import { createSquadRouter } from './features/squads/routes.ts'
 import type { SquadRepository } from './features/squads/repository.ts'
 import { createSweeperRouter } from './features/sweepers/routes.ts'
@@ -24,6 +26,7 @@ export interface AppDependencies {
   logger: Logger
   tournaments: TournamentRepository
   divisions: DivisionRepository
+  registrations: RegistrationRepository
   squads: SquadRepository
   sweepers: SweeperRepository
   /** Resolves when the database answers; rejects (a 503) when it does not. Feeds `GET /ready`. */
@@ -38,6 +41,7 @@ export function createApp({
   logger,
   tournaments,
   divisions,
+  registrations,
   squads,
   sweepers,
   checkDatabase,
@@ -76,6 +80,11 @@ export function createApp({
       path: '/v1/tournaments/:id/sweepers',
       access: 'public',
       router: createSweeperRouter(sweepers, tournaments),
+    },
+    {
+      path: '/v1/tournaments/:id/registrations',
+      access: 'public', // D-46: locked down right after 0.3.0 (D-52)
+      router: createRegistrationRouter(registrations, tournaments, divisions, squads, sweepers),
     },
     {
       path: '/v1/tournaments',

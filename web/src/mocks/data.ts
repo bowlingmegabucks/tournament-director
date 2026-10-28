@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker'
 import type { Division } from '../features/divisions/types'
+import type { Registration, RegistrationList } from '../features/registrations/types'
 import type { Squad } from '../features/squads/types'
 import type { Sweeper } from '../features/sweepers/types'
 import type { Tournament } from '../features/tournaments/types'
@@ -140,6 +141,152 @@ export function createDemoSweepers(divisions: Division[]): Sweeper[] {
       bonusPins: pins(women, 6),
     }),
   ]
+}
+
+export function createRegistration(overrides: Partial<Registration> = {}): Registration {
+  const firstName = faker.person.firstName()
+  const lastName = faker.person.lastName()
+  return {
+    id: faker.string.uuid(),
+    bowler: {
+      id: faker.string.uuid(),
+      name: `${firstName} ${lastName}`,
+      firstName,
+      lastName,
+      usbcId: `${faker.string.numeric(4)}-${faker.string.numeric(5)}`,
+    },
+    divisionId: faker.string.uuid(),
+    divisionName: 'Open',
+    squads: 1,
+    sweepers: 0,
+    superSweeper: false,
+    ...overrides,
+  }
+}
+
+// Who is in the demo list: the division, squads, and sweepers are positions in the demo lists.
+interface DemoBowler {
+  first: string
+  last: string
+  suffix?: string
+  usbc: string
+  division: number
+  squads: number[]
+  sweepers: number[]
+  superSweeper: boolean
+}
+
+const demoBowlers: DemoBowler[] = [
+  {
+    first: 'Dana',
+    last: 'Abbott',
+    usbc: '4821-10394',
+    division: 0,
+    squads: [0, 1],
+    sweepers: [0, 1],
+    superSweeper: true,
+  },
+  {
+    first: 'Ray',
+    last: 'Baptiste',
+    suffix: 'Jr',
+    usbc: '1190-55820',
+    division: 0,
+    squads: [0],
+    sweepers: [],
+    superSweeper: false,
+  },
+  {
+    first: 'Maria',
+    last: 'Chen',
+    usbc: '3377-20418',
+    division: 1,
+    squads: [0, 1],
+    sweepers: [0, 1],
+    superSweeper: true,
+  },
+  {
+    first: 'Tom',
+    last: 'Delgado',
+    usbc: '',
+    division: 0,
+    squads: [1],
+    sweepers: [0],
+    superSweeper: false,
+  },
+  {
+    first: 'Joe',
+    last: 'Fontaine',
+    usbc: '2045-88123',
+    division: 0,
+    squads: [0, 1],
+    sweepers: [],
+    superSweeper: false,
+  },
+  {
+    first: 'Joe',
+    last: 'Fontaine',
+    usbc: '5560-11902',
+    division: 1,
+    squads: [1],
+    sweepers: [],
+    superSweeper: false,
+  },
+]
+
+/**
+ * For the mock server: six bowlers in the demo divisions, sorted as the API sorts, with the summary
+ * counted from them. The third squad has no entries.
+ */
+export function createDemoRegistrationList(
+  divisions: Division[],
+  squads: Squad[],
+  sweepers: Sweeper[],
+): RegistrationList {
+  const registrations = demoBowlers.map(({ first, last, suffix, usbc, division, ...entered }) => {
+    const name = `${first} ${last}`
+    return createRegistration({
+      bowler: {
+        id: faker.string.uuid(),
+        name: suffix ? `${name}, ${suffix}` : name,
+        firstName: first,
+        lastName: last,
+        usbcId: usbc,
+      },
+      divisionId: divisions[division]?.id ?? '',
+      divisionName: divisions[division]?.name ?? '',
+      squads: entered.squads.length,
+      sweepers: entered.sweepers.length,
+      superSweeper: entered.superSweeper,
+    })
+  })
+  const entries = (position: number, key: 'squads' | 'sweepers') =>
+    demoBowlers.filter((bowler) => bowler[key].includes(position)).length
+  return {
+    registrations,
+    summary: {
+      registrations: registrations.length,
+      superSweepers: registrations.filter((registration) => registration.superSweeper).length,
+      divisions: divisions.map(({ id, number, name }, position) => ({
+        id,
+        number,
+        name,
+        entries: demoBowlers
+          .filter((bowler) => bowler.division === position)
+          .reduce((total, bowler) => total + bowler.squads.length, 0),
+      })),
+      squads: squads.map(({ id, date }, position) => ({
+        id,
+        date,
+        entries: entries(position, 'squads'),
+      })),
+      sweepers: sweepers.map(({ id, date }, position) => ({
+        id,
+        date,
+        entries: entries(position, 'sweepers'),
+      })),
+    },
+  }
 }
 
 export function createTournaments(count = 5): Tournament[] {

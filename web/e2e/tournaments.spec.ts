@@ -77,3 +77,34 @@ test('a tournament sidebar leads to its squads and sweepers (SQD-21, SQD-22)', a
   await expect(page.getByText('Open: +10')).toBeVisible()
   await expect(page.getByText('Women: +6')).toHaveCount(2)
 })
+
+test('a tournament sidebar leads to its registrations, which a filter narrows (REG-23, REG-24)', async ({
+  page,
+}) => {
+  await page.goto('/tournaments')
+  await page.getByRole('article').first().getByRole('link').click()
+
+  await page
+    .getByRole('navigation', { name: /Northeast MegaBuck/ })
+    .getByRole('link', { name: 'Registrations' })
+    .click()
+
+  await expect(page.getByRole('heading', { name: 'Registrations', level: 1 })).toBeVisible()
+  const names = page.getByRole('rowheader')
+  await expect(names).toHaveText([
+    'Dana Abbott',
+    'Ray Baptiste, Jr',
+    'Maria Chen',
+    'Tom Delgado',
+    'Joe Fontaine',
+    'Joe Fontaine',
+  ])
+  await expect(page.getByRole('heading', { name: 'By division' })).toBeVisible()
+
+  await page.getByRole('searchbox', { name: 'Filter by name or USBC ID' }).fill('joe 2045')
+
+  await expect(names).toHaveText(['Joe Fontaine'])
+  await expect(page.getByText('Showing 1 of 6 registrations.')).toBeVisible()
+  // The summary counts the whole tournament, filtered or not.
+  await expect(page.getByRole('term').filter({ hasText: 'Bowlers registered' })).toBeVisible()
+})

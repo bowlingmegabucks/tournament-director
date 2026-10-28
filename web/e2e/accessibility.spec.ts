@@ -70,6 +70,23 @@ for (const colorScheme of colorSchemes) {
       })
     }
 
+    test('registrations page (loaded and filtered) has no WCAG 2.2 AA violations', async ({
+      page,
+    }) => {
+      await page.goto('/tournaments')
+      await page.getByRole('article').first().getByRole('link').click()
+      await page
+        .getByRole('navigation', { name: /Northeast MegaBuck/ })
+        .getByRole('link', { name: 'Registrations' })
+        .click()
+      await expect(page.getByRole('table')).toBeVisible()
+      await expectNoViolations(page)
+
+      await page.getByRole('searchbox', { name: 'Filter by name or USBC ID' }).fill('zz')
+      await expect(page.getByText('No registrations match the filter.')).toBeVisible()
+      await expectNoViolations(page)
+    })
+
     test('tournament not found has no WCAG 2.2 AA violations', async ({ page }) => {
       await page.goto('/tournaments/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01')
       await expect(page.getByRole('heading', { name: 'Tournament not found' })).toBeVisible()

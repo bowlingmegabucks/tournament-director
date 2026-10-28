@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router'
 import { DivisionsPage } from './features/divisions/DivisionsPage'
+import { RegistrationsPage } from './features/registrations/RegistrationsPage'
 import { SquadsPage } from './features/squads/SquadsPage'
 import { SweepersPage } from './features/sweepers/SweepersPage'
 import { HomePage } from './features/home/HomePage'
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="divisions" element={<DivisionsPage />} />
           <Route path="squads" element={<SquadsPage />} />
           <Route path="sweepers" element={<SweepersPage />} />
+          <Route path="registrations" element={<RegistrationsPage />} />
         </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Route>

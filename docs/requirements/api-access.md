@@ -10,6 +10,7 @@ Built on branch `landingPage`. This is a platform rule with no legacy twin (D-27
 
 ## Notes
 
-- Mounted today: `/health` and `/v1/tournaments`, both `public`.
+- Mounted today, all `public`: `/health`, `/ready`, `/v1/tournaments`, and the web-only routes under `/v1/tournaments/:id/` for divisions, squads, sweepers, and registrations.
+- `/v1/tournaments/:id/registrations` shows bowler names and entries. It ships public only because 0.2.0 has no auth. The lock-down release right after 0.3.0 puts it, and any other public read route that should not be public, behind auth (D-46, D-52).
 - The API enforces access; the web app only hides what a user cannot use (D-19).
 - Do not call `app.use` with a router in `app.ts`. See `docs/api-standards.md`.

@@ -88,7 +88,7 @@ Do not put a click handler on a `div` or `span`. The lint rule `jsx-a11y` fails 
 
 **Buttons.** The base style in `base.css` is the primary button. One primary per view. A secondary button (outline: transparent fill, `--color-accent` border and text) gets a class in the component module. A destructive action names the thing ("Delete tournament") and asks to confirm.
 
-**Data view.** Follow the state shape in `react-patterns`. Style the states alike: loading in `<output>`, error in a bordered `role="alert"` block with a "Try again" button, empty as a plain sentence that says what to do next.
+**Data view.** Follow the state shape in `react-patterns`. Style the states alike: loading with the shared `Loading` component (`web/src/shared/Loading.tsx`: pulsing dots, the words, and optional placeholder rows via `rows`, D-53), error in a bordered `role="alert"` block with a "Try again" button, empty as a plain sentence that says what to do next.
 
 **Images and icons.** Meaningful image: `alt` text that says what it conveys. Decorative: `alt=""`. An icon-only button needs an accessible name (`aria-label`) and a visible tooltip or text nearby.
 

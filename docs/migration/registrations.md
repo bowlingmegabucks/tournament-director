@@ -117,8 +117,8 @@ The API does not block a division change after scores exist. The desk does (`REG
 
 ## Registration list
 
-| ID | Rule |
-| --- | --- |
-| REG-23 | Sorted by last name, then first name. Columns: bowler, division, squads entered (count), sweepers entered (count), super sweeper. A name filter narrows the list. **D-47:** a table page. **D-49:** one filter box over first name, last name, and USBC ID (every word starts a field, in the browser). **D-48:** a bowler with two registrations shows twice. **D-51:** sort ends on registration id; bad rows skipped. **D-46:** public until auth, then signed-in only. |
-| REG-24 | Counts shown: entries per squad; entries per sweeper; super sweeper entries; entries per division = sum of **squads** each bowler in that division entered (sweepers not counted). **D-50:** shown as a summary above the grid for the whole tournament. |
-| REG-25 | Actions: delete registration, edit bowler name, add or remove super sweeper, change division, change average, edit bowler. |
+| ID | Rule | Status |
+| --- | --- | --- |
+| REG-23 | Sorted by last name, then first name. Columns: bowler, division, squads entered (count), sweepers entered (count), super sweeper. A name filter narrows the list. **D-47:** a table page. **D-49:** one filter box over first name, last name, and USBC ID (every word starts a field, in the browser). **D-48:** a bowler with two registrations shows twice. **D-51:** sort ends on registration id; bad rows skipped. **D-46:** public until auth, then signed-in only. | Done, differs (D-47, D-49, D-51) |
+| REG-24 | Counts shown: entries per squad; entries per sweeper; super sweeper entries; entries per division = sum of **squads** each bowler in that division entered (sweepers not counted). **D-50:** shown as a summary above the grid for the whole tournament. | Done, differs (D-50) |
+| REG-25 | Actions: delete registration, edit bowler name, add or remove super sweeper, change division, change average, edit bowler. |  |

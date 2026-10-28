@@ -45,5 +45,6 @@ What the user sees and can do.
 | --- | --- |
 | Tournaments (list, Home card, overview) | [tournaments.md](tournaments.md) |
 | Divisions (list) | [divisions.md](divisions.md) |
+| Squads and sweepers (lists) | [squads-and-sweepers.md](squads-and-sweepers.md) |
 | Navigation and layout | [navigation.md](navigation.md) |
 | API route access | [api-access.md](api-access.md) |

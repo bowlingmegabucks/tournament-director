@@ -3,6 +3,10 @@ import { z } from 'zod'
 import { HttpError } from '../../shared/errors.ts'
 import { toVendorDivision } from '../divisions/types.ts'
 import type { DivisionRepository } from '../divisions/repository.ts'
+import { toVendorSquad } from '../squads/types.ts'
+import type { SquadRepository } from '../squads/repository.ts'
+import { toVendorSweeper } from '../sweepers/types.ts'
+import type { SweeperRepository } from '../sweepers/repository.ts'
 import type { TournamentRepository } from './repository.ts'
 
 const idParams = z.object({ id: z.uuid() })
@@ -10,6 +14,8 @@ const idParams = z.object({ id: z.uuid() })
 export function createTournamentRouter(
   repository: TournamentRepository,
   divisions: DivisionRepository,
+  squads: SquadRepository,
+  sweepers: SweeperRepository,
 ): Router {
   const router = Router()
 
@@ -22,13 +28,22 @@ export function createTournamentRouter(
   router.get('/:id', async (req, res) => {
     const { id } = idParams.parse(req.params)
     // Both reads start together. An unknown tournament costs one wasted read and still gives 404.
-    const [tournament, stored] = await Promise.all([
+    const [tournament, storedDivisions, storedSquads, storedSweepers] = await Promise.all([
       repository.get(id),
       divisions.listByTournament(id),
+      squads.listByTournament(id),
+      sweepers.listByTournament(id),
     ])
     if (!tournament) throw new HttpError(404, 'Tournament not found')
-    // D-25, D-37: the detail carries the vendor-shape divisions (API-04).
-    res.json({ tournament: { ...tournament, divisions: stored.map(toVendorDivision) } })
+    // D-25, D-37, D-41: the detail carries the vendor-shape divisions, squads, and sweepers (API-04).
+    res.json({
+      tournament: {
+        ...tournament,
+        divisions: storedDivisions.map(toVendorDivision),
+        squads: storedSquads.map(toVendorSquad),
+        sweepers: storedSweepers.map(toVendorSweeper),
+      },
+    })
   })
 
   return router

@@ -33,4 +33,29 @@ export const legacySchemaSql = [
     PRIMARY KEY (\`Id\`),
     FOREIGN KEY (\`TournamentId\`) REFERENCES \`Tournaments\` (\`Id\`) ON DELETE CASCADE
   )`,
+  `CREATE TABLE \`Squads\` (
+    \`Id\`              char(36)     NOT NULL,
+    \`TournamentId\`    char(36)     NOT NULL,
+    \`SquadType\`       int          NOT NULL,
+    \`Date\`            datetime(6)  NOT NULL,
+    \`CashRatio\`       decimal(3,1) NULL,
+    \`MaxPerPair\`      smallint     NOT NULL,
+    \`StartingLane\`    smallint     NOT NULL DEFAULT 0,
+    \`NumberOfLanes\`   smallint     NOT NULL DEFAULT 0,
+    \`Complete\`        tinyint(1)   NOT NULL,
+    \`FinalsRatio\`     decimal(3,1) NULL,
+    \`SquadEntryFee\`   decimal(5,2) NULL,
+    \`SweeperEntryFee\` decimal(5,2) NULL,
+    \`Games\`           smallint     NULL,
+    PRIMARY KEY (\`Id\`),
+    FOREIGN KEY (\`TournamentId\`) REFERENCES \`Tournaments\` (\`Id\`) ON DELETE CASCADE
+  )`,
+  `CREATE TABLE \`SweeperDivision\` (
+    \`SweeperId\`        char(36) NOT NULL,
+    \`DivisionId\`       char(36) NOT NULL,
+    \`BonusPinsPerGame\` int      NULL,
+    PRIMARY KEY (\`SweeperId\`, \`DivisionId\`),
+    FOREIGN KEY (\`DivisionId\`) REFERENCES \`Divisions\` (\`Id\`) ON DELETE CASCADE,
+    FOREIGN KEY (\`SweeperId\`)  REFERENCES \`Squads\` (\`Id\`)    ON DELETE CASCADE
+  )`,
 ]

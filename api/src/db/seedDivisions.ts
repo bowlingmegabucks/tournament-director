@@ -10,7 +10,7 @@ const samples = [
 
 // A fixed id per tournament and number, so running the seed twice updates these rows and adds none.
 // Only the last four digits change, so the id stays a valid UUID.
-function divisionId(tournamentId: string, number: number): string {
+export function divisionId(tournamentId: string, number: number): string {
   return `${tournamentId.slice(0, -4)}d00${number}`
 }
 

@@ -61,6 +61,12 @@ export function TournamentLayout() {
           <li>
             <NavLink to={`/tournaments/${data.id}/divisions`}>Divisions</NavLink>
           </li>
+          <li>
+            <NavLink to={`/tournaments/${data.id}/squads`}>Squads</NavLink>
+          </li>
+          <li>
+            <NavLink to={`/tournaments/${data.id}/sweepers`}>Sweepers</NavLink>
+          </li>
         </ul>
         <p>
           <Link to="/tournaments">Change tournament</Link>

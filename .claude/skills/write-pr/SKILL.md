@@ -89,5 +89,5 @@ Tell the owner:
 - The title, on its own line for easy copying
 - `pr-description.md` is written and ready to paste
 - To delete `pr-description.md` before committing (it is not meant for the repo)
-- Labels to assign, one line of reason each
-- Labels to create, each with its description and `gh label create` command
+- Labels to assign, in alphabetical order, one line of reason each
+- Labels to create, in alphabetical order, each with its description and `gh label create` command

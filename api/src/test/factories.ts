@@ -1,6 +1,8 @@
 import { faker } from '@faker-js/faker'
 import type { Config } from '../config.ts'
 import type { Division } from '../features/divisions/types.ts'
+import type { Squad } from '../features/squads/types.ts'
+import type { Sweeper } from '../features/sweepers/types.ts'
 import type { Tournament } from '../features/tournaments/types.ts'
 
 export function createTournament(overrides: Partial<Tournament> = {}): Tournament {
@@ -32,6 +34,40 @@ export function createDivision(overrides: Partial<Division> = {}): Division {
     handicapPercentage: null,
     handicapBase: null,
     maximumHandicapPerGame: null,
+    ...overrides,
+  }
+}
+
+export function createSquad(overrides: Partial<Squad> = {}): Squad {
+  return {
+    id: faker.string.uuid(),
+    date: '2026-10-24T09:00:00',
+    complete: false,
+    startingLane: 1,
+    numberOfLanes: 24,
+    maxPerPair: 4,
+    entryFee: 50,
+    entryFeeOverridden: false,
+    finalsRatio: 7,
+    finalsRatioOverridden: false,
+    cashRatio: 5,
+    cashRatioOverridden: false,
+    ...overrides,
+  }
+}
+
+export function createSweeper(overrides: Partial<Sweeper> = {}): Sweeper {
+  return {
+    id: faker.string.uuid(),
+    date: '2026-10-24T18:00:00',
+    complete: false,
+    startingLane: 1,
+    numberOfLanes: 12,
+    maxPerPair: 4,
+    entryFee: 25,
+    games: 3,
+    cashRatio: 4,
+    bonusPins: [],
     ...overrides,
   }
 }

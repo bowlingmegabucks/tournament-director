@@ -1,5 +1,7 @@
 import { faker } from '@faker-js/faker'
 import type { Division } from '../features/divisions/types'
+import type { Squad } from '../features/squads/types'
+import type { Sweeper } from '../features/sweepers/types'
 import type { Tournament } from '../features/tournaments/types'
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
@@ -61,6 +63,81 @@ export function createDemoDivisions(): Division[] {
       minimumAge: 18,
       maximumAge: 39,
       minimumAverage: 200,
+    }),
+  ]
+}
+
+export function createSquad(overrides: Partial<Squad> = {}): Squad {
+  return {
+    id: faker.string.uuid(),
+    date: '2026-10-24T09:00:00',
+    complete: false,
+    startingLane: 1,
+    numberOfLanes: 24,
+    maxPerPair: 4,
+    entryFee: 50,
+    entryFeeOverridden: false,
+    finalsRatio: 7,
+    finalsRatioOverridden: false,
+    cashRatio: 5,
+    cashRatioOverridden: false,
+    ...overrides,
+  }
+}
+
+export function createSweeper(overrides: Partial<Sweeper> = {}): Sweeper {
+  return {
+    id: faker.string.uuid(),
+    date: '2026-10-24T18:00:00',
+    complete: false,
+    startingLane: 1,
+    numberOfLanes: 12,
+    maxPerPair: 4,
+    entryFee: 25,
+    games: 3,
+    cashRatio: 4,
+    bonusPins: [],
+    ...overrides,
+  }
+}
+
+/** For the mock server: a finished morning squad, an afternoon squad that overrides, and a smaller Sunday one. */
+export function createDemoSquads(): Squad[] {
+  return [
+    createSquad({ date: '2026-10-24T09:00:00', complete: true }),
+    createSquad({
+      date: '2026-10-24T13:00:00',
+      entryFee: 60,
+      entryFeeOverridden: true,
+      finalsRatio: 8,
+      finalsRatioOverridden: true,
+    }),
+    createSquad({
+      date: '2026-10-25T09:00:00',
+      startingLane: 11,
+      numberOfLanes: 10,
+      maxPerPair: 5,
+    }),
+  ]
+}
+
+/** For the mock server: one sweeper with pins on two divisions, one with pins on only one. */
+export function createDemoSweepers(divisions: Division[]): Sweeper[] {
+  const [open, women] = divisions
+  const pins = (division: Division | undefined, bonusPinsPerGame: number) =>
+    division ? [{ divisionId: division.id, divisionName: division.name, bonusPinsPerGame }] : []
+  return [
+    createSweeper({
+      date: '2026-10-24T18:00:00',
+      bonusPins: [...pins(open, 10), ...pins(women, 6)],
+    }),
+    createSweeper({
+      date: '2026-10-25T17:00:00',
+      complete: true,
+      entryFee: 30,
+      games: 4,
+      cashRatio: 5,
+      bonusPins: pins(women, 6),
     }),
   ]
 }

@@ -26,13 +26,15 @@ describe('db:seed script', () => {
     await resetDatabase(client)
   })
 
-  it('reads DATABASE_URL, seeds four tournaments and twelve divisions, and reports the counts', async () => {
+  it('reads DATABASE_URL, seeds four tournaments, twelve divisions, and twenty squads and sweepers, and reports the counts', async () => {
     const { stdout } = await runSeed({ DATABASE_URL: inject('databaseUrl') })
 
     expect(stdout).toContain('Seeded 4 tournaments.')
     expect(stdout).toContain('Seeded 12 divisions.')
+    expect(stdout).toContain('Seeded 20 squads and sweepers.')
     expect(await client.tournament.count()).toBe(4)
     expect(await client.division.count()).toBe(12)
+    expect(await client.squad.count()).toBe(20)
   })
 
   it('fails with no DATABASE_URL and seeds nothing', async () => {

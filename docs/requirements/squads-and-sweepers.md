@@ -13,7 +13,7 @@ What `GET /v1/tournaments/{id}/squads` returns for a squad.
 | `id`                                                        | UUID    |                                                                                 |
 | `date`                                                      | text    | The center's local time with no zone: `2026-10-24T09:00:00`                     |
 | `complete`                                                  | boolean | Shown as Open or Complete                                                       |
-| `startingLane`, `numberOfLanes`, `maxPerPair`               | integer | A stored 0 for `numberOfLanes` shows as "Not set"                               |
+| `startingLane`, `numberOfLanes`, `maxPerPair`               | integer | A stored 0 for `numberOfLanes` shows as "Not set"; a first lane of 0 shows just the count ("12 lanes")                               |
 | `entryFee`, `finalsRatio`, `cashRatio`                      | number  | The squad's own value if set, else the tournament's (`TRN-12`)                  |
 | `entryFeeOverridden`, `finalsRatioOverridden`, `cashRatioOverridden` | boolean | True when the squad sets its own value. The card adds "(override)"      |
 

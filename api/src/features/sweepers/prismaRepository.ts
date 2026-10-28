@@ -1,8 +1,9 @@
 import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import { describeIssue } from '../../shared/describeIssue.ts'
 import type { Logger } from '../../shared/logger.ts'
+import { compareSessions } from '../../shared/sessions.ts'
 import type { SweeperRepository } from './repository.ts'
-import { toSweeper } from './sweeperRow.ts'
+import { toSweeper, type DivisionPins } from './sweeperRow.ts'
 
 /** `Squads.SquadType` for a sweeper. A squad is 0; any other value is not read (D-42). */
 const sweeperType = 1
@@ -14,45 +15,39 @@ export function createPrismaSweeperRepository(
 ): SweeperRepository {
   return {
     async listByTournament(tournamentId) {
-      const { rows, divisions, pins } = await withDatabaseErrors(logger, async () => {
-        // The sweepers and the divisions do not depend on each other, so they load together.
-        const [sweepers, tournamentDivisions] = await Promise.all([
-          client.squad.findMany({
-            where: { tournamentId, squadType: sweeperType },
-            // SQD-20, D-45.
-            orderBy: [{ date: 'asc' }, { startingLane: 'asc' }, { id: 'asc' }],
+      // The sweepers and their pins do not depend on each other, so they load together. A pin row
+      // for a division of another tournament is left out by the `division` filter.
+      const [rows, pinRows] = await withDatabaseErrors(logger, () =>
+        Promise.all([
+          client.squad.findMany({ where: { tournamentId, squadType: sweeperType } }),
+          client.sweeperDivision.findMany({
+            where: {
+              sweeper: { tournamentId, squadType: sweeperType },
+              division: { tournamentId },
+            },
+            include: { division: { select: { name: true, number: true } } },
           }),
-          // The tournament's own divisions, in DIV-13 order. A pin row for any other division is ignored.
-          client.division.findMany({
-            where: { tournamentId },
-            select: { id: true, name: true },
-            orderBy: [{ number: 'asc' }, { name: 'asc' }],
-          }),
-        ])
-        const pinRows = await client.sweeperDivision.findMany({
-          where: { sweeperId: { in: sweepers.map((sweeper) => sweeper.id) } },
-        })
-        return { rows: sweepers, divisions: tournamentDivisions, pins: pinRows }
-      })
+        ]),
+      )
 
-      // Group once: sweeper id, then division id, then the stored pins.
-      const pinsBySweeper = new Map<string, Map<string, number | null>>()
-      for (const { sweeperId, divisionId, bonusPinsPerGame } of pins) {
-        const own = pinsBySweeper.get(sweeperId) ?? new Map<string, number | null>()
-        own.set(divisionId, bonusPinsPerGame)
-        pinsBySweeper.set(sweeperId, own)
+      // Group once by sweeper, then put each sweeper's divisions in DIV-13 order.
+      const pinsBySweeper = new Map<string, (DivisionPins & { number: number })[]>()
+      for (const pin of pinRows) {
+        const own = pinsBySweeper.get(pin.sweeperId) ?? []
+        own.push({
+          divisionId: pin.divisionId,
+          divisionName: pin.division.name,
+          bonusPinsPerGame: pin.bonusPinsPerGame,
+          number: pin.division.number,
+        })
+        pinsBySweeper.set(pin.sweeperId, own)
       }
 
-      return rows.flatMap((row) => {
-        const own = pinsBySweeper.get(row.id)
-        const result = toSweeper(
-          row,
-          divisions.map(({ id, name }) => ({
-            divisionId: id,
-            divisionName: name,
-            bonusPinsPerGame: own?.get(id),
-          })),
+      const sweepers = rows.flatMap((row) => {
+        const own = (pinsBySweeper.get(row.id) ?? []).sort(
+          (a, b) => a.number - b.number || a.divisionName.localeCompare(b.divisionName),
         )
+        const result = toSweeper(row, own)
         if (result.success) return [result.data]
         // D-42: one old row must not hide the rest.
         logger.warn(
@@ -61,6 +56,8 @@ export function createPrismaSweeperRepository(
         )
         return []
       })
+      // SQD-20, D-45. Sorted here, not by the database, so one function decides every tie.
+      return sweepers.sort(compareSessions)
     },
   }
 }

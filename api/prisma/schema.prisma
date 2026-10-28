@@ -22,6 +22,7 @@ model Tournament {
   finalsRatio   Decimal  @map("FinalsRatio") @db.Decimal(3, 1)
   cashRatio     Decimal  @map("CashRatio") @db.Decimal(3, 1)
   bowlingCenter String   @map("BowlingCenter") @db.LongText
+  squads        Squad[]
 
   @@map("Tournaments")
 }
@@ -40,6 +41,7 @@ model Division {
   maximumHandicapPerGame Int?     @map("MaximumHandicapPerGame")
   /// 0 = Male, 1 = Female, NULL = any gender (docs/migration/database.md)
   gender                 Int?     @map("Gender")
+  sweeperPins            SweeperDivision[]
 
   @@map("Divisions")
 }
@@ -61,6 +63,10 @@ model Squad {
   squadEntryFee   Decimal? @map("SquadEntryFee") @db.Decimal(5, 2)
   sweeperEntryFee Decimal? @map("SweeperEntryFee") @db.Decimal(5, 2)
   games           Int?     @map("Games") @db.SmallInt
+  /// The tournament it belongs to, for the fee and ratios a squad falls back on (TRN-12).
+  tournament      Tournament @relation(fields: [tournamentId], references: [id])
+  /// Bonus pins, for a sweeper.
+  pins            SweeperDivision[]
 
   @@map("Squads")
 }
@@ -70,6 +76,8 @@ model SweeperDivision {
   sweeperId        String @map("SweeperId") @db.Char(36)
   divisionId       String @map("DivisionId") @db.Char(36)
   bonusPinsPerGame Int?   @map("BonusPinsPerGame")
+  sweeper          Squad    @relation(fields: [sweeperId], references: [id])
+  division         Division @relation(fields: [divisionId], references: [id])
 
   @@id([sweeperId, divisionId])
   @@map("SweeperDivision")

@@ -25,10 +25,13 @@ describe('toVendorSweeper', () => {
 describe('bonusPinsSchema', () => {
   const entry = { divisionId: crypto.randomUUID(), divisionName: 'Open' }
 
-  it('accepts pins other than 0 and refuses 0 (D-45)', () => {
+  it('accepts whole numbers of pins, positive or negative (DIV-14)', () => {
     expect(bonusPinsSchema.safeParse({ ...entry, bonusPinsPerGame: 10 }).success).toBe(true)
     expect(bonusPinsSchema.safeParse({ ...entry, bonusPinsPerGame: -3 }).success).toBe(true)
-    expect(bonusPinsSchema.safeParse({ ...entry, bonusPinsPerGame: 0 }).success).toBe(false)
+  })
+
+  it.each([2.5, '10', null])('refuses %s pins', (pins) => {
+    expect(bonusPinsSchema.safeParse({ ...entry, bonusPinsPerGame: pins }).success).toBe(false)
   })
 })
 

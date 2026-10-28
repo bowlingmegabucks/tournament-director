@@ -1,14 +1,11 @@
 import { z } from 'zod'
 import { sessionFields } from '../../shared/sessions.ts'
 
-/** Bonus pins per game for one division. Only divisions with pins other than 0 appear (D-45). */
+/** Bonus pins per game for one division. `toSweeper` lists only divisions with pins other than 0 (D-45). */
 export const bonusPinsSchema = z.object({
   divisionId: z.uuid(),
   divisionName: z.string(),
-  bonusPinsPerGame: z
-    .number()
-    .int()
-    .refine((pins) => pins !== 0),
+  bonusPinsPerGame: z.number().int(),
 })
 
 export type BonusPins = z.infer<typeof bonusPinsSchema>

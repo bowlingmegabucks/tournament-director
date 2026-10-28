@@ -1,6 +1,7 @@
 import { apiUrl } from '../../shared/apiUrl'
 import { field } from '../../shared/field'
 import { readJson } from '../../shared/readJson'
+import { isSessionDate } from '../../shared/sessionFormat'
 import { TournamentNotFoundError } from '../../shared/tournamentQuery'
 import type { Squad } from './types'
 
@@ -22,7 +23,7 @@ const flags = [
 function isSquad(value: unknown): value is Squad {
   return (
     typeof field(value, 'id') === 'string' &&
-    typeof field(value, 'date') === 'string' &&
+    isSessionDate(field(value, 'date')) &&
     numbers.every((key) => typeof field(value, key) === 'number') &&
     flags.every((key) => typeof field(value, key) === 'boolean')
   )

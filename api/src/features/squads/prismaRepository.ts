@@ -1,6 +1,7 @@
 import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import { describeIssue } from '../../shared/describeIssue.ts'
 import type { Logger } from '../../shared/logger.ts'
+import { compareSessions } from '../../shared/sessions.ts'
 import type { SquadRepository } from './repository.ts'
 import { toSquad } from './squadRow.ts'
 
@@ -11,28 +12,22 @@ const squadType = 0
 export function createPrismaSquadRepository(client: PrismaClient, logger: Logger): SquadRepository {
   return {
     async listByTournament(tournamentId) {
-      const [tournament, rows] = await withDatabaseErrors(logger, () =>
-        Promise.all([
-          client.tournament.findUnique({
-            where: { id: tournamentId },
-            select: { entryFee: true, finalsRatio: true, cashRatio: true },
-          }),
-          client.squad.findMany({
-            where: { tournamentId, squadType },
-            // SQD-20, D-45.
-            orderBy: [{ date: 'asc' }, { startingLane: 'asc' }, { id: 'asc' }],
-          }),
-        ]),
+      // One call: each squad brings the tournament values it falls back on (TRN-12). A tournament
+      // with no squads, or none at all, gives an empty list; the route answers 404 for an unknown one.
+      const rows = await withDatabaseErrors(logger, () =>
+        client.squad.findMany({
+          where: { tournamentId, squadType },
+          include: {
+            tournament: { select: { entryFee: true, finalsRatio: true, cashRatio: true } },
+          },
+        }),
       )
-      // The route answers 404 for an unknown tournament; there is nothing to fall back on here.
-      if (!tournament) return []
-      const defaults = {
-        entryFee: tournament.entryFee.toNumber(),
-        finalsRatio: tournament.finalsRatio.toNumber(),
-        cashRatio: tournament.cashRatio.toNumber(),
-      }
-      return rows.flatMap((row) => {
-        const result = toSquad(row, defaults)
+      const squads = rows.flatMap((row) => {
+        const result = toSquad(row, {
+          entryFee: row.tournament.entryFee.toNumber(),
+          finalsRatio: row.tournament.finalsRatio.toNumber(),
+          cashRatio: row.tournament.cashRatio.toNumber(),
+        })
         if (result.success) return [result.data]
         // D-42: one old row must not hide the rest.
         logger.warn(
@@ -41,6 +36,8 @@ export function createPrismaSquadRepository(client: PrismaClient, logger: Logger
         )
         return []
       })
+      // SQD-20, D-45. Sorted here, not by the database, so one function decides every tie.
+      return squads.sort(compareSessions)
     },
   }
 }

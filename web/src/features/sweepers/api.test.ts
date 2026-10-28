@@ -99,6 +99,23 @@ describe('fetchSweepers', () => {
     ['bonusPins', { bonusPins: 'none' }],
   ] as const
 
+  it.each(['garbage', '2026-10-24', '2026-10-24T18:00:00Z'])(
+    'rejects a sweeper date of %s (SQD-22)',
+    async (date) => {
+      respondWith({ sweepers: [{ ...createSweeper(), date }] })
+
+      await expect(fetchSweepers('t1')).rejects.toThrow('unexpected response')
+    },
+  )
+
+  it('rejects bonus pins of 0, which the API leaves out (D-45)', async () => {
+    respondWith({
+      sweepers: [{ ...createSweeper(), bonusPins: [{ ...pins, bonusPinsPerGame: 0 }] }],
+    })
+
+    await expect(fetchSweepers('t1')).rejects.toThrow('unexpected response')
+  })
+
   it.each(wrong)('rejects a sweeper with a wrong %s', async (_field, override) => {
     respondWith({ sweepers: [{ ...createSweeper(), ...override }] })
 

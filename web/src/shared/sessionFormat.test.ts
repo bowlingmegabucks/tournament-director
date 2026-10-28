@@ -6,6 +6,7 @@ import {
   formatPins,
   formatRatio,
   formatSessionDate,
+  isSessionDate,
   withOverride,
 } from './sessionFormat'
 
@@ -51,10 +52,27 @@ describe('formatLanes', () => {
     expect(formatLanes(1, -2)).toBe('Not set')
   })
 
-  it('says Not set when the first lane is the legacy default of 0, not a range from lane 0', () => {
-    expect(formatLanes(0, 24)).toBe('Not set')
-    expect(formatLanes(-1, 4)).toBe('Not set')
-    expect(formatLanes(1, 24)).toBe('1 to 24 (24 lanes)')
+  it('keeps the lane count when the first lane is the legacy default of 0', () => {
+    expect(formatLanes(0, 12)).toBe('12 lanes')
+    expect(formatLanes(-1, 4)).toBe('4 lanes')
+    expect(formatLanes(0, 1)).toBe('1 lane')
+  })
+})
+
+describe('isSessionDate', () => {
+  it('accepts the API date text', () => {
+    expect(isSessionDate('2026-10-24T09:00:00')).toBe(true)
+  })
+
+  it.each([
+    'garbage',
+    '2026-10-24',
+    '2026-10-24T09:00:00Z',
+    'x2026-10-24T09:00:00',
+    20261024,
+    null,
+  ])('rejects %s', (value) => {
+    expect(isSessionDate(value)).toBe(false)
   })
 })
 

@@ -1,6 +1,7 @@
 import { apiUrl } from '../../shared/apiUrl'
 import { field } from '../../shared/field'
 import { readJson } from '../../shared/readJson'
+import { isSessionDate } from '../../shared/sessionFormat'
 import { TournamentNotFoundError } from '../../shared/tournamentQuery'
 import type { BonusPins, Sweeper } from './types'
 
@@ -17,7 +18,9 @@ function isBonusPins(value: unknown): value is BonusPins {
   return (
     typeof field(value, 'divisionId') === 'string' &&
     typeof field(value, 'divisionName') === 'string' &&
-    typeof field(value, 'bonusPinsPerGame') === 'number'
+    typeof field(value, 'bonusPinsPerGame') === 'number' &&
+    // The API leaves out divisions with no bonus (D-45), so a 0 means the contract broke.
+    field(value, 'bonusPinsPerGame') !== 0
   )
 }
 
@@ -25,7 +28,7 @@ function isSweeper(value: unknown): value is Sweeper {
   const bonusPins = field(value, 'bonusPins')
   return (
     typeof field(value, 'id') === 'string' &&
-    typeof field(value, 'date') === 'string' &&
+    isSessionDate(field(value, 'date')) &&
     typeof field(value, 'complete') === 'boolean' &&
     numbers.every((key) => typeof field(value, key) === 'number') &&
     Array.isArray(bonusPins) &&

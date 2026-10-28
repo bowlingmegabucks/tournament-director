@@ -99,6 +99,15 @@ describe('fetchSquads', () => {
     ['cashRatioOverridden', { cashRatioOverridden: null }],
   ] as const
 
+  it.each(['garbage', '2026-10-24', '2026-10-24T09:00:00Z'])(
+    'rejects a squad date of %s (SQD-21)',
+    async (date) => {
+      respondWith({ squads: [{ ...createSquad(), date }] })
+
+      await expect(fetchSquads('t1')).rejects.toThrow('unexpected response')
+    },
+  )
+
   it.each(wrong)('rejects a squad with a wrong %s', async (_field, override) => {
     respondWith({ squads: [{ ...createSquad(), ...override }] })
 

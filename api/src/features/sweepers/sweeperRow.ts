@@ -1,20 +1,22 @@
 import { localDateTime, toNumber, type SessionRow } from '../../shared/sessions.ts'
 import { sweeperSchema, type Sweeper } from './types.ts'
 
-/** One division of the sweeper's tournament, with the stored pins (`undefined` when no row exists). */
+/** A stored `SweeperDivision` row, with the name of its division. */
 export interface DivisionPins {
   divisionId: string
   divisionName: string
-  bonusPinsPerGame: number | null | undefined
+  /** NULL counts as 0. */
+  bonusPinsPerGame: number | null
 }
 
 /**
  * Turn a stored sweeper row (`SquadType` 1) into the shape the Sweepers page reads. A sweeper
  * needs a fee, games, and a cash ratio (SQD-11, SQD-12); a row without them does not fit, and the
- * repository skips and logs it (D-42). `divisions` is the tournament's divisions in order. A
- * missing row, a NULL, and a 0 all mean no bonus (`SCR-09`) and are left out (D-45).
+ * repository skips and logs it (D-42). `pins` are the sweeper's stored rows in division order. A
+ * division with no row, a NULL, or a 0 has no bonus (`SCR-09`) and is not listed (D-45); this is
+ * the one place that rule lives.
  */
-export function toSweeper(row: SessionRow, divisions: DivisionPins[]) {
+export function toSweeper(row: SessionRow, pins: DivisionPins[]) {
   return sweeperSchema.safeParse({
     id: row.id,
     date: localDateTime(row.date),
@@ -25,12 +27,10 @@ export function toSweeper(row: SessionRow, divisions: DivisionPins[]) {
     entryFee: toNumber(row.sweeperEntryFee),
     games: row.games,
     cashRatio: toNumber(row.cashRatio),
-    bonusPins: divisions
-      .filter(({ bonusPinsPerGame }) => bonusPinsPerGame)
-      .map(({ divisionId, divisionName, bonusPinsPerGame }) => ({
-        divisionId,
-        divisionName,
-        bonusPinsPerGame,
-      })),
+    bonusPins: pins.flatMap(({ divisionId, divisionName, bonusPinsPerGame }) =>
+      bonusPinsPerGame === null || bonusPinsPerGame === 0
+        ? []
+        : [{ divisionId, divisionName, bonusPinsPerGame }],
+    ),
   } satisfies Record<keyof Sweeper, unknown>)
 }

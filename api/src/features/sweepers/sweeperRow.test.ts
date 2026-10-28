@@ -64,8 +64,8 @@ describe('toSweeper', () => {
     ])
   })
 
-  it('leaves out a division with no stored row or a NULL (SCR-09, D-45)', () => {
-    const result = toSweeper(createRow(), divisions(undefined, null, 5))
+  it('leaves out a division whose pins are NULL (SCR-09, D-45)', () => {
+    const result = toSweeper(createRow(), divisions(null, null, 5))
 
     expect(result.success && result.data.bonusPins).toEqual([
       { divisionId: scratchId, divisionName: 'Scratch', bonusPinsPerGame: 5 },
@@ -73,13 +73,19 @@ describe('toSweeper', () => {
   })
 
   it('has an empty list when every division counts as 0 (D-45)', () => {
-    const result = toSweeper(createRow(), divisions(undefined, null, 0))
+    const result = toSweeper(createRow(), divisions(null, null, 0))
+
+    expect(result.success && result.data.bonusPins).toEqual([])
+  })
+
+  it('lists nothing when the sweeper has no stored pin rows (SCR-09, D-45)', () => {
+    const result = toSweeper(createRow(), [])
 
     expect(result.success && result.data.bonusPins).toEqual([])
   })
 
   it('keeps negative pins, which are not 0 (D-45)', () => {
-    const result = toSweeper(createRow(), divisions(-5, undefined, undefined))
+    const result = toSweeper(createRow(), divisions(-5, null, null))
 
     expect(result.success && result.data.bonusPins).toHaveLength(1)
   })

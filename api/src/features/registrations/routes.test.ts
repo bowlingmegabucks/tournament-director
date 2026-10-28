@@ -137,6 +137,23 @@ describe('GET /v1/tournaments/:id/registrations', () => {
     expect(response.body).toEqual({ message: 'Tournament not found' })
   })
 
+  it('does not read anything else for an unknown tournament (REG-26)', async () => {
+    const rejects = () => Promise.reject(new HttpError(503, 'Database unavailable'))
+    const app = createTestApp({
+      registrations: { listByTournament: rejects },
+      divisions: { listByTournament: rejects },
+      squads: { listByTournament: rejects },
+      sweepers: { listByTournament: rejects },
+    })
+
+    const response = await request(app).get(
+      '/v1/tournaments/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01/registrations',
+    )
+
+    // The other reads would answer 503. Only a 404 shows they never ran first.
+    expect(response.status).toBe(404)
+  })
+
   it('returns 400 when the id is not a UUID (REG-26)', async () => {
     const response = await request(createTestApp()).get('/v1/tournaments/not-a-uuid/registrations')
 

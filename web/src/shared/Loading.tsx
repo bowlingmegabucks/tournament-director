@@ -1,10 +1,13 @@
 import styles from './Loading.module.css'
 
+/** How many placeholder bars there are ids for. A bigger number does not compile. */
+type RowCount = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12
+
 interface LoadingProps {
   /** The words, such as "Loading squads…". They stay on screen and are what a screen reader hears. */
   label: string
   /** Gray placeholder bars below the dots, for a list page. None by default. Up to 12 (D-53). */
-  rows?: number
+  rows?: RowCount
 }
 
 // The bars are fixed decoration, so they get fixed ids rather than a loop index.

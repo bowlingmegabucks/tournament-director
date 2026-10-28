@@ -234,6 +234,45 @@ describe('Prisma registration repository', () => {
     expect((warning?.registrationIds as string[]).sort()).toEqual([first, second].sort())
   })
 
+  it('logs a duplicate bowler once, not on every visit (REG-27, D-48)', async () => {
+    const tournamentId = await insertTournament()
+    const bowlerId = await insertBowler()
+    await insertRegistration(bowlerId, await insertDivision(tournamentId, 'Open'))
+    await insertRegistration(bowlerId, await insertDivision(tournamentId, 'Senior'))
+    const { repository, records } = setup()
+
+    await repository.listByTournament(tournamentId)
+    await repository.listByTournament(tournamentId)
+
+    expect(records()).toHaveLength(1)
+  })
+
+  it('logs a skipped row once, not on every visit (REG-26, D-51)', async () => {
+    const tournamentId = await insertTournament()
+    await insertRegistration(await insertBowler({ first: '' }), await insertDivision(tournamentId))
+    const { repository, records } = setup()
+
+    await repository.listByTournament(tournamentId)
+    await repository.listByTournament(tournamentId)
+
+    expect(records()).toHaveLength(1)
+  })
+
+  it('logs the same duplicate again for another tournament (REG-27)', async () => {
+    const [first, second] = [await insertTournament(), await insertTournament()]
+    const bowlerId = await insertBowler()
+    for (const tournamentId of [first, second]) {
+      await insertRegistration(bowlerId, await insertDivision(tournamentId, 'Open'))
+      await insertRegistration(bowlerId, await insertDivision(tournamentId, 'Senior'))
+    }
+    const { repository, records } = setup()
+
+    await repository.listByTournament(first)
+    await repository.listByTournament(second)
+
+    expect(records()).toHaveLength(2)
+  })
+
   it('does not warn when each bowler has one registration (REG-27)', async () => {
     const tournamentId = await insertTournament()
     const divisionId = await insertDivision(tournamentId)

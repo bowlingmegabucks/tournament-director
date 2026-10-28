@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, useRef } from 'react'
 import { formatSessionDate } from '../../shared/sessionFormat'
 import styles from './SessionsDialog.module.css'
 import type { SessionEntries } from './types'
@@ -32,6 +32,9 @@ export function SessionsDialog({
   onClose,
 }: Readonly<SessionsDialogProps>) {
   const titleId = useId()
+  // Where the last mouse press landed. A drag that starts in the box and ends on the backdrop
+  // fires a click on the dialog too, and must not close it.
+  const pressedOnBackdrop = useRef(false)
   const listed = all.filter((session) => entered.includes(session.id))
   const noun = kind === 'squads' ? 'squad' : 'sweeper'
   return (
@@ -42,10 +45,15 @@ export function SessionsDialog({
       className={styles.dialog}
       aria-labelledby={titleId}
       onClose={onClose}
+      onMouseDown={(event) => {
+        pressedOnBackdrop.current = event.target === event.currentTarget
+      }}
       onClick={(event) => {
-        // The dialog has no padding of its own: the content wrapper fills it. So a click that
-        // lands on the dialog element itself is a click on the backdrop.
-        if (event.target === event.currentTarget) event.currentTarget.close()
+        // The dialog has no padding of its own: the content wrapper fills it. So a press and a
+        // click that both land on the dialog element itself are on the backdrop.
+        if (event.target === event.currentTarget && pressedOnBackdrop.current) {
+          event.currentTarget.close()
+        }
       }}
     >
       <div className={styles.content}>

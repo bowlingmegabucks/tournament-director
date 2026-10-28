@@ -13,6 +13,15 @@ export function createPrismaRegistrationRepository(
   client: PrismaClient,
   logger: Logger,
 ): RegistrationRepository {
+  // A bad row stays bad on every visit and refetch. Say so once per process, so the log keeps room
+  // for new problems.
+  const reported = new Set<string>()
+  const warnOnce = (key: string, fields: Record<string, unknown>, message: string) => {
+    if (reported.has(key)) return
+    reported.add(key)
+    logger.warn(fields, message)
+  }
+
   return {
     async listByTournament(tournamentId) {
       const rows = await withDatabaseErrors(logger, () =>
@@ -27,7 +36,9 @@ export function createPrismaRegistrationRepository(
             bowler: {
               select: { id: true, firstName: true, lastName: true, suffix: true, usbcId: true },
             },
+            // Only this tournament's squads come back; `toRegistration` still guards the mapping.
             squads: {
+              where: { squad: { tournamentId } },
               select: { squad: { select: { id: true, tournamentId: true, squadType: true } } },
             },
           },
@@ -37,7 +48,8 @@ export function createPrismaRegistrationRepository(
         const result = toRegistration(row, tournamentId)
         if (result.success) return [result.data]
         // D-51: one old row must not hide the rest.
-        logger.warn(
+        warnOnce(
+          `skipped:${row.id}`,
           {
             registrationId: row.id,
             tournamentId,
@@ -56,7 +68,8 @@ export function createPrismaRegistrationRepository(
       }
       for (const [bowlerId, registrationIds] of idsByBowler) {
         if (registrationIds.length > 1) {
-          logger.warn(
+          warnOnce(
+            `duplicate:${tournamentId}:${bowlerId}`,
             { bowlerId, tournamentId, registrationIds },
             'A bowler has more than one registration in this tournament',
           )

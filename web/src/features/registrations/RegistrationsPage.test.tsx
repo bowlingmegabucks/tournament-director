@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
@@ -420,6 +420,74 @@ describe('RegistrationsPage', () => {
       await userEvent.click(content)
 
       expect(screen.getByRole('dialog')).toBeVisible()
+    })
+
+    it('stays open when a drag starts in the box and ends on the backdrop (REG-28)', async () => {
+      serveSessions()
+      open()
+      await userEvent.click(await countButton('2 squads, show list'))
+      const dialog = await screen.findByRole('dialog')
+      const content = dialog.firstElementChild
+      if (!content) throw new Error('The popup has no content wrapper')
+
+      // A browser fires the click on the common ancestor, the dialog, after this drag.
+      fireEvent.mouseDown(content)
+      fireEvent.mouseUp(dialog)
+      fireEvent.click(dialog)
+
+      expect(screen.getByRole('dialog')).toBeVisible()
+    })
+
+    it('opens the popup of the bowler whose count was clicked, not the first row (REG-28)', async () => {
+      serveSessions()
+      open()
+
+      await userEvent.click(await countButton('1 squad, show list'))
+
+      const popup = await screen.findByRole('dialog', { name: 'Ray Baptiste: squads' })
+      expect(within(popup).getByText('1 of 3 squads')).toBeVisible()
+    })
+
+    it('stays open for a click that was not pressed on the backdrop (REG-28)', async () => {
+      serveSessions()
+      open()
+      await userEvent.click(await countButton('2 squads, show list'))
+      const dialog = await screen.findByRole('dialog')
+      const content = dialog.firstElementChild
+      if (!content) throw new Error('The popup has no content wrapper')
+
+      // No press at all: for example a click made by a script.
+      fireEvent.click(dialog)
+      // Pressed on the backdrop, but the click landed inside the box.
+      fireEvent.mouseDown(dialog)
+      fireEvent.click(content)
+
+      expect(screen.getByRole('dialog')).toBeVisible()
+    })
+
+    it('keeps showing the live list when the registrations are refetched (REG-28)', async () => {
+      const dana = named('Dana', 'Abbott', { squadIds: ['s1', 's2'] })
+      let current = [dana]
+      server.use(
+        http.get('/v1/tournaments/:id', () => HttpResponse.json({ tournament })),
+        http.get('/v1/tournaments/:id/registrations', () =>
+          HttpResponse.json({
+            registrations: current,
+            summary: { ...emptySummary, registrations: 1, squads, sweepers },
+          }),
+        ),
+      )
+      const view = open()
+      await userEvent.click(await countButton('2 squads, show list'))
+      expect(await screen.findByText('2 of 3 squads')).toBeVisible()
+
+      // A third squad arrives, and the window regains focus.
+      current = [{ ...dana, squadIds: ['s1', 's2', 's3'] }]
+      fireEvent.focus(window)
+      window.dispatchEvent(new Event('visibilitychange'))
+
+      expect(await screen.findByText('3 of 3 squads')).toBeVisible()
+      view.unmount()
     })
 
     it('shows no popup until a count is clicked (REG-28)', async () => {

@@ -1,5 +1,6 @@
 import type { PrismaClient } from '../shared/database.ts'
 import { divisionId } from './seedDivisions.ts'
+import { sessionId } from './seedSessions.ts'
 import { samples as sampleTournaments } from './seedTournaments.ts'
 
 // `division` is a number from `seedDivisions`; `squads` and `sweepers` are the numbers from
@@ -94,12 +95,9 @@ const samples = [
 ]
 
 // A fixed id per tournament and number, so running the seed twice updates these rows and adds none.
-// `e` is a bowler and `f` a registration; `a` and `b` are the squads and sweepers from `seedSessions`.
-// All are hex, so the id stays a valid UUID.
+// `e` is a bowler and `f` a registration. The squad and sweeper ids come from `seedSessions`, so the
+// two seeds cannot drift apart. Both kinds are hex, so the id stays a valid UUID.
 function rowId(tournamentId: string, kind: 'e' | 'f', n: number): string {
-  return `${tournamentId.slice(0, -4)}${kind}00${n}`
-}
-function sessionId(tournamentId: string, kind: 'a' | 'b', n: number): string {
   return `${tournamentId.slice(0, -4)}${kind}00${n}`
 }
 

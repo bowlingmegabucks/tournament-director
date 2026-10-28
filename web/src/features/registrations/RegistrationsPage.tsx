@@ -7,7 +7,6 @@ import { filterRegistrations } from './filter'
 import { RegistrationSummary } from './RegistrationSummary'
 import { SessionsDialog } from './SessionsDialog'
 import styles from './RegistrationsPage.module.css'
-import type { Registration } from './types'
 import { useRegistrations } from './useRegistrations'
 
 function describeShown(shown: number, total: number, filtering: boolean): string {
@@ -49,11 +48,14 @@ export function RegistrationsPage() {
   const tournament = useOutletContext<Tournament>()
   const { data, isPending, error, refetch } = useRegistrations(id)
   const [filter, setFilter] = useState('')
-  const [popup, setPopup] = useState<{ registration: Registration; kind: Kind } | null>(null)
+  // The popup keeps only which registration and which list. Its content is read from the live data
+  // at render, so a refetch cannot leave the count and the popup disagreeing.
+  const [popup, setPopup] = useState<{ registrationId: string; kind: Kind } | null>(null)
 
   const registrations = data?.registrations ?? []
   const shown = filterRegistrations(registrations, filter)
   const filtering = filter.trim() !== ''
+  const popupRegistration = popup && registrations.find(({ id }) => id === popup.registrationId)
 
   return (
     <>
@@ -143,7 +145,7 @@ export function RegistrationsPage() {
                         count={registration.squadIds.length}
                         kind="squads"
                         onOpen={() => {
-                          setPopup({ registration, kind: 'squads' })
+                          setPopup({ registrationId: registration.id, kind: 'squads' })
                         }}
                       />
                     </td>
@@ -152,7 +154,7 @@ export function RegistrationsPage() {
                         count={registration.sweeperIds.length}
                         kind="sweepers"
                         onOpen={() => {
-                          setPopup({ registration, kind: 'sweepers' })
+                          setPopup({ registrationId: registration.id, kind: 'sweepers' })
                         }}
                       />
                     </td>
@@ -172,15 +174,13 @@ export function RegistrationsPage() {
               </tbody>
             </table>
           )}
-          {popup && (
+          {popup && popupRegistration && (
             <SessionsDialog
-              bowlerName={popup.registration.bowler.name}
+              bowlerName={popupRegistration.bowler.name}
               kind={popup.kind}
               all={data.summary[popup.kind]}
               entered={
-                popup.kind === 'squads'
-                  ? popup.registration.squadIds
-                  : popup.registration.sweeperIds
+                popup.kind === 'squads' ? popupRegistration.squadIds : popupRegistration.sweeperIds
               }
               onClose={() => {
                 setPopup(null)

@@ -47,9 +47,10 @@ jobs:
       # Stryker's incremental mode reuses the results of the last run and tests again only the mutants
       # whose code, or whose covering tests, changed. The file is cached: a pull request starts from
       # the newest one (its own branch first, then main). The run that has none does a full run.
-      # The score and the threshold still cover the whole project.
+      # The score and the threshold still cover the whole project. The result is saved even when the
+      # run fails the threshold, so a re-run of a pull request does not start from scratch.
       - name: Restore the incremental mutation result
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ inputs.folder }}/reports/stryker-incremental.json
           key: stryker-${{ inputs.folder }}-${{ github.run_id }}
@@ -71,6 +72,13 @@ jobs:
             fi
           fi
           npm run test:mutation -- --incremental --reporters "$reporters"
+
+      - name: Save the incremental mutation result
+        if: ${{ always() && hashFiles(format('{0}/reports/stryker-incremental.json', inputs.folder)) != '' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ inputs.folder }}/reports/stryker-incremental.json
+          key: stryker-${{ inputs.folder }}-${{ github.run_id }}
 
       - name: Upload mutation report
         if: always()

@@ -8,7 +8,11 @@ export type SessionKind = 'squad' | 'sweeper'
  */
 export interface LaneBowler {
   registrationId: string
+  /** `First Last`, plus `, Suffix`. */
   name: string
+  /** For sorting the unassigned list by last name, then first (D-58). */
+  firstName: string
+  lastName: string
   divisionId: string
   divisionName: string
   average: number | null

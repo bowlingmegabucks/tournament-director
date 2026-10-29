@@ -121,18 +121,52 @@ describe('applyMoves', () => {
     expect(result.pairs[2]?.bowlers.map((bowler) => bowler.position)).toEqual(['5A'])
   })
 
-  it('moves a bowler back to unassigned, after the ones already waiting', () => {
+  it('moves a bowler back to unassigned, sorted by last name, then first (D-58)', () => {
     const moves = new Map([[joe.registrationId, { firstLane: null, position: '' }]])
 
     const result = applyMoves(page, moves)
 
     expect(result.unassigned.map((bowler) => bowler.name)).toEqual([
       'Carl Dubois',
-      'Pat Nguyen',
       'Joe Fontaine',
+      'Pat Nguyen',
     ])
-    expect(result.unassigned[2]?.position).toBe('')
+    expect(result.unassigned[1]?.position).toBe('')
     expect(result.pairs[0]?.bowlers.map((bowler) => bowler.name)).toEqual(['Dana Abbott'])
+  })
+
+  it('sorts a returning bowler by first name when the last names match', () => {
+    const amy = createLaneBowler({ firstName: 'Amy', lastName: 'Dubois', position: '1B' })
+    const zed = createLaneBowler({ firstName: 'Zed', lastName: 'Dubois' })
+    const same = createLanePage({
+      pairs: [createLanePair(1, [amy])],
+      unassigned: [zed, createLaneBowler({ firstName: 'Bo', lastName: 'Adams' })],
+    })
+
+    const result = applyMoves(
+      same,
+      new Map([[amy.registrationId, { firstLane: null, position: '' }]]),
+    )
+
+    expect(result.unassigned.map((bowler) => bowler.firstName)).toEqual(['Bo', 'Amy', 'Zed'])
+  })
+
+  it('sorts last names without regard to case, then by registration id', () => {
+    const lower = createLaneBowler({
+      firstName: 'Al',
+      lastName: 'adams',
+      registrationId: 'b',
+      position: '1B',
+    })
+    const upper = createLaneBowler({ firstName: 'Al', lastName: 'Adams', registrationId: 'a' })
+    const tie = createLanePage({ pairs: [createLanePair(1, [lower])], unassigned: [upper] })
+
+    const result = applyMoves(
+      tie,
+      new Map([[lower.registrationId, { firstLane: null, position: '' }]]),
+    )
+
+    expect(result.unassigned.map((bowler) => bowler.registrationId)).toEqual(['a', 'b'])
   })
 
   it('applies several moves and leaves the other positions alone', () => {

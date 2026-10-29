@@ -157,6 +157,8 @@ describe('fetchLanes', () => {
   const wrongBowler = [
     ['registrationId', { registrationId: 1 }],
     ['name', { name: null }],
+    ['firstName', { firstName: 1 }],
+    ['lastName', { lastName: 1 }],
     ['divisionId', { divisionId: 1 }],
     ['divisionName', { divisionName: 1 }],
     ['average', { average: '200' }],

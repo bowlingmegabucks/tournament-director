@@ -76,6 +76,8 @@ export function buildLanePage(
     const bowler: LaneBowler = {
       registrationId: entry.registrationId,
       name: entry.name,
+      firstName: entry.firstName,
+      lastName: entry.lastName,
       divisionId: division.id,
       divisionName: division.name,
       average: entry.average,

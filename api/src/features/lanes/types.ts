@@ -9,7 +9,11 @@ import { sessionFields } from '../../shared/sessions.ts'
  */
 export const laneBowlerSchema = z.object({
   registrationId: z.uuid(),
+  /** `First Last`, plus `, Suffix` (BWL-13). */
   name: z.string().min(1),
+  /** For sorting the unassigned list by last name, then first (D-58). */
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
   divisionId: z.uuid(),
   divisionName: z.string(),
   average: z.number().int().nullable(),

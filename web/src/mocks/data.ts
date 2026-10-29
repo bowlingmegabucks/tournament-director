@@ -322,10 +322,17 @@ export function createDemoTournaments(now: Date = new Date()): Tournament[] {
   })
 }
 
+/** A test that overrides only `name` gets a first and last name read from it: "Joe Fontaine, Jr" is Joe, Fontaine. */
 export function createLaneBowler(overrides: Partial<LaneBowler> = {}): LaneBowler {
+  const parts = overrides.name?.split(' ')
+  const firstName = overrides.firstName ?? parts?.[0] ?? faker.person.firstName()
+  const lastName =
+    overrides.lastName ?? parts?.slice(1).join(' ').split(',')[0] ?? faker.person.lastName()
   return {
     registrationId: faker.string.uuid(),
-    name: `${faker.person.firstName()} ${faker.person.lastName()}`,
+    name: `${firstName} ${lastName}`,
+    firstName,
+    lastName,
     divisionId: faker.string.uuid(),
     divisionName: 'Open',
     average: 200,
@@ -475,6 +482,8 @@ export function createDemoLanePage(
     const division = divisions[demo.division]
     const bowler = createLaneBowler({
       name: `${demo.first} ${demo.last}`,
+      firstName: demo.first,
+      lastName: demo.last,
       divisionId: division?.id ?? '',
       divisionName: division?.name ?? '',
       average: demo.average,
@@ -492,7 +501,9 @@ export function createDemoLanePage(
   for (const pair of page.pairs) {
     pair.bowlers.sort((a, b) => a.position.localeCompare(b.position, 'en', { numeric: true }))
   }
-  page.unassigned = unassigned.sort((a, b) => a.name.localeCompare(b.name))
+  page.unassigned = unassigned.sort(
+    (a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName),
+  )
   page.divisions = divisions.map(({ id, number, name }, index) => ({
     id,
     number,

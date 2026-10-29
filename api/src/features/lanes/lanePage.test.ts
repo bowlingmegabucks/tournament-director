@@ -217,7 +217,7 @@ describe('buildLanePage', () => {
   it('carries the average, the super sweeper flag, the position, and the division name (LAN-11)', () => {
     const { page } = buildLanePage(
       session({ kind: 'sweeper' }),
-      [entry('3A', { average: null, superSweeper: true })],
+      [entry('3A', { average: null, superSweeper: true, firstName: 'Joe', lastName: 'Fontaine' })],
       [division],
     )
 
@@ -227,6 +227,8 @@ describe('buildLanePage', () => {
       position: '3A',
       divisionName: 'Open',
       divisionId: division.id,
+      firstName: 'Joe',
+      lastName: 'Fontaine',
     })
   })
 

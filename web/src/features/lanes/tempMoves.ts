@@ -44,10 +44,22 @@ function comparePositions(a: LaneBowler, b: LaneBowler): number {
   return lane(a) - lane(b) || letterOf(a.position).localeCompare(letterOf(b.position))
 }
 
+// Ignores case and accents, as the API does.
+const compareText = (a: string, b: string) => a.localeCompare(b, 'en', { sensitivity: 'base' })
+
+function compareNames(a: LaneBowler, b: LaneBowler): number {
+  return (
+    compareText(a.lastName, b.lastName) ||
+    compareText(a.firstName, b.firstName) ||
+    a.registrationId.localeCompare(b.registrationId)
+  )
+}
+
 /**
  * The page with the moves made on this screen applied: each moved bowler leaves where they were
- * and lands in their new pair, or at the end of the unassigned list. Computed during render from
- * the API's page, never copied into state.
+ * and lands in their new pair, or in the unassigned list, which stays sorted by last name, then
+ * first name, then registration id, as the API sorts it (D-58). Computed during render from the
+ * API's page, never copied into state.
  */
 export function applyMoves(page: LanePage, moves: ReadonlyMap<string, Move>): LanePage {
   if (moves.size === 0) return page
@@ -78,7 +90,7 @@ export function applyMoves(page: LanePage, moves: ReadonlyMap<string, Move>): La
     unassigned: [
       ...page.unassigned.filter((bowler) => !moved(bowler)),
       ...arrivals.filter((bowler) => moves.get(bowler.registrationId)?.firstLane === null),
-    ],
+    ].sort(compareNames),
     other: page.other.filter((bowler) => !moved(bowler)),
   }
 }

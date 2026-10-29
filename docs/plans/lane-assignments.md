@@ -117,7 +117,7 @@ On a drop or a dialog pick:
 
 - Full pair: error toast "Lanes 1-2 are full (5 of 5). Pick another pair." (D-58). Real behavior, not a stub.
 - Pair with room: the bowler moves on this screen. A temporary function (`tempMoves.ts`) picks the first free seat in fill order (D-56) and the page applies the moves during render over the API's page, so nothing is copied into state. An info toast says: "No save is configured yet. This move shows on this screen only and is lost on refresh." Refreshing, or opening another session, drops the moves. Slice two replaces this with the call and uses the position in the response; delete `tempMoves.ts` then.
-- Bowlers already in a pair can be dragged too: a move to another pair frees the old seat and renumbers no one. Dropping a placed bowler on the unassigned list clears the position on screen, with the same toast. The unassigned list shows the newcomer last.
+- Bowlers already in a pair can be dragged too: a move to another pair frees the old seat and renumbers no one. Dropping a placed bowler on the unassigned list clears the position on screen, with the same toast. The unassigned list stays sorted by last name, then first name, so a returning bowler takes their place in it (the API sends `firstName` and `lastName` for this).
 
 States (all in [lanes-states.html](lane-assignments-mockups/lanes-states.html)): loading (`Loading` with rows), error with Try again (`QueryError`), squad or sweeper not found, nobody entered ("No bowlers have entered this squad yet." / "...sweeper..."), everyone assigned ("Everyone has a lane."), lanes not set ("This squad has no lanes set..."), complete (read only), bowlers-per-pair out of range (422 message, page disabled), other positions.
 

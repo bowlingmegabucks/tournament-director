@@ -27,6 +27,8 @@ function isBowler(value: unknown): boolean {
   return (
     isText(field(value, 'registrationId')) &&
     isText(field(value, 'name')) &&
+    isText(field(value, 'firstName')) &&
+    isText(field(value, 'lastName')) &&
     isText(field(value, 'divisionId')) &&
     isText(field(value, 'divisionName')) &&
     (average === null || isNumber(average)) &&

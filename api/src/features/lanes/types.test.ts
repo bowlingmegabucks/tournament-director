@@ -4,6 +4,8 @@ import { laneBowlerSchema, lanePageSchema } from './types.ts'
 const bowler = {
   registrationId: '2f6d8b3a-4c55-4d0e-8a11-9b7e5c3d1f02',
   name: 'Joe Fontaine',
+  firstName: 'Joe',
+  lastName: 'Fontaine',
   divisionId: '7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01',
   divisionName: 'Open',
   average: 212,
@@ -28,6 +30,8 @@ describe('laneBowlerSchema', () => {
   it.each([
     ['a registration id that is not a UUID', { registrationId: 'x' }],
     ['an empty name', { name: '' }],
+    ['an empty first name', { firstName: '' }],
+    ['an empty last name', { lastName: '' }],
     ['a fractional average', { average: 1.5 }],
     ['text pins', { pins: 'ten' }],
   ])('rejects %s', (_name, overrides) => {

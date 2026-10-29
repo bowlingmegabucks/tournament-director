@@ -255,7 +255,7 @@ test('a bowler can be dragged with the keyboard (D-58)', async ({ page }) => {
   await openSquad(page, '1:00 PM')
 
   // Space picks up, Shift and the arrows move in big steps, Space drops over the first pair.
-  await page.getByRole('button', { name: 'Drag Pat Nguyen' }).focus()
+  await page.getByRole('button', { name: 'Drag Rosa Delgado' }).focus()
   await page.keyboard.press('Space')
   for (let step = 0; step < 12; step++) await page.keyboard.press('Shift+ArrowRight')
   for (let step = 0; step < 2; step++) await page.keyboard.press('Shift+ArrowDown')

@@ -16,6 +16,7 @@ const NO_MAXIMUM = 999
 export function handicap(average: number | null, settings: HandicapSettings): number {
   const { handicapBase, handicapPercentage, maximumHandicapPerGame } = settings
   if (average === null || handicapBase === null || handicapPercentage === null) return 0
+  // Stryker disable next-line EqualityOperator: at an average equal to the base the raw handicap is 0 anyway.
   if (average >= handicapBase) return 0
   const raw = Math.floor(((handicapBase - average) * handicapPercentage) / 100)
   return Math.min(raw, maximumHandicapPerGame ?? NO_MAXIMUM)

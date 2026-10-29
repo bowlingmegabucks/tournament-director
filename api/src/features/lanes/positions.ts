@@ -23,6 +23,7 @@ export function parsePosition(text: string): Position | undefined {
   const match = POSITION.exec(text)
   if (!match) return undefined
   const [, lane, letter] = match
+  // Stryker disable next-line StringLiteral: both groups always exist once the pattern matches.
   return { lane: Number(lane), letter: letter ?? '' }
 }
 
@@ -55,6 +56,6 @@ export function buildPairs(startingLane: number, numberOfLanes: number): Pair[] 
 }
 
 /** The pair that holds a lane, or `undefined` when the lane is outside the session. */
-export function pairOf(lane: number, pairs: readonly Pair[]): Pair | undefined {
+export function pairOf<T extends Pair>(lane: number, pairs: readonly T[]): T | undefined {
   return pairs.find((pair) => pair.lanes.includes(lane))
 }

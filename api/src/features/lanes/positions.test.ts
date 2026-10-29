@@ -44,6 +44,16 @@ describe('comparePositions', () => {
     expect(sorted).toEqual(['1A', '1B', '2C', '2D', '12A'])
   })
 
+  it('puts the lower letter first on one lane (LAN-04)', () => {
+    expect(comparePositions({ lane: 1, letter: 'A' }, { lane: 1, letter: 'B' })).toBeLessThan(0)
+    expect(comparePositions({ lane: 1, letter: 'B' }, { lane: 1, letter: 'A' })).toBeGreaterThan(0)
+  })
+
+  it('puts a lower lane first whatever the letters (LAN-04)', () => {
+    expect(comparePositions({ lane: 2, letter: 'A' }, { lane: 3, letter: 'A' })).toBeLessThan(0)
+    expect(comparePositions({ lane: 3, letter: 'A' }, { lane: 2, letter: 'E' })).toBeGreaterThan(0)
+  })
+
   it('treats the same position as equal', () => {
     expect(comparePositions({ lane: 3, letter: 'A' }, { lane: 3, letter: 'A' })).toBe(0)
   })

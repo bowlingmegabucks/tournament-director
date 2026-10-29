@@ -1,6 +1,7 @@
 import { faker } from '@faker-js/faker'
 import type { Config } from '../config.ts'
 import type { Division } from '../features/divisions/types.ts'
+import type { LaneEntry } from '../features/lanes/types.ts'
 import type { Registration } from '../features/registrations/types.ts'
 import type { Squad } from '../features/squads/types.ts'
 import type { Sweeper } from '../features/sweepers/types.ts'
@@ -90,6 +91,22 @@ export function createRegistration(overrides: Partial<Registration> = {}): Regis
     superSweeper: false,
     squadIds: [],
     sweeperIds: [],
+    ...overrides,
+  }
+}
+
+export function createLaneEntry(overrides: Partial<LaneEntry> = {}): LaneEntry {
+  const firstName = faker.person.firstName()
+  const lastName = faker.person.lastName()
+  return {
+    registrationId: faker.string.uuid(),
+    name: `${firstName} ${lastName}`,
+    firstName,
+    lastName,
+    divisionId: faker.string.uuid(),
+    average: 200,
+    superSweeper: false,
+    position: '',
     ...overrides,
   }
 }

@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from 'vitest'
 import { createPrismaDivisionRepository } from '../features/divisions/prismaRepository.ts'
+import { buildLanePage } from '../features/lanes/lanePage.ts'
+import { createPrismaLaneRepository } from '../features/lanes/prismaRepository.ts'
 import { createPrismaRegistrationRepository } from '../features/registrations/prismaRepository.ts'
 import { summarize } from '../features/registrations/summary.ts'
 import { createPrismaSquadRepository } from '../features/squads/prismaRepository.ts'
@@ -67,6 +69,28 @@ describe('seedRegistrations', () => {
     expect(summary.superSweepers).toBe(2)
     expect(summary.squads.map((squad) => squad.entries)).toEqual([5, 5, 0])
     expect(summary.sweepers.map((sweeper) => sweeper.entries)).toEqual([3, 3])
+  })
+
+  it('puts sample bowlers on lanes and leaves others waiting, in a page the API builds (LAN-01, LAN-10)', async () => {
+    await seedRegistrations(client)
+    const { logger } = createCapturedLogger()
+    const id = samples[0]?.id ?? ''
+    const [squad] = await createPrismaSquadRepository(client, logger).listByTournament(id)
+    const second = (await createPrismaSquadRepository(client, logger).listByTournament(id))[1]
+    const divisions = await createPrismaDivisionRepository(client, logger).listByTournament(id)
+    if (!squad || !second) throw new Error('The seed needs squads 1 and 2')
+
+    const entries = await createPrismaLaneRepository(client, logger).listEntries(second.id)
+    const { page, outsideLanes, skipped } = buildLanePage(
+      { ...second, kind: 'squad', bonusPins: [] },
+      entries,
+      divisions,
+    )
+
+    expect(page.pairs[0]?.bowlers.map((bowler) => bowler.position)).toEqual(['1A', '1B', '2C'])
+    expect(page.unassigned.map((bowler) => bowler.name)).toEqual(['Tom Delgado', 'Joe Fontaine'])
+    expect(outsideLanes).toEqual([])
+    expect(skipped).toEqual([])
   })
 
   it('adds nothing the second time (REG-26)', async () => {

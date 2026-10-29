@@ -3,6 +3,7 @@ import { createApp, type AppDependencies } from '../app.ts'
 import { createConfig } from './factories.ts'
 import { createCapturedLogger } from './logger.ts'
 import { createInMemoryDivisionRepository } from '../features/divisions/repository.ts'
+import { createInMemoryLaneRepository } from '../features/lanes/repository.ts'
 import { createInMemoryRegistrationRepository } from '../features/registrations/repository.ts'
 import { createInMemorySquadRepository } from '../features/squads/repository.ts'
 import { createInMemorySweeperRepository } from '../features/sweepers/repository.ts'
@@ -16,6 +17,7 @@ export function createTestApp(overrides: Partial<AppDependencies> = {}): Express
     tournaments: createInMemoryTournamentRepository([]),
     divisions: createInMemoryDivisionRepository([]),
     registrations: createInMemoryRegistrationRepository([]),
+    lanes: createInMemoryLaneRepository([]),
     squads: createInMemorySquadRepository([]),
     sweepers: createInMemorySweeperRepository([]),
     checkDatabase: () => Promise.resolve(),

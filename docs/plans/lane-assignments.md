@@ -74,7 +74,7 @@ Bowler: { registrationId, name, divisionId, divisionName, average: number | null
 - `capacity` is `maxPerPair`, capped at 5 (D-56). A `maxPerPair` below 2 or above 5 gives 422 `{ message: "Bowlers per pair must be 2 to 5 to assign lanes" }` (LAN-02); the page shows it and disables itself, as legacy does.
 - `numberOfLanes` of 0 gives `pairs: []`.
 - `divisions` counts bowlers on this session per division (entries, assigned or not), in division number order; a division nobody entered lists 0.
-- Errors: `400` an id is not a UUID; `404 { message: "Tournament not found" }`; `404 { message: "Squad not found" }` or `"Sweeper not found"` for an id that is not that kind in that tournament; `422` as above; `500` a stored tournament or session breaks its read shape; `503` database down (D-32).
+- Errors: `400` an id is not a UUID; `404 { message: "Tournament not found" }`; `404 { message: "Squad not found" }` or `"Sweeper not found"` for an id that is not that kind in that tournament; `422` as above; `500` a stored tournament breaks its read shape (a session that breaks its shape is skipped, D-42, so it reads as `404`); `503` database down (D-32).
 - A `SquadRegistration` whose registration breaks the read shape (UUID id, bowler with a first and last name) is skipped and logged once per process, with its id (D-51). A position outside the lanes logs a warning once per process (D-61).
 - Never sent: SSN, gender, date of birth, address, email, phone, payments (BWL-17). The query names columns.
 - Logging: `requestLogger(res, logger)`; fields first, then a constant message. No bowler names in logs.
@@ -157,7 +157,7 @@ Mock data for `npm run dev:mocks` and e2e: demo lane pages in `web/src/mocks/dat
 ## Steps
 
 1. **API pure logic.** `positions.ts`, `handicap.ts`, and their tests. Green.
-2. **API read.** Schema fields, `types.ts`, `entryRow.ts`, `lanePage.ts`, repository interface and in-memory fake, Prisma repository, `get(...)` on the squad and sweeper repositories. Tests for each. Green.
+2. **API read.** Schema fields, `types.ts`, `entryRow.ts`, `lanePage.ts`, repository interface and in-memory fake, Prisma repository. The route finds the session in the squad or sweeper list (no new `get`). Tests for each. Green.
 3. **API routes.** `routes.ts` for both kinds, mounted in `app.ts` as `public`; access test; route tests. Seed positions and the seed test. Green.
 4. **Web data.** `types.ts`, `api.ts`, `useLanes.ts`, mock data and handlers, tests. Green.
 5. **Web page.** `dropRules.ts`; `BowlerCard`, `PairZone`, `UnassignedList`, `OtherPositions`, `LanesPage` with all states and the toast; no drag yet. Component tests. Green.

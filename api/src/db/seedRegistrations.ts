@@ -7,7 +7,25 @@ import { samples as sampleTournaments } from './seedTournaments.ts'
 // `seedSessions`. Squad 1 is complete and squad 3 has no entries, so the summary shows both. Two
 // bowlers share a name and one has no USBC ID, so the list shows a stable order and a blank ID.
 // A super sweeper bowler is in both sweepers (REG-06). No row ever holds an SSN.
-const samples = [
+// `average` drives handicap (SCR-07); one bowler has none. `lanes` maps a session key (`a1` is
+// squad 1, `b1` is sweeper 1) to the stored position: '' is not assigned (LAN-01, D-58). The open
+// squad 2 has bowlers on one pair and others waiting; the complete squad 1 is all placed but one.
+interface Sample {
+  n: number
+  first: string
+  last: string
+  suffix: string
+  usbc: string
+  gender: number | null
+  division: number
+  squads: number[]
+  sweepers: number[]
+  superSweeper: number
+  average: number | null
+  lanes: Record<string, string>
+}
+
+const samples: Sample[] = [
   {
     n: 1,
     first: 'Dana',
@@ -19,6 +37,8 @@ const samples = [
     squads: [1, 2],
     sweepers: [1, 2],
     superSweeper: 1,
+    average: 212,
+    lanes: { a1: '1A', a2: '1A', b1: '1A', b2: '' },
   },
   {
     n: 2,
@@ -31,6 +51,8 @@ const samples = [
     squads: [1],
     sweepers: [],
     superSweeper: 0,
+    average: 190,
+    lanes: { a1: '1B' },
   },
   {
     n: 3,
@@ -43,6 +65,8 @@ const samples = [
     squads: [1, 2],
     sweepers: [1, 2],
     superSweeper: 1,
+    average: 168,
+    lanes: { a1: '2C', a2: '2C', b1: '', b2: '' },
   },
   {
     n: 4,
@@ -55,6 +79,8 @@ const samples = [
     squads: [2],
     sweepers: [1],
     superSweeper: 0,
+    average: 205,
+    lanes: { a2: '', b1: '' },
   },
   {
     n: 5,
@@ -67,6 +93,8 @@ const samples = [
     squads: [1, 2],
     sweepers: [],
     superSweeper: 0,
+    average: 231,
+    lanes: { a1: '3A', a2: '1B' },
   },
   {
     n: 6,
@@ -79,6 +107,8 @@ const samples = [
     squads: [2],
     sweepers: [],
     superSweeper: 0,
+    average: null,
+    lanes: { a2: '' },
   },
   {
     n: 7,
@@ -91,6 +121,8 @@ const samples = [
     squads: [1],
     sweepers: [2],
     superSweeper: 0,
+    average: 150,
+    lanes: { a1: '', b2: '' },
   },
 ]
 
@@ -128,31 +160,47 @@ export async function seedRegistrations(client: PrismaClient): Promise<number> {
     }),
   )
   await Promise.all(
-    rows.map(({ tournamentId, n, division, superSweeper }) => {
+    rows.map(({ tournamentId, n, division, superSweeper, average }) => {
       return client.$executeRaw`
-        INSERT INTO Registrations (Id, BowlerId, DivisionId, SuperSweeper)
+        INSERT INTO Registrations (Id, BowlerId, DivisionId, Average, SuperSweeper)
         VALUES (${rowId(tournamentId, 'f', n)}, ${rowId(tournamentId, 'e', n)},
-                ${divisionId(tournamentId, division)}, ${superSweeper})
+                ${divisionId(tournamentId, division)}, ${average}, ${superSweeper})
         ON DUPLICATE KEY UPDATE
-          DivisionId = VALUES(DivisionId), SuperSweeper = VALUES(SuperSweeper)`
+          DivisionId = VALUES(DivisionId), Average = VALUES(Average),
+          SuperSweeper = VALUES(SuperSweeper)`
     }),
   )
   await Promise.all(
-    rows.flatMap(({ tournamentId, n, squads, sweepers }) => [
+    rows.flatMap(({ tournamentId, n, squads, sweepers, lanes }) => [
       ...squads.map((squad) =>
-        insertLink(client, rowId(tournamentId, 'f', n), sessionId(tournamentId, 'a', squad)),
+        insertLink(
+          client,
+          rowId(tournamentId, 'f', n),
+          sessionId(tournamentId, 'a', squad),
+          lanes[`a${squad}`] ?? '',
+        ),
       ),
       ...sweepers.map((sweeper) =>
-        insertLink(client, rowId(tournamentId, 'f', n), sessionId(tournamentId, 'b', sweeper)),
+        insertLink(
+          client,
+          rowId(tournamentId, 'f', n),
+          sessionId(tournamentId, 'b', sweeper),
+          lanes[`b${sweeper}`] ?? '',
+        ),
       ),
     ]),
   )
   return rows.length
 }
 
-function insertLink(client: PrismaClient, registrationId: string, squadId: string) {
+function insertLink(
+  client: PrismaClient,
+  registrationId: string,
+  squadId: string,
+  position: string,
+) {
   return client.$executeRaw`
-    INSERT INTO SquadRegistration (RegistrationId, SquadId)
-    VALUES (${registrationId}, ${squadId})
-    ON DUPLICATE KEY UPDATE SquadId = VALUES(SquadId)`
+    INSERT INTO SquadRegistration (RegistrationId, SquadId, LaneAssignment)
+    VALUES (${registrationId}, ${squadId}, ${position})
+    ON DUPLICATE KEY UPDATE LaneAssignment = VALUES(LaneAssignment)`
 }

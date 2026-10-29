@@ -9,6 +9,16 @@
   border-radius: var(--radius);
 }
 
+/* A bowler in a pair: handle, position, details, and the Move button on one line. */
+.placed {
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+}
+
+.placed .actions {
+  grid-column: auto;
+}
+
 /* The card that follows the pointer. The row it came from stays put, dimmed. */
 .dragging {
   opacity: 0.5;

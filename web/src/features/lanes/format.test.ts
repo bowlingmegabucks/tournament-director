@@ -8,6 +8,10 @@ describe('formatPair', () => {
     expect(formatPair({ lanes: [11, 12] })).toBe('Lanes 11-12')
   })
 
+  it('names the first and the last lane of a longer run', () => {
+    expect(formatPair({ lanes: [1, 2, 3] })).toBe('Lanes 1-3')
+  })
+
   it('names a lone lane', () => {
     expect(formatPair({ lanes: [5] })).toBe('Lane 5')
   })

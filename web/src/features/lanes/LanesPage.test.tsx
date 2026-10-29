@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
@@ -476,6 +476,29 @@ describe('Assign to lanes dialog (D-58)', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('closes when the backdrop is clicked, but not when a press inside the box ends there', async () => {
+    const page = filled()
+    serve(page)
+    const user = userEvent.setup()
+    open(page)
+    await user.click(
+      await screen.findByRole('button', { name: 'Assign to lanes: Pat Nguyen' }, { timeout: 3000 }),
+    )
+    const dialog = await screen.findByRole('dialog', { name: 'Assign Pat Nguyen to lanes' })
+    const inside = within(dialog).getByRole('heading', { name: 'Assign Pat Nguyen to lanes' })
+
+    fireEvent.mouseDown(inside)
+    fireEvent.click(dialog)
+    expect(screen.getByRole('dialog')).toBeVisible()
+
+    fireEvent.click(inside)
+    expect(screen.getByRole('dialog')).toBeVisible()
+
+    fireEvent.mouseDown(dialog)
+    fireEvent.click(dialog)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('dismisses the error toast', async () => {

@@ -29,9 +29,9 @@ The score count is not checked against the squad's game count. A bowler can have
 
 ## Handicap
 
-| ID | Rule |
-| --- | --- |
-| SCR-07 | **Handicap per game** for a registration in a division: |
+| ID | Rule | Status |
+| --- | --- | --- |
+| SCR-07 | **Handicap per game** for a registration in a division. The function is built for the lane page ([lane-assignments.md](../requirements/lane-assignments.md)); scoring uses it later: | |
 
 ```
 if average, handicapBase, or handicapPercentage is missing: 0
@@ -49,11 +49,11 @@ Examples with base 220, 90%, cap 50:
 | 150 | `floor(70 × 0.9) = 63` | 50 (capped) |
 | none | — | 0 |
 
-| ID | Rule |
-| --- | --- |
-| SCR-08 | Handicap is the same every game. Squad total with handicap = scratch total + handicap × games bowled. |
-| SCR-09 | **Sweeper bonus pins** replace handicap in sweepers: the `BonusPinsPerGame` for the bowler's division in that sweeper. Missing row or NULL = 0. Same use as handicap: total = scratch + pins × games. |
-| SCR-10 | The division for a score is the bowler's current registration division in that tournament. |
+| ID | Rule | Status |
+| --- | --- | --- |
+| SCR-08 | Handicap is the same every game. Squad total with handicap = scratch total + handicap × games bowled. | |
+| SCR-09 | **Sweeper bonus pins** replace handicap in sweepers: the `BonusPinsPerGame` for the bowler's division in that sweeper. Missing row or NULL = 0. Same use as handicap: total = scratch + pins × games. The lane page reads the pins ([lane-assignments.md](../requirements/lane-assignments.md)); scoring uses them later. | |
+| SCR-10 | The division for a score is the bowler's current registration division in that tournament. | |
 
 The old `rewrite/` spec listed set amounts (+10 handicap, +6 for 55+ or women, 0 scratch). Those are not in the code; the desk types a number per division per sweeper. See Q-11.
 

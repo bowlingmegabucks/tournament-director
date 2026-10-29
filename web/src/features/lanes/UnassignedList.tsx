@@ -28,40 +28,39 @@ export function UnassignedList({
   const accepts = dragging !== undefined && dragging.position !== ''
 
   return (
-    <section
-      ref={ref}
-      aria-labelledby={titleId}
-      className={`${styles.area} ${accepts ? styles.canDrop : ''}`}
-    >
-      <h2 id={titleId} className={styles.title}>
+    <section aria-labelledby={titleId}>
+      {/* The title sits outside the box, level with "Lanes (1 to 24)" (D-58). */}
+      <h2 id={titleId} className={scroll.areaTitle}>
         Unassigned ({bowlers.length})
       </h2>
-      {bowlers.length === 0 ? (
-        <p className={styles.empty}>Everyone has a lane.</p>
-      ) : (
-        // A scrolling region must take the keyboard, or its overflow is out of reach.
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
-        <div
-          className={`${scroll.scroll} ${styles.scrollOffset}`}
-          tabIndex={0}
-          role="region"
-          aria-label="Unassigned bowlers"
-        >
-          <ul className={styles.bowlers}>
-            {bowlers.map((bowler) => (
-              <BowlerRow
-                key={bowler.registrationId}
-                bowler={bowler}
-                kind={kind}
-                readOnly={readOnly}
-                compact={false}
-                onAssign={onAssign}
-              />
-            ))}
-          </ul>
-        </div>
-      )}
-      {accepts && <span className={styles.cue}>Drop here to clear the lane</span>}
+      <div ref={ref} className={`${styles.area} ${accepts ? styles.canDrop : ''}`}>
+        {bowlers.length === 0 ? (
+          <p className={styles.empty}>Everyone has a lane.</p>
+        ) : (
+          // A scrolling region must take the keyboard, or its overflow is out of reach.
+          <div
+            className={`${scroll.scroll} ${styles.scrollOffset}`}
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+            tabIndex={0}
+            role="region"
+            aria-label="Unassigned bowlers"
+          >
+            <ul className={styles.bowlers}>
+              {bowlers.map((bowler) => (
+                <BowlerRow
+                  key={bowler.registrationId}
+                  bowler={bowler}
+                  kind={kind}
+                  readOnly={readOnly}
+                  compact={false}
+                  onAssign={onAssign}
+                />
+              ))}
+            </ul>
+          </div>
+        )}
+        {accepts && <span className={styles.cue}>Drop here to clear the lane</span>}
+      </div>
     </section>
   )
 }

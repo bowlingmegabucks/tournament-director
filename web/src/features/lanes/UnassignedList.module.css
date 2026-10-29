@@ -1,5 +1,8 @@
 .area {
   position: relative;
+  /* Level with the first pair, which sits one step inside its scrolling region. The title's own
+     margin collapses with this one, so this is the title's gap plus that step. */
+  margin-block-start: calc(var(--space-2) + var(--space-1));
   padding: var(--space-3);
   background: var(--color-surface);
   border: var(--border-width) dashed var(--color-border);
@@ -38,16 +41,11 @@
   list-style: none;
 }
 
-.title {
-  margin: 0 0 var(--space-2);
-  font-size: var(--font-size-lg);
-}
-
 .empty {
   margin: 0;
 }
 
-/* This list starts lower than the pairs: its box has a title and padding of its own. */
+/* This list starts a step lower than the pairs and its box has padding of its own. */
 .scrollOffset {
-  --above: 26.5rem;
+  --above: 26.625rem;
 }

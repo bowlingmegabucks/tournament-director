@@ -1,0 +1,60 @@
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.strip strong {
+  color: var(--color-text);
+}
+
+/* Layout A (D-58): unassigned beside the pairs; one column on a phone. */
+.layout {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 40rem) {
+  .layout {
+    grid-template-columns: 17rem 1fr;
+    align-items: start;
+  }
+}
+
+.areaTitle {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-lg);
+}
+
+/* Each area scrolls on its own; the titles and the page header stay put. */
+.scroll {
+  max-block-size: 70vh;
+  overflow: auto;
+  padding: var(--space-1);
+}
+
+.pairs {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.note {
+  color: var(--color-text-muted);
+}
+
+.other {
+  margin-block-start: var(--space-4);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+}

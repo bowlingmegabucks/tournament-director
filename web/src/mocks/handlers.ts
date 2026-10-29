@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import {
   createDemoDivisions,
+  createDemoLanePage,
   createDemoRegistrationList,
   createDemoSquads,
   createDemoSweepers,
@@ -13,6 +14,8 @@ const divisions = createDemoDivisions()
 const squads = createDemoSquads()
 const sweepers = createDemoSweepers(divisions)
 const registrations = createDemoRegistrationList(divisions, squads, sweepers)
+
+const notFound = () => HttpResponse.json({ message: 'Tournament not found' }, { status: 404 })
 
 export const handlers = [
   http.get('/v1/tournaments', () => HttpResponse.json({ tournaments })),
@@ -37,6 +40,20 @@ export const handlers = [
       ? HttpResponse.json(registrations)
       : HttpResponse.json({ message: 'Tournament not found' }, { status: 404 }),
   ),
+  http.get('/v1/tournaments/:id/squads/:sessionId/lanes', ({ params }) => {
+    if (!tournaments.some((candidate) => candidate.id === params.id)) return notFound()
+    const squad = squads.find((candidate) => candidate.id === params.sessionId)
+    return squad
+      ? HttpResponse.json(createDemoLanePage('squad', squad, divisions))
+      : HttpResponse.json({ message: 'Squad not found' }, { status: 404 })
+  }),
+  http.get('/v1/tournaments/:id/sweepers/:sessionId/lanes', ({ params }) => {
+    if (!tournaments.some((candidate) => candidate.id === params.id)) return notFound()
+    const sweeper = sweepers.find((candidate) => candidate.id === params.sessionId)
+    return sweeper
+      ? HttpResponse.json(createDemoLanePage('sweeper', sweeper, divisions))
+      : HttpResponse.json({ message: 'Sweeper not found' }, { status: 404 })
+  }),
   http.get('/v1/tournaments/:id/sweepers', ({ params }) =>
     tournaments.some((candidate) => candidate.id === params.id)
       ? HttpResponse.json({ sweepers })

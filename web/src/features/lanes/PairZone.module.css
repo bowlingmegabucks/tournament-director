@@ -1,0 +1,60 @@
+.pair {
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.title {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-base);
+}
+
+.count {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+}
+
+.bowlers {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.empty {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* Drop cues: color plus a word and a border style, never color alone (D-58). */
+.canDrop {
+  border: 3px solid var(--color-success);
+}
+
+.cannotDrop {
+  border: 3px dashed var(--color-danger);
+}
+
+.cue {
+  display: block;
+  margin-block-start: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.canDrop .cue::before {
+  content: '✓ ';
+  color: var(--color-success);
+}
+
+.cannotDrop .cue::before {
+  content: '✕ ';
+  color: var(--color-danger);
+}

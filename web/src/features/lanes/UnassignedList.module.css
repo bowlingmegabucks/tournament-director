@@ -1,0 +1,39 @@
+.area {
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: var(--border-width) dashed var(--color-border);
+  border-radius: var(--radius);
+}
+
+.canDrop {
+  border: 3px solid var(--color-success);
+}
+
+.cue {
+  display: block;
+  margin-block-start: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.canDrop .cue::before {
+  content: '✓ ';
+  color: var(--color-success);
+}
+
+.bowlers {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-lg);
+}
+
+.empty {
+  margin: 0;
+}

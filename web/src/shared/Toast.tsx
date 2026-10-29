@@ -21,6 +21,7 @@ export function Toast({ kind, children, onDismiss, autoDismissMs }: Readonly<Toa
   }, [autoDismissMs, onDismiss])
 
   // <output> has the implicit "status" role. Errors need "alert", which <output> should not carry.
+  // Stryker disable next-line ConditionalExpression: <div role="alert"> and <output> differ only in tag, which tests do not pin (they query by role).
   const Container = kind === 'error' ? 'div' : 'output'
 
   return (

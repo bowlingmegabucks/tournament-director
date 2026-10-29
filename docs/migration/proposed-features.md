@@ -16,7 +16,7 @@ Ideas from the old `rewrite/REWRITE_SPEC.md` and from this review. **None of the
 | Record desk payments | rewrite spec §6.9 | See Q-17 |
 | Delete a payment | rewrite spec §7.10 | |
 | Pairing sheet PDF (lane assignments) | rewrite spec §6.6 | Legacy uses the clipboard and recap sheets instead |
-| Recap sheet as PDF | rewrite spec §6.10 | Legacy shows recap sheets on screen and prints them |
+| Recap sheet as PDF | rewrite spec §6.10 | Legacy shows recap sheets on screen and prints them. Plan notes in [reports.md](reports.md#recap-sheet-in-the-new-app-plan-notes); Q-29 to Q-31 |
 | 1099 report (name, address, SSN, prize amount) | rewrite spec §5.8 | Legacy stores SSNs but has no report and no prize amounts. See Q-22 |
 | Audit log of who changed what, and who viewed an SSN | rewrite spec §10, post-MVP | |
 | Cut-off for the registration site once the tournament starts | rewrite spec §8 | Legacy has no cut-off; the API key works at any time |

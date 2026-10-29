@@ -21,6 +21,7 @@ Version numbers follow content, not a countdown. 0.10.0 is fine.
 
 - [ ] Every legacy rule is `Done`, `Done, differs`, or `Dropped` with a decision ID (see the Status columns in `docs/migration/`).
 - [ ] Every open question in [decisions-and-questions.md](migration/decisions-and-questions.md) is settled.
+- [ ] The desk can generate and print recap sheets for a squad or sweeper, with the cross (`RPT-05`, `LAN-12`; plan notes in [reports.md](migration/reports.md#recap-sheet-in-the-new-app-plan-notes); Q-29 to Q-31).
 
 ## Data and cutover
 

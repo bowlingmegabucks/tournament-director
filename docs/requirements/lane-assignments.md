@@ -68,7 +68,7 @@ Public today (D-27); both get a signed-in label in the lock-down release (D-59, 
 - **On-screen moves are temporary.** `web/src/features/lanes/tempMoves.ts` picks the seat and applies moves over the API's page during render. A refresh, or opening another session, drops them. Slice two replaces it with the move command, where the API picks the seat and returns the position, and `tempMoves.ts` is deleted.
 - **Designed, not built** (D-57): the page will send the registration and the odd lane of the pair (or nothing, to unassign). The API picks the first free seat in fill order, answers 409 `{ message }` when the pair is full, refuses on a complete session (D-10), and returns the new position; the page updates its labels from it. This needs the lock-down release first (D-52).
 - **Open:** live updates when several people work at once (Q-27) and what happens when two people race for the last seat of a pair (Q-28).
-- **Not built yet:** `LAN-05`, `LAN-06`, `LAN-09` (the move), `LAN-12` (add to squad, new registration, remove from squad, copy, recap sheets), and the cross (lane per game, staggered skip). `LAN-07` and `LAN-08` are not needed: the server picks the seat (D-57).
+- **Not built yet:** `LAN-05`, `LAN-06`, `LAN-09` (the move), `LAN-12` (add to squad, new registration, remove from squad, copy, recap sheets), and the cross (lane per game, staggered skip). Recap sheet plan notes: [reports.md](../migration/reports.md#recap-sheet-in-the-new-app-plan-notes). `LAN-07` and `LAN-08` are not needed: the server picks the seat (D-57).
 
 ## Local data
 

@@ -46,3 +46,8 @@
 .empty {
   margin: 0;
 }
+
+/* This list starts lower than the pairs: its box has a title and padding of its own. */
+.scrollOffset {
+  --above: 26.5rem;
+}

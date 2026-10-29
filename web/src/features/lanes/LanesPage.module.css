@@ -32,11 +32,24 @@
   font-size: var(--font-size-lg);
 }
 
-/* Each area scrolls on its own; the titles and the page header stay put. */
+/*
+ * Each area scrolls on its own; the titles and the page header stay put. On a screen wide enough
+ * for two columns, the areas also fill what is left of the window, so the page itself does not
+ * scroll. `--above` is the height of everything over the scrolling part: the logo, the main menu,
+ * the page padding, the breadcrumb, the title, the tab, the division strip, and the area title.
+ * It was measured at 16px type. If a line wraps the page grows by that much and scrolls a little;
+ * in a window shorter than 16rem of room the areas stop shrinking and the page scrolls (D-58).
+ */
 .scroll {
-  max-block-size: 70vh;
+  max-block-size: 24rem;
   overflow: auto;
   padding: var(--space-1);
+}
+
+@media (min-width: 40rem) {
+  .scroll {
+    max-block-size: max(16rem, calc(100dvh - var(--above, 24.5rem)));
+  }
 }
 
 .pairs {

@@ -41,7 +41,12 @@ export function UnassignedList({
       ) : (
         // A scrolling region must take the keyboard, or its overflow is out of reach.
         // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
-        <div className={scroll.scroll} tabIndex={0} role="region" aria-label="Unassigned bowlers">
+        <div
+          className={`${scroll.scroll} ${styles.scrollOffset}`}
+          tabIndex={0}
+          role="region"
+          aria-label="Unassigned bowlers"
+        >
           <ul className={styles.bowlers}>
             {bowlers.map((bowler) => (
               <BowlerRow

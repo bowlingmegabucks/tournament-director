@@ -33,20 +33,25 @@
   font-size: var(--font-size-sm);
 }
 
-/* Drop cues: color plus a word and a border style, never color alone (D-58). */
+/*
+ * Drop cues: color plus a word and a line style, never color alone (D-58). The cue is an outline
+ * drawn over the border and the words replace the "2 of 5" count in the header, so nothing takes
+ * space and nothing moves when a drag starts.
+ */
 .canDrop {
-  border: 3px solid var(--color-success);
+  outline: 3px solid var(--color-success);
+  outline-offset: calc(-1 * var(--border-width));
 }
 
 .cannotDrop {
-  border: 3px dashed var(--color-danger);
+  outline: 3px dashed var(--color-danger);
+  outline-offset: calc(-1 * var(--border-width));
 }
 
 .cue {
-  display: block;
-  margin-block-start: var(--space-2);
   font-size: var(--font-size-sm);
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .canDrop .cue::before {

@@ -1,19 +1,28 @@
 .area {
+  position: relative;
   padding: var(--space-3);
   background: var(--color-surface);
   border: var(--border-width) dashed var(--color-border);
   border-radius: var(--radius);
 }
 
+/* An outline over the border and a cue laid over the bottom edge, so nothing takes space and
+   nothing moves when a drag starts (D-58). */
 .canDrop {
-  border: 3px solid var(--color-success);
+  outline: 3px solid var(--color-success);
+  outline-offset: calc(-1 * var(--border-width));
 }
 
 .cue {
-  display: block;
-  margin-block-start: var(--space-2);
+  position: absolute;
+  inset-inline: var(--space-3);
+  inset-block-end: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-surface);
+  border-radius: var(--radius);
   font-size: var(--font-size-sm);
   font-weight: 600;
+  text-align: center;
 }
 
 .canDrop .cue::before {

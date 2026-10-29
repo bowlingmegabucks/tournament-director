@@ -29,7 +29,12 @@ export function PairZone({ pair, kind, dragging, readOnly, onAssign }: Readonly<
   return (
     <li ref={ref} className={`${styles.pair} ${zone}`}>
       <h3 className={styles.title}>
-        {formatPair(pair)} <span className={styles.count}>{formatFill(pair)}</span>
+        {formatPair(pair)}{' '}
+        {cue ? (
+          <span className={styles.cue}>{cue}</span>
+        ) : (
+          <span className={styles.count}>{formatFill(pair)}</span>
+        )}
       </h3>
       {pair.bowlers.length === 0 ? (
         <p className={styles.empty}>No one yet.</p>
@@ -47,7 +52,6 @@ export function PairZone({ pair, kind, dragging, readOnly, onAssign }: Readonly<
           ))}
         </ul>
       )}
-      {cue && <span className={styles.cue}>{cue}</span>}
     </li>
   )
 }

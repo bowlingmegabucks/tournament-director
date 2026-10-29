@@ -424,7 +424,7 @@ describe('Assign to lanes dialog (D-58)', () => {
     )
   })
 
-  it('shows the not-built error for a pick, closes, and moves no one (D-55)', async () => {
+  it('moves the bowler to the pair on screen and says nothing is saved (D-55, D-56)', async () => {
     const page = filled()
     serve(page)
     const user = userEvent.setup()
@@ -436,15 +436,61 @@ describe('Assign to lanes dialog (D-58)', () => {
 
     await user.click(within(dialog).getByRole('button', { name: /Lanes 5-6/ }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Lane assignment is not built yet. Nothing was saved.',
-    )
+    expect(
+      await screen.findByText(
+        'No save is configured yet. This move shows on this screen only and is lost on refresh.',
+      ),
+    ).toBeVisible()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Unassigned (2)' })).toBeVisible()
-    expect(within(await pairCard(/Lanes 5-6/)).getByText('No one yet.')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Unassigned (1)' })).toBeVisible()
+    const pair = await pairCard(/Lanes 5-6/)
+    expect(within(pair).getByText('Pat Nguyen')).toBeVisible()
+    expect(within(pair).getByText('5A')).toBeVisible()
+    expect(within(pair).queryByText('No one yet.')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 3, name: /Lanes 5-6/ })).toHaveTextContent('1 of 5')
   })
 
-  it('offers Unassigned to a bowler who has a lane, and says it is not built (D-57, D-55)', async () => {
+  it('gives the next bowler on a pair the next seat (D-56)', async () => {
+    const page = filled()
+    serve(page)
+    const user = userEvent.setup()
+    open(page)
+    for (const name of ['Pat Nguyen', 'Carl Dubois']) {
+      await user.click(
+        await screen.findByRole('button', { name: `Assign to lanes: ${name}` }, { timeout: 3000 }),
+      )
+      await user.click(await screen.findByRole('button', { name: /Lanes 5-6/ }))
+    }
+
+    const pair = await pairCard(/Lanes 5-6/)
+    expect(
+      within(pair)
+        .getAllByText(/^[1-9]\d?[A-E]$/)
+        .map((position) => position.textContent),
+    ).toEqual(['5A', '6C'])
+    expect(screen.getByRole('heading', { name: 'Unassigned (0)' })).toBeVisible()
+    expect(screen.getByText('Everyone has a lane.')).toBeVisible()
+  })
+
+  it('moves a bowler from one pair to another and frees the seat (D-57)', async () => {
+    const page = filled()
+    serve(page)
+    const user = userEvent.setup()
+    open(page)
+    await user.click(
+      await screen.findByRole('button', { name: 'Move Joe Fontaine' }, { timeout: 3000 }),
+    )
+
+    await user.click(await screen.findByRole('button', { name: /Lanes 5-6/ }))
+
+    const from = await pairCard(/Lanes 1-2/)
+    expect(within(from).queryByText('Joe Fontaine')).not.toBeInTheDocument()
+    expect(within(from).getByText('Dana Abbott')).toBeVisible()
+    expect(screen.getByRole('heading', { level: 3, name: /Lanes 1-2/ })).toHaveTextContent('1 of 5')
+    expect(within(await pairCard(/Lanes 5-6/)).getByText('Joe Fontaine')).toBeVisible()
+  })
+
+  it('offers Unassigned to a bowler who has a lane, and clears the lane on screen (D-57, D-55)', async () => {
     const page = filled()
     serve(page)
     const user = userEvent.setup()
@@ -460,7 +506,12 @@ describe('Assign to lanes dialog (D-58)', () => {
     )
     await user.click(within(dialog).getByRole('button', { name: /Unassigned/ }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('not built yet')
+    expect(await screen.findByText(/No save is configured yet/)).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Unassigned (3)' })).toBeVisible()
+    expect(
+      within(screen.getByRole('region', { name: 'Unassigned bowlers' })).getByText('Joe Fontaine'),
+    ).toBeVisible()
+    expect(within(await pairCard(/Lanes 1-2/)).queryByText('Joe Fontaine')).not.toBeInTheDocument()
   })
 
   it('closes on Cancel with no error', async () => {
@@ -501,7 +552,7 @@ describe('Assign to lanes dialog (D-58)', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('dismisses the error toast', async () => {
+  it('dismisses the notice', async () => {
     const page = filled()
     serve(page)
     const user = userEvent.setup()
@@ -510,10 +561,11 @@ describe('Assign to lanes dialog (D-58)', () => {
       await screen.findByRole('button', { name: 'Assign to lanes: Pat Nguyen' }, { timeout: 3000 }),
     )
     await user.click(await screen.findByRole('button', { name: /Lanes 5-6/ }))
-    await screen.findByRole('alert')
+    const notice = (await screen.findByText(/No save is configured yet/)).closest('output')
+    if (!notice) throw new Error('The notice is not a status')
 
-    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
+    await user.click(within(notice).getByRole('button', { name: 'Dismiss' }))
 
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByText(/No save is configured yet/)).not.toBeInTheDocument()
   })
 })

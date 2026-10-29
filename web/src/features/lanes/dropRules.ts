@@ -1,4 +1,5 @@
 import { formatPair } from './format'
+import { planMove, type Move } from './tempMoves'
 import type { LaneBowler, LanePair } from './types'
 
 /**
@@ -27,19 +28,34 @@ export const unassignedDropId = 'unassigned'
 /** Where a bowler can go: a pair, or back to unassigned (D-57). */
 export type DropTarget = LanePair | 'unassigned'
 
-/** The stub for slice one (D-55). The move command replaces it after lock-down (D-52, D-57). */
-export const NOT_BUILT = 'Lane assignment is not built yet. Nothing was saved.'
+/**
+ * The notice that goes with every move until the move command exists (D-55). The move shows on
+ * this screen only.
+ */
+export const NOT_SAVED =
+  'No save is configured yet. This move shows on this screen only and is lost on refresh.'
+
+/** What a drop, or a pick in the Assign dialog, does (D-55, D-58). */
+export type DropDecision =
+  { type: 'none' } | { type: 'refuse'; message: string } | { type: 'move'; move: Move }
 
 /**
- * What a drop, or a pick in the Assign dialog, tells the user (D-55, D-58). A full pair refuses.
- * A pair with room, or a placed bowler dropped on unassigned, would move them, which is not built:
- * the same error says so and nothing moves. A drop that changes nothing says nothing.
+ * A full pair refuses (D-56). A pair with room, or the unassigned list for a bowler who has a
+ * lane, moves the bowler on screen (the seat is worked out in `tempMoves`). A drop that changes
+ * nothing does nothing.
  */
-export function dropMessage(bowler: LaneBowler, target: DropTarget): string | undefined {
-  if (target === 'unassigned') return bowler.position === '' ? undefined : NOT_BUILT
+export function decideDrop(bowler: LaneBowler, target: DropTarget): DropDecision {
+  if (target === 'unassigned') {
+    return bowler.position === ''
+      ? { type: 'none' }
+      : { type: 'move', move: planMove(bowler, target) }
+  }
   const outcome = dropOutcome(target, bowler.registrationId)
   if (outcome === 'full') {
-    return `${formatPair(target)} are full (${target.bowlers.length} of ${target.capacity}). Pick another pair.`
+    return {
+      type: 'refuse',
+      message: `${formatPair(target)} are full (${target.bowlers.length} of ${target.capacity}). Pick another pair.`,
+    }
   }
-  return outcome === 'room' ? NOT_BUILT : undefined
+  return outcome === 'room' ? { type: 'move', move: planMove(bowler, target) } : { type: 'none' }
 }

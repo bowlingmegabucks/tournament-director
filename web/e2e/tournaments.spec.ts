@@ -214,7 +214,7 @@ test('a squad card opens its lane page with the pairs and the bowlers who need a
   await expect(page.getByRole('heading', { level: 3, name: /^Lanes 3-4/ })).toContainText('2 of 4')
 })
 
-test('a drop on a pair with room says lane assignment is not built (D-55, D-58)', async ({
+test('a drop on a pair with room moves the bowler on screen and says nothing is saved (D-55, D-56, D-58)', async ({
   page,
 }) => {
   // Tall enough that the pair is in view: a drop needs a visible target.
@@ -227,8 +227,13 @@ test('a drop on a pair with room says lane assignment is not built (D-55, D-58)'
     page.getByRole('heading', { level: 3, name: /^Lanes 3-4/ }),
   )
 
-  await expect(page.getByRole('alert')).toContainText('Lane assignment is not built yet')
-  await expect(page.getByRole('heading', { name: 'Unassigned (4)' })).toBeVisible()
+  await expect(page.getByText(/No save is configured yet/)).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Unassigned (3)' })).toBeVisible()
+  const pair = page.getByRole('heading', { level: 3, name: /^Lanes 3-4/ }).locator('xpath=..')
+  await expect(pair).toContainText('3 of 4')
+  await expect(pair.getByText('Pat Nguyen')).toBeVisible()
+  // The first free seat after 3A and 4C (D-56).
+  await expect(pair.getByText('3B')).toBeVisible()
 })
 
 test('a drop on a full pair is refused (D-56, D-58)', async ({ page }) => {
@@ -274,7 +279,8 @@ test('the Assign to lanes dialog picks a pair, and Escape closes it (D-58)', asy
   await button.click()
   await dialog.getByRole('button', { name: /Lanes 7-8/ }).click()
 
-  await expect(page.getByRole('alert')).toContainText('Lane assignment is not built yet')
+  await expect(page.getByText(/No save is configured yet/)).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Unassigned (3)' })).toBeVisible()
 })
 
 test('a complete squad has no handles or buttons (LAN-13, D-10)', async ({ page }) => {

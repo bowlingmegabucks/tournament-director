@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { createLaneBowler, createLanePair } from '../../mocks/data'
 import {
-  dropMessage,
+  decideDrop,
   dropOutcome,
-  NOT_BUILT,
+  NOT_SAVED,
   pairDropId,
   seatsLeft,
   unassignedDropId,
@@ -47,37 +47,54 @@ describe('seatsLeft', () => {
   })
 })
 
-describe('dropMessage', () => {
+describe('decideDrop', () => {
   const placed = createLaneBowler({ position: '1A' })
   const waiting = createLaneBowler()
 
-  it('says the move is not built for a pair with room (D-55)', () => {
-    expect(dropMessage(waiting, createLanePair(3, bowlers(2), 5))).toBe(NOT_BUILT)
-    expect(NOT_BUILT).toBe('Lane assignment is not built yet. Nothing was saved.')
+  it('moves a bowler to a pair with room, to the first free seat (D-55, D-56)', () => {
+    const pair = createLanePair(3, [createLaneBowler({ position: '3A' })], 5)
+
+    expect(decideDrop(waiting, pair)).toEqual({
+      type: 'move',
+      move: { firstLane: 3, position: '4C' },
+    })
   })
 
   it('refuses a full pair and says how full it is (D-58)', () => {
-    expect(dropMessage(waiting, createLanePair(1, bowlers(5), 5))).toBe(
-      'Lanes 1-2 are full (5 of 5). Pick another pair.',
-    )
+    expect(decideDrop(waiting, createLanePair(1, bowlers(5), 5))).toEqual({
+      type: 'refuse',
+      message: 'Lanes 1-2 are full (5 of 5). Pick another pair.',
+    })
   })
 
   it('names the lane pair it refused', () => {
-    expect(dropMessage(waiting, createLanePair(11, bowlers(2), 2))).toBe(
-      'Lanes 11-12 are full (2 of 2). Pick another pair.',
+    expect(decideDrop(waiting, createLanePair(11, bowlers(2), 2))).toEqual({
+      type: 'refuse',
+      message: 'Lanes 11-12 are full (2 of 2). Pick another pair.',
+    })
+  })
+
+  it("does nothing for the bowler's own pair (D-57)", () => {
+    expect(decideDrop(placed, createLanePair(1, [placed], 5))).toEqual({ type: 'none' })
+  })
+
+  it('moves a placed bowler back to unassigned (D-57)', () => {
+    expect(decideDrop(placed, 'unassigned')).toEqual({
+      type: 'move',
+      move: { firstLane: null, position: '' },
+    })
+  })
+
+  it('does nothing when an unassigned bowler is dropped on unassigned', () => {
+    expect(decideDrop(waiting, 'unassigned')).toEqual({ type: 'none' })
+  })
+})
+
+describe('NOT_SAVED', () => {
+  it('says the move shows on this screen only (D-55)', () => {
+    expect(NOT_SAVED).toBe(
+      'No save is configured yet. This move shows on this screen only and is lost on refresh.',
     )
-  })
-
-  it("says nothing for the bowler's own pair (D-57)", () => {
-    expect(dropMessage(placed, createLanePair(1, [placed], 5))).toBeUndefined()
-  })
-
-  it('says the move is not built when a placed bowler goes back to unassigned (D-55)', () => {
-    expect(dropMessage(placed, 'unassigned')).toBe(NOT_BUILT)
-  })
-
-  it('says nothing when an unassigned bowler is dropped on unassigned', () => {
-    expect(dropMessage(waiting, 'unassigned')).toBeUndefined()
   })
 })
 

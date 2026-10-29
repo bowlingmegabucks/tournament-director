@@ -9,14 +9,18 @@ import type { Tournament } from '../tournaments/types'
 import { LaneSetupError } from './api'
 import { AssignDialog } from './AssignDialog'
 import { BowlerPreview } from './BowlerRow'
-import { dropMessage, pairDropId, unassignedDropId, type DropTarget } from './dropRules'
+import { decideDrop, NOT_SAVED, pairDropId, unassignedDropId, type DropTarget } from './dropRules'
 import { countBowlers, formatTotals } from './format'
 import styles from './LanesPage.module.css'
 import { OtherPositions } from './OtherPositions'
 import { PairZone } from './PairZone'
+import { applyMoves, type Move } from './tempMoves'
 import type { LaneBowler, LanePage, SessionKind } from './types'
 import { UnassignedList } from './UnassignedList'
 import { useLanes } from './useLanes'
+
+/** How long the "not saved" notice stays. An error stays until dismissed. */
+const INFO_MS = 8000
 
 function everyBowler(page: LanePage): LaneBowler[] {
   return [...page.pairs.flatMap((pair) => pair.bowlers), ...page.unassigned, ...page.other]
@@ -24,8 +28,9 @@ function everyBowler(page: LanePage): LaneBowler[] {
 
 /**
  * The lane assignments of one squad or sweeper (LAN-10, D-58, D-60): the bowlers who need a lane
- * beside one drop zone per lane pair. Read only for now: a drop on a pair with room, or on the
- * unassigned list, shows a "not built yet" error and moves no one (D-55). A full pair refuses.
+ * beside one drop zone per lane pair. Nothing saves yet (D-55): a drop on a pair with room, or a
+ * placed bowler dropped on the unassigned list, moves the bowler on this screen only and says so
+ * in an info toast. A full pair refuses.
  */
 export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
   // Stryker disable next-line StringLiteral: the route always has these params; this only satisfies the type.
@@ -34,7 +39,13 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
   const { data, isPending, error, refetch } = useLanes(kind, id, sessionId)
   const [draggingId, setDraggingId] = useState<string>()
   const [assigning, setAssigning] = useState<LaneBowler>()
-  const [toast, setToast] = useState<string>()
+  const [toast, setToast] = useState<{ kind: 'info' | 'error'; text: string }>()
+  // TEMPORARY (D-55): the moves made on this screen, for this session only. They show until the
+  // page is left or refreshed, when the API's page is all there is.
+  const [moved, setMoved] = useState<{ sessionId: string; moves: ReadonlyMap<string, Move> }>({
+    sessionId,
+    moves: new Map(),
+  })
 
   if (isPending) return <Loading label="Loading lane assignments…" rows={4} />
   if (error instanceof LaneSetupError) return <p role="alert">{error.message}</p>
@@ -51,26 +62,33 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
 
   const { session } = data
   const readOnly = session.complete
-  const bowlers = everyBowler(data)
+  const moves = moved.sessionId === sessionId ? moved.moves : new Map<string, Move>()
+  const view = applyMoves(data, moves)
+  const bowlers = everyBowler(view)
   const dragging = bowlers.find((bowler) => bowler.registrationId === draggingId)
 
   // One place decides what a drop or a dialog pick does (D-55, D-58).
   function attempt(bowler: LaneBowler, target: DropTarget) {
-    const message = dropMessage(bowler, target)
-    if (message) setToast(message)
+    const decision = decideDrop(bowler, target)
+    if (decision.type === 'refuse') {
+      setToast({ kind: 'error', text: decision.message })
+    } else if (decision.type === 'move') {
+      setMoved({ sessionId, moves: new Map(moves).set(bowler.registrationId, decision.move) })
+      setToast({ kind: 'info', text: NOT_SAVED })
+    }
   }
 
   let body
-  if (countBowlers(data) === 0) {
+  if (countBowlers(view) === 0) {
     body = <p>No bowlers have entered this {kind} yet.</p>
-  } else if (data.pairs.length === 0) {
+  } else if (view.pairs.length === 0) {
     body = (
       <>
         <p>
           This {kind} has no lanes set, so there is nowhere to drop a bowler. Set its lanes first.
         </p>
         <UnassignedList
-          bowlers={data.unassigned}
+          bowlers={view.unassigned}
           kind={kind}
           dragging={undefined}
           readOnly
@@ -82,19 +100,19 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
     body = (
       <>
         <ul className={styles.strip} aria-label="Bowlers per division">
-          {data.divisions.map((division) => (
+          {view.divisions.map((division) => (
             <li key={division.id}>
               {division.name}: {division.entries}
             </li>
           ))}
           <li>
-            <strong>{formatTotals(data)}</strong>
+            <strong>{formatTotals(view)}</strong>
           </li>
         </ul>
         {readOnly && <p className={styles.note}>This {kind} is complete. Lanes cannot change.</p>}
         <div className={styles.layout}>
           <UnassignedList
-            bowlers={data.unassigned}
+            bowlers={view.unassigned}
             kind={kind}
             dragging={dragging}
             readOnly={readOnly}
@@ -108,7 +126,7 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
             {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
             <div className={styles.scroll} tabIndex={0} role="region" aria-label="Lane pairs">
               <ul className={styles.pairs}>
-                {data.pairs.map((pair) => (
+                {view.pairs.map((pair) => (
                   <PairZone
                     key={pair.firstLane}
                     pair={pair}
@@ -122,7 +140,7 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
             </div>
           </section>
         </div>
-        {data.other.length > 0 && <OtherPositions bowlers={data.other} kind={kind} />}
+        {view.other.length > 0 && <OtherPositions bowlers={view.other} kind={kind} />}
       </>
     )
   }
@@ -143,7 +161,7 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
           attempt(bowler, 'unassigned')
           return
         }
-        const pair = data.pairs.find((candidate) => pairDropId(candidate) === String(target.id))
+        const pair = view.pairs.find((candidate) => pairDropId(candidate) === String(target.id))
         if (pair) attempt(bowler, pair)
       }}
     >
@@ -154,7 +172,7 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
         <AssignDialog
           bowler={assigning}
           kind={kind}
-          page={data}
+          page={view}
           onPick={(target) => {
             attempt(assigning, target)
           }}
@@ -165,12 +183,13 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
       )}
       {toast && (
         <Toast
-          kind="error"
+          kind={toast.kind}
+          autoDismissMs={toast.kind === 'info' ? INFO_MS : undefined}
           onDismiss={() => {
             setToast(undefined)
           }}
         >
-          {toast}
+          {toast.text}
         </Toast>
       )}
     </DragDropProvider>

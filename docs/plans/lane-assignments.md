@@ -4,7 +4,7 @@ Branch: `laneAssignment-view` (already checked out; not `migrate-lane-assignment
 
 Mockups: [lane-assignments-mockups/index.html](lane-assignments-mockups/index.html).
 
-This is slice one of two (D-55): the read-only page, the squad portal, and a drop that shows a "not built yet" error. The move command is slice two, after the lock-down release (D-52). D-57 records how it will work, so this page is built to fit it.
+This is slice one of two (D-55): the page, the squad portal, and a drop that moves the bowler on screen only, with an info toast that nothing is saved (changed after approval: it first showed an error and moved no one). The move command is slice two, after the lock-down release (D-52). D-57 records how it will work, so this page is built to fit it.
 
 ## Scope
 
@@ -116,8 +116,8 @@ The **Assign to lanes** button opens a modal: a native `<dialog>` (like the Regi
 On a drop or a dialog pick:
 
 - Full pair: error toast "Lanes 1-2 are full (5 of 5). Pick another pair." (D-58). Real behavior, not a stub.
-- Pair with room: error toast "Lane assignment is not built yet. Nothing was saved." The bowler does not move. This is the stub (D-55); slice two replaces it with the call and updates the labels from the response.
-- Bowlers already in a pair can be dragged too (the move design allows it); the same two outcomes apply. Dropping on the unassigned list gives the stub toast.
+- Pair with room: the bowler moves on this screen. A temporary function (`tempMoves.ts`) picks the first free seat in fill order (D-56) and the page applies the moves during render over the API's page, so nothing is copied into state. An info toast says: "No save is configured yet. This move shows on this screen only and is lost on refresh." Refreshing, or opening another session, drops the moves. Slice two replaces this with the call and uses the position in the response; delete `tempMoves.ts` then.
+- Bowlers already in a pair can be dragged too: a move to another pair frees the old seat and renumbers no one. Dropping a placed bowler on the unassigned list clears the position on screen, with the same toast. The unassigned list shows the newcomer last.
 
 States (all in [lanes-states.html](lane-assignments-mockups/lanes-states.html)): loading (`Loading` with rows), error with Try again (`QueryError`), squad or sweeper not found, nobody entered ("No bowlers have entered this squad yet." / "...sweeper..."), everyone assigned ("Everyone has a lane."), lanes not set ("This squad has no lanes set..."), complete (read only), bowlers-per-pair out of range (422 message, page disabled), other positions.
 
@@ -147,7 +147,7 @@ Mock data for `npm run dev:mocks` and e2e: demo lane pages in `web/src/mocks/dat
 | LAN-11 | `handicap.test.ts` "handicap per SCR-07": the 230/200/150/none examples, no base gives 0; `lanePage.test.ts` "pins is handicap on a squad and bonus pins on a sweeper (LAN-11, SCR-09)"; `LanesPage.test.tsx` "a sweeper shows pins and Y or N" |
 | LAN-13 | `LanesPage.test.tsx` "a complete session has no drag handles or assign buttons (LAN-13, D-10)" |
 | D-51 | `prismaRepository.db.test.ts` "skips a registration that breaks the read shape and logs it once" |
-| D-55, D-58 | `dropRules.test.ts` "room or full"; `LanesPage.test.tsx` "a pick on a pair with room shows the not-built toast and moves no one", "a pick on a full pair shows the full toast", "the dialog marks full pairs and disables them", "Esc closes the dialog and focus returns to the button"; `web/e2e/tournaments.spec.ts` "keyboard drag shows the not-built toast", "the assign dialog picks a pair and shows the not-built toast" |
+| D-55, D-56, D-58 | `dropRules.test.ts` "room or full", "decideDrop"; `tempMoves.test.ts` seat order, freed seats, legacy letters, `applyMoves`; `LanesPage.test.tsx` "moves the bowler to the pair on screen and says nothing is saved", "a pick on a full pair shows the full toast", "the dialog marks full pairs and disables them", "Esc closes the dialog and focus returns to the button"; `web/e2e/tournaments.spec.ts` "a bowler can be dragged with the keyboard", "a drop on a pair with room moves the bowler on screen", "the assign dialog picks a pair" |
 | D-60 | `SessionPortal.test.tsx` "shows the header and the tab", "redirects the portal root to the lanes tab", "not found"; `SessionCard` test "links the date to the portal" (squads and sweepers pages tests) |
 | D-61 | `lanePage.test.ts` "a legacy 2B shows on its pair", "a position outside the lanes goes to other", "a bad format goes to other"; `prismaRepository.db.test.ts` "logs a warning for a position outside the lanes, once" |
 | D-59 | `api/src/app.test.ts` access labels list includes the two new routes as `public` |

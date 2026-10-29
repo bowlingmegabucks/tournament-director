@@ -103,6 +103,11 @@ for (const colorScheme of colorSchemes) {
       await page.getByRole('button', { name: 'Assign to lanes: Pat Nguyen' }).click()
       await expect(page.getByRole('dialog', { name: 'Assign Pat Nguyen to lanes' })).toBeVisible()
       await expectNoViolations(page)
+
+      // The "not saved" notice, with the moved bowler in place.
+      await page.getByRole('button', { name: /Lanes 7-8/ }).click()
+      await expect(page.getByText(/No save is configured yet/)).toBeVisible()
+      await expectNoViolations(page)
     })
 
     test('lane assignments page of a complete squad has no WCAG 2.2 AA violations', async ({

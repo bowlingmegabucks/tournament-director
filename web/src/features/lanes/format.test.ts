@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { createLaneBowler, createLanePage, createLanePair } from '../../mocks/data'
-import { countBowlers, formatBowler, formatFill, formatPair, formatTotals } from './format'
+import {
+  countBowlers,
+  formatBowler,
+  formatFill,
+  formatPair,
+  formatSpots,
+  formatTotals,
+} from './format'
 
 describe('formatPair', () => {
   it('names both lanes (LAN-03)', () => {
@@ -97,5 +104,51 @@ describe('countBowlers and formatTotals (LAN-10)', () => {
 
   it('handles nobody', () => {
     expect(formatTotals(createLanePage())).toBe('0 bowlers, 0 need a lane')
+  })
+})
+
+describe('formatSpots (D-58)', () => {
+  const some = (count: number) => Array.from({ length: count }, () => createLaneBowler())
+
+  it('counts every seat on every pair, less everyone entered', () => {
+    const page = createLanePage({
+      pairs: [createLanePair(1, some(3), 5), createLanePair(3, some(1), 5)],
+      unassigned: some(2),
+      other: some(1),
+    })
+
+    expect(formatSpots(page)).toBe('3 of 10 spots open')
+  })
+
+  it('counts a bowler without a lane against the spots', () => {
+    const page = createLanePage({
+      pairs: [createLanePair(1, [], 4)],
+      unassigned: some(4),
+    })
+
+    expect(formatSpots(page)).toBe('0 of 4 spots open')
+  })
+
+  it('does not change when a bowler gets a lane', () => {
+    const waiting = createLanePage({ pairs: [createLanePair(1, [], 5)], unassigned: some(1) })
+    const placed = createLanePage({ pairs: [createLanePair(1, some(1), 5)] })
+
+    expect(formatSpots(waiting)).toBe(formatSpots(placed))
+  })
+
+  it('says by how many a session is over its seats', () => {
+    const page = createLanePage({ pairs: [createLanePair(1, some(5), 2)], unassigned: some(1) })
+
+    expect(formatSpots(page)).toBe('4 over the 2 spots')
+  })
+
+  it("uses each pair's own capacity", () => {
+    const page = createLanePage({ pairs: [createLanePair(1, [], 2), createLanePair(3, [], 5)] })
+
+    expect(formatSpots(page)).toBe('7 of 7 spots open')
+  })
+
+  it('says nothing when the session has no pairs', () => {
+    expect(formatSpots(createLanePage({ pairs: [], unassigned: some(2) }))).toBeUndefined()
   })
 })

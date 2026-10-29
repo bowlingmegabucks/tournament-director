@@ -45,3 +45,15 @@ export function formatTotals(page: LanePage): string {
   const waiting = page.unassigned.length
   return `${total} ${total === 1 ? 'bowler' : 'bowlers'}, ${waiting} ${waiting === 1 ? 'needs' : 'need'} a lane`
 }
+
+/**
+ * How many more bowlers the session can take (D-58): every seat on every pair, less everyone
+ * entered, whether or not they have a lane yet. `undefined` when there are no pairs. Past the
+ * limit it says by how many (a legacy session can hold more than its seats).
+ */
+export function formatSpots(page: LanePage): string | undefined {
+  const seats = page.pairs.reduce((total, pair) => total + pair.capacity, 0)
+  if (seats === 0) return undefined
+  const open = seats - countBowlers(page)
+  return open >= 0 ? `${open} of ${seats} spots open` : `${-open} over the ${seats} spots`
+}

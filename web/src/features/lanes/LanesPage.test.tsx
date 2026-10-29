@@ -171,7 +171,7 @@ describe('LanesPage', () => {
     ).toBeVisible()
   })
 
-  it('counts bowlers per division and the ones who need a lane (LAN-10)', async () => {
+  it('counts bowlers per division, the ones who need a lane, and the spots left (LAN-10, D-58)', async () => {
     const page = filled()
     serve(page)
 
@@ -186,7 +186,7 @@ describe('LanesPage', () => {
       within(strip)
         .getAllByRole('listitem')
         .map((item) => item.textContent),
-    ).toEqual(['Open: 8', 'Women: 1', '9 bowlers, 2 need a lane'])
+    ).toEqual(['Open: 8', 'Women: 1', '9 bowlers, 2 need a lane', '16 of 25 spots open'])
   })
 
   it('says everyone has a lane when none is unassigned (LAN-10)', async () => {

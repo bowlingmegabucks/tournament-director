@@ -10,7 +10,7 @@ import { LaneSetupError } from './api'
 import { AssignDialog } from './AssignDialog'
 import { BowlerPreview } from './BowlerRow'
 import { decideDrop, NOT_SAVED, pairDropId, unassignedDropId, type DropTarget } from './dropRules'
-import { countBowlers, formatTotals } from './format'
+import { countBowlers, formatSpots, formatTotals } from './format'
 import styles from './LanesPage.module.css'
 import { OtherPositions } from './OtherPositions'
 import { PairZone } from './PairZone'
@@ -107,6 +107,9 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
           ))}
           <li>
             <strong>{formatTotals(view)}</strong>
+          </li>
+          <li>
+            <strong>{formatSpots(view)}</strong>
           </li>
         </ul>
         {readOnly && <p className={styles.note}>This {kind} is complete. Lanes cannot change.</p>}

@@ -208,6 +208,8 @@ test('a squad card opens its lane page with the pairs and the bowlers who need a
     'page',
   )
   await expect(page.getByRole('heading', { name: 'Unassigned (4)' })).toBeVisible()
+  // Twelve pairs of four, with eleven bowlers entered.
+  await expect(page.getByText('37 of 48 spots open')).toBeVisible()
   await expect(page.getByRole('heading', { level: 3, name: /^Lanes 1-2/ })).toContainText(
     '4 of 4, full',
   )

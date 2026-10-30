@@ -59,7 +59,7 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 - [ ] Auth approach decided and built (0.3.0).
 - [x] Every route declares its access; undeclared routes deny (`API-15`, D-27). Only `public` exists until sign-in (0.3.0); recheck then.
 - [ ] Roles and permissions reviewed against [security.md](migration/security.md).
-- [ ] Personal data (bowler records) is behind auth.
+- [ ] Personal data (bowler records) is behind auth. The scores view is the one exception: it shows names and scratch scores to everyone on purpose (D-70).
 - [ ] Lock-down release done before any command route (D-52): every public read route and page reviewed, and those that should not be public put behind auth.
 - [ ] Lane assignments page and its route are signed-in only (D-59). They ship public in 0.2.0; label them in the lock-down release and hide the link when signed out.
 - [ ] Recap sheet routes (`.../squads/{sessionId}/recap-sheets` and the sweeper twin) and the "Recap sheets" button are signed-in only (D-66). They ship public in 0.2.0; label them in the lock-down release and hide the button when signed out.

@@ -1,5 +1,6 @@
 import sponsors from '../../assets/score-sheet-sponsors.png'
-import { formatHandicap, formatHandicapTotal, formatSheetDate, formatSheetTime } from './format'
+import { formatSheetDate, formatSheetTime } from '../../shared/sessionFormat'
+import { formatHandicap, formatHandicapTotal } from './format'
 import styles from './RecapSheet.module.css'
 import type { RecapSession, RecapSheet as Sheet, SkipPattern } from './types'
 

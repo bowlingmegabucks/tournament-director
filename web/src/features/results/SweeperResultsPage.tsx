@@ -1,13 +1,14 @@
 import { useOutletContext, useParams } from 'react-router'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
-import { formatSessionDate } from '../../shared/sessionFormat'
+import { formatRatio, formatSessionDate } from '../../shared/sessionFormat'
 import type { Tournament } from '../tournaments/types'
-import { formatRatio } from './format'
 import styles from './ResultsPage.module.css'
 import tableStyles from './ResultsTable.module.css'
+import { PrintResults } from './PrintResults'
 import { SweeperTable } from './SweeperTable'
 import { useSweeperResults } from './useResults'
+import { useResultsPrint } from './useResultsPrint'
 
 /**
  * The results of one sweeper: one list for everyone with a score, not split by division (RES-22,
@@ -18,6 +19,7 @@ export function SweeperResultsPage() {
   const { id = '', sessionId = '' } = useParams()
   const tournament = useOutletContext<Tournament>()
   const { data, error, refetch } = useSweeperResults(id, sessionId)
+  const { printing, print } = useResultsPrint()
 
   if (!data) {
     if (error) {
@@ -42,14 +44,25 @@ export function SweeperResultsPage() {
         <p>No scores entered yet.</p>
       ) : (
         <>
-          <p className={styles.note}>
-            Cash ratio {formatRatio(data.cashRatio)} · {session.games} games
-          </p>
+          <div className={styles.toolbar}>
+            <p className={styles.note}>
+              Cash ratio {formatRatio(data.cashRatio)} · {session.games} games
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                void print()
+              }}
+            >
+              Print results
+            </button>
+          </div>
           <h2>Sweeper results</h2>
           <p className={tableStyles.sub}>
             {entries} · Cashing {data.cashers} · Cut score {data.cutScore}
           </p>
           <SweeperTable rows={data.rows} />
+          {printing && <PrintResults results={data} />}
         </>
       )}
     </>

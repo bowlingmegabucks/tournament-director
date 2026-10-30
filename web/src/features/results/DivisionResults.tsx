@@ -12,22 +12,21 @@ function TieMarks({ row }: Readonly<{ row: SquadRow }>) {
 }
 
 /**
- * One division of a squad (RES-10, RES-11, RES-11a, D-75, D-76, D-81): a table with the cut and
- * cash lines, the tie marks, and the earlier-advancer tag; then the bowlers who did not finish and
- * the no-shows. HDCP and Games show only when the API says to. Below 40rem each row is a block.
+ * The summary, tables, and sections of one division (RES-10, RES-11, RES-11a, D-75, D-76, D-81): a
+ * table with the cut and cash lines, the tie marks, and the earlier-advancer tag; then the bowlers
+ * who did not finish and the no-shows. HDCP and Games show only when the API says to. Below 40rem
+ * each row is a block. The screen and the print copy both draw it.
  */
-export function DivisionResults({
+export function DivisionBody({
   division,
   games,
 }: Readonly<{ division: DivisionResult; games: number }>) {
-  const headingId = useId()
   const items = squadItems(division.rows)
   const columns = 4 + (division.showGames ? 1 : 0) + (division.showHandicap ? 1 : 0)
   const anyEarlier = division.rows.some((row) => row.advancedEarlier)
 
   return (
-    <section aria-labelledby={headingId}>
-      <h2 id={headingId}>{division.name}</h2>
+    <>
       <p className={styles.sub}>{formatSummary(division)}</p>
 
       {division.rows.length === 0 ? (
@@ -168,6 +167,20 @@ export function DivisionResults({
           </ul>
         </>
       )}
+    </>
+  )
+}
+
+/** One division of a squad on screen: its name, then everything in `DivisionBody`. */
+export function DivisionResults({
+  division,
+  games,
+}: Readonly<{ division: DivisionResult; games: number }>) {
+  const headingId = useId()
+  return (
+    <section aria-labelledby={headingId}>
+      <h2 id={headingId}>{division.name}</h2>
+      <DivisionBody division={division} games={games} />
     </section>
   )
 }

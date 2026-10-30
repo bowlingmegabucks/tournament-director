@@ -70,11 +70,6 @@ export function formatSummary(division: DivisionResult): string {
   return `${entries} · Advancing ${count('advancer')} · Cashing ${count('casher')}`
 }
 
-/** "1 in 8" for a ratio of 8 or 7.5. */
-export function formatRatio(ratio: number): string {
-  return `1 in ${ratio}`
-}
-
 /** "2 of 3" for a bowler who bowled 2 of the squad's 3 games. */
 export function formatGamesOf(games: number, sessionGames: number): string {
   return `${games} of ${sessionGames}`

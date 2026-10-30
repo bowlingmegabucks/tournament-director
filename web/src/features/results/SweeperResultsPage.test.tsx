@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -110,7 +110,7 @@ describe('SweeperResultsPage', () => {
     expect(
       await screen.findByRole('heading', { level: 2, name: 'Sweeper results' }, { timeout: 3000 }),
     ).toBeVisible()
-    expect(screen.getByText('Cash ratio 1 in 3 · 3 games')).toBeVisible()
+    expect(screen.getByText('Cash ratio 1 in 3.0 · 3 games')).toBeVisible()
     expect(screen.getByText('3 entries · Cashing 1 · Cut score 712')).toBeVisible()
   })
 
@@ -260,5 +260,58 @@ describe('SweeperResultsPage', () => {
     await vi.advanceTimersByTimeAsync(RESULTS_REFRESH_MS * 3)
 
     expect(asked).toBe(1)
+  })
+})
+
+describe('SweeperResultsPage printing (RES-33, D-78)', () => {
+  let print: ReturnType<typeof vi.fn>
+  const copySections = () => document.querySelectorAll('[data-results-print-copy] > section')
+
+  beforeEach(() => {
+    print = vi.fn()
+    vi.stubGlobal('print', print)
+    vi.stubGlobal('matchMedia', () => ({
+      matches: false,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    delete document.body.dataset.resultsPrinting
+  })
+
+  it('Print results prints the list in one section, then clears the copy', async () => {
+    const results = filled()
+    serve(results)
+    open(results)
+    let copied = -1
+    print.mockImplementation(() => {
+      copied = copySections().length
+    })
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Print results' }, { timeout: 3000 }),
+    )
+    await waitFor(() => {
+      expect(print).toHaveBeenCalledTimes(1)
+    })
+    expect(copied).toBe(1)
+
+    window.dispatchEvent(new Event('afterprint'))
+    await waitFor(() => {
+      expect(copySections()).toHaveLength(0)
+    })
+  })
+
+  it('offers no print button with no scores', async () => {
+    const results = createSweeperResults()
+    serve(results)
+
+    open(results)
+
+    await screen.findByText('No scores entered yet.', {}, { timeout: 3000 })
+    expect(screen.queryByRole('button', { name: /Print/ })).not.toBeInTheDocument()
   })
 })

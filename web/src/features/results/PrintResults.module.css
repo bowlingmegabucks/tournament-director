@@ -1,0 +1,83 @@
+/*
+ * What the printer gets (D-78): one division per page on letter paper, in a copy kept outside the
+ * app. It is hidden on screen. While printing, `body[data-results-printing]` hides every child of
+ * the body except this copy, which carries `data-results-print-copy`. The page is black on white
+ * whatever the theme: the root swaps the colour tokens the tables read, so the screen tables are
+ * reused as they are. A named page keeps every other print of the app on its normal paper.
+ */
+@page results {
+  size: 8.5in 11in;
+  margin: 0.5in;
+
+  /* Page numbers, where the browser supports page margin boxes. Elsewhere it prints its own footer. */
+  @bottom-center {
+    content: counter(page) ' / ' counter(pages);
+    font-size: 9pt;
+  }
+}
+
+.root {
+  display: none;
+  page: results;
+}
+
+.sheet {
+  break-after: page;
+}
+
+.head {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-block-end: var(--space-4);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.head p {
+  margin: var(--space-1) 0 0;
+}
+
+.sponsors {
+  inline-size: 3.1in;
+  block-size: auto;
+}
+
+@media print {
+  .root {
+    display: block;
+    background: var(--color-paper);
+    color: var(--color-ink);
+    --color-text: var(--color-ink);
+    --color-text-muted: var(--color-ink);
+    --color-border: var(--color-ink);
+    --color-accent: var(--color-ink);
+  }
+
+  :global(body[data-results-printing]) {
+    background: var(--color-paper);
+  }
+
+  :global(body[data-results-printing]) > :global(:not([data-results-print-copy])) {
+    display: none;
+  }
+
+  /* No blank page after the last division. */
+  .sheet:last-child {
+    break-after: auto;
+  }
+
+  /* A long division repeats its header row on the next page and keeps a row whole. */
+  .root :global(thead) {
+    display: table-header-group;
+  }
+
+  .root :global(tr) {
+    break-inside: avoid;
+  }
+}

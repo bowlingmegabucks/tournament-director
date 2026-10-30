@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -124,7 +124,7 @@ describe('SquadResultsPage', () => {
     open(results)
 
     expect(await screen.findByText('5 entries · Advancing 1 · Cashing 1')).toBeVisible()
-    expect(screen.getByText('Finals ratio 1 in 7.5 · cash ratio 1 in 5')).toBeVisible()
+    expect(screen.getByText('Finals ratio 1 in 7.5 · cash ratio 1 in 5.0')).toBeVisible()
   })
 
   it('tags an earlier advancer at or above the cut and explains the tag once (RW-5, D-81)', async () => {
@@ -624,5 +624,115 @@ describe('SquadResultsPage refresh (RES-34, D-79)', () => {
     })
     expect(screen.getByRole('table', { name: 'Results for the Open division' })).toBeVisible()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+})
+
+describe('SquadResultsPage printing (RES-33, D-78)', () => {
+  let print: ReturnType<typeof vi.fn>
+  const copySections = () => document.querySelectorAll('[data-results-print-copy] > section')
+
+  beforeEach(() => {
+    print = vi.fn()
+    vi.stubGlobal('print', print)
+    vi.stubGlobal('matchMedia', () => ({
+      matches: false,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    delete document.body.dataset.resultsPrinting
+  })
+
+  const two = () =>
+    createSquadResults({
+      divisions: [
+        openDivision(),
+        createDivisionResult({
+          name: 'Women',
+          entries: 1,
+          rows: [row({ name: 'Linda Perrault', group: 'advancer' })],
+        }),
+      ],
+    })
+
+  it('Print all divisions prints every division, not only the one on screen', async () => {
+    const results = two()
+    serve(results)
+    open(results)
+    let copied = -1
+    print.mockImplementation(() => {
+      copied = copySections().length
+    })
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Print all divisions' }, { timeout: 3000 }),
+    )
+
+    await waitFor(() => {
+      expect(print).toHaveBeenCalledTimes(1)
+    })
+    expect(copied).toBe(2)
+    expect(document.body).toHaveAttribute('data-results-printing', '')
+  })
+
+  it('removes the print copy once the browser says printing is over', async () => {
+    const results = two()
+    serve(results)
+    open(results)
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Print all divisions' }, { timeout: 3000 }),
+    )
+    await waitFor(() => {
+      expect(print).toHaveBeenCalledTimes(1)
+    })
+
+    window.dispatchEvent(new Event('afterprint'))
+
+    await waitFor(() => {
+      expect(copySections()).toHaveLength(0)
+    })
+    expect(document.body).not.toHaveAttribute('data-results-printing')
+  })
+
+  it('does not print again while a print is open', async () => {
+    const results = two()
+    serve(results)
+    open(results)
+    const button = await screen.findByRole(
+      'button',
+      { name: 'Print all divisions' },
+      { timeout: 3000 },
+    )
+
+    await userEvent.click(button)
+    await waitFor(() => {
+      expect(print).toHaveBeenCalledTimes(1)
+    })
+    await userEvent.click(button)
+
+    expect(print).toHaveBeenCalledTimes(1)
+  })
+
+  it('has no print copy on the page until the button is pressed', async () => {
+    const results = two()
+    serve(results)
+
+    open(results)
+
+    await screen.findByRole('button', { name: 'Print all divisions' }, { timeout: 3000 })
+    expect(copySections()).toHaveLength(0)
+  })
+
+  it('offers no print button when there is nothing to print', async () => {
+    const results = createSquadResults({ divisions: [] })
+    serve(results)
+
+    open(results)
+
+    await screen.findByText('No scores entered yet.', {}, { timeout: 3000 })
+    expect(screen.queryByRole('button', { name: /Print/ })).not.toBeInTheDocument()
   })
 })

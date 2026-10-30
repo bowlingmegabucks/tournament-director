@@ -2,12 +2,13 @@ import { useId } from 'react'
 import { useOutletContext, useParams, useSearchParams } from 'react-router'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
-import { formatSessionDate } from '../../shared/sessionFormat'
+import { formatRatio, formatSessionDate } from '../../shared/sessionFormat'
 import type { Tournament } from '../tournaments/types'
 import { DivisionResults } from './DivisionResults'
-import { formatRatio } from './format'
+import { PrintResults } from './PrintResults'
 import styles from './ResultsPage.module.css'
 import { useSquadResults } from './useResults'
+import { useResultsPrint } from './useResultsPrint'
 
 /**
  * The results of one squad, one division at a time (RES-10, RES-32, D-80). The first division shows
@@ -21,6 +22,7 @@ export function SquadResultsPage() {
   const { data, error, refetch } = useSquadResults(id, sessionId)
   const [search, setSearch] = useSearchParams()
   const selectId = useId()
+  const { printing, print } = useResultsPrint()
 
   if (!data) {
     if (error) {
@@ -72,11 +74,20 @@ export function SquadResultsPage() {
                 </select>
               </div>
             )}
+            <button
+              type="button"
+              onClick={() => {
+                void print()
+              }}
+            >
+              Print all divisions
+            </button>
           </div>
           <p className={styles.note}>
             Finals ratio {formatRatio(data.finalsRatio)} · cash ratio {formatRatio(data.cashRatio)}
           </p>
           <DivisionResults division={chosen} games={session.games} />
+          {printing && <PrintResults results={data} />}
         </>
       ) : (
         <p>No scores entered yet.</p>

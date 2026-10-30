@@ -3,7 +3,6 @@ import { createDivisionResult, createSquadRow, createSweeperRow } from '../../mo
 import {
   formatDecider,
   formatGamesOf,
-  formatRatio,
   formatSummary,
   formatTie,
   ordinal,
@@ -172,11 +171,6 @@ describe('summaries', () => {
     expect(formatSummary(createDivisionResult({ entries: 1 }))).toBe(
       '1 entry · Advancing 0 · Cashing 0',
     )
-  })
-
-  it('writes a ratio as "1 in N"', () => {
-    expect(formatRatio(8)).toBe('1 in 8')
-    expect(formatRatio(7.5)).toBe('1 in 7.5')
   })
 
   it('writes games as "2 of 3"', () => {

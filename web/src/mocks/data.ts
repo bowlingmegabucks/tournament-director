@@ -4,6 +4,13 @@ import type { LaneBowler, LanePage, LanePair } from '../features/lanes/types'
 import type { SessionKind } from '../shared/session'
 import type { RecapSheet, RecapSheets } from '../features/recapSheets/types'
 import type { Registration, RegistrationList } from '../features/registrations/types'
+import type {
+  DivisionResult,
+  SquadResults,
+  SquadRow,
+  SweeperResults,
+  SweeperRow,
+} from '../features/results/types'
 import type { ScoreBowler, ScorePage, ScorePair } from '../features/scores/types'
 import type { Squad } from '../features/squads/types'
 import type { Sweeper } from '../features/sweepers/types'
@@ -671,5 +678,274 @@ export function createDemoScorePage(
       .map((pair) => createScorePair(pair.firstLane, pair.bowlers.map(toScoreBowler))),
     noLane: lanePage.unassigned.length,
     other: lanePage.other.map(toScoreBowler),
+  })
+}
+
+/** A placed bowler of a squad division. Three games of 200, no handicap, no tie, not an earlier advancer. */
+export function createSquadRow(overrides: Partial<SquadRow> = {}): SquadRow {
+  return {
+    registrationId: faker.string.uuid(),
+    name: `${faker.person.firstName()} ${faker.person.lastName()}`,
+    place: 1,
+    group: 'other',
+    total: 600,
+    highGame: 200,
+    games: 3,
+    handicap: 0,
+    advancedEarlier: false,
+    ties: [],
+    ...overrides,
+  }
+}
+
+/** One division of squad results with no one in it. Override the rows and flags a test cares about. */
+export function createDivisionResult(overrides: Partial<DivisionResult> = {}): DivisionResult {
+  return {
+    id: faker.string.uuid(),
+    number: 1,
+    name: 'Open',
+    entries: 0,
+    showHandicap: false,
+    showGames: false,
+    rows: [],
+    didNotFinish: [],
+    noShows: [],
+    ...overrides,
+  }
+}
+
+/** Squad results for a 3-game squad. Override what a test cares about. */
+export function createSquadResults(overrides: Partial<SquadResults> = {}): SquadResults {
+  const { session, ...rest } = overrides
+  return {
+    session: {
+      id: faker.string.uuid(),
+      kind: 'squad',
+      date: '2026-10-24T09:00:00',
+      complete: false,
+      games: 3,
+      ...session,
+    },
+    finalsRatio: 8,
+    cashRatio: 5,
+    divisions: [],
+    ...rest,
+  }
+}
+
+/** A placed bowler of a sweeper. */
+export function createSweeperRow(overrides: Partial<SweeperRow> = {}): SweeperRow {
+  return {
+    registrationId: faker.string.uuid(),
+    name: `${faker.person.firstName()} ${faker.person.lastName()}`,
+    place: 1,
+    group: 'other',
+    total: 600,
+    highGame: 200,
+    games: 3,
+    ties: [],
+    divisionName: 'Open',
+    bonusPins: 0,
+    ...overrides,
+  }
+}
+
+/** Sweeper results with no one in them. Override what a test cares about. */
+export function createSweeperResults(overrides: Partial<SweeperResults> = {}): SweeperResults {
+  const { session, ...rest } = overrides
+  return {
+    session: {
+      id: faker.string.uuid(),
+      kind: 'sweeper',
+      date: '2026-10-24T18:00:00',
+      complete: false,
+      games: 3,
+      ...session,
+    },
+    cashRatio: 4,
+    entries: 0,
+    cashers: 0,
+    cutScore: null,
+    rows: [],
+    ...rest,
+  }
+}
+
+type DemoPlayer = [name: string, total: number, highGame: number, handicap?: number, games?: number]
+
+/** Number the players 1 to N and put the first `advance` among the advancers and the next `cash` among the cashers. */
+function demoRows(players: DemoPlayer[], advance: number, cash: number): SquadRow[] {
+  return players.map(([name, total, highGame, handicap = 0, games = 3], index) =>
+    createSquadRow({
+      name,
+      place: index + 1,
+      group: index < advance ? 'advancer' : index < advance + cash ? 'casher' : 'other',
+      total,
+      highGame,
+      handicap,
+      games,
+    }),
+  )
+}
+
+/**
+ * For the mock server: the results of a demo squad. A complete squad has two divisions, a tie at the
+ * cut line, a bowler who did not finish, and a no-show. An open squad is part way through, so
+ * bowlers have different game counts and the Games column shows (D-75, D-76).
+ */
+export function createDemoSquadResults(
+  session: { id: string; date: string; complete: boolean },
+  divisions: Division[],
+): SquadResults {
+  const [open, women] = divisions
+  const base = { id: session.id, date: session.date, complete: session.complete, games: 3 }
+  if (!session.complete) {
+    return createSquadResults({
+      session: { ...base, kind: 'squad' },
+      finalsRatio: 8,
+      cashRatio: 4,
+      divisions: open
+        ? [
+            createDivisionResult({
+              id: open.id,
+              number: open.number,
+              name: open.name,
+              entries: 8,
+              showGames: true,
+              rows: demoRows(
+                [
+                  ['Dave Kowalski', 503, 258, 0, 2],
+                  ['Marcus Reyes', 467, 241, 0, 2],
+                  ['Tom Brandt', 458, 238, 0, 2],
+                  ['Ray Costa', 457, 247, 0, 2],
+                  ['Jim Albright', 456, 231, 0, 2],
+                  ['Paul Nguyen', 232, 232, 0, 1],
+                  ['Walt Pruitt', 218, 218, 0, 1],
+                  ['Steve Marsh', 214, 214, 0, 1],
+                ],
+                1,
+                1,
+              ),
+            }),
+          ]
+        : [],
+    })
+  }
+  const bowlers: DemoPlayer[] = [
+    ['Dave Kowalski', 735, 258],
+    ['Marcus Reyes', 717, 250],
+    ['Tom Brandt', 702, 244],
+    ['Jim Albright', 692, 236],
+    ['Ray Costa', 685, 247],
+    ['Paul Nguyen', 677, 232],
+    ['Steve Marsh', 674, 238],
+    ['Frank DeLuca', 672, 238],
+    ['Greg Olson', 667, 243],
+    ['Walt Pruitt', 654, 224],
+    ['Hank Dietrich', 640, 226],
+    ['Lou Savage', 633, 224],
+    ['Ed Brannigan', 608, 207],
+    ['Carl Fenner', 589, 201],
+  ]
+  const seniors: DemoPlayer[] = [
+    ['Linda Perrault', 648, 225, 24],
+    ['Gail Whitmore', 648, 223, 30],
+    ['Rita Alvarez', 610, 212, 12],
+    ['Nancy Burke', 605, 208, 18],
+    ['Joan Pelletier', 602, 210, 40],
+    ['Carol Ng', 593, 205, 0],
+    ['Sue Dunphy', 566, 194, 22],
+    ['Barb Hollis', 550, 190, 35],
+  ]
+  const seniorRows = demoRows(seniors, 1, 1)
+  const [winner, loser] = seniorRows
+  if (winner) {
+    winner.ties = [{ line: 'cut', outcome: 'won', decidedBy: { kind: 'game', rank: 1 } }]
+  }
+  if (loser) {
+    loser.ties = [{ line: 'cut', outcome: 'lost', decidedBy: { kind: 'game', rank: 1 } }]
+  }
+  const results: DivisionResult[] = []
+  if (open) {
+    results.push(
+      createDivisionResult({
+        id: open.id,
+        number: open.number,
+        name: open.name,
+        entries: 16,
+        rows: demoRows(bowlers, 2, 1),
+        didNotFinish: [
+          {
+            registrationId: faker.string.uuid(),
+            name: 'Bob Whitaker',
+            total: 445,
+            highGame: 230,
+            games: 2,
+            handicap: 0,
+          },
+        ],
+        noShows: [{ registrationId: faker.string.uuid(), name: 'Mike Tran' }],
+      }),
+    )
+  }
+  if (women) {
+    results.push(
+      createDivisionResult({
+        id: women.id,
+        number: women.number,
+        name: women.name,
+        entries: 12,
+        showHandicap: true,
+        rows: seniorRows,
+      }),
+    )
+  }
+  return createSquadResults({
+    session: { ...base, kind: 'squad' },
+    finalsRatio: 8,
+    cashRatio: 5,
+    divisions: results.toSorted((a, b) => a.name.localeCompare(b.name)),
+  })
+}
+
+/** For the mock server: the results of a demo sweeper, one list with each division's bonus pins. */
+export function createDemoSweeperResults(session: {
+  id: string
+  date: string
+  complete: boolean
+  games: number
+}): SweeperResults {
+  const players: [string, string, number, number, number][] = [
+    ['Dave Kowalski', 'Open', 0, 712, 256],
+    ['Linda Perrault', 'Women', 10, 681, 229],
+    ['Marcus Reyes', 'Open', 0, 679, 238],
+    ['Gail Whitmore', 'Women', 10, 661, 220],
+    ['Tom Brandt', 'Open', 0, 655, 233],
+    ['Ray Costa', 'Open', 0, 640, 226],
+  ]
+  return createSweeperResults({
+    session: {
+      id: session.id,
+      kind: 'sweeper',
+      date: session.date,
+      complete: session.complete,
+      games: session.games,
+    },
+    cashRatio: 3,
+    entries: players.length,
+    cashers: 2,
+    cutScore: 681,
+    rows: players.map(([name, divisionName, bonusPins, total, highGame], index) =>
+      createSweeperRow({
+        name,
+        divisionName,
+        bonusPins,
+        total,
+        highGame,
+        place: index + 1,
+        group: index < 2 ? 'casher' : 'other',
+        games: session.games,
+      }),
+    ),
   })
 }

@@ -23,7 +23,7 @@ export function RecapSheet({ sheet, session, pattern }: Readonly<RecapSheetProps
         <img
           className={styles.sponsors}
           src={sponsors}
-          alt="Northeast Megabucks Tournament, with sponsors: Ace Mitchell Bowlers Mart, Cambridge Credit Counseling, Audacy, TechVision Livestreaming, Strike F/X, Federico's, Rock 102, Lia"
+          alt="Northeast Megabucks Tournament and its sponsors"
         />
         <div className={styles.when}>
           <span>{formatSheetDate(session.date)}</span>
@@ -39,27 +39,37 @@ export function RecapSheet({ sheet, session, pattern }: Readonly<RecapSheetProps
         <table className={styles.table}>
           <thead>
             <tr>
-              <th scope="col">Lane</th>
-              <th scope="col">Score</th>
-              <th scope="col">Handicap</th>
-              <th scope="col">Total</th>
+              <th scope="col" className={styles.headCell}>
+                Lane
+              </th>
+              <th scope="col" className={styles.headCell}>
+                Score
+              </th>
+              <th scope="col" className={styles.headCell}>
+                Handicap
+              </th>
+              <th scope="col" className={styles.headCell}>
+                Total
+              </th>
             </tr>
           </thead>
           <tbody>
             {lanes.map((lane, index) => (
               // The cross repeats a label (lane 4A can come up twice), so the game number is the key.
               <tr key={`game-${index + 1}`}>
-                <td>{lane}</td>
-                <td />
-                <td>{handicap}</td>
-                <td />
+                <td className={styles.cell}>{lane}</td>
+                <td className={styles.cell} />
+                <td className={styles.cell}>{handicap}</td>
+                <td className={styles.cell} />
               </tr>
             ))}
             <tr>
-              <th scope="row">Totals</th>
-              <td />
-              <td>{formatHandicapTotal(sheet.handicap, session.games)}</td>
-              <td />
+              <th scope="row" className={styles.cell}>
+                Totals
+              </th>
+              <td className={styles.cell} />
+              <td className={styles.cell}>{formatHandicapTotal(sheet.handicap, session.games)}</td>
+              <td className={styles.cell} />
             </tr>
           </tbody>
         </table>

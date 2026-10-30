@@ -32,7 +32,7 @@ describe('RecapSheet', () => {
     const sheet = show()
 
     expect(
-      sheet.getByRole('img', { name: /Northeast Megabucks Tournament, with sponsors/ }),
+      sheet.getByRole('img', { name: 'Northeast Megabucks Tournament and its sponsors' }),
     ).toBeVisible()
   })
 

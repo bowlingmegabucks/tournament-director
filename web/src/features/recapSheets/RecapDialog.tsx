@@ -103,7 +103,7 @@ export function RecapDialog({
     body = (
       <>
         <section className={styles.notice} aria-label="About these sheets">
-          <p>
+          <p className={styles.noticeText}>
             The lanes on every sheet come from all {sheets.length}{' '}
             {plural(sheets.length, 'bowler', 'bowlers')} with a lane, whatever is checked. Checking
             a sheet only decides whether it prints. Moves made on the lane page but not saved are
@@ -180,8 +180,8 @@ export function RecapDialog({
         <>
           <div className={styles.bar}>
             <fieldset className={styles.skip}>
-              <legend>Skip</legend>
-              <label>
+              <legend className={styles.skipLegend}>Skip</legend>
+              <label className={styles.skipOption}>
                 <input
                   type="radio"
                   name="skip"
@@ -192,7 +192,7 @@ export function RecapDialog({
                 />
                 Staggered skip
               </label>
-              <label>
+              <label className={styles.skipOption}>
                 <input
                   type="radio"
                   name="skip"
@@ -232,6 +232,7 @@ export function RecapDialog({
               <label htmlFor={filterId}>Find a bowler</label>
               <input
                 id={filterId}
+                className={styles.input}
                 type="search"
                 value={filter}
                 placeholder="Name or division"

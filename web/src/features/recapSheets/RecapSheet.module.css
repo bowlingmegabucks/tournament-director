@@ -53,7 +53,7 @@
 .signature {
   inline-size: 100%;
   padding-block-start: 0.03in;
-  border-block-start: 2px solid var(--color-ink);
+  border-block-start: 1.5pt solid var(--color-ink);
 }
 
 .bowlerSignature {
@@ -78,13 +78,13 @@
   border-collapse: collapse;
 }
 
-.table th,
-.table td {
-  border: 2px solid var(--color-ink);
+.cell {
+  border: 1.5pt solid var(--color-ink);
   text-align: center;
 }
 
-.table thead th {
+.headCell {
+  composes: cell;
   block-size: 0.5in;
 }
 

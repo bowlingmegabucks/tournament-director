@@ -51,14 +51,14 @@
   border: 0;
 }
 
-.skip legend {
+.skipLegend {
   float: left;
   margin-inline-end: var(--space-3);
   padding: 0;
   font-weight: 600;
 }
 
-.skip label {
+.skipOption {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -74,7 +74,7 @@
   gap: var(--space-1);
 }
 
-.field input {
+.input {
   min-block-size: var(--target-min);
   padding: var(--space-2);
   background: var(--color-bg);
@@ -123,7 +123,7 @@
   list-style: none;
 }
 
-.notice p {
+.noticeText {
   margin: 0;
 }
 

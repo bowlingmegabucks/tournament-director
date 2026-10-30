@@ -45,6 +45,16 @@ function markLine(
   }
 }
 
+/** D-14: the tie marks at a sweeper's cash line, by registration id. */
+export function markCashLine(
+  cashers: readonly ResultEntry[],
+  others: readonly ResultEntry[],
+): Map<string, Tie[]> {
+  const marks = new Map<string, Tie[]>()
+  markLine(marks, 'cash', cashers, others)
+  return marks
+}
+
 /**
  * D-14, D-16: the tie marks of one division, by registration id. The number of advancers or
  * cashers never grows because of a tie. At the cut line an earlier advancer is not a competitor:

@@ -20,7 +20,10 @@ function respondWith(path: string, body: JsonBodyType) {
 
 const row = createSquadRow({
   group: 'advancer',
-  ties: [{ line: 'cut', outcome: 'won', decidedBy: { kind: 'game', rank: 1 } }],
+  ties: [
+    { line: 'cut', outcome: 'won', decidedBy: { kind: 'game', rank: 1 } },
+    { line: 'cash', outcome: 'lost', decidedBy: { kind: 'games' } },
+  ],
 })
 const squad = createSquadResults({
   divisions: [
@@ -87,6 +90,14 @@ describe('fetchSquadResults', () => {
 
     expect(failure).toBeInstanceOf(ResultsUnavailableError)
     expect(failure).toHaveProperty('message', "This squad's finals ratio is 0.")
+  })
+
+  it('reports a 422 whose body is not JSON', async () => {
+    server.use(http.get(squadPath, () => new HttpResponse('<html></html>', { status: 422 })))
+
+    await expect(fetchSquadResults('t1', 's1')).rejects.toThrow(
+      'Failed to load results (response is not JSON)',
+    )
   })
 
   it('has a plain message when a 422 carries none', async () => {
@@ -228,6 +239,47 @@ describe('fetchSquadResults', () => {
             rows: [
               { ...row, ties: [{ line: 'cut', outcome: 'won', decidedBy: { kind: 'game' } }] },
             ],
+          },
+        ],
+      },
+    ],
+    [
+      'a decider of an unknown kind that has a rank',
+      {
+        ...squad,
+        divisions: [
+          {
+            ...division,
+            rows: [
+              {
+                ...row,
+                ties: [{ line: 'cut', outcome: 'won', decidedBy: { kind: 'luck', rank: 3 } }],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    [
+      'a did-not-finish row with no registration id',
+      {
+        ...squad,
+        divisions: [
+          {
+            ...division,
+            didNotFinish: [{ name: 'x', total: 1, highGame: 1, games: 1, handicap: 0 }],
+          },
+        ],
+      },
+    ],
+    [
+      'a did-not-finish row with no name',
+      {
+        ...squad,
+        divisions: [
+          {
+            ...division,
+            didNotFinish: [{ registrationId: 'r', total: 1, highGame: 1, games: 1, handicap: 0 }],
           },
         ],
       },

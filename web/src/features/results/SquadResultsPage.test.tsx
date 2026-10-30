@@ -278,6 +278,61 @@ describe('SquadResultsPage', () => {
     expect(first.getByText('2')).toBeVisible()
   })
 
+  it.each([
+    [false, false, 4],
+    [true, false, 5],
+    [false, true, 5],
+    [true, true, 6],
+  ])(
+    'spans the lines across every column: games %s, handicap %s, %i columns (RES-11)',
+    async (showGames, showHandicap, columns) => {
+      const results = createSquadResults({
+        divisions: [openDivision({ showGames, showHandicap })],
+      })
+      serve(results)
+
+      open(results)
+
+      const view = await table('Results for the Open division')
+      expect(view.getAllByRole('columnheader')).toHaveLength(columns)
+      expect(view.getByRole('cell', { name: 'Cut Line' })).toHaveAttribute(
+        'colspan',
+        String(columns),
+      )
+    },
+  )
+
+  it('shows the handicap of a bowler who did not finish only in a handicap division (D-75)', async () => {
+    const quit = {
+      registrationId: 'r1',
+      name: 'Bob Whitaker',
+      total: 445,
+      highGame: 230,
+      games: 2,
+      handicap: 12,
+    }
+    const withHandicap = createSquadResults({
+      session: { ...createSquadResults().session, complete: true },
+      divisions: [openDivision({ showHandicap: true, didNotFinish: [quit] })],
+    })
+    serve(withHandicap)
+    const { unmount } = open(withHandicap)
+    const dnf = await table('Open division, did not finish')
+    expect(dnf.getByRole('columnheader', { name: 'HDCP' })).toBeVisible()
+    expect(cellsOf(dnf)[1]).toEqual(['Bob Whitaker', '2 of 3', '445', '230', '12'])
+    unmount()
+
+    const without = createSquadResults({
+      session: { ...createSquadResults().session, complete: true },
+      divisions: [openDivision({ showHandicap: false, didNotFinish: [quit] })],
+    })
+    serve(without)
+    open(without)
+    const plain = await table('Open division, did not finish')
+    expect(plain.queryByRole('columnheader', { name: 'HDCP' })).not.toBeInTheDocument()
+    expect(cellsOf(plain)[1]).toEqual(['Bob Whitaker', '2 of 3', '445', '230'])
+  })
+
   it('hides the Games column when the counts match (D-76)', async () => {
     const results = createSquadResults({ divisions: [openDivision({ showGames: false })] })
     serve(results)
@@ -538,6 +593,41 @@ describe('SquadResultsPage states (D-77)', () => {
     ).toBeVisible()
   })
 
+  it('does not retry a ratio the results cannot use (D-83)', async () => {
+    const results = createSquadResults({ divisions: [openDivision()] })
+    serve(results)
+    let asked = 0
+    server.use(
+      http.get('/v1/tournaments/:id/squads/:sessionId/results', () => {
+        asked += 1
+        return HttpResponse.json({ message: "This squad's finals ratio is 0." }, { status: 422 })
+      }),
+    )
+
+    open(results)
+    await screen.findByText("This squad's finals ratio is 0.", {}, { timeout: 3000 })
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+
+    expect(asked).toBe(1)
+  })
+
+  it('retries another failure once', async () => {
+    const results = createSquadResults({ divisions: [openDivision()] })
+    serve(results)
+    let asked = 0
+    server.use(
+      http.get('/v1/tournaments/:id/squads/:sessionId/results', () => {
+        asked += 1
+        return new HttpResponse(null, { status: 503 })
+      }),
+    )
+
+    open(results)
+    await screen.findByText('Failed to load results (503)', {}, { timeout: 5000 })
+
+    expect(asked).toBe(2)
+  })
+
   it('says the squad is not found for a 404', async () => {
     const results = createSquadResults({ divisions: [openDivision()] })
     serve(results)
@@ -714,6 +804,91 @@ describe('SquadResultsPage printing (RES-33, D-78)', () => {
     await userEvent.click(button)
 
     expect(print).toHaveBeenCalledTimes(1)
+  })
+
+  it('ends the print if the page is left while the print dialog is open', async () => {
+    const results = two()
+    serve(results)
+    const { unmount } = open(results)
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Print all divisions' }, { timeout: 3000 }),
+    )
+    await waitFor(() => {
+      expect(document.body).toHaveAttribute('data-results-printing', '')
+    })
+
+    unmount()
+
+    expect(document.body).not.toHaveAttribute('data-results-printing')
+  })
+
+  describe('while the sponsor image loads', () => {
+    let finish: () => void = () => undefined
+
+    beforeEach(() => {
+      vi.spyOn(HTMLImageElement.prototype, 'complete', 'get').mockReturnValue(false)
+      const gate = new Promise<void>((resolve) => {
+        finish = resolve
+      })
+      Object.defineProperty(HTMLImageElement.prototype, 'decode', {
+        value: () => gate,
+        configurable: true,
+      })
+    })
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+      Reflect.deleteProperty(HTMLImageElement.prototype, 'decode')
+    })
+
+    it('waits for the images, and ignores a second press meanwhile (D-78)', async () => {
+      const results = two()
+      serve(results)
+      open(results)
+      const button = await screen.findByRole(
+        'button',
+        { name: 'Print all divisions' },
+        { timeout: 3000 },
+      )
+
+      await userEvent.click(button)
+      await userEvent.click(button)
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(print).not.toHaveBeenCalled()
+
+      finish()
+      await waitFor(() => {
+        expect(print).toHaveBeenCalledTimes(1)
+      })
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(print).toHaveBeenCalledTimes(1)
+    })
+
+    it('prints again once the first print is over', async () => {
+      const results = two()
+      serve(results)
+      open(results)
+      const button = await screen.findByRole(
+        'button',
+        { name: 'Print all divisions' },
+        { timeout: 3000 },
+      )
+      finish()
+
+      await userEvent.click(button)
+      await waitFor(() => {
+        expect(print).toHaveBeenCalledTimes(1)
+      })
+      window.dispatchEvent(new Event('afterprint'))
+      await waitFor(() => {
+        expect(copySections()).toHaveLength(0)
+      })
+      await userEvent.click(button)
+
+      await waitFor(() => {
+        expect(print).toHaveBeenCalledTimes(2)
+      })
+    })
   })
 
   it('has no print copy on the page until the button is pressed', async () => {

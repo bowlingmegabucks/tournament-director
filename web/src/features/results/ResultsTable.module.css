@@ -32,7 +32,8 @@
   text-align: end;
 }
 
-.total {
+.totalCell {
+  composes: num;
   font-weight: 700;
 }
 

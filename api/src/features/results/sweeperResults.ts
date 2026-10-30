@@ -22,8 +22,8 @@ export interface SweeperOutcome {
 export function workOutSweeper(entries: readonly ResultEntry[], cashRatio: number): SweeperOutcome {
   const ranked = rankEntries(entries)
   const entryCount = ranked.length
-  const cashCount =
-    entryCount === 0 ? 0 : Math.min(Math.max(Math.floor(entryCount / cashRatio), 1), entryCount)
+  // With no entries the cap makes it 0.
+  const cashCount = Math.min(Math.max(Math.floor(entryCount / cashRatio), 1), entryCount)
   const cashers = ranked.slice(0, cashCount)
   return {
     entryCount,

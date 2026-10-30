@@ -73,11 +73,11 @@ export function DivisionBody({
                     <TieMarks row={item.row} />
                   </th>
                   {division.showGames && (
-                    <td className={`${styles.num}`} data-label="Games">
+                    <td className={styles.num} data-label="Games">
                       {item.row.games}
                     </td>
                   )}
-                  <td className={`${styles.num} ${styles.total}`} data-label="Total">
+                  <td className={styles.totalCell} data-label="Total">
                     {item.row.total}
                   </td>
                   <td className={styles.num} data-label="HG">
@@ -138,7 +138,7 @@ export function DivisionBody({
                   <td className={styles.num} data-label="Games">
                     {formatGamesOf(row.games, games)}
                   </td>
-                  <td className={`${styles.num} ${styles.total}`} data-label="Total">
+                  <td className={styles.totalCell} data-label="Total">
                     {row.total}
                   </td>
                   <td className={styles.num} data-label="HG">

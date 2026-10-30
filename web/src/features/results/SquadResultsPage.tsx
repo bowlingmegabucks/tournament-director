@@ -61,6 +61,7 @@ export function SquadResultsPage() {
                         next.set('division', event.target.value)
                         return next
                       },
+                      // Stryker disable next-line ObjectLiteral,BooleanLiteral: the history is the browser's; e2e checks the Back button.
                       { replace: true },
                     )
                   }}

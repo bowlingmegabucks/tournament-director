@@ -49,6 +49,11 @@ describe('compareEntries (SCR-11)', () => {
     expectAbove(entry([190, 195, 195], 10), entry([200, 200, 200], 0))
   })
 
+  it('ranks the higher total above a higher high game (RK-3)', () => {
+    // 550 with a 250 game against 570 with a 190 high game: the total comes first.
+    expectAbove(entry([190, 190, 190]), entry([250, 150, 150]))
+  })
+
   it('compares the high game with pins, not the best scratch game (RK-12)', () => {
     const higherScratch = entry([250, 200, 200], 0) // total 650, high game 250
     const higherWithPins = entry([243, 187, 190], 10) // total 650, high game 253
@@ -59,6 +64,14 @@ describe('compareEntries (SCR-11)', () => {
 describe('decidedBy (D-14, D-16)', () => {
   it('names the games bowled when totals are equal and the counts differ', () => {
     expect(decidedBy(entry([300, 300]), entry([200, 200, 200]))).toEqual({ kind: 'games' })
+  })
+
+  it('names the 2nd-best game when the high games match with pins but the scratch games do not', () => {
+    // Both total 650 with a high game of 250 (250 + 0, and 240 + 10). The 2nd-best game decides.
+    expect(decidedBy(entry([250, 200, 200], 0), entry([240, 190, 190], 10))).toEqual({
+      kind: 'game',
+      rank: 2,
+    })
   })
 
   it('names the high game as rank 1', () => {
@@ -113,6 +126,13 @@ describe('rankEntries', () => {
     const ranked = rankEntries([zed, twinHigh, adamsB, twinLow, adamsA])
 
     expect(ranked).toEqual([adamsA, adamsB, twinLow, twinHigh, zed])
+  })
+
+  it('puts names that differ only in case together, then goes on to the first name', () => {
+    const lower = createResultEntry({ games: [200, 200, 200], lastName: 'adams', firstName: 'Zed' })
+    const upper = createResultEntry({ games: [200, 200, 200], lastName: 'Adams', firstName: 'Al' })
+
+    expect(rankEntries([lower, upper])).toEqual([upper, lower])
   })
 
   it('does not change the list it is given', () => {

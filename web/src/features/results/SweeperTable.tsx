@@ -45,7 +45,7 @@ export function SweeperTable({ rows }: Readonly<{ rows: SweeperResults['rows'] }
                   </span>
                 ))}
               </th>
-              <td className={`${styles.num} ${styles.total}`} data-label="Total">
+              <td className={styles.totalCell} data-label="Total">
                 {item.row.total}
               </td>
               <td className={styles.num} data-label="HG">

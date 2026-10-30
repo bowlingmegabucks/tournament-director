@@ -17,6 +17,7 @@ export function useResultsPrint() {
     () => () => {
       endPrint.current?.()
     },
+    // Stryker disable next-line ArrayDeclaration: a constant list also runs the cleanup only on unmount.
     [],
   )
 

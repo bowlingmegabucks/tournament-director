@@ -12,24 +12,27 @@ interface Difference {
   ahead: ResultEntry
 }
 
+/** The entry with the larger figure. Only asked when the two figures differ. */
+const larger = (a: ResultEntry, b: ResultEntry, mine: number, theirs: number) =>
+  // Stryker disable next-line EqualityOperator: the figures differ, so > and >= pick the same entry.
+  mine > theirs ? a : b
+
 /** The first of the SCR-11 steps on which two entries differ, or `undefined` for a full tie. */
 function firstDifference(a: ResultEntry, b: ResultEntry): Difference | undefined {
   if (a.games.length !== b.games.length) {
-    return { criterion: { kind: 'games' }, ahead: a.games.length > b.games.length ? a : b }
+    return { criterion: { kind: 'games' }, ahead: larger(a, b, a.games.length, b.games.length) }
   }
-  if (a.total !== b.total) return { criterion: 'total', ahead: a.total > b.total ? a : b }
+  if (a.total !== b.total) return { criterion: 'total', ahead: larger(a, b, a.total, b.total) }
   if (a.highGame !== b.highGame) {
-    return { criterion: { kind: 'game', rank: 1 }, ahead: a.highGame > b.highGame ? a : b }
+    return { criterion: { kind: 'game', rank: 1 }, ahead: larger(a, b, a.highGame, b.highGame) }
   }
   // Games are equal, so both lists have the same length. Step 4 compares scratch games from the 2nd best.
-  for (let index = 1; index < a.best.length; index++) {
-    const mine = a.best[index] ?? 0
-    const theirs = b.best[index] ?? 0
-    if (mine !== theirs) {
-      return { criterion: { kind: 'game', rank: index + 1 }, ahead: mine > theirs ? a : b }
-    }
+  const index = a.best.findIndex((score, position) => position > 0 && score !== b.best[position])
+  if (index === -1) return undefined
+  return {
+    criterion: { kind: 'game', rank: index + 1 },
+    ahead: larger(a, b, a.best[index] ?? 0, b.best[index] ?? 0),
   }
-  return undefined
 }
 
 /**

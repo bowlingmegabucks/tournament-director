@@ -432,6 +432,10 @@ test('the Results tab of a complete squad shows one division at a time, with lin
   await expect(women.getByRole('columnheader', { name: 'HDCP' })).toBeVisible()
   await expect(page.getByText('Lost the spot on high game.')).toBeVisible()
   await expect(page).toHaveURL(/results\?division=/)
+
+  // The choice replaces the address, so Back leaves the tab instead of undoing the choice (D-80).
+  await page.goBack()
+  await expect(page).not.toHaveURL(/results/)
 })
 
 test('the Results tab of an open squad shows the Games column (RES-34, D-76)', async ({ page }) => {

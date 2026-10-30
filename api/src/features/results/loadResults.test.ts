@@ -268,6 +268,40 @@ describe('loadSquadResults: the result (RES-10, RES-11b, D-77)', () => {
     expect(result.divisions[1]?.rows.map((row) => row.total)).toEqual([450, 420])
   })
 
+  it('lists divisions by name even when their numbers run the other way (RES-10)', async () => {
+    const squad = squadAt(morning, { finalsRatio: 40, cashRatio: 40 })
+    const second = createDivision({ number: 1, name: 'Women' })
+    const first = createDivision({ number: 2, name: 'Open' })
+    const inFirst = field([squad.id], [[200, 200, 200]], first.id)
+    const inSecond = field([squad.id], [[150, 150, 150]], second.id)
+    const { deps, reporting, tournament } = setup({
+      squads: [squad],
+      seats: [...inSecond.seats, ...inFirst.seats],
+      divisions: [second, first],
+    })
+
+    const result = await loadSquadResults(deps, reporting, tournament.id, squad.id)
+
+    expect(result.divisions.map((division) => division.name)).toEqual(['Open', 'Women'])
+  })
+
+  it('treats names that differ only in case as equal and orders them by number (RES-10)', async () => {
+    const squad = squadAt(morning, { finalsRatio: 40, cashRatio: 40 })
+    const upper = createDivision({ number: 1, name: 'Open' })
+    const lower = createDivision({ number: 2, name: 'open' })
+    const inUpper = field([squad.id], [[200, 200, 200]], upper.id)
+    const inLower = field([squad.id], [[150, 150, 150]], lower.id)
+    const { deps, reporting, tournament } = setup({
+      squads: [squad],
+      seats: [...inLower.seats, ...inUpper.seats],
+      divisions: [lower, upper],
+    })
+
+    const result = await loadSquadResults(deps, reporting, tournament.id, squad.id)
+
+    expect(result.divisions.map((division) => division.number)).toEqual([1, 2])
+  })
+
   it('uses the squad’s own ratios and sends them (SQ-18, RES-03)', async () => {
     const squad = squadAt(morning, { finalsRatio: 2, cashRatio: 2 })
     const { seats } = field([squad.id], four)
@@ -360,6 +394,30 @@ describe('loadSquadResults: the result (RES-10, RES-11b, D-77)', () => {
       sessionId: squad.id,
       msg: 'Skipped a result entry whose division is not in this tournament',
     })
+  })
+})
+
+describe('loadSquadResults: entries left out (D-51)', () => {
+  it('logs each left-out entry once, not one warning for all of them', async () => {
+    const squad = squadAt(morning)
+    const first = createLaneEntry({ divisionId: createDivision().id })
+    const second = createLaneEntry({ divisionId: createDivision().id })
+    const { deps, reporting, tournament, captured } = setup({
+      squads: [squad],
+      seats: [
+        { sessionId: squad.id, entry: first, games: [200] },
+        { sessionId: squad.id, entry: second, games: [190] },
+      ],
+    })
+
+    await loadSquadResults(deps, reporting, tournament.id, squad.id)
+    await loadSquadResults(deps, reporting, tournament.id, squad.id)
+
+    const logged = captured
+      .records()
+      .filter((record) => record.level === 40)
+      .map((record) => record.registrationId)
+    expect(logged.toSorted()).toEqual([first.registrationId, second.registrationId].toSorted())
   })
 })
 

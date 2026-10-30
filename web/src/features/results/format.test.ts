@@ -71,6 +71,12 @@ describe('formatTie (D-14, D-16)', () => {
     )
   })
 
+  it('says a full tie is a full tie even if a tie-breaker is sent', () => {
+    expect(formatTie({ line: 'cut', outcome: 'full', decidedBy: { kind: 'games' } })).toBe(
+      'Full tie at the cut line. The director decides.',
+    )
+  })
+
   it('treats a win with no tie-breaker as a full tie', () => {
     expect(formatTie({ line: 'cut', outcome: 'won', decidedBy: null })).toBe(
       'Full tie at the cut line. The director decides.',

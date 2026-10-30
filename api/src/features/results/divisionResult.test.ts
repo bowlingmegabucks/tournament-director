@@ -85,6 +85,26 @@ describe('toDivisionResult', () => {
     })
   })
 
+  it('tags an earlier advancer whose total equals the cut score (SQ-26)', () => {
+    const lastAdvancer = createResultEntry({ games: [39, 35, 35] }) // 109
+    const earlier = createResultEntry({ games: [37, 36, 36] }) // 109
+    const rest = Array.from({ length: 20 }, (_, index) => flat(20 - index))
+
+    const result = build([flat(300), flat(299), lastAdvancer, earlier, ...rest], {
+      finalsRatio: 8,
+      cashRatio: 8,
+      advancedBefore: new Set([earlier.bowlerId]),
+    })
+
+    const row = result.rows.find((item) => item.registrationId === earlier.registrationId)
+    expect(
+      result.rows.find((item) => item.registrationId === lastAdvancer.registrationId),
+    ).toMatchObject({
+      group: 'advancer',
+    })
+    expect(row).toMatchObject({ group: 'casher', advancedEarlier: true })
+  })
+
   it('does not tag an earlier advancer who cashes below the cut (SQ-24)', () => {
     const advancers = [flat(247), flat(240), flat(238)]
     const ed = flat(235)

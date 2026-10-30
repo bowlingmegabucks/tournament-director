@@ -7,9 +7,15 @@ import type { RecapSheets } from './types.ts'
  * RPT-05, RPT-05c, D-65: one sheet for each bowler with a saved lane, from the lane page the API
  * already builds. The pairs come in lane order and each pair sorts by letter (LAN-04), so the
  * sheets do too. Every cross works from the lanes in use across the whole session, whichever
- * sheets the desk later prints (D-64).
+ * sheets the desk later prints (D-64). `withoutDivision` counts entries `buildLanePage` left out
+ * because their division is not one of the tournament's (D-51): they have a lane but no sheet,
+ * and they are missing from the lanes in use too, so the page says so.
  */
-export function buildRecapSheets(page: LanePage, games: number): RecapSheets {
+export function buildRecapSheets(
+  page: LanePage,
+  games: number,
+  withoutDivision: number,
+): RecapSheets {
   const lanes = lanesInUse(page.pairs)
 
   const sheets = page.pairs.flatMap((pair) =>
@@ -42,5 +48,6 @@ export function buildRecapSheets(page: LanePage, games: number): RecapSheets {
     },
     sheets,
     withoutLane: page.unassigned.length + page.other.length,
+    withoutDivision,
   }
 }

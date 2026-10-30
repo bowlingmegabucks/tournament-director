@@ -1,6 +1,7 @@
 import { faker } from '@faker-js/faker'
 import type { Division } from '../features/divisions/types'
-import type { LaneBowler, LanePage, LanePair, SessionKind } from '../features/lanes/types'
+import type { LaneBowler, LanePage, LanePair } from '../features/lanes/types'
+import type { SessionKind } from '../shared/session'
 import type { RecapSheet, RecapSheets } from '../features/recapSheets/types'
 import type { Registration, RegistrationList } from '../features/registrations/types'
 import type { Squad } from '../features/squads/types'
@@ -547,6 +548,7 @@ export function createRecapSheets(overrides: Partial<RecapSheets> = {}): RecapSh
     },
     sheets: [],
     withoutLane: 0,
+    withoutDivision: 0,
     ...rest,
   }
 }

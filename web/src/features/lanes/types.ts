@@ -1,5 +1,6 @@
-/** A squad or a sweeper: both use the lane page (D-60). */
-export type SessionKind = 'squad' | 'sweeper'
+import type { SessionKind } from '../../shared/session'
+
+export type { SessionKind }
 
 /**
  * One bowler on the lane page (LAN-11). `pins` is the handicap on a squad and the bonus pins on a

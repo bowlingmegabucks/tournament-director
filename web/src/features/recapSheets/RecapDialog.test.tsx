@@ -36,16 +36,38 @@ function serve(recap: RecapSheets) {
 const squad = createRecapSheets({ sheets: [joey, dana, maria] })
 
 let print: ReturnType<typeof vi.fn>
+/** Listeners the dialog put on the print media query, so a test can say the print ended. */
+let mediaListeners: ((event: { matches: boolean }) => void)[]
 
 beforeEach(() => {
   print = vi.fn()
+  mediaListeners = []
   vi.stubGlobal('print', print)
+  vi.stubGlobal('matchMedia', () => ({
+    matches: false,
+    addEventListener: (_type: string, listener: (event: { matches: boolean }) => void) => {
+      mediaListeners.push(listener)
+    },
+    removeEventListener: (_type: string, listener: (event: { matches: boolean }) => void) => {
+      mediaListeners = mediaListeners.filter((candidate) => candidate !== listener)
+    },
+  }))
 })
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
   delete document.body.dataset.recapPrinting
 })
+
+/** Click a print button and wait for the browser's print to be asked for once more. */
+async function pressPrint(name: string) {
+  const before = print.mock.calls.length
+  await userEvent.click(screen.getByRole('button', { name }))
+  await waitFor(() => {
+    expect(print.mock.calls.length).toBe(before + 1)
+  })
+}
 
 function open(onClose = vi.fn()) {
   renderWithClient(<RecapDialog kind="squad" tournamentId="t1" sessionId="s1" onClose={onClose} />)
@@ -172,6 +194,31 @@ describe('RecapDialog warning', () => {
     await loaded(createRecapSheets({ sheets: [joey], withoutLane: 1 }))
 
     expect(screen.getByText(/1 bowler has no lane and gets no sheet\./)).toBeVisible()
+  })
+
+  it('warns about a bowler with a lane but an unknown division, in its own notice (D-51, D-65)', async () => {
+    await loaded(createRecapSheets({ sheets: [joey, dana], withoutDivision: 2 }))
+
+    expect(
+      screen.getByText(/2 bowlers have a lane but a division that is not in this tournament/),
+    ).toBeVisible()
+    expect(screen.getByText(/Those lanes are left out of the lanes in use too/)).toBeVisible()
+    expect(screen.queryByText(/no lane and/)).not.toBeInTheDocument()
+  })
+
+  it('says "bowler has" and "That lane is" for one unknown division (D-51)', async () => {
+    await loaded(createRecapSheets({ sheets: [joey], withoutDivision: 1 }))
+
+    expect(
+      screen.getByText(/1 bowler has a lane but a division that is not in this tournament/),
+    ).toBeVisible()
+    expect(screen.getByText(/That lane is left out of the lanes in use too/)).toBeVisible()
+  })
+
+  it('shows neither notice when every bowler is placed (D-51)', async () => {
+    await loaded()
+
+    expect(screen.queryByText(/division that is not in this tournament/)).not.toBeInTheDocument()
   })
 
   it('shows no warning when everyone has a lane (RPT-05c)', async () => {
@@ -360,7 +407,7 @@ describe('RecapDialog printing (D-62)', () => {
       ])
     })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Print all' }))
+    await pressPrint('Print all')
 
     expect(print).toHaveBeenCalledTimes(1)
   })
@@ -375,7 +422,7 @@ describe('RecapDialog printing (D-62)', () => {
       ])
     })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Print selected (2)' }))
+    await pressPrint('Print selected (2)')
 
     expect(print).toHaveBeenCalledTimes(1)
   })
@@ -387,7 +434,7 @@ describe('RecapDialog printing (D-62)', () => {
       expect(printCopy()).toHaveLength(3)
     })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Print selected (3)' }))
+    await pressPrint('Print selected (3)')
 
     expect(print).toHaveBeenCalledTimes(1)
   })
@@ -404,7 +451,7 @@ describe('RecapDialog printing (D-62)', () => {
     print.mockImplementationOnce(() => {
       printedAll = lanesOf(printCopy()[2] as HTMLElement)
     })
-    await userEvent.click(screen.getByRole('button', { name: 'Print all' }))
+    await pressPrint('Print all')
     window.dispatchEvent(new Event('afterprint'))
     await userEvent.click(screen.getByRole('button', { name: 'Clear' }))
     await userEvent.click(screen.getByRole('checkbox', { name: 'Print Maria Ortega' }))
@@ -412,7 +459,7 @@ describe('RecapDialog printing (D-62)', () => {
       printedOne = lanesOf(printCopy()[0] as HTMLElement)
     })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Print selected (1)' }))
+    await pressPrint('Print selected (1)')
 
     expect(printedAll).toEqual(['3A', '6A', '9A'])
     expect(printedOne).toEqual(printedAll)
@@ -425,7 +472,7 @@ describe('RecapDialog printing (D-62)', () => {
       expect(within(printCopy()[2] as HTMLElement).getByRole('cell', { name: '7A' })).toBeVisible()
     })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Print all' }))
+    await pressPrint('Print all')
 
     expect(print).toHaveBeenCalledTimes(1)
   })
@@ -436,7 +483,7 @@ describe('RecapDialog printing (D-62)', () => {
       expect(document.body).toHaveAttribute('data-recap-printing')
     })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Print all' }))
+    await pressPrint('Print all')
     expect(printCopy()).toHaveLength(3)
 
     window.dispatchEvent(new Event('afterprint'))
@@ -489,18 +536,19 @@ describe('RecapDialog edges', () => {
       expect(document.body.dataset.recapPrinting).toBe('')
     })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Print all' }))
+    await pressPrint('Print all')
 
     expect(print).toHaveBeenCalledTimes(1)
   })
 
   it('listens for the end of one print only, so a later print is its own (D-62)', async () => {
     await loaded()
-    await userEvent.click(screen.getByRole('button', { name: 'Print all' }))
+    const remove = vi.spyOn(window, 'removeEventListener')
+    await pressPrint('Print all')
     window.dispatchEvent(new Event('afterprint'))
-    await userEvent.click(screen.getByRole('button', { name: 'Print all' }))
+    expect(remove).toHaveBeenCalledWith('afterprint', expect.any(Function))
+    await pressPrint('Print all')
 
-    // A second afterprint from the first print must not clear the second one's copy.
     expect(document.body).toHaveAttribute('data-recap-printing')
     window.dispatchEvent(new Event('afterprint'))
     expect(document.body).not.toHaveAttribute('data-recap-printing')
@@ -553,5 +601,108 @@ describe('RecapDialog retries (RPT-09)', () => {
 
     await screen.findByRole('alert')
     expect(asked).toBe(1)
+  })
+})
+
+describe('RecapDialog print safety (D-62)', () => {
+  const printCopy = () => articles().filter((sheet) => !sheet.closest('dialog'))
+
+  /** jsdom has no image decoding, so give the sponsor image one that the test controls. */
+  function holdImages() {
+    // Every sheet in the print copy has its own image, so each one gets its own wait.
+    const waiting: (() => void)[] = []
+    const decode = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          waiting.push(resolve)
+        }),
+    )
+    vi.spyOn(HTMLImageElement.prototype, 'complete', 'get').mockReturnValue(false)
+    Object.defineProperty(HTMLImageElement.prototype, 'decode', {
+      value: decode,
+      configurable: true,
+    })
+    return {
+      decode,
+      release: () => {
+        for (const resolve of waiting) resolve()
+      },
+    }
+  }
+
+  afterEach(() => {
+    Reflect.deleteProperty(HTMLImageElement.prototype, 'decode')
+  })
+
+  it('waits for the sponsor image before it asks the browser to print', async () => {
+    await loaded()
+    const images = holdImages()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Print all' }))
+    await waitFor(() => {
+      expect(images.decode).toHaveBeenCalled()
+    })
+    expect(print).not.toHaveBeenCalled()
+    expect(document.body).not.toHaveAttribute('data-recap-printing')
+
+    images.release()
+    await waitFor(() => {
+      expect(print).toHaveBeenCalledTimes(1)
+    })
+    expect(document.body).toHaveAttribute('data-recap-printing')
+  })
+
+  it('prints even when an image cannot be decoded', async () => {
+    await loaded()
+    vi.spyOn(HTMLImageElement.prototype, 'complete', 'get').mockReturnValue(false)
+    Object.defineProperty(HTMLImageElement.prototype, 'decode', {
+      value: () => Promise.reject(new Error('broken image')),
+      configurable: true,
+    })
+
+    await pressPrint('Print all')
+  })
+
+  it('ends the print when the print media query goes off, as a cancelled dialog may do', async () => {
+    await loaded()
+    await pressPrint('Print all')
+    expect(printCopy()).toHaveLength(3)
+
+    for (const listener of mediaListeners) listener({ matches: true })
+    expect(document.body).toHaveAttribute('data-recap-printing')
+
+    for (const listener of mediaListeners) listener({ matches: false })
+
+    await waitFor(() => {
+      expect(printCopy()).toHaveLength(0)
+    })
+    expect(document.body).not.toHaveAttribute('data-recap-printing')
+    expect(mediaListeners).toHaveLength(0)
+  })
+
+  it('takes the page out of print mode when the dialog goes away mid-print', async () => {
+    serve(squad)
+    const { unmount } = renderWithClient(
+      <RecapDialog kind="squad" tournamentId="t1" sessionId="s1" onClose={vi.fn()} />,
+    )
+    await screen.findByRole('button', { name: 'Print all' })
+    await pressPrint('Print all')
+    expect(document.body).toHaveAttribute('data-recap-printing')
+
+    unmount()
+
+    expect(document.body).not.toHaveAttribute('data-recap-printing')
+    expect(mediaListeners).toHaveLength(0)
+  })
+
+  it('ignores a second click while the first print is under way', async () => {
+    await loaded()
+    await pressPrint('Print all')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Print selected (3)' }))
+    await Promise.resolve()
+
+    expect(print).toHaveBeenCalledTimes(1)
+    expect(printCopy()).toHaveLength(3)
   })
 })

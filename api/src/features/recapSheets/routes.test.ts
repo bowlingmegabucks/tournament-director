@@ -127,6 +127,32 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/recap-sheets (RPT-08)', () =
     },
   )
 
+  it("counts an entry whose division is not the tournament's, and gives it no sheet (D-51, D-65)", async () => {
+    const tournament = createTournament()
+    const squad = createSquad()
+    const open = createDivision()
+    const app = createTestApp({
+      tournaments: createInMemoryTournamentRepository([tournament]),
+      divisions: createInMemoryDivisionRepository([
+        { tournamentId: tournament.id, division: open },
+      ]),
+      squads: createInMemorySquadRepository([{ tournamentId: tournament.id, squad }]),
+      lanes: createInMemoryLaneRepository([
+        { sessionId: squad.id, entry: createLaneEntry({ divisionId: open.id, position: '1A' }) },
+        { sessionId: squad.id, entry: createLaneEntry({ position: '3A' }) },
+      ]),
+    })
+
+    const response = await request(app).get(
+      `/v1/tournaments/${tournament.id}/squads/${squad.id}/recap-sheets`,
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.body.sheets).toHaveLength(1)
+    expect(response.body.withoutDivision).toBe(1)
+    expect(response.body.withoutLane).toBe(0)
+  })
+
   it('returns no sheets for a squad nobody has a lane in (RPT-05c)', async () => {
     const tournament = createTournament()
     const squad = createSquad()

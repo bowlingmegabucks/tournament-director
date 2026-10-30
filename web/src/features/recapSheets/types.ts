@@ -32,4 +32,6 @@ export interface RecapSheets {
   sheets: RecapSheet[]
   /** Bowlers with no sheet: no lane, or a position outside the session's lanes (D-65). */
   withoutLane: number
+  /** Bowlers with a lane whose division is not one of the tournament's, so they have no sheet (D-51). */
+  withoutDivision: number
 }

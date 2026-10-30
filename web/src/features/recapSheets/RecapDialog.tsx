@@ -1,11 +1,12 @@
-import { useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { formatSessionDate } from '../../shared/sessionFormat'
-import type { SessionKind } from '../lanes/types'
+import type { SessionKind } from '../../shared/session'
 import { filterSheets } from './filter'
 import { PrintSheets } from './PrintSheets'
+import { imagesReady, startPrint } from './print'
 import styles from './RecapDialog.module.css'
 import { RecapSheet } from './RecapSheet'
 import type { RecapSheet as Sheet, SkipPattern } from './types'
@@ -50,24 +51,35 @@ export function RecapDialog({
   const [printing, setPrinting] = useState<readonly Sheet[]>()
   // Where the last mouse press landed, so a drag that ends on the backdrop does not close it.
   const pressedOnBackdrop = useRef(false)
+  // Ends the print in progress, if any. One print at a time: a second click waits for the first.
+  const endPrint = useRef<() => void>(undefined)
+  const preparing = useRef(false)
+
+  // Closing the dialog while the browser prints must not leave the page marked for print.
+  useEffect(
+    () => () => {
+      endPrint.current?.()
+    },
+    [],
+  )
 
   const sheets = data?.sheets ?? []
   const shown = filterSheets(sheets, filter)
   const selected = sheets.filter((sheet) => !unchecked.has(sheet.registrationId))
 
-  function print(list: readonly Sheet[]) {
-    // Put the print copy on the page first, then ask the browser to print it. The app hides
-    // itself while `data-recap-printing` is set (see PrintSheets.module.css).
+  async function print(list: readonly Sheet[]) {
+    if (preparing.current || endPrint.current) return
+    preparing.current = true
+    // Put the print copy on the page and let its images load, then ask the browser to print it.
     flushSync(() => {
       setPrinting(list)
     })
-    document.body.dataset.recapPrinting = ''
-    const finish = () => {
-      delete document.body.dataset.recapPrinting
+    await imagesReady()
+    preparing.current = false
+    endPrint.current = startPrint(() => {
+      endPrint.current = undefined
       setPrinting(undefined)
-    }
-    window.addEventListener('afterprint', finish, { once: true })
-    window.print()
+    })
   }
 
   function check(ids: readonly string[], on: boolean) {
@@ -213,7 +225,7 @@ export function RecapDialog({
               className={styles.secondary}
               disabled={selected.length === 0}
               onClick={() => {
-                print(selected)
+                void print(selected)
               }}
             >
               Print selected ({selected.length})
@@ -221,7 +233,7 @@ export function RecapDialog({
             <button
               type="button"
               onClick={() => {
-                print(sheets)
+                void print(sheets)
               }}
             >
               Print all
@@ -295,6 +307,17 @@ export function RecapDialog({
               and {plural(data.withoutLane, 'gets', 'get')} no sheet.
             </strong>{' '}
             The lanes in use change the cross, so print after everyone has a lane.
+          </p>
+        )}
+        {data && data.withoutDivision > 0 && (
+          <p className={styles.notice} role="status">
+            <strong>
+              {data.withoutDivision} {plural(data.withoutDivision, 'bowler has', 'bowlers have')} a
+              lane but a division that is not in this tournament, so{' '}
+              {plural(data.withoutDivision, 'gets', 'get')} no sheet.
+            </strong>{' '}
+            {plural(data.withoutDivision, 'That lane is', 'Those lanes are')} left out of the lanes
+            in use too, so check the registration.
           </p>
         )}
         {body}

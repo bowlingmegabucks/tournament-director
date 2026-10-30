@@ -2,8 +2,7 @@ import { apiUrl } from '../../shared/apiUrl'
 import { field } from '../../shared/field'
 import { readJson } from '../../shared/readJson'
 import { isSessionDate } from '../../shared/sessionFormat'
-import { LaneSetupError, SessionNotFoundError } from '../lanes/api'
-import type { SessionKind } from '../lanes/types'
+import { LaneSetupError, SessionNotFoundError, type SessionKind } from '../../shared/session'
 import type { RecapSheets } from './types'
 
 const isText = (value: unknown) => typeof value === 'string'
@@ -43,7 +42,8 @@ function isRecapSheets(value: unknown): value is RecapSheets {
     isSession(field(value, 'session')) &&
     Array.isArray(sheets) &&
     sheets.every(isSheet) &&
-    isNumber(field(value, 'withoutLane'))
+    isNumber(field(value, 'withoutLane')) &&
+    isNumber(field(value, 'withoutDivision'))
   )
 }
 

@@ -28,8 +28,8 @@ function sheetsFor(
     ? createDivision({ number: 1, name: 'Open', handicapBase: 220, handicapPercentage: 90 })
     : division
   const entries = positions.map((position) => createLaneEntry({ divisionId: open.id, position }))
-  const { page } = buildLanePage(options.session ?? session(), entries, [open])
-  return { built: buildRecapSheets(page, options.games ?? 6), entries }
+  const { page, skipped } = buildLanePage(options.session ?? session(), entries, [open])
+  return { built: buildRecapSheets(page, options.games ?? 6, skipped.length), entries }
 }
 
 describe('buildRecapSheets', () => {
@@ -55,7 +55,21 @@ describe('buildRecapSheets', () => {
   })
 
   it('gives no sheets and a zero count when no one has entered (RPT-05c)', () => {
-    expect(sheetsFor([]).built).toMatchObject({ sheets: [], withoutLane: 0 })
+    expect(sheetsFor([]).built).toMatchObject({ sheets: [], withoutLane: 0, withoutDivision: 0 })
+  })
+
+  it('counts a bowler with a lane but an unknown division apart, with no sheet (D-51, D-65)', () => {
+    const known = createLaneEntry({ divisionId: division.id, position: '1A' })
+    const stranger = createLaneEntry({ position: '3A' })
+    const { page, skipped } = buildLanePage(session(), [known, stranger], [division])
+
+    const built = buildRecapSheets(page, 3, skipped.length)
+
+    expect(built.sheets.map((sheet) => sheet.registrationId)).toEqual([known.registrationId])
+    expect(built.withoutDivision).toBe(1)
+    expect(built.withoutLane).toBe(0)
+    // The stranger's pair is not in use, so the cross runs over lanes 1 and 2 only.
+    expect(built.sheets[0]?.cross.same).toEqual(['1A', '2A', '1A'])
   })
 
   it('works each cross from the lanes in use across the whole session (LAN-18, D-64)', () => {

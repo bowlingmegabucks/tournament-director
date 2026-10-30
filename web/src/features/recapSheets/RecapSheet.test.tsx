@@ -28,12 +28,13 @@ describe('RecapSheet', () => {
     expect(sheet.getByText('Office Check: __________')).toBeInTheDocument()
   })
 
-  it('shows the sponsor image with a text that names the tournament (RPT-05, D-63)', () => {
+  it('shows the sponsor image as decoration, so a screen reader does not repeat it on every sheet (RPT-05, D-63)', () => {
     const sheet = show()
 
-    expect(
-      sheet.getByRole('img', { name: 'Northeast Megabucks Tournament and its sponsors' }),
-    ).toBeVisible()
+    expect(sheet.queryByRole('img')).not.toBeInTheDocument()
+    const image = screen.getByRole('article').querySelector('img')
+    expect(image).toHaveAttribute('alt', '')
+    expect(image).toHaveAttribute('src', expect.stringContaining('score-sheet-sponsors'))
   })
 
   it('lists one row per game and a Totals row, with blank scores (RPT-05a)', () => {

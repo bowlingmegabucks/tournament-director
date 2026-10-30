@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { http, HttpResponse, type JsonBodyType } from 'msw'
 import { server } from '../../mocks/server'
 import { createRecapSheet, createRecapSheets } from '../../mocks/data'
-import { LaneSetupError, SessionNotFoundError } from '../lanes/api'
+import { LaneSetupError, SessionNotFoundError } from '../../shared/session'
 import { fetchRecapSheets } from './api'
 
 const squadPath = '/v1/tournaments/:id/squads/:sessionId/recap-sheets'
@@ -153,6 +153,7 @@ describe('fetchRecapSheets (RPT-08)', () => {
     ['no sheets', { ...recap, sheets: undefined }],
     ['sheets that is not an array', { ...recap, sheets: 'none' }],
     ['no withoutLane', { ...recap, withoutLane: undefined }],
+    ['no withoutDivision', { ...recap, withoutDivision: undefined }],
   ])('rejects %s', async (_label, body) => {
     respondWith(body)
 

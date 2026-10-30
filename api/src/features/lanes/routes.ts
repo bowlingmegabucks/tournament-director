@@ -1,30 +1,16 @@
 import { Router } from 'express'
 import { z } from 'zod'
-import { HttpError } from '../../shared/errors.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { requestLogger } from '../../shared/requestLogging.ts'
-import type { DivisionRepository } from '../divisions/repository.ts'
 import type { SquadRepository } from '../squads/repository.ts'
 import type { SweeperRepository } from '../sweepers/repository.ts'
-import type { TournamentRepository } from '../tournaments/repository.ts'
-import { buildLanePage, type LaneSession } from './lanePage.ts'
-import { MAX_SEATS, MIN_SEATS } from './positions.ts'
-import type { LaneRepository } from './repository.ts'
+import { loadLanePage, type FindSession, type LanePageDeps } from './loadLanePage.ts'
 
 const params = z.object({ id: z.uuid(), sessionId: z.uuid() })
 
-interface LaneRouterDeps {
-  lanes: LaneRepository
-  tournaments: TournamentRepository
-  divisions: DivisionRepository
+interface LaneRouterDeps extends LanePageDeps {
   logger: Logger
 }
-
-/** Finds one session of the tournament, as a `LaneSession`. Squad or sweeper, so the route is one handler. */
-export type FindSession = (
-  tournamentId: string,
-  sessionId: string,
-) => Promise<(LaneSession & { games: number }) | undefined>
 
 export function findSquad(squads: SquadRepository): FindSession {
   return async (tournamentId, sessionId) => {
@@ -62,24 +48,13 @@ export function createLaneRouter(
   // Stryker disable next-line StringLiteral: '' and '/' match the same path.
   router.get('/', async (req, res) => {
     const { id, sessionId } = params.parse(req.params)
-    // An unknown tournament is a 404 and stops here, so a random id costs one query (as TRN-15).
-    const tournament = await tournaments.get(id)
-    if (!tournament) throw new HttpError(404, 'Tournament not found')
-    const session = await findSession(id, sessionId)
-    if (!session) throw new HttpError(404, `${label} not found`)
-    // LAN-02, D-56: the page supports 2 to 5 seats a pair. Squad setup allows other values (Q-10).
-    if (session.maxPerPair < MIN_SEATS || session.maxPerPair > MAX_SEATS) {
-      throw new HttpError(
-        422,
-        `Bowlers per pair must be ${MIN_SEATS} to ${MAX_SEATS} to assign lanes`,
-      )
-    }
-
-    const [entries, tournamentDivisions] = await Promise.all([
-      lanes.listEntries(sessionId),
-      divisions.listByTournament(id),
-    ])
-    const { page, skipped, outsideLanes } = buildLanePage(session, entries, tournamentDivisions)
+    const { page, skipped, outsideLanes } = await loadLanePage(
+      label,
+      findSession,
+      { lanes, tournaments, divisions },
+      id,
+      sessionId,
+    )
 
     const log = requestLogger(res, logger)
     for (const registrationId of skipped) {

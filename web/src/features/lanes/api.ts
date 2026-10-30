@@ -2,17 +2,8 @@ import { apiUrl } from '../../shared/apiUrl'
 import { field } from '../../shared/field'
 import { readJson } from '../../shared/readJson'
 import { isSessionDate } from '../../shared/sessionFormat'
-import type { LanePage, SessionKind } from './types'
-
-/** The API has no squad or sweeper with this id in the tournament (404), or an id is not valid (400). */
-export class SessionNotFoundError extends Error {
-  constructor(kind: SessionKind) {
-    super(kind === 'squad' ? 'Squad not found' : 'Sweeper not found')
-  }
-}
-
-/** The session cannot take lane assignments as set up, such as 6 bowlers per pair (422, LAN-02). */
-export class LaneSetupError extends Error {}
+import { LaneSetupError, SessionNotFoundError, type SessionKind } from '../../shared/session'
+import type { LanePage } from './types'
 
 const isText = (value: unknown) => typeof value === 'string'
 const isNumber = (value: unknown) => typeof value === 'number'

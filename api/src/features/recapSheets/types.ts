@@ -37,6 +37,8 @@ export const recapSheetsSchema = z.object({
   sheets: z.array(recapSheetSchema),
   /** Bowlers with no sheet: no lane yet, or a position outside the session's lanes (D-61, D-65). */
   withoutLane: z.number().int().nonnegative(),
+  /** Bowlers with a lane whose division is not one of the tournament's, so they have no sheet (D-51). */
+  withoutDivision: z.number().int().nonnegative(),
 })
 
 export type RecapSheets = z.infer<typeof recapSheetsSchema>

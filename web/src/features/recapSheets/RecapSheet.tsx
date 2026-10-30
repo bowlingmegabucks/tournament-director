@@ -20,11 +20,8 @@ export function RecapSheet({ sheet, session, pattern }: Readonly<RecapSheetProps
   return (
     <article className={styles.sheet} aria-label={`Recap sheet for ${sheet.name}`}>
       <div className={styles.left}>
-        <img
-          className={styles.sponsors}
-          src={sponsors}
-          alt="Northeast Megabucks Tournament and its sponsors"
-        />
+        {/* Decoration on a printed form: the preview lists every sheet, so a text would repeat for each. */}
+        <img className={styles.sponsors} src={sponsors} alt="" />
         <div className={styles.when}>
           <span>{formatSheetDate(session.date)}</span>
           <span>{formatSheetTime(session.date)}</span>

@@ -1,3 +1,8 @@
+/*
+ * Element selectors (th, td, tr) sit under .table on purpose: a table needs them to restyle its
+ * cells on narrow screens without a class on every cell, and they cannot leak out of this module.
+ */
+
 .table {
   inline-size: 100%;
   border-collapse: collapse;
@@ -21,7 +26,8 @@
   font-weight: 600;
 }
 
-.who span {
+.name,
+.division {
   display: block;
 }
 
@@ -59,7 +65,7 @@
  */
 @media (max-width: 40rem) {
   .table,
-  .table tbody,
+  .body,
   .table tr,
   .table th,
   .table td {

@@ -55,14 +55,14 @@ export function ScoreTable({ bowlers, games, label }: Readonly<ScoreTableProps>)
           </th>
         </tr>
       </thead>
-      <tbody role="rowgroup">
+      <tbody role="rowgroup" className={styles.body}>
         {bowlers.map((bowler) => (
           <tr key={bowler.registrationId} role="row">
             <td role="cell" className={styles.lane}>
               {bowler.position}
             </td>
             <th role="rowheader" scope="row" className={styles.who}>
-              <span>{bowler.name}</span>
+              <span className={styles.name}>{bowler.name}</span>
               <span className={styles.division}>{bowler.divisionName}</span>
             </th>
             {columns.map((game) => (

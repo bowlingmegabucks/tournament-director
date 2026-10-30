@@ -413,6 +413,26 @@ describe('ScoresPage refresh (SCR-18, D-72)', () => {
     })
   })
 
+  it('stops asking once the session is complete (SCR-18, D-10)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const page = filled({ session: { ...createScorePage().session, complete: true } })
+    serve(page)
+    let asked = 0
+    server.use(
+      http.get('/v1/tournaments/:id/squads/:sessionId/scores', () => {
+        asked += 1
+        return HttpResponse.json(page)
+      }),
+    )
+    open(page)
+    await screen.findByRole('table', { name: 'Scores for lanes 1-2' }, { timeout: 3000 })
+    expect(asked).toBe(1)
+
+    await vi.advanceTimersByTimeAsync(SCORE_REFRESH_MS * 3)
+
+    expect(asked).toBe(1)
+  })
+
   it('keeps the last scores on screen when a refresh fails', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const page = filled()

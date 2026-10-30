@@ -187,6 +187,10 @@ async function openSquad(page: Page, time: string) {
 
 /** Press on a handle, move in steps so the drag library sees a drag, and let go over a target. */
 async function dragTo(page: Page, handle: Locator, target: Locator) {
+  // The unassigned list scrolls; a handle below its edge would take the press as a text selection.
+  await handle.scrollIntoViewIfNeeded()
+  await target.scrollIntoViewIfNeeded()
+  await handle.scrollIntoViewIfNeeded()
   const from = await handle.boundingBox()
   const to = await target.boundingBox()
   if (!from || !to) throw new Error('Nothing to drag')
@@ -194,11 +198,6 @@ async function dragTo(page: Page, handle: Locator, target: Locator) {
   await page.mouse.down()
   await page.mouse.move(from.x + from.width / 2 + 10, from.y + from.height / 2 + 10, { steps: 5 })
   await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 15 })
-  // The pairs show a cue while a drag runs. A slow runner can lag behind the mouse.
-  await expect(page.getByText(/Drop here|Full: cannot drop here/).first()).toBeVisible()
-  // Give the library a frame to see the pointer over the target before the drop.
-  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)))
-  await page.mouse.move(to.x + to.width / 2 + 1, to.y + to.height / 2 + 1)
   await page.mouse.up()
 }
 

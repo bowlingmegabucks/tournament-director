@@ -87,6 +87,24 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('scores page (loaded, on a wide and a narrow screen) has no WCAG 2.2 AA violations', async ({
+      page,
+    }) => {
+      await page.goto('/tournaments')
+      await page.getByRole('article').first().getByRole('link').click()
+      await page
+        .getByRole('navigation', { name: /Northeast MegaBuck/ })
+        .getByRole('link', { name: 'Squads' })
+        .click()
+      await page.getByRole('link', { name: /1:00 PM/ }).click()
+      await page.getByRole('link', { name: 'Scores' }).click()
+      await expect(page.getByRole('heading', { level: 2, name: 'Lanes 1-2' })).toBeVisible()
+      await expectNoViolations(page)
+
+      await page.setViewportSize({ width: 320, height: 800 })
+      await expectNoViolations(page)
+    })
+
     test('lane assignments page (loaded, and with the Assign dialog open) has no WCAG 2.2 AA violations', async ({
       page,
     }) => {

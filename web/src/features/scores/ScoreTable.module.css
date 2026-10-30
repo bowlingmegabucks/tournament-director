@@ -1,0 +1,111 @@
+.table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  padding: var(--space-2) var(--space-3);
+  border-block-end: var(--border-width) solid var(--color-border);
+  text-align: start;
+}
+
+.table thead th {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.who {
+  font-weight: 600;
+}
+
+.who span {
+  display: block;
+}
+
+.division {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+}
+
+.lane {
+  color: var(--color-text-muted);
+}
+
+.table .num {
+  text-align: end;
+}
+
+.total {
+  font-weight: 700;
+}
+
+/* Read by a screen reader, not seen: "no score" in an empty cell, "Game 1" under "G1". */
+.hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/*
+ * No sideways scroll (D-73): below 40rem each row is a block. Lane and bowler sit on top and the
+ * game cells wrap in a grid, each under its label. The header row stays for screen readers only.
+ */
+@media (max-width: 40rem) {
+  .table,
+  .table tbody,
+  .table tr,
+  .table th,
+  .table td {
+    display: block;
+  }
+
+  .head {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .table tr {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(3.5rem, 1fr));
+    gap: var(--space-1) var(--space-2);
+    padding: var(--space-2) 0;
+    border-block-end: var(--border-width) solid var(--color-border);
+  }
+
+  .table tr > .lane,
+  .table tr > .who {
+    grid-column: 1 / -1;
+  }
+
+  .table th,
+  .table td {
+    padding: 0;
+    border: 0;
+  }
+
+  .lane {
+    font-size: var(--font-size-sm);
+  }
+
+  .table .num {
+    text-align: start;
+  }
+
+  .table td.num::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    font-weight: 400;
+  }
+}

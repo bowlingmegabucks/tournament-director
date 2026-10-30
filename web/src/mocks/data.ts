@@ -4,6 +4,7 @@ import type { LaneBowler, LanePage, LanePair } from '../features/lanes/types'
 import type { SessionKind } from '../shared/session'
 import type { RecapSheet, RecapSheets } from '../features/recapSheets/types'
 import type { Registration, RegistrationList } from '../features/registrations/types'
+import type { ScoreBowler, ScorePage, ScorePair } from '../features/scores/types'
 import type { Squad } from '../features/squads/types'
 import type { Sweeper } from '../features/sweepers/types'
 import type { Tournament } from '../features/tournaments/types'
@@ -593,5 +594,82 @@ export function createDemoRecapSheets(
     },
     sheets,
     withoutLane: page.unassigned.length + page.other.length,
+  })
+}
+
+/** A bowler on the Scores tab. Three empty games unless a test sends `scores`; the total follows them. */
+export function createScoreBowler(overrides: Partial<ScoreBowler> = {}): ScoreBowler {
+  const scores = overrides.scores ?? [null, null, null]
+  return {
+    registrationId: faker.string.uuid(),
+    name: `${faker.person.firstName()} ${faker.person.lastName()}`,
+    divisionName: 'Open',
+    position: '',
+    scores,
+    total: scores.reduce<number>((sum, score) => sum + (score ?? 0), 0),
+    ...overrides,
+  }
+}
+
+/** A pair with its lanes worked out from its first lane, as the API sends it. */
+export function createScorePair(firstLane: number, bowlers: ScoreBowler[] = []): ScorePair {
+  return { firstLane, lanes: [firstLane, firstLane + 1], bowlers }
+}
+
+/** A Scores page for a 3-game squad with nobody on it. Override what a test cares about. */
+export function createScorePage(overrides: Partial<ScorePage> = {}): ScorePage {
+  const { session, ...rest } = overrides
+  return {
+    session: {
+      id: faker.string.uuid(),
+      kind: 'squad',
+      date: '2026-10-24T09:00:00',
+      complete: false,
+      games: 3,
+      ...session,
+    },
+    pairs: [],
+    noLane: 0,
+    other: [],
+    ...rest,
+  }
+}
+
+/**
+ * For the mock server: the Scores page of a demo squad or sweeper, laid over its demo lane page.
+ * An open session is part scored: the first bowler has every game, the next two games, the next
+ * one, and the rest none. A complete session has every game, and one no-show with zeros.
+ */
+export function createDemoScorePage(
+  kind: SessionKind,
+  session: Parameters<typeof createDemoLanePage>[1],
+  divisions: Division[],
+): ScorePage {
+  const lanePage = createDemoLanePage(kind, session, divisions)
+  const games = 3
+  let index = 0
+  const toScoreBowler = (bowler: LaneBowler): ScoreBowler => {
+    const bowled = session.complete ? games : Math.max(games - index, 0)
+    const noShow = session.complete && index === 1
+    const scores = Array.from({ length: games }, (_, game) => {
+      if (game >= bowled) return null
+      return noShow ? 0 : 160 + ((index * 37 + game * 23) % 90)
+    })
+    index += 1
+    return createScoreBowler({
+      registrationId: bowler.registrationId,
+      name: bowler.name,
+      divisionName: bowler.divisionName,
+      position: bowler.position,
+      scores,
+    })
+  }
+  return createScorePage({
+    session: { id: session.id, kind, date: session.date, complete: session.complete, games },
+    pairs: lanePage.pairs
+      .filter((pair) => pair.bowlers.length > 0)
+      .map((pair) => createScorePair(pair.firstLane, pair.bowlers.map(toScoreBowler))),
+    noLane: lanePage.unassigned.length,
+    other: lanePage.other.map(toScoreBowler),
   })
 }

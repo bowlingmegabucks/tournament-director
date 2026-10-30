@@ -366,3 +366,43 @@ test('a sweeper card opens its lane page with bonus pins (LAN-11, D-60)', async 
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Sat 10/24/2026 6:00 PM')
   await expect(page.getByText('Open · avg 205 · +10 pins · super sweeper: N')).toBeVisible()
 })
+
+test('the Scores tab shows a part-scored squad by lane pair, and notes bowlers with no lane (SCR-13, SCR-17, D-69, D-71)', async ({
+  page,
+}) => {
+  await openSquad(page, '1:00 PM')
+
+  await page.getByRole('link', { name: 'Scores' }).click()
+
+  await expect(page.getByRole('link', { name: 'Scores' })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('heading', { level: 2, name: 'Lanes 1-2' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 2, name: 'Lanes 3-4' })).toBeVisible()
+  const first = page.getByRole('table', { name: 'Scores for lanes 1-2' })
+  await expect(first.getByRole('row').nth(1).getByRole('cell').last()).not.toHaveText('0')
+  await expect(page.getByText('4 bowlers have no lane.')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Assign lanes' })).toBeVisible()
+  await expect(page.getByRole('button')).toHaveCount(0)
+})
+
+test('the Scores tab of a complete squad says it cannot change and shows a no-show as 0 (SCR-14, D-69)', async ({
+  page,
+}) => {
+  await openSquad(page, '9:00 AM')
+
+  await page.getByRole('link', { name: 'Scores' }).click()
+
+  await expect(page.getByText('This squad is complete. Scores cannot change.')).toBeVisible()
+  await expect(page.getByRole('table', { name: 'Scores for lanes 1-2' })).toBeVisible()
+})
+
+test('the Scores tab does not scroll sideways on a phone (D-73)', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 800 })
+  await openSquad(page, '1:00 PM')
+  await page.getByRole('link', { name: 'Scores' }).click()
+  await expect(page.getByRole('heading', { level: 2, name: 'Lanes 1-2' })).toBeVisible()
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  )
+  expect(overflow).toBeLessThanOrEqual(0)
+})

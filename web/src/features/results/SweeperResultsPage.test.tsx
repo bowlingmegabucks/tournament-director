@@ -243,6 +243,24 @@ describe('SweeperResultsPage', () => {
     })
   })
 
+  it('marks the results unofficial while the sweeper is open and not once it is complete (RES-36, D-84)', async () => {
+    const results = filled({ session: { ...filled().session, complete: false } })
+    serve(results)
+    const view = open(results)
+
+    expect(await screen.findByText(/can still change/, {}, { timeout: 3000 })).toHaveTextContent(
+      'Unofficial results. This sweeper is not complete, so scores and places can still change.',
+    )
+    view.unmount()
+
+    const done = filled({ session: { ...filled().session, complete: true } })
+    serve(done)
+    open(done)
+
+    await screen.findByRole('table', { name: 'Sweeper results' }, { timeout: 3000 })
+    expect(screen.queryByText(/Unofficial results/)).not.toBeInTheDocument()
+  })
+
   it('stops asking once the sweeper is complete', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const results = filled({ session: { ...filled().session, complete: true } })

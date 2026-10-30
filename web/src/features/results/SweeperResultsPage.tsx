@@ -8,6 +8,7 @@ import tableStyles from './ResultsTable.module.css'
 import { PrintResults } from './PrintResults'
 import { SweeperTable } from './SweeperTable'
 import { useSweeperResults } from './useResults'
+import { UnofficialNotice } from './UnofficialNotice'
 import { useResultsPrint } from './useResultsPrint'
 
 /**
@@ -57,6 +58,7 @@ export function SweeperResultsPage() {
               Print results
             </button>
           </div>
+          {!session.complete && <UnofficialNotice kind="sweeper" />}
           <h2>Sweeper results</h2>
           <p className={tableStyles.sub}>
             {entries} · Cashing {data.cashers} · Cut score {data.cutScore}

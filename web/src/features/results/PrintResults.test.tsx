@@ -90,6 +90,35 @@ describe('PrintResults (RES-33, RPT-01, D-78)', () => {
     expect(copy?.parentElement).toBe(document.body)
   })
 
+  it('puts UNOFFICIAL RESULTS on every page of a squad that is not complete (RES-36, D-84)', () => {
+    render(<PrintResults results={{ ...squad, session: { ...squad.session, complete: false } }} />)
+
+    expect(screen.getAllByText('UNOFFICIAL RESULTS')).toHaveLength(2)
+  })
+
+  it('leaves the mark off a complete squad and a complete sweeper (RES-36)', () => {
+    const view = render(
+      <PrintResults results={{ ...squad, session: { ...squad.session, complete: true } }} />,
+    )
+    expect(screen.queryByText('UNOFFICIAL RESULTS')).not.toBeInTheDocument()
+    view.unmount()
+
+    const sweeper = createSweeperResults()
+    render(
+      <PrintResults results={{ ...sweeper, session: { ...sweeper.session, complete: true } }} />,
+    )
+    expect(screen.queryByText('UNOFFICIAL RESULTS')).not.toBeInTheDocument()
+  })
+
+  it('puts UNOFFICIAL RESULTS on a sweeper that is not complete (RES-36)', () => {
+    const sweeper = createSweeperResults()
+    render(
+      <PrintResults results={{ ...sweeper, session: { ...sweeper.session, complete: false } }} />,
+    )
+
+    expect(screen.getByText('UNOFFICIAL RESULTS')).toBeInTheDocument()
+  })
+
   it('prints a sweeper as one list with no division line', () => {
     const sweeper = createSweeperResults({
       session: { ...createSweeperResults().session, date: '2026-10-24T18:00:00' },

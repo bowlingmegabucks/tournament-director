@@ -7,12 +7,13 @@ import tableStyles from './ResultsTable.module.css'
 import { SweeperTable } from './SweeperTable'
 import type { SquadResults, SweeperResults } from './types'
 
-/** RPT-01: the title, the date, the division if there is one, and the sponsor image. */
+/** RPT-01: the title, the date, the division if there is one, and the sponsor image. RES-36: the unofficial mark. */
 function PrintHeader({
   title,
   date,
   division,
-}: Readonly<{ title: string; date: string; division?: string }>) {
+  unofficial,
+}: Readonly<{ title: string; date: string; division?: string; unofficial: boolean }>) {
   return (
     <header className={styles.head}>
       <div>
@@ -21,6 +22,7 @@ function PrintHeader({
           Date: {formatSheetDate(date)} - {formatSheetTime(date)}
         </p>
         {division !== undefined && <p>Division: {division}</p>}
+        {unofficial && <p className={styles.unofficial}>UNOFFICIAL RESULTS</p>}
       </div>
       <img
         className={styles.sponsors}
@@ -46,13 +48,18 @@ export function PrintResults({ results }: Readonly<{ results: SquadResults | Swe
             className={styles.sheet}
             aria-label={`${division.name} division`}
           >
-            <PrintHeader title="Squad Results" date={session.date} division={division.name} />
+            <PrintHeader
+              title="Squad Results"
+              date={session.date}
+              division={division.name}
+              unofficial={!session.complete}
+            />
             <DivisionBody division={division} games={session.games} />
           </section>
         ))
       ) : (
         <section className={styles.sheet} aria-label="Sweeper results">
-          <PrintHeader title="Sweeper Results" date={session.date} />
+          <PrintHeader title="Sweeper Results" date={session.date} unofficial={!session.complete} />
           <p className={tableStyles.sub}>
             {results.entries === 1 ? '1 entry' : `${results.entries} entries`} · Cashing{' '}
             {results.cashers} · Cut score {results.cutScore}

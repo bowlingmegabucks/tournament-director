@@ -88,6 +88,30 @@ describe('SquadResultsPage', () => {
     ])
   })
 
+  it('marks the results unofficial while the squad is open and not once it is complete (RES-36, D-84)', async () => {
+    const open_ = createSquadResults({
+      session: { ...createSquadResults().session, complete: false },
+      divisions: [openDivision()],
+    })
+    serve(open_)
+    const view = open(open_)
+
+    expect(await screen.findByText(/can still change/, {}, { timeout: 3000 })).toHaveTextContent(
+      'Unofficial results. This squad is not complete, so scores and places can still change.',
+    )
+    view.unmount()
+
+    const done = createSquadResults({
+      session: { ...createSquadResults().session, complete: true },
+      divisions: [openDivision()],
+    })
+    serve(done)
+    open(done)
+
+    await screen.findByRole('heading', { level: 2, name: 'Open' }, { timeout: 3000 })
+    expect(screen.queryByText(/Unofficial results/)).not.toBeInTheDocument()
+  })
+
   it('says "No Advancers" first when no one advances (RES-11)', async () => {
     const results = createSquadResults({
       divisions: [

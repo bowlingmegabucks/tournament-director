@@ -8,6 +8,7 @@ import { DivisionResults } from './DivisionResults'
 import { PrintResults } from './PrintResults'
 import styles from './ResultsPage.module.css'
 import { useSquadResults } from './useResults'
+import { UnofficialNotice } from './UnofficialNotice'
 import { useResultsPrint } from './useResultsPrint'
 
 /**
@@ -84,6 +85,7 @@ export function SquadResultsPage() {
               Print all divisions
             </button>
           </div>
+          {!session.complete && <UnofficialNotice kind="squad" />}
           <p className={styles.note}>
             Finals ratio {formatRatio(data.finalsRatio)} · cash ratio {formatRatio(data.cashRatio)}
           </p>

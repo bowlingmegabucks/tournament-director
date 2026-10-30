@@ -127,7 +127,7 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
             </h2>
             {/* A scrolling region must take the keyboard, or its overflow is out of reach. */}
             {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-            <div className={styles.scroll} tabIndex={0} role="region" aria-label="Lane pairs">
+            <section className={styles.scroll} tabIndex={0} aria-label="Lane pairs">
               <ul className={styles.pairs}>
                 {view.pairs.map((pair) => (
                   <PairZone
@@ -140,7 +140,7 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
                   />
                 ))}
               </ul>
-            </div>
+            </section>
           </section>
         </div>
         {view.other.length > 0 && <OtherPositions bowlers={view.other} kind={kind} />}

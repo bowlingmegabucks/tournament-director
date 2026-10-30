@@ -29,7 +29,9 @@ export function parsePosition(text: string): Position | undefined {
 
 /** LAN-04: lane number, then letter. */
 export function comparePositions(a: Position, b: Position): number {
-  return a.lane - b.lane || (a.letter < b.letter ? -1 : a.letter > b.letter ? 1 : 0)
+  if (a.lane !== b.lane) return a.lane - b.lane
+  if (a.letter < b.letter) return -1
+  return a.letter > b.letter ? 1 : 0
 }
 
 export interface Pair {

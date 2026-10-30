@@ -38,11 +38,10 @@ export function UnassignedList({
           <p className={styles.empty}>Everyone has a lane.</p>
         ) : (
           // A scrolling region must take the keyboard, or its overflow is out of reach.
-          <div
+          <section
             className={`${scroll.scroll} ${styles.scrollOffset}`}
             // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
             tabIndex={0}
-            role="region"
             aria-label="Unassigned bowlers"
           >
             <ul className={styles.bowlers}>
@@ -57,7 +56,7 @@ export function UnassignedList({
                 />
               ))}
             </ul>
-          </div>
+          </section>
         )}
         {accepts && <span className={styles.cue}>Drop here to clear the lane</span>}
       </div>

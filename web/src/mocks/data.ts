@@ -454,7 +454,10 @@ const demoLaneBowlers: DemoLaneBowler[] = [
 ]
 
 const lanePins = (kind: SessionKind, division: Division | undefined, average: number | null) => {
-  if (kind === 'sweeper') return division?.name === 'Women' ? 6 : division?.name === 'Open' ? 10 : 0
+  if (kind === 'sweeper') {
+    if (division?.name === 'Women') return 6
+    return division?.name === 'Open' ? 10 : 0
+  }
   const base = division?.handicapBase
   const percent = division?.handicapPercentage
   if (average === null || !base || !percent || average >= base) return 0
@@ -501,7 +504,7 @@ export function createDemoLanePage(
   for (const pair of page.pairs) {
     pair.bowlers.sort((a, b) => a.position.localeCompare(b.position, 'en', { numeric: true }))
   }
-  page.unassigned = unassigned.sort(
+  page.unassigned = unassigned.toSorted(
     (a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName),
   )
   page.divisions = divisions.map(({ id, number, name }, index) => ({

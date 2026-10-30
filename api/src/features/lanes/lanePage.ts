@@ -124,7 +124,7 @@ export function buildLanePage(
     },
     pairs,
     unassigned,
-    other: other.sort((a, b) => compareText(a.position, b.position)),
+    other: other.toSorted((a, b) => compareText(a.position, b.position)),
     divisions: [...divisions]
       .sort((a, b) => a.number - b.number || compareText(a.name, b.name))
       .map(({ id, number, name }) => ({ id, number, name, entries: counts.get(id) ?? 0 })),

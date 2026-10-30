@@ -57,6 +57,12 @@
     --color-text-muted: var(--color-ink);
     --color-border: var(--color-ink);
     --color-accent: var(--color-ink);
+
+    /* Paper is denser than a screen: tighter rows, so a division of 40 bowlers needs two pages, not four. */
+    --space-2: 0.1875rem;
+    --space-3: 0.5rem;
+    font-size: 0.8125rem;
+    line-height: 1.25;
   }
 
   :global(body[data-results-printing]) {

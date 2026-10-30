@@ -406,3 +406,120 @@ test('the Scores tab does not scroll sideways on a phone (D-73)', async ({ page 
   )
   expect(overflow).toBeLessThanOrEqual(0)
 })
+
+test('the Results tab of a complete squad shows one division at a time, with lines, ties, and sections (RES-10, RES-11, RES-32, D-75, D-80)', async ({
+  page,
+}) => {
+  await openSquad(page, '9:00 AM')
+
+  await page.getByRole('link', { name: 'Results' }).click()
+
+  await expect(page.getByRole('link', { name: 'Results' })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('heading', { level: 2, name: 'Open' })).toBeVisible()
+  const open = page.getByRole('table', { name: 'Results for the Open division' })
+  await expect(open.getByRole('row', { name: 'Cut Line' })).toBeVisible()
+  await expect(open.getByRole('row', { name: 'Cash Line' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 3, name: 'Did not finish' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 3, name: 'No show' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 2, name: 'Women' })).toHaveCount(0)
+
+  await page
+    .getByRole('combobox', { name: 'Division' })
+    .selectOption({ label: 'Women (12 entries)' })
+
+  await expect(page.getByRole('heading', { level: 2, name: 'Women' })).toBeVisible()
+  const women = page.getByRole('table', { name: 'Results for the Women division' })
+  await expect(women.getByRole('columnheader', { name: 'HDCP' })).toBeVisible()
+  await expect(page.getByText('Lost the spot on high game.')).toBeVisible()
+  await expect(page).toHaveURL(/results\?division=/)
+})
+
+test('the Results tab of an open squad shows the Games column (RES-34, D-76)', async ({ page }) => {
+  await openSquad(page, '1:00 PM')
+
+  await page.getByRole('link', { name: 'Results' }).click()
+
+  const open = page.getByRole('table', { name: 'Results for the Open division' })
+  await expect(open.getByRole('columnheader', { name: 'Games' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Did not finish' })).toHaveCount(0)
+})
+
+test('the Results tab of a sweeper is one list with a cash line (RES-22, RES-25a, D-82)', async ({
+  page,
+}) => {
+  await page.goto('/tournaments')
+  await page.getByRole('article').first().getByRole('link').click()
+  await page
+    .getByRole('navigation', { name: /Northeast MegaBuck/ })
+    .getByRole('link', { name: 'Sweepers' })
+    .click()
+  await page.getByRole('link', { name: /6:00 PM/ }).click()
+
+  await page.getByRole('link', { name: 'Results' }).click()
+
+  const list = page.getByRole('table', { name: 'Sweeper results' })
+  await expect(list.getByRole('row', { name: 'Cash Line' })).toBeVisible()
+  await expect(list.getByText('Women, +10 a game').first()).toBeVisible()
+})
+
+test('Print all divisions prints one letter page for each division (RES-33, D-78)', async ({
+  page,
+}) => {
+  // Headless Chrome ends a print the moment window.print() returns, which unmarks the page before
+  // the PDF is made. A no-op print keeps the print copy on the page, as the open dialog would.
+  await page.addInitScript(() => {
+    window.print = () => undefined
+  })
+  await openSquad(page, '9:00 AM')
+  await page.getByRole('link', { name: 'Results' }).click()
+  await expect(page.getByRole('heading', { level: 2, name: 'Open' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Print all divisions' }).click()
+
+  // The page marks itself for print once the sponsor image has loaded; wait for that mark.
+  await expect(page.locator('body')).toHaveAttribute('data-results-printing', '')
+  await page.emulateMedia({ media: 'print' })
+  const pdf = (await page.pdf({ preferCSSPageSize: true, printBackground: true })).toString(
+    'latin1',
+  )
+
+  // 612 x 792 points is 8.5 x 11 inches. One page for each of the two divisions of the squad.
+  expect(pdf.match(/\/MediaBox \[0 0 612 792\]/g)).toHaveLength(2)
+  expect(pdf.match(/\/Type \/Page\b(?!s)/g)).toHaveLength(2)
+})
+
+test('Print results prints a sweeper on one letter page (RES-33, D-78)', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.print = () => undefined
+  })
+  await page.goto('/tournaments')
+  await page.getByRole('article').first().getByRole('link').click()
+  await page
+    .getByRole('navigation', { name: /Northeast MegaBuck/ })
+    .getByRole('link', { name: 'Sweepers' })
+    .click()
+  await page.getByRole('link', { name: /6:00 PM/ }).click()
+  await page.getByRole('link', { name: 'Results' }).click()
+  await expect(page.getByRole('table', { name: 'Sweeper results' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Print results' }).click()
+
+  await expect(page.locator('body')).toHaveAttribute('data-results-printing', '')
+  await page.emulateMedia({ media: 'print' })
+  const pdf = (await page.pdf({ preferCSSPageSize: true, printBackground: true })).toString(
+    'latin1',
+  )
+  expect(pdf.match(/\/MediaBox \[0 0 612 792\]/g)).toHaveLength(1)
+})
+
+test('the Results tab does not scroll sideways on a phone (D-73)', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 800 })
+  await openSquad(page, '9:00 AM')
+  await page.getByRole('link', { name: 'Results' }).click()
+  await expect(page.getByRole('heading', { level: 2, name: 'Open' })).toBeVisible()
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  )
+  expect(overflow).toBeLessThanOrEqual(0)
+})

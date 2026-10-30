@@ -114,6 +114,19 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/recap-sheets (RPT-08)', () =
     expect(response.body).toEqual({ message: 'Bowlers per pair must be 2 to 5 to assign lanes' })
   })
 
+  it.each([2, 5])(
+    'accepts %i bowlers per pair, the ends of the range (LAN-02)',
+    async (maxPerPair) => {
+      const { app, tournament, squad } = setup({ maxPerPair })
+
+      const response = await request(app).get(
+        `/v1/tournaments/${tournament.id}/squads/${squad.id}/recap-sheets`,
+      )
+
+      expect(response.status).toBe(200)
+    },
+  )
+
   it('returns no sheets for a squad nobody has a lane in (RPT-05c)', async () => {
     const tournament = createTournament()
     const squad = createSquad()

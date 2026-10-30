@@ -68,7 +68,8 @@ export function crossLanes(
     walked.push(lanes[index] ?? startLane)
   }
   return walked.map((lane, offset) => {
-    const isEvenGame = (offset + 1) % 2 === 0
+    // `offset` counts from 0, so the even games (2, 4, ...) are the odd offsets.
+    const isEvenGame = offset % 2 === 1
     const other = otherLane(lane)
     return isEvenGame && lanes.includes(other) ? other : lane
   })

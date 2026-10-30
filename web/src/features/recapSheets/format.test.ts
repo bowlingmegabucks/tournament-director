@@ -6,9 +6,13 @@ describe('formatSheetDate (RPT-05)', () => {
     expect(formatSheetDate('2026-10-24T23:30:00')).toBe('10/24/2026')
   })
 
-  it('leaves text that is not a session date as it is', () => {
-    expect(formatSheetDate('soon')).toBe('soon')
-  })
+  it.each(['soon', 'x2026-10-24T09:00:00', '2026-10-24T09:00:00Z'])(
+    'leaves %s as it is, since it is not a session date',
+    (value) => {
+      expect(formatSheetDate(value)).toBe(value)
+      expect(formatSheetTime(value)).toBe(value)
+    },
+  )
 })
 
 describe('formatSheetTime (RPT-05)', () => {

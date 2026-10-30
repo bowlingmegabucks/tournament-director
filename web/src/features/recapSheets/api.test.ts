@@ -87,6 +87,14 @@ describe('fetchRecapSheets (RPT-08)', () => {
     )
   })
 
+  it('rejects a 422 whose body is not JSON', async () => {
+    server.use(http.get(squadPath, () => new HttpResponse('<html></html>', { status: 422 })))
+
+    await expect(fetchRecapSheets('squad', 't1', 's1')).rejects.toThrow(
+      'Failed to load recap sheets (response is not JSON)',
+    )
+  })
+
   it('reports the status for another failure', async () => {
     server.use(http.get(squadPath, () => new HttpResponse(null, { status: 503 })))
 
@@ -113,9 +121,9 @@ describe('fetchRecapSheets (RPT-08)', () => {
     ['handicap', { handicap: '47' }],
     ['cross', { cross: undefined }],
     ['the staggered cross', { cross: { staggered: 'x', same: [] } }],
-    ['a staggered lane that is not text', { cross: { staggered: [1], same: [] } }],
+    ['a staggered lane that is not text', { cross: { staggered: ['1A', 4], same: [] } }],
     ['the same cross', { cross: { staggered: [], same: undefined } }],
-    ['a same lane that is not text', { cross: { staggered: [], same: [4] } }],
+    ['a same lane that is not text', { cross: { staggered: [], same: ['4A', 4] } }],
   ] as const
 
   it.each(wrongSheet)('rejects a sheet with a wrong %s', async (_label, change) => {

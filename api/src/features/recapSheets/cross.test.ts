@@ -42,6 +42,12 @@ describe('crossLanes: the worked examples in lane-assignments.md (LAN-19)', () =
     expect(crossLanes(1, range(1, 16), 4, 'staggered')).toEqual([1, 4, 7, 10])
   })
 
+  it('steps by twice the skip on the last game of the staggered cycle (LAN-19)', () => {
+    // 40 lanes in use skip 3. Steps: game 2 is 8, game 3 is 10, game 4 is max(6, 2) = 6.
+    // Raw lanes 1, 9, 19, 25; games 2 and 4 swap to the other lane of the pair.
+    expect(crossLanes(1, range(1, 40), 4, 'staggered')).toEqual([1, 10, 19, 26])
+  })
+
   it('wraps at the end of the lanes in use (LAN-19)', () => {
     expect(crossLanes(15, range(1, 16), 3, 'same')).toEqual([15, 2, 3])
   })
@@ -53,7 +59,9 @@ describe('crossLanes: the worked examples in lane-assignments.md (LAN-19)', () =
   })
 
   it('throws for a start lane that is not in use', () => {
-    expect(() => crossLanes(30, range(1, 16), 3, 'same')).toThrow(RangeError)
+    expect(() => crossLanes(30, range(1, 16), 3, 'same')).toThrow(
+      new RangeError('Lane 30 is not one of the lanes in use'),
+    )
   })
 })
 

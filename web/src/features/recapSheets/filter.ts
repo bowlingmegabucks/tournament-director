@@ -15,7 +15,7 @@ function words(text: string): string[] {
  */
 export function filterSheets(sheets: readonly RecapSheet[], text: string): RecapSheet[] {
   const typed = words(text)
-  if (typed.length === 0) return [...sheets]
+  // With no words, every sheet passes, so an empty box keeps them all.
   return sheets.filter((sheet) => {
     const known = words(`${sheet.name} ${sheet.divisionName}`)
     return typed.every((word) => known.some((candidate) => candidate.startsWith(word)))

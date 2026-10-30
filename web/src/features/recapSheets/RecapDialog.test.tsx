@@ -447,3 +447,111 @@ describe('RecapDialog printing (D-62)', () => {
     expect(document.body).not.toHaveAttribute('data-recap-printing')
   })
 })
+
+describe('RecapDialog edges', () => {
+  it('has a plain title while the sheets load (RPT-09)', async () => {
+    server.use(http.get(path, () => new Promise(() => undefined)))
+
+    open()
+
+    expect(await screen.findByRole('dialog', { name: 'Recap sheets' })).toBeVisible()
+  })
+
+  it('does not say "No sheet matches" when something matches (D-64)', async () => {
+    await loaded()
+
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Find a bowler' }), 'joey')
+
+    expect(screen.queryByText('No sheet matches that search.')).not.toBeInTheDocument()
+  })
+
+  it('does not close on a click that began inside the box (RPT-09)', async () => {
+    const onClose = await loaded()
+    const dialog = screen.getByRole('dialog')
+
+    fireEvent.mouseDown(dialog)
+    fireEvent.click(screen.getByRole('button', { name: 'Print all' }))
+
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('does not close on a click that has no press before it (RPT-09)', async () => {
+    const onClose = await loaded()
+
+    fireEvent.click(screen.getByRole('dialog'))
+
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('marks the page with an empty flag while printing (D-62)', async () => {
+    await loaded()
+    print.mockImplementation(() => {
+      expect(document.body.dataset.recapPrinting).toBe('')
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Print all' }))
+
+    expect(print).toHaveBeenCalledTimes(1)
+  })
+
+  it('listens for the end of one print only, so a later print is its own (D-62)', async () => {
+    await loaded()
+    await userEvent.click(screen.getByRole('button', { name: 'Print all' }))
+    window.dispatchEvent(new Event('afterprint'))
+    await userEvent.click(screen.getByRole('button', { name: 'Print all' }))
+
+    // A second afterprint from the first print must not clear the second one's copy.
+    expect(document.body).toHaveAttribute('data-recap-printing')
+    window.dispatchEvent(new Event('afterprint'))
+    expect(document.body).not.toHaveAttribute('data-recap-printing')
+  })
+})
+
+describe('RecapDialog retries (RPT-09)', () => {
+  it('tries a failing request once more, then shows the error', async () => {
+    let asked = 0
+    server.use(
+      http.get(path, () => {
+        asked += 1
+        return new HttpResponse(null, { status: 503 })
+      }),
+    )
+
+    open()
+
+    expect(await screen.findByRole('alert', {}, { timeout: 4000 })).toHaveTextContent(
+      'Failed to load recap sheets (503)',
+    )
+    expect(asked).toBe(2)
+  })
+
+  it('does not retry a missing squad', async () => {
+    let asked = 0
+    server.use(
+      http.get(path, () => {
+        asked += 1
+        return new HttpResponse(null, { status: 404 })
+      }),
+    )
+
+    open()
+
+    await screen.findByRole('alert')
+    expect(asked).toBe(1)
+  })
+
+  it('does not retry a session that cannot take lanes', async () => {
+    let asked = 0
+    server.use(
+      http.get(path, () => {
+        asked += 1
+        return HttpResponse.json({ message: 'Bowlers per pair must be 2 to 5' }, { status: 422 })
+      }),
+    )
+
+    open()
+
+    await screen.findByRole('alert')
+    expect(asked).toBe(1)
+  })
+})

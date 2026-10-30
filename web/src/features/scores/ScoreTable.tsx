@@ -20,7 +20,7 @@ function ScoreCell({ score, label }: Readonly<{ score: number | null; label: str
   return (
     // eslint-disable-next-line jsx-a11y/no-interactive-element-to-noninteractive-role
     <td role="cell" data-label={label} className={styles.num}>
-      {score === null ? <span className={styles.hidden}>no score</span> : score}
+      {score ?? <span className={styles.hidden}>no score</span>}
     </td>
   )
 }

@@ -18,6 +18,12 @@ export interface LanePageDeps {
   divisions: DivisionRepository
 }
 
+interface LanePageOptions {
+  checkSeats: boolean
+}
+
+const DEFAULT_OPTIONS: LanePageOptions = { checkSeats: true }
+
 /**
  * The lane page of one squad or sweeper, for every route that builds on it (the lane page, the
  * recap sheets). One place holds the checks, so the routes cannot drift apart: an unknown
@@ -33,7 +39,7 @@ export async function loadLanePage(
   { lanes, tournaments, divisions }: LanePageDeps,
   tournamentId: string,
   sessionId: string,
-  options: { checkSeats: boolean } = { checkSeats: true },
+  options: LanePageOptions = DEFAULT_OPTIONS,
 ): Promise<
   BuiltLanePage & { session: LaneSession & { games: number }; entries: readonly LaneEntry[] }
 > {

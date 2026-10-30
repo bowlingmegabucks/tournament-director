@@ -34,6 +34,7 @@ describe('db:seed script', () => {
     expect(stdout).toContain('Seeded 20 squads and sweepers.')
     expect(await client.tournament.count()).toBe(4)
     expect(await client.division.count()).toBe(12)
+    expect(stdout).toContain('Seeded 80 scores.')
     expect(await client.squad.count()).toBe(20)
   })
 

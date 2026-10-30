@@ -101,6 +101,7 @@ export function createLaneEntry(overrides: Partial<LaneEntry> = {}): LaneEntry {
   const lastName = faker.person.lastName()
   return {
     registrationId: faker.string.uuid(),
+    bowlerId: faker.string.uuid(),
     name: `${firstName} ${lastName}`,
     firstName,
     lastName,

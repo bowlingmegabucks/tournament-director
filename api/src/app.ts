@@ -13,6 +13,8 @@ import type { LaneRepository } from './features/lanes/repository.ts'
 import { createRecapSheetRouter } from './features/recapSheets/routes.ts'
 import { createRegistrationRouter } from './features/registrations/routes.ts'
 import type { RegistrationRepository } from './features/registrations/repository.ts'
+import { createScoreRouter } from './features/scores/routes.ts'
+import type { ScoreRepository } from './features/scores/repository.ts'
 import { createSquadRouter } from './features/squads/routes.ts'
 import type { SquadRepository } from './features/squads/repository.ts'
 import { createSweeperRouter } from './features/sweepers/routes.ts'
@@ -31,6 +33,7 @@ export interface AppDependencies {
   divisions: DivisionRepository
   registrations: RegistrationRepository
   lanes: LaneRepository
+  scores: ScoreRepository
   squads: SquadRepository
   sweepers: SweeperRepository
   /** Resolves when the database answers; rejects (a 503) when it does not. Feeds `GET /ready`. */
@@ -47,6 +50,7 @@ export function createApp({
   divisions,
   registrations,
   lanes,
+  scores,
   squads,
   sweepers,
   checkDatabase,
@@ -103,6 +107,28 @@ export function createApp({
         lanes,
         tournaments,
         divisions,
+        logger,
+      }),
+    },
+    {
+      path: '/v1/tournaments/:id/squads/:sessionId/scores',
+      access: 'public', // D-70: public for good, so viewers who are not signed in watch scores
+      router: createScoreRouter('squad', findSquad(squads), {
+        lanes,
+        tournaments,
+        divisions,
+        scores,
+        logger,
+      }),
+    },
+    {
+      path: '/v1/tournaments/:id/sweepers/:sessionId/scores',
+      access: 'public', // D-70
+      router: createScoreRouter('sweeper', findSweeper(sweepers), {
+        lanes,
+        tournaments,
+        divisions,
+        scores,
         logger,
       }),
     },

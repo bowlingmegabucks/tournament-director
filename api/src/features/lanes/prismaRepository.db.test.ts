@@ -110,11 +110,16 @@ describe('Prisma lane repository', () => {
       position: '15A',
       superSweeper: 1,
     })
+    const [stored] = await client.$queryRawUnsafe<{ BowlerId: string }[]>(
+      'SELECT BowlerId FROM Registrations WHERE Id = ?',
+      registrationId,
+    )
     const { repository } = setup()
 
     await expect(repository.listEntries(sessionId)).resolves.toEqual([
       {
         registrationId,
+        bowlerId: stored?.BowlerId,
         divisionId,
         average: 212,
         firstName: 'Ray',
@@ -170,6 +175,7 @@ describe('Prisma lane repository', () => {
 
     expect(Object.keys(entry ?? {}).sort()).toEqual([
       'average',
+      'bowlerId',
       'divisionId',
       'firstName',
       'lastName',

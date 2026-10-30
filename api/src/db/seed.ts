@@ -2,6 +2,7 @@ import { loadConfig } from '../config.ts'
 import { createDatabaseClient } from '../shared/database.ts'
 import { seedDivisions } from './seedDivisions.ts'
 import { seedRegistrations } from './seedRegistrations.ts'
+import { seedScores } from './seedScores.ts'
 import { seedSessions } from './seedSessions.ts'
 import { seedTournaments } from './seedTournaments.ts'
 
@@ -13,6 +14,7 @@ try {
   console.log(`Seeded ${await seedDivisions(client)} divisions.`)
   console.log(`Seeded ${await seedSessions(client)} squads and sweepers.`)
   console.log(`Seeded ${await seedRegistrations(client)} registrations.`)
+  console.log(`Seeded ${await seedScores(client)} scores.`)
 } finally {
   await client.$disconnect()
 }

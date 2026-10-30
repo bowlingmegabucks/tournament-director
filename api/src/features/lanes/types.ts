@@ -65,6 +65,8 @@ export type LanePage = z.infer<typeof lanePageSchema>
  */
 export interface LaneEntry {
   registrationId: string
+  /** Scores link to the bowler, not the registration (domain model fact 3). Never sent on the lane page. */
+  bowlerId: string
   name: string
   firstName: string
   lastName: string

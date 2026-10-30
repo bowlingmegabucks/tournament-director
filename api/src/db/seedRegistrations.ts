@@ -129,7 +129,7 @@ const samples: Sample[] = [
 // A fixed id per tournament and number, so running the seed twice updates these rows and adds none.
 // `e` is a bowler and `f` a registration. The squad and sweeper ids come from `seedSessions`, so the
 // two seeds cannot drift apart. Both kinds are hex, so the id stays a valid UUID.
-function rowId(tournamentId: string, kind: 'e' | 'f', n: number): string {
+export function rowId(tournamentId: string, kind: 'e' | 'f', n: number): string {
   return `${tournamentId.slice(0, -4)}${kind}00${n}`
 }
 

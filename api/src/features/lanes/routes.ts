@@ -5,6 +5,7 @@ import { requestLogger } from '../../shared/requestLogging.ts'
 import type { SquadRepository } from '../squads/repository.ts'
 import type { SweeperRepository } from '../sweepers/repository.ts'
 import { loadLanePage, type FindSession, type LanePageDeps } from './loadLanePage.ts'
+import { reportLanePageProblems } from './reportProblems.ts'
 
 const params = z.object({ id: z.uuid(), sessionId: z.uuid() })
 
@@ -56,39 +57,12 @@ export function createLaneRouter(
       sessionId,
     )
 
-    const log = requestLogger(res, logger)
-    for (const registrationId of skipped) {
-      warnOnce(
-        reported,
-        `division:${sessionId}:${registrationId}`,
-        log,
-        { registrationId, sessionId },
-        'Skipped a lane entry whose division is not in this tournament',
-      )
-    }
-    for (const registrationId of outsideLanes) {
-      warnOnce(
-        reported,
-        `outside:${sessionId}:${registrationId}`,
-        log,
-        { registrationId, sessionId },
-        'A lane position fits no pair of this session',
-      )
-    }
+    reportLanePageProblems(reported, requestLogger(res, logger), sessionId, {
+      skipped,
+      outsideLanes,
+    })
     res.json(page)
   })
 
   return router
-}
-
-function warnOnce(
-  reported: Set<string>,
-  key: string,
-  log: Logger,
-  fields: Record<string, unknown>,
-  message: string,
-): void {
-  if (reported.has(key)) return
-  reported.add(key)
-  log.warn(fields, message)
 }

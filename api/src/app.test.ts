@@ -120,6 +120,15 @@ describe('route access (D-27)', () => {
     expect(response.body).toEqual({ message: 'Tournament not found' })
   })
 
+  it.each(['squads', 'sweepers'])('serves the %s recap sheets as public (D-66)', async (kind) => {
+    const response = await request(createTestApp()).get(
+      `/v1/tournaments/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01/${kind}/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a02/recap-sheets`,
+    )
+
+    // 404 from the tournament lookup, not from a missing route: the route is mounted.
+    expect(response.body).toEqual({ message: 'Tournament not found' })
+  })
+
   it('does not serve the old demo path', async () => {
     const response = await request(createTestApp()).get('/tournaments')
 

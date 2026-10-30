@@ -10,6 +10,7 @@ import { createDivisionRouter } from './features/divisions/routes.ts'
 import type { DivisionRepository } from './features/divisions/repository.ts'
 import { createLaneRouter, findSquad, findSweeper } from './features/lanes/routes.ts'
 import type { LaneRepository } from './features/lanes/repository.ts'
+import { createRecapSheetRouter } from './features/recapSheets/routes.ts'
 import { createRegistrationRouter } from './features/registrations/routes.ts'
 import type { RegistrationRepository } from './features/registrations/repository.ts'
 import { createSquadRouter } from './features/squads/routes.ts'
@@ -103,6 +104,20 @@ export function createApp({
         tournaments,
         divisions,
         logger,
+      }),
+    },
+    {
+      path: '/v1/tournaments/:id/squads/:sessionId/recap-sheets',
+      access: 'public', // D-66: locked down right after 0.3.0 (D-52)
+      router: createRecapSheetRouter('squad', findSquad(squads), { lanes, tournaments, divisions }),
+    },
+    {
+      path: '/v1/tournaments/:id/sweepers/:sessionId/recap-sheets',
+      access: 'public', // D-66: locked down right after 0.3.0 (D-52)
+      router: createRecapSheetRouter('sweeper', findSweeper(sweepers), {
+        lanes,
+        tournaments,
+        divisions,
       }),
     },
     {

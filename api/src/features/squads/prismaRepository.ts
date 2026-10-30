@@ -18,7 +18,9 @@ export function createPrismaSquadRepository(client: PrismaClient, logger: Logger
         client.squad.findMany({
           where: { tournamentId, squadType },
           include: {
-            tournament: { select: { entryFee: true, finalsRatio: true, cashRatio: true, games: true } },
+            tournament: {
+              select: { entryFee: true, finalsRatio: true, cashRatio: true, games: true },
+            },
           },
         }),
       )

@@ -21,7 +21,10 @@ interface LaneRouterDeps {
 }
 
 /** Finds one session of the tournament, as a `LaneSession`. Squad or sweeper, so the route is one handler. */
-type FindSession = (tournamentId: string, sessionId: string) => Promise<LaneSession | undefined>
+export type FindSession = (
+  tournamentId: string,
+  sessionId: string,
+) => Promise<(LaneSession & { games: number }) | undefined>
 
 export function findSquad(squads: SquadRepository): FindSession {
   return async (tournamentId, sessionId) => {

@@ -23,6 +23,7 @@ export function createPrismaLaneRepository(client: PrismaClient, logger: Logger)
             registration: {
               select: {
                 id: true,
+                bowlerId: true,
                 average: true,
                 superSweeper: true,
                 divisionId: true,

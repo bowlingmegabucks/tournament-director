@@ -17,10 +17,12 @@
     "!src/features/sweepers/prismaRepository.ts",
     "!src/features/registrations/prismaRepository.ts",
     "!src/features/lanes/prismaRepository.ts",
+    "!src/features/scores/prismaRepository.ts",
     "!src/db/seedTournaments.ts",
     "!src/db/seedDivisions.ts",
     "!src/db/seedSessions.ts",
-    "!src/db/seedRegistrations.ts"
+    "!src/db/seedRegistrations.ts",
+    "!src/db/seedScores.ts"
   ],
   "reporters": ["clear-text", "html"],
   "dashboard": {

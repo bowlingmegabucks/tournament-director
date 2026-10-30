@@ -51,9 +51,9 @@ Examples with base 220, 90%, cap 50:
 
 | ID | Rule | Status |
 | --- | --- | --- |
-| SCR-08 | Handicap is the same every game. Squad total with handicap = scratch total + handicap × games bowled. | |
-| SCR-09 | **Sweeper bonus pins** replace handicap in sweepers: the `BonusPinsPerGame` for the bowler's division in that sweeper. Missing row or NULL = 0. Same use as handicap: total = scratch + pins × games. The lane page reads the pins ([lane-assignments.md](../requirements/lane-assignments.md)); scoring uses them later. | |
-| SCR-10 | The division for a score is the bowler's current registration division in that tournament. | |
+| SCR-08 | Handicap is the same every game. Squad total with handicap = scratch total + handicap × games bowled. **D-68:** the score view and entry show scratch only; this applies with results. | |
+| SCR-09 | **Sweeper bonus pins** replace handicap in sweepers: the `BonusPinsPerGame` for the bowler's division in that sweeper. Missing row or NULL = 0. Same use as handicap: total = scratch + pins × games. The lane page reads the pins ([lane-assignments.md](../requirements/lane-assignments.md)); scoring uses them later. **D-68:** not shown on the score view. | |
+| SCR-10 | The division for a score is the bowler's current registration division in that tournament. | Done |
 
 The old `rewrite/` spec listed set amounts (+10 handicap, +6 for 55+ or women, 0 scratch). Those are not in the code; the desk types a number per division per sweeper. See Q-11.
 
@@ -83,8 +83,8 @@ Example from the legacy tests (scratch, 3 games): totals 109 each. Bowler A game
 
 ## Screen
 
-| ID | Rule |
-| --- | --- |
-| SCR-13 | The grid lists bowlers with a position, sorted by position (`LAN-04`). Bowlers without a position do not appear. |
-| SCR-14 | On a complete squad, paste and save are off (`SQD-17`). **D-10:** the new server also rejects score saves for a complete squad or sweeper. |
-| SCR-15 | Success message: "Scores updated". |
+| ID | Rule | Status |
+| --- | --- | --- |
+| SCR-13 | The grid lists bowlers with a position, sorted by position (`LAN-04`). Bowlers without a position do not appear. **D-69, D-71:** the view groups by pair, adds a note and link for bowlers with no lane, and lists "Other positions" with their scores. | Done, differs (D-69, D-71, D-73) |
+| SCR-14 | On a complete squad, paste and save are off (`SQD-17`). **D-10:** the new server also rejects score saves for a complete squad or sweeper. **D-69:** the view is read only in both states and says when the session is complete. | Done in part, differs (D-69); server refusal later |
+| SCR-15 | Success message: "Scores updated". | |

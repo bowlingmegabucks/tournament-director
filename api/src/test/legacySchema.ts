@@ -86,6 +86,15 @@ export const legacySchemaSql = [
     FOREIGN KEY (\`BowlerId\`)   REFERENCES \`Bowlers\` (\`Id\`),
     FOREIGN KEY (\`DivisionId\`) REFERENCES \`Divisions\` (\`Id\`)
   )`,
+  `CREATE TABLE \`SquadScores\` (
+    \`BowlerId\` char(36) NOT NULL,
+    \`SquadId\`  char(36) NOT NULL,
+    \`Game\`     smallint NOT NULL,
+    \`Score\`    int      NOT NULL,
+    PRIMARY KEY (\`BowlerId\`, \`SquadId\`, \`Game\`),
+    FOREIGN KEY (\`BowlerId\`) REFERENCES \`Bowlers\` (\`Id\`),
+    FOREIGN KEY (\`SquadId\`)  REFERENCES \`Squads\` (\`Id\`)
+  )`,
   `CREATE TABLE \`SquadRegistration\` (
     \`RegistrationId\` char(36)   NOT NULL,
     \`SquadId\`        char(36)   NOT NULL,

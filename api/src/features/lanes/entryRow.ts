@@ -12,6 +12,7 @@ export interface LaneEntryRow {
   laneAssignment: string | null
   registration: {
     id: string
+    bowlerId: string
     average: number | null
     superSweeper: boolean
     divisionId: string
@@ -23,6 +24,7 @@ export interface LaneEntryRow {
 // first and last name (D-51). BWL-01 to BWL-12 run on save, not on read.
 const entrySchema = z.object({
   registrationId: z.uuid(),
+  bowlerId: z.uuid(),
   divisionId: z.uuid(),
   average: z.number().int().nullable(),
   firstName: z.string().min(1),
@@ -37,6 +39,7 @@ export function toLaneEntry(row: LaneEntryRow) {
   const { registration } = row
   const checked = entrySchema.safeParse({
     registrationId: registration.id,
+    bowlerId: registration.bowlerId,
     divisionId: registration.divisionId,
     average: registration.average,
     firstName: registration.bowler.firstName,

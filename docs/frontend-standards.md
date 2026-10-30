@@ -80,6 +80,7 @@ Enforced by `eslint-plugin-jsx-a11y` (lint) and axe in `e2e/accessibility.spec.t
 - Respect `prefers-reduced-motion`. Put every animation and transition inside `@media (prefers-reduced-motion: no-preference)`. Keep it short and optional.
 - Use one `<h1>` per page and do not skip heading levels. Use landmarks (`header`, `main`, `nav`).
 - Text must stay readable at 200% zoom and 320px width with no sideways scroll.
+- **Avoid horizontal scroll anywhere, not only on the page.** A table or grid that does not fit reflows (rows become stacked blocks, columns wrap or drop into a second line) instead of scrolling inside a box. Vertical scroll areas are fine. Allow a sideways-scrolling region only when the content is truly two-dimensional and has no reflow, and say why in a comment.
 - Every image has `alt` text. Decorative images use `alt=""`.
 - Brand text on the logo's black background: gold `--color-accent` and green `--color-success` both pass in dark mode. In light mode the tokens use darker shades.
 

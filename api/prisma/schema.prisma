@@ -133,3 +133,17 @@ model SquadRegistration {
   @@id([registrationId, squadId])
   @@map("SquadRegistration")
 }
+
+/// One game score for one bowler in one squad or sweeper, in scratch pins (storage section of
+/// `scores.md`). Read only for the score view (D-69). Linked to the bowler, not the registration,
+/// and modeled without relations: the view joins them in code.
+model SquadScore {
+  bowlerId String @map("BowlerId") @db.Char(36)
+  squadId  String @map("SquadId") @db.Char(36)
+  /// 1-based.
+  game     Int    @map("Game") @db.SmallInt
+  score    Int    @map("Score")
+
+  @@id([bowlerId, squadId, game])
+  @@map("SquadScores")
+}

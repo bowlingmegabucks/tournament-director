@@ -76,6 +76,9 @@ function SessionPortalView({
           <li>
             <NavLink to="lanes">Lane assignments</NavLink>
           </li>
+          <li>
+            <NavLink to="scores">Scores</NavLink>
+          </li>
         </ul>
       </nav>
       <Outlet context={tournament} />

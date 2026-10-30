@@ -9,6 +9,7 @@ function row(
     laneAssignment,
     registration: {
       id: '2f6d8b3a-4c55-4d0e-8a11-9b7e5c3d1f02',
+      bowlerId: '5a9e3c71-8d24-4b6f-9c10-2e7a4f6b8d33',
       average: 200,
       superSweeper: true,
       divisionId: '7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01',
@@ -24,6 +25,7 @@ describe('toLaneEntry', () => {
       success: true,
       data: {
         registrationId: '2f6d8b3a-4c55-4d0e-8a11-9b7e5c3d1f02',
+        bowlerId: '5a9e3c71-8d24-4b6f-9c10-2e7a4f6b8d33',
         divisionId: '7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01',
         average: 200,
         firstName: 'Joe',
@@ -58,6 +60,7 @@ describe('toLaneEntry', () => {
   it.each([
     ['a registration id that is not a UUID', { id: 'nope' }],
     ['a division id that is not a UUID', { divisionId: 'nope' }],
+    ['a bowler id that is not a UUID', { bowlerId: 'nope' }],
     ['a fractional average', { average: 200.5 }],
     ['no first name', { bowler: { firstName: '', lastName: 'Fontaine', suffix: '' } }],
     ['no last name', { bowler: { firstName: 'Joe', lastName: '', suffix: '' } }],

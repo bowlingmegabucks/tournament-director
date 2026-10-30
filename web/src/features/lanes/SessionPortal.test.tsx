@@ -3,7 +3,13 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
-import { createLanePage, createSquad, createSweeper, createTournament } from '../../mocks/data'
+import {
+  createLanePage,
+  createScorePage,
+  createSquad,
+  createSweeper,
+  createTournament,
+} from '../../mocks/data'
 import { renderApp } from '../../test/renderApp'
 
 const tournament = createTournament({ name: 'Spring Open' })
@@ -58,7 +64,46 @@ describe('SessionPortal', () => {
       'aria-current',
       'page',
     )
-    expect(within(tabs).getAllByRole('link')).toHaveLength(1)
+    expect(
+      within(tabs)
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual(['Lane assignments', 'Scores'])
+    expect(within(tabs).getByRole('link', { name: 'Scores' })).not.toHaveAttribute('aria-current')
+  })
+
+  it.each([
+    ['squads', 'Squad pages', () => squad.id],
+    ['sweepers', 'Sweeper pages', () => sweeper.id],
+  ])('has a Scores tab that opens the %s scores page (SCR-17, D-60)', async (kind, nav, id) => {
+    serve()
+    server.use(
+      http.get('/v1/tournaments/:id/squads/:sessionId/scores', () =>
+        HttpResponse.json(
+          createScorePage({ session: { ...createScorePage().session, id: squad.id } }),
+        ),
+      ),
+      http.get('/v1/tournaments/:id/sweepers/:sessionId/scores', () =>
+        HttpResponse.json(
+          createScorePage({
+            session: { ...createScorePage().session, id: sweeper.id, kind: 'sweeper' },
+          }),
+        ),
+      ),
+    )
+    renderApp(`${base}/${kind}/${id()}/lanes`)
+    const tabs = await screen.findByRole('navigation', { name: nav }, { timeout: 3000 })
+
+    await userEvent.click(within(tabs).getByRole('link', { name: 'Scores' }))
+
+    expect(await screen.findByText(/No bowlers have entered/, {}, { timeout: 3000 })).toBeVisible()
+    expect(within(tabs).getByRole('link', { name: 'Scores' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(within(tabs).getByRole('link', { name: 'Lane assignments' })).not.toHaveAttribute(
+      'aria-current',
+    )
   })
 
   it('shows a sweeper the same way, with Complete (D-60)', async () => {

@@ -1,0 +1,32 @@
+.note {
+  margin: 0 0 var(--space-4);
+}
+
+.pairs {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pair {
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.pairTitle {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-base);
+}
+
+.other {
+  margin-block-start: var(--space-6);
+}
+
+.otherTitle {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-lg);
+}

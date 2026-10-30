@@ -100,7 +100,7 @@ Do not put a click handler on a `div` or `span`. The lint rule `jsx-a11y` fails 
 - [ ] Targets are at least `--target-min` tall
 - [ ] Every input has a visible label, and errors are linked with `aria-describedby`
 - [ ] One `<h1>`, no skipped heading levels, landmarks in place
-- [ ] Readable at 200% zoom and 320px wide with no sideways scroll
+- [ ] Readable at 200% zoom and 320px wide with no sideways scroll, on the page or inside a table or box. Reflow a wide table into stacked rows instead of scrolling it
 - [ ] Animation is short and is wrapped in `@media (prefers-reduced-motion: no-preference)`
 - [ ] Page `<title>` and `lang` are set (new pages get their own title)
 - [ ] Images have `alt`

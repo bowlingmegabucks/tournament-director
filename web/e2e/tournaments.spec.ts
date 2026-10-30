@@ -193,9 +193,9 @@ async function dragTo(page: Page, handle: Locator, target: Locator) {
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
   await page.mouse.down()
   await page.mouse.move(from.x + from.width / 2 + 10, from.y + from.height / 2 + 10, { steps: 5 })
-  // The pairs show a cue once the drag has started. A slow runner can lag behind the mouse.
-  await expect(page.getByText(/Drop here|Full: cannot drop here/).first()).toBeVisible()
   await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 15 })
+  // The pairs show a cue while a drag runs. A slow runner can lag behind the mouse.
+  await expect(page.getByText(/Drop here|Full: cannot drop here/).first()).toBeVisible()
   // Give the library a frame to see the pointer over the target before the drop.
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)))
   await page.mouse.move(to.x + to.width / 2 + 1, to.y + to.height / 2 + 1)

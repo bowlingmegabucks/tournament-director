@@ -2,6 +2,11 @@ import { faker } from '@faker-js/faker'
 import type { Config } from '../config.ts'
 import type { Division } from '../features/divisions/types.ts'
 import type { LaneEntry } from '../features/lanes/types.ts'
+import {
+  toResultEntry,
+  type ResultEntry,
+  type ResultEntryInput,
+} from '../features/results/entries.ts'
 import type { Registration } from '../features/registrations/types.ts'
 import type { Squad } from '../features/squads/types.ts'
 import type { Sweeper } from '../features/sweepers/types.ts'
@@ -111,6 +116,24 @@ export function createLaneEntry(overrides: Partial<LaneEntry> = {}): LaneEntry {
     position: '',
     ...overrides,
   }
+}
+
+/** A result entry with three games of 200 and no pins. Override the games, pins, or names a test cares about. */
+export function createResultEntry(overrides: Partial<ResultEntryInput> = {}): ResultEntry {
+  const firstName = faker.person.firstName()
+  const lastName = faker.person.lastName()
+  return toResultEntry({
+    registrationId: faker.string.uuid(),
+    bowlerId: faker.string.uuid(),
+    firstName,
+    lastName,
+    name: `${firstName} ${lastName}`,
+    divisionId: faker.string.uuid(),
+    divisionName: 'Open',
+    games: [200, 200, 200],
+    pins: 0,
+    ...overrides,
+  })
 }
 
 /** A config with no CORS origins and no telemetry destination. The database URL points nowhere real. */

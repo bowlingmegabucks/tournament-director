@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { SessionRow } from '../../shared/sessions.ts'
 import { toSquad, type TournamentDefaults } from './squadRow.ts'
 
-const defaults: TournamentDefaults = { entryFee: 50, finalsRatio: 7, cashRatio: 5 }
+const defaults: TournamentDefaults = { entryFee: 50, finalsRatio: 7, cashRatio: 5, games: 3 }
 const decimal = (value: number) => ({ toNumber: () => value })
 
 function createRow(overrides: Partial<SessionRow> = {}): SessionRow {
@@ -39,6 +39,7 @@ describe('toSquad', () => {
       finalsRatioOverridden: false,
       cashRatio: 5,
       cashRatioOverridden: false,
+      games: 3,
     })
   })
 
@@ -59,7 +60,14 @@ describe('toSquad', () => {
       finalsRatioOverridden: true,
       cashRatio: 4.5,
       cashRatioOverridden: true,
+      games: 3,
     })
+  })
+
+  it('takes the games from the tournament, since a squad never sets its own (TRN-04)', () => {
+    const result = toSquad(createRow({ games: 9 }), { ...defaults, games: 5 })
+
+    expect(result.success && result.data).toMatchObject({ games: 5 })
   })
 
   it('flags each override on its own (D-43)', () => {

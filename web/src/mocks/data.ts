@@ -83,6 +83,7 @@ export function createSquad(overrides: Partial<Squad> = {}): Squad {
     finalsRatioOverridden: false,
     cashRatio: 5,
     cashRatioOverridden: false,
+    games: 3,
     ...overrides,
   }
 }

@@ -56,6 +56,8 @@ The desk drags a bowler onto a position, or back to "unassigned". Several desk P
 
 ## The cross (lane per game)
 
+**Done** as `LAN-18` (lanes in use, skip) and `LAN-19` (steps, swap) in [recap-sheets.md](../requirements/recap-sheets.md). The two skip patterns are radio buttons, staggered first (D-64).
+
 Bowlers change lanes every game. The app works out each bowler's lane for each game and prints it on the recap sheet. The desk picks one of two patterns with the "Same skip" and "Staggered skip" radio buttons (staggered is selected at start).
 
 ### Inputs

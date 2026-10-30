@@ -110,6 +110,28 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('recap sheets dialog has no WCAG 2.2 AA violations', async ({ page }) => {
+      await page.goto('/tournaments')
+      await page.getByRole('article').first().getByRole('link').click()
+      await page
+        .getByRole('navigation', { name: /Northeast MegaBuck/ })
+        .getByRole('link', { name: 'Squads' })
+        .click()
+      await page.getByRole('link', { name: /1:00 PM/ }).click()
+      await page.getByRole('button', { name: 'Recap sheets' }).click()
+      await expect(page.getByRole('button', { name: 'Print all' })).toBeVisible()
+
+      await expectNoViolations(page)
+
+      // One sheet unchecked: dimmed, and still readable.
+      await page
+        .getByRole('checkbox', { name: /^Print / })
+        .first()
+        .uncheck()
+      await expect(page.getByText('Not printing')).toBeVisible()
+      await expectNoViolations(page)
+    })
+
     test('lane assignments page of a complete squad has no WCAG 2.2 AA violations', async ({
       page,
     }) => {

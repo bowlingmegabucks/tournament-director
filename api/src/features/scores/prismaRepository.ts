@@ -1,6 +1,7 @@
 import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import { describeIssue } from '../../shared/describeIssue.ts'
 import type { Logger } from '../../shared/logger.ts'
+import { warnOnce } from '../../shared/warnOnce.ts'
 import type { ScoreRepository } from './repository.ts'
 import { toScoreRow } from './scoreRow.ts'
 
@@ -20,19 +21,18 @@ export function createPrismaScoreRepository(client: PrismaClient, logger: Logger
       return rows.flatMap((row) => {
         const result = toScoreRow(row)
         if (result.success) return [result.data]
-        const key = `${sessionId}:${row.bowlerId}:${row.game}`
-        if (!reported.has(key)) {
-          reported.add(key)
-          logger.warn(
-            {
-              bowlerId: row.bowlerId,
-              sessionId,
-              game: row.game,
-              problems: result.error.issues.map(describeIssue),
-            },
-            'Skipped a stored score that breaks the read shape',
-          )
-        }
+        warnOnce(
+          reported,
+          `${sessionId}:${row.bowlerId}:${row.game}`,
+          logger,
+          {
+            bowlerId: row.bowlerId,
+            sessionId,
+            game: row.game,
+            problems: result.error.issues.map(describeIssue),
+          },
+          'Skipped a stored score that breaks the read shape',
+        )
         return []
       })
     },

@@ -1,16 +1,5 @@
 import type { Logger } from '../../shared/logger.ts'
-
-function warnOnce(
-  reported: Set<string>,
-  key: string,
-  log: Logger,
-  fields: Record<string, unknown>,
-  message: string,
-): void {
-  if (reported.has(key)) return
-  reported.add(key)
-  log.warn(fields, message)
-}
+import { warnOnce } from '../../shared/warnOnce.ts'
 
 /**
  * Warn about the stored rows a lane page leaves out or cannot place (D-51, D-61): an entry whose

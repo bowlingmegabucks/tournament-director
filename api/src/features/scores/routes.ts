@@ -33,6 +33,10 @@ export function createScoreRouter(
   // Stryker disable next-line StringLiteral: '' and '/' match the same path.
   router.get('/', async (req, res) => {
     const { id, sessionId } = params.parse(req.params)
+    // Both reads start together. An unknown session still throws a 404 from the lane page, and the
+    // score read is then dropped (its failure is ignored so it cannot go unhandled).
+    const storedRead = scores.listScores(sessionId)
+    storedRead.catch(() => undefined)
     const loaded = await loadLanePage(
       label,
       findSession,
@@ -41,7 +45,7 @@ export function createScoreRouter(
       sessionId,
       { checkSeats: false },
     )
-    const stored = await scores.listScores(sessionId)
+    const stored = await storedRead
 
     reportLanePageProblems(reported, requestLogger(res, logger), sessionId, loaded)
     res.json(buildScorePage(loaded.page, loaded.entries, stored, loaded.session.games))

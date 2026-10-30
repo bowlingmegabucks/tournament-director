@@ -1,10 +1,9 @@
 /*
  * Below 40rem the CSS turns each row into a block so the table never scrolls sideways (D-73). A
  * `display` change can drop a table's meaning for a screen reader, so every part keeps its role
- * on purpose. That is why the two role rules are off in this file (a `td` counts as interactive
- * for a grid, but here it is a plain cell).
+ * on purpose. The lines that lint flags for it carry their own disable (a `td` counts as
+ * interactive for a grid, but here it is a plain cell).
  */
-/* eslint-disable jsx-a11y/no-redundant-roles, jsx-a11y/no-interactive-element-to-noninteractive-role */
 import styles from './ScoreTable.module.css'
 import type { ScoreBowler } from './types'
 
@@ -19,6 +18,7 @@ interface ScoreTableProps {
 /** A score cell: the number, "0" for a stored 0, or a blank a screen reader reads as "no score" (D-69). */
 function ScoreCell({ score, label }: Readonly<{ score: number | null; label: string }>) {
   return (
+    // eslint-disable-next-line jsx-a11y/no-interactive-element-to-noninteractive-role
     <td role="cell" data-label={label} className={styles.num}>
       {score === null ? <span className={styles.hidden}>no score</span> : score}
     </td>
@@ -36,6 +36,7 @@ export function ScoreTable({ bowlers, games, label }: Readonly<ScoreTableProps>)
   const columns = Array.from({ length: games }, (_, index) => index + 1)
   return (
     <table role="table" className={styles.table} aria-label={label}>
+      {/* eslint-disable-next-line jsx-a11y/no-redundant-roles */}
       <thead role="rowgroup" className={styles.head}>
         <tr role="row">
           <th role="columnheader" scope="col">
@@ -55,9 +56,11 @@ export function ScoreTable({ bowlers, games, label }: Readonly<ScoreTableProps>)
           </th>
         </tr>
       </thead>
+      {/* eslint-disable-next-line jsx-a11y/no-redundant-roles */}
       <tbody role="rowgroup" className={styles.body}>
         {bowlers.map((bowler) => (
           <tr key={bowler.registrationId} role="row">
+            {/* eslint-disable-next-line jsx-a11y/no-interactive-element-to-noninteractive-role */}
             <td role="cell" className={styles.lane}>
               {bowler.position}
             </td>
@@ -68,6 +71,7 @@ export function ScoreTable({ bowlers, games, label }: Readonly<ScoreTableProps>)
             {columns.map((game) => (
               <ScoreCell key={game} score={bowler.scores[game - 1] ?? null} label={`G${game}`} />
             ))}
+            {/* eslint-disable-next-line jsx-a11y/no-interactive-element-to-noninteractive-role */}
             <td role="cell" data-label="Total" className={totalClass}>
               {bowler.total}
             </td>

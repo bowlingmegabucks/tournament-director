@@ -3,7 +3,7 @@ import { field } from '../../shared/field'
 import { readJson } from '../../shared/readJson'
 import { isSessionDate } from '../../shared/sessionFormat'
 import { SessionNotFoundError, type SessionKind } from '../../shared/session'
-import type { ScorePage } from './types'
+import type { ScoreBowler, ScorePage } from './types'
 
 const isText = (value: unknown) => typeof value === 'string'
 const isNumber = (value: unknown) => typeof value === 'number'
@@ -42,6 +42,12 @@ function isSession(value: unknown): boolean {
   )
 }
 
+/** Every bowler has a score slot for each game of the session, as the API builds them (D-69). */
+function hasGameSlots(page: ScorePage): boolean {
+  const hasSlots = (bowler: ScoreBowler) => bowler.scores.length >= page.session.games
+  return page.other.every(hasSlots) && page.pairs.every((pair) => pair.bowlers.every(hasSlots))
+}
+
 function isScorePage(value: unknown): value is ScorePage {
   return (
     isSession(field(value, 'session')) &&
@@ -65,6 +71,8 @@ export async function fetchScores(
   if (response.status === 404 || response.status === 400) throw new SessionNotFoundError(kind)
   if (!response.ok) throw new Error(`Failed to load scores (${response.status})`)
   const body = await readJson(response, 'Failed to load scores')
-  if (!isScorePage(body)) throw new Error('Failed to load scores (unexpected response)')
+  if (!isScorePage(body) || !hasGameSlots(body)) {
+    throw new Error('Failed to load scores (unexpected response)')
+  }
   return body
 }

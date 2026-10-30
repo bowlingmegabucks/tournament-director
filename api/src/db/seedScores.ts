@@ -34,13 +34,11 @@ export async function seedScores(client: PrismaClient): Promise<number> {
       })),
     ),
   )
-  await Promise.all(
-    rows.map(
-      ({ bowlerId, squadId, game, score }) => client.$executeRaw`
-        INSERT INTO SquadScores (BowlerId, SquadId, Game, Score)
-        VALUES (${bowlerId}, ${squadId}, ${game}, ${score})
-        ON DUPLICATE KEY UPDATE Score = VALUES(Score)`,
-    ),
-  )
+  for (const { bowlerId, squadId, game, score } of rows) {
+    await client.$executeRaw`
+      INSERT INTO SquadScores (BowlerId, SquadId, Game, Score)
+      VALUES (${bowlerId}, ${squadId}, ${game}, ${score})
+      ON DUPLICATE KEY UPDATE Score = VALUES(Score)`
+  }
   return rows.length
 }

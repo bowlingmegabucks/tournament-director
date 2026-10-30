@@ -153,6 +153,19 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/scores', () => {
     expect(response.body).toEqual({ message: 'Tournament not found' })
   })
 
+  it('answers 404 for an unknown tournament even when the score read fails (SCR-16)', async () => {
+    const { squad } = setup()
+    const app = createTestApp({
+      scores: { listScores: () => Promise.reject(new HttpError(503, 'Database unavailable')) },
+    })
+
+    const response = await request(app).get(
+      `/v1/tournaments/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01/squads/${squad.id}/scores`,
+    )
+
+    expect(response.status).toBe(404)
+  })
+
   it.each([
     [
       'an unknown squad',

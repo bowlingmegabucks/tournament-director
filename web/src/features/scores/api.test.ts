@@ -99,8 +99,29 @@ describe('fetchScores', () => {
     ['a bowler with no division', { ...page, other: [{ ...bowler, divisionName: undefined }] }],
     ['a bowler with no position', { ...page, other: [{ ...bowler, position: undefined }] }],
     ['scores that is not an array', { ...page, other: [{ ...bowler, scores: 'none' }] }],
-    ['a score that is text', { ...page, other: [{ ...bowler, scores: ['200'] }] }],
+    ['a score that is text', { ...page, other: [{ ...bowler, scores: ['200', null, null] }] }],
     ['a bowler with no total', { ...page, other: [{ ...bowler, total: undefined }] }],
+    [
+      'a bowler with fewer scores than the session has games',
+      { ...page, other: [{ ...bowler, scores: [null] }] },
+    ],
+    [
+      'a pair where only the second bowler has too few scores',
+      {
+        ...page,
+        pairs: [
+          {
+            firstLane: 1,
+            lanes: [1, 2],
+            bowlers: [bowler, { ...bowler, registrationId: 'r2', scores: [] }],
+          },
+        ],
+      },
+    ],
+    [
+      'a paired bowler with fewer scores than the session has games',
+      { ...page, pairs: [{ firstLane: 1, lanes: [1, 2], bowlers: [{ ...bowler, scores: [] }] }] },
+    ],
     ['a bowler with no registration id', { ...page, other: [{ ...bowler, registrationId: 7 }] }],
   ])('rejects %s', async (_label, body) => {
     respondWith(body)

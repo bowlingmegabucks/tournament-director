@@ -110,6 +110,21 @@ describe('ScoresPage', () => {
     ])
   })
 
+  it('labels each cell for the narrow layout, which shows the label above the number (D-73)', async () => {
+    const page = filled()
+    serve(page)
+
+    open(page)
+
+    const table = await tableFor('Scores for lanes 1-2')
+    const joeRow = table.getByRole('row', { name: /Joe Fontaine/ })
+    expect(
+      within(joeRow)
+        .getAllByRole('cell')
+        .map((cell) => cell.getAttribute('data-label')),
+    ).toEqual([null, 'G1', 'G2', 'G3', 'Total'])
+  })
+
   it('leaves a game with no score blank for a screen reader to read as "no score" (D-69)', async () => {
     const page = filled()
     serve(page)

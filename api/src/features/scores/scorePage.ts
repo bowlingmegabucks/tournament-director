@@ -23,15 +23,21 @@ export function buildScorePage(
     gamesOf.set(bowlerId, byGame)
   }
 
+  // The scores saved for a registration's bowler, if any.
+  const storedFor = (registrationId: string) => {
+    const bowlerId = bowlerOf.get(registrationId)
+    return bowlerId === undefined ? undefined : gamesOf.get(bowlerId)
+  }
+
   const shown = [...lanePage.pairs.flatMap((pair) => pair.bowlers), ...lanePage.other]
   let columns = games
   for (const { registrationId } of shown) {
-    const stored = gamesOf.get(bowlerOf.get(registrationId) ?? '')
+    const stored = storedFor(registrationId)
     if (stored) columns = Math.max(columns, ...stored.keys())
   }
 
   function toBowler(bowler: LanePage['other'][number]): ScoreBowler {
-    const stored = gamesOf.get(bowlerOf.get(bowler.registrationId) ?? '')
+    const stored = storedFor(bowler.registrationId)
     const row = Array.from({ length: columns }, (_, index) => stored?.get(index + 1) ?? null)
     return {
       registrationId: bowler.registrationId,

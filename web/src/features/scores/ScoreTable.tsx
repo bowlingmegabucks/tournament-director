@@ -25,6 +25,9 @@ function ScoreCell({ score, label }: Readonly<{ score: number | null; label: str
   )
 }
 
+// Stryker disable next-line StringLiteral: class names only style the cell; jsdom does not compute styles.
+const totalClass = `${styles.num} ${styles.total}`
+
 /**
  * The bowlers of one lane pair, or of "Other positions": lane, bowler with division, a column per
  * game, and the scratch total (SCR-13, D-68, D-69). Read only.
@@ -65,7 +68,7 @@ export function ScoreTable({ bowlers, games, label }: Readonly<ScoreTableProps>)
             {columns.map((game) => (
               <ScoreCell key={game} score={bowler.scores[game - 1] ?? null} label={`G${game}`} />
             ))}
-            <td role="cell" data-label="Total" className={`${styles.num} ${styles.total}`}>
+            <td role="cell" data-label="Total" className={totalClass}>
               {bowler.total}
             </td>
           </tr>

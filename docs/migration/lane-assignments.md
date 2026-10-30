@@ -49,14 +49,16 @@ The desk drags a bowler onto a position, or back to "unassigned". Several desk P
 | --- | --- | --- |
 | LAN-10 | Two areas: unassigned bowlers and the lane grid. Plus a count of entries per division. | Done, differs (D-58) |
 | LAN-11 | Each bowler shows name, division, average, and handicap. On a squad, handicap comes from the division formula (`SCR-07`). On a sweeper, it is the division's bonus pins (`SCR-09`), and the bowler also shows Y/N for super sweeper. | Done |
-| LAN-12 | Actions: add an already-registered bowler to this squad (`REG-21`), new registration (`REG-22`), remove from squad (`REG-20`), copy assignments to clipboard (`RPT-06`), generate recap sheets (the "staggered skip" checkbox sits with them; see [the cross](#the-cross-lane-per-game)). | |
+| LAN-12 | Actions: add an already-registered bowler to this squad (`REG-21`), new registration (`REG-22`), remove from squad (`REG-20`), copy assignments to clipboard (`RPT-06`, dropped: D-67), generate recap sheets (the staggered skip choice, two radio buttons, sits with them; D-62 to D-66; see [the cross](#the-cross-lane-per-game)). | |
 | LAN-13 | A complete squad opens read-only (`SQD-17`). | Done, differs (D-10) |
 
 **D-55:** all of `LAN-12` is Later. **D-58:** `LAN-10` and `LAN-11` are built, with an on-screen move that saves nothing; "unassigned" is a NULL or empty position. **D-59:** public for 0.2.0, then signed-in only. **D-60:** reached from a squad portal page. **D-10:** the server lock on a complete session comes with the move command. The lasting record is [lane-assignments.md](../requirements/lane-assignments.md).
 
 ## The cross (lane per game)
 
-Bowlers change lanes every game. The app works out each bowler's lane for each game and prints it on the recap sheet. The desk picks one of two patterns with a "staggered skip" checkbox.
+**Done** as `LAN-18` (lanes in use, skip) and `LAN-19` (steps, swap) in [recap-sheets.md](../requirements/recap-sheets.md). The two skip patterns are radio buttons, staggered first (D-64).
+
+Bowlers change lanes every game. The app works out each bowler's lane for each game and prints it on the recap sheet. The desk picks one of two patterns with the "Same skip" and "Staggered skip" radio buttons (staggered is selected at start).
 
 ### Inputs
 

@@ -1,0 +1,33 @@
+/*
+ * What the printer gets (D-62): the chosen sheets, one per half-sheet page, in a copy kept outside
+ * the app. It is hidden on screen. While printing, `body[data-recap-printing]` hides every child of
+ * the body except this copy, which carries `data-recap-print-copy`. A named page keeps every other print of the app on its normal paper.
+ */
+@page recap {
+  size: 8.5in 5.5in;
+  margin: 0;
+}
+
+.root {
+  display: none;
+  page: recap;
+}
+
+@media print {
+  .root {
+    display: block;
+  }
+
+  :global(body[data-recap-printing]) {
+    background: var(--color-paper);
+  }
+
+  :global(body[data-recap-printing]) > :global(:not([data-recap-print-copy])) {
+    display: none;
+  }
+
+  /* No blank page after the last sheet. */
+  .root > :last-child {
+    break-after: auto;
+  }
+}

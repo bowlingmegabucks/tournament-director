@@ -18,7 +18,9 @@ export function createPrismaSquadRepository(client: PrismaClient, logger: Logger
         client.squad.findMany({
           where: { tournamentId, squadType },
           include: {
-            tournament: { select: { entryFee: true, finalsRatio: true, cashRatio: true } },
+            tournament: {
+              select: { entryFee: true, finalsRatio: true, cashRatio: true, games: true },
+            },
           },
         }),
       )
@@ -27,6 +29,7 @@ export function createPrismaSquadRepository(client: PrismaClient, logger: Logger
           entryFee: row.tournament.entryFee.toNumber(),
           finalsRatio: row.tournament.finalsRatio.toNumber(),
           cashRatio: row.tournament.cashRatio.toNumber(),
+          games: row.tournament.games,
         })
         if (result.success) return [result.data]
         // D-42: one old row must not hide the rest.

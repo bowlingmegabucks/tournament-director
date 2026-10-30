@@ -12,6 +12,7 @@ const numbers = [
   'entryFee',
   'finalsRatio',
   'cashRatio',
+  'games',
 ] as const
 const flags = [
   'complete',

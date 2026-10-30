@@ -7,6 +7,8 @@ import {
   createLaneBowler,
   createLanePage,
   createLanePair,
+  createRecapSheet,
+  createRecapSheets,
   createSquad,
   createSweeper,
   createTournament,
@@ -307,7 +309,10 @@ describe('LanesPage', () => {
       ),
     ).toBeVisible()
     expect(screen.getByText('Pat Nguyen')).toBeVisible()
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    // Printing recap sheets changes nothing, so it stays (D-63).
+    expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([
+      'Recap sheets',
+    ])
   })
 
   it('names the page, the session, and the tournament in the title', async () => {
@@ -567,5 +572,95 @@ describe('Assign to lanes dialog (D-58)', () => {
     await user.click(within(notice).getByRole('button', { name: 'Dismiss' }))
 
     expect(screen.queryByText(/No save is configured yet/)).not.toBeInTheDocument()
+  })
+})
+
+describe('Recap sheets button (LAN-12, RPT-09)', () => {
+  const recapPath = (kind: string) => `/v1/tournaments/:id/${kind}/:sessionId/recap-sheets`
+
+  it('opens the recap sheet dialog over the lane page, which stays put (D-64)', async () => {
+    const page = filled()
+    serve(page)
+    server.use(
+      http.get(recapPath('squads'), () =>
+        HttpResponse.json(
+          createRecapSheets({ sheets: [createRecapSheet({ name: 'Joe Fontaine' })] }),
+        ),
+      ),
+    )
+    open(page)
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Recap sheets' }, { timeout: 3000 }),
+    )
+
+    expect(await screen.findByRole('button', { name: 'Print all' })).toBeVisible()
+    expect(screen.getByRole('article', { name: 'Recap sheet for Joe Fontaine' })).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Lanes (1 to 10)' })).toBeInTheDocument()
+  })
+
+  it('closes the dialog and leaves the lane page as it was', async () => {
+    const page = filled()
+    serve(page)
+    server.use(http.get(recapPath('squads'), () => HttpResponse.json(createRecapSheets())))
+    open(page)
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Recap sheets' }, { timeout: 3000 }),
+    )
+    await screen.findByText(/No bowler has a lane yet/)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Recap sheets' })).toBeVisible()
+  })
+
+  it('is there on a complete squad too (D-63)', async () => {
+    const page = createLanePage({
+      session: { ...filled().session, complete: true },
+      pairs: [createLanePair(1, [joe])],
+      divisions: [{ id: 'd1', number: 1, name: 'Open', entries: 1 }],
+    })
+    serve(page)
+
+    open(page)
+
+    expect(
+      await screen.findByRole('button', { name: 'Recap sheets' }, { timeout: 3000 }),
+    ).toBeVisible()
+  })
+
+  it('asks the sweeper route for a sweeper (D-60)', async () => {
+    const page = createLanePage({
+      session: { ...filled().session, kind: 'sweeper' },
+      pairs: [createLanePair(1, [joe])],
+      divisions: [{ id: 'd1', number: 1, name: 'Open', entries: 1 }],
+    })
+    serve(page)
+    let asked = ''
+    server.use(
+      http.get(recapPath('sweepers'), ({ request }) => {
+        asked = new URL(request.url).pathname
+        return HttpResponse.json(createRecapSheets({ session: { ...page.session, games: 3 } }))
+      }),
+    )
+    open(page)
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Recap sheets' }, { timeout: 3000 }),
+    )
+
+    await screen.findByText(/No bowler has a lane yet/)
+    expect(asked).toContain('/sweepers/')
+  })
+
+  it('offers no recap button when no one has entered (LAN-10)', async () => {
+    const page = createLanePage()
+    serve(page)
+
+    open(page)
+
+    await screen.findByText(/No bowlers have entered this squad yet/, undefined, { timeout: 3000 })
+    expect(screen.queryByRole('button', { name: 'Recap sheets' })).not.toBeInTheDocument()
   })
 })

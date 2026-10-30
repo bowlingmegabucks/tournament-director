@@ -48,5 +48,6 @@ What the user sees and can do.
 | Squads and sweepers (lists)             | [squads-and-sweepers.md](squads-and-sweepers.md) |
 | Registrations (list)                    | [registrations.md](registrations.md)             |
 | Lane assignments (page, drag, portal)   | [lane-assignments.md](lane-assignments.md)       |
+| Recap sheets (preview, print, the cross) | [recap-sheets.md](recap-sheets.md)              |
 | Navigation and layout                   | [navigation.md](navigation.md)                   |
 | API route access                        | [api-access.md](api-access.md)                   |

@@ -18,6 +18,8 @@ model Tournament {
   start         DateTime @map("Start") @db.DateTime(6)
   end           DateTime @map("End") @db.DateTime(6)
   entryFee      Decimal  @map("EntryFee") @db.Decimal(5, 2)
+  /// Games per qualifying squad (TRN-04). A sweeper sets its own.
+  games         Int      @map("Games") @db.SmallInt
   /// 1 in N advance. A squad may override it; the squad list needs the default (TRN-12).
   finalsRatio   Decimal  @map("FinalsRatio") @db.Decimal(3, 1)
   cashRatio     Decimal  @map("CashRatio") @db.Decimal(3, 1)

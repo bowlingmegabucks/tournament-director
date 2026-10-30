@@ -1,0 +1,194 @@
+.dialog {
+  inline-size: min(60rem, calc(100vw - 2 * var(--space-4)));
+  max-inline-size: none;
+  block-size: min(46rem, calc(100vh - 2 * var(--space-4)));
+  padding: 0;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-elevated);
+}
+
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.dialog::backdrop {
+  background: var(--color-backdrop);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-block-end: var(--border-width) solid var(--color-border);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-block-end: var(--border-width) solid var(--color-border);
+}
+
+.skip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.skipLegend {
+  float: left;
+  margin-inline-end: var(--space-3);
+  padding: 0;
+  font-weight: 600;
+}
+
+.skipOption {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--target-min);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.input {
+  min-block-size: var(--target-min);
+  padding: var(--space-2);
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  font: inherit;
+}
+
+.secondary {
+  background: transparent;
+  color: var(--color-accent);
+}
+
+.count {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* The one scrolling area. It takes the keyboard, or its overflow is out of reach. */
+.scroller {
+  flex: 1;
+  min-block-size: 0;
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  overflow: auto;
+  background: var(--color-bg);
+}
+
+.notice {
+  display: block;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-inline-start: var(--marker-width) solid var(--color-accent);
+  border-radius: var(--radius);
+}
+
+.list {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.noticeText {
+  margin: 0;
+}
+
+.pick {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.check {
+  display: grid;
+  place-items: center;
+  min-inline-size: var(--target-min);
+  min-block-size: var(--target-min);
+}
+
+.caption {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.badge {
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+/* A sheet that will not print: dimmed, and the badge says so, so color is never the only cue. */
+.off .preview {
+  opacity: 0.55;
+}
+
+.off .badge {
+  border-style: dashed;
+}
+
+/* Sheets are laid out at true size (8.5in) and shrunk to fit the box. */
+.preview {
+  inline-size: max-content;
+  zoom: 0.32;
+}
+
+@media (min-width: 36rem) {
+  .preview {
+    zoom: 0.55;
+  }
+}
+
+@media (min-width: 56rem) {
+  .preview {
+    zoom: 0.8;
+  }
+}
+
+.empty {
+  margin: 0;
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+}
+
+@media print {
+  .dialog {
+    display: none;
+  }
+}

@@ -18,7 +18,7 @@ describe('Prisma squad repository', () => {
     await resetDatabase(client)
   })
 
-  /** A tournament with a $50 fee, finals ratio 7.0, and cash ratio 5.0. */
+  /** A tournament with a $50 fee, 6 games, finals ratio 7.0, and cash ratio 5.0. */
   async function insertTournament(): Promise<string> {
     const { id, name } = createTournament()
     await client.$executeRawUnsafe(
@@ -94,6 +94,7 @@ describe('Prisma squad repository', () => {
         finalsRatioOverridden: false,
         cashRatio: 5,
         cashRatioOverridden: false,
+        games: 6,
       },
     ])
   })

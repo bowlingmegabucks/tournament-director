@@ -17,4 +17,6 @@ export interface Squad {
   finalsRatioOverridden: boolean
   cashRatio: number
   cashRatioOverridden: boolean
+  /** Games each bowler bowls on this squad: the tournament's (TRN-04). */
+  games: number
 }

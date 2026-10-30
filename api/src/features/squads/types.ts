@@ -15,6 +15,8 @@ export const squadSchema = z.object({
   finalsRatioOverridden: z.boolean(),
   cashRatio: z.number(),
   cashRatioOverridden: z.boolean(),
+  /** Games each bowler bowls on this squad: the tournament's (TRN-04). The recap sheets use it. */
+  games: z.number().int(),
 })
 
 export type Squad = z.infer<typeof squadSchema>

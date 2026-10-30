@@ -6,6 +6,8 @@ export interface TournamentDefaults {
   entryFee: number
   finalsRatio: number
   cashRatio: number
+  /** Games per squad: a squad never overrides it (TRN-04). */
+  games: number
 }
 
 /**
@@ -30,5 +32,6 @@ export function toSquad(row: SessionRow, defaults: TournamentDefaults) {
     finalsRatioOverridden: finalsRatio !== null,
     cashRatio: cashRatio ?? defaults.cashRatio,
     cashRatioOverridden: cashRatio !== null,
+    games: defaults.games,
   } satisfies Record<keyof Squad, unknown>)
 }

@@ -297,6 +297,62 @@ test('a complete squad has no handles or buttons (LAN-13, D-10)', async ({ page 
   await expect(page.getByRole('button', { name: /Assign to lanes|Move/ })).toHaveCount(0)
 })
 
+test('the recap sheets dialog previews every sheet, switches the skip, and picks sheets (RPT-09, D-64)', async ({
+  page,
+}) => {
+  await openSquad(page, '1:00 PM')
+  await page.getByRole('button', { name: 'Recap sheets' }).click()
+
+  const dialog = page.getByRole('dialog', { name: /^Recap sheets/ })
+  await expect(dialog.getByRole('button', { name: 'Print all' })).toBeVisible()
+  // Seven bowlers have a lane; four wait (D-65).
+  await expect(dialog.getByRole('article')).toHaveCount(7)
+  await expect(dialog.getByText(/4 bowlers have no lane and get no sheet/)).toBeVisible()
+  await expect(dialog.getByText('7 of 7 selected')).toBeVisible()
+
+  const first = dialog.getByRole('article').first()
+  const staggered = await first.getByRole('cell').allTextContents()
+  await dialog.getByRole('radio', { name: 'Same skip' }).check()
+  expect(await first.getByRole('cell').allTextContents()).not.toEqual(staggered)
+
+  await dialog
+    .getByRole('checkbox', { name: /^Print / })
+    .first()
+    .uncheck()
+  await expect(dialog.getByText('6 of 7 selected')).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Print selected (6)' })).toBeEnabled()
+
+  await page.keyboard.press('Escape')
+  await expect(dialog).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Recap sheets' })).toBeFocused()
+})
+
+test('Print all lays out one half sheet per page, 8.5 by 5.5 inches (RPT-05b, D-62)', async ({
+  page,
+}) => {
+  // The print dialog cannot be driven, so stand in for it and look at what the page would print.
+  await page.addInitScript(() => {
+    window.print = () => undefined
+  })
+  await openSquad(page, '1:00 PM')
+  await page.getByRole('button', { name: 'Recap sheets' }).click()
+  const dialog = page.getByRole('dialog', { name: /^Recap sheets/ })
+  await dialog
+    .getByRole('checkbox', { name: /^Print / })
+    .first()
+    .uncheck()
+  await dialog.getByRole('button', { name: 'Print selected (6)' }).click()
+
+  await page.emulateMedia({ media: 'print' })
+  const pdf = (await page.pdf({ preferCSSPageSize: true, printBackground: true })).toString(
+    'latin1',
+  )
+
+  // 612 x 396 points is 8.5 x 5.5 inches. One page for each of the six checked sheets.
+  expect(pdf.match(/\/MediaBox \[0 0 612 396\]/g)).toHaveLength(6)
+  expect(pdf.match(/\/Type \/Page\b(?!s)/g)).toHaveLength(6)
+})
+
 test('a sweeper card opens its lane page with bonus pins (LAN-11, D-60)', async ({ page }) => {
   await page.goto('/tournaments')
   await page.getByRole('article').first().getByRole('link').click()

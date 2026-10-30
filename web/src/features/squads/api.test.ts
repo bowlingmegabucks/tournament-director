@@ -97,6 +97,7 @@ describe('fetchSquads', () => {
     ['finalsRatioOverridden', { finalsRatioOverridden: 1 }],
     ['cashRatio', { cashRatio: '5' }],
     ['cashRatioOverridden', { cashRatioOverridden: null }],
+    ['games', { games: '3' }],
   ] as const
 
   it.each(['garbage', '2026-10-24', '2026-10-24T09:00:00Z'])(

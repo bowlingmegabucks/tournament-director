@@ -6,7 +6,7 @@ import { QueryError } from '../../shared/QueryError'
 import { formatSessionDate } from '../../shared/sessionFormat'
 import { Toast } from '../../shared/Toast'
 import type { Tournament } from '../tournaments/types'
-import { LaneSetupError } from './api'
+import { LaneSetupError } from '../../shared/session'
 import { AssignDialog } from './AssignDialog'
 import { BowlerPreview } from './BowlerRow'
 import { decideDrop, NOT_SAVED, pairDropId, unassignedDropId, type DropTarget } from './dropRules'
@@ -14,6 +14,7 @@ import { countBowlers, formatSpots, formatTotals } from './format'
 import styles from './LanesPage.module.css'
 import { OtherPositions } from './OtherPositions'
 import { PairZone } from './PairZone'
+import { RecapDialog } from '../recapSheets/RecapDialog'
 import { applyMoves, type Move } from './tempMoves'
 import type { LaneBowler, LanePage, SessionKind } from './types'
 import { UnassignedList } from './UnassignedList'
@@ -39,6 +40,7 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
   const { data, isPending, error, refetch } = useLanes(kind, id, sessionId)
   const [draggingId, setDraggingId] = useState<string>()
   const [assigning, setAssigning] = useState<LaneBowler>()
+  const [recapOpen, setRecapOpen] = useState(false)
   const [toast, setToast] = useState<{ kind: 'info' | 'error'; text: string }>()
   // TEMPORARY (D-55): the moves made on this screen, for this session only. They show until the
   // page is left or refreshed, when the API's page is all there is.
@@ -99,19 +101,29 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
   } else {
     body = (
       <>
-        <ul className={styles.strip} aria-label="Bowlers per division">
-          {view.divisions.map((division) => (
-            <li key={division.id}>
-              {division.name}: {division.entries}
+        <div className={styles.stripRow}>
+          <ul className={styles.strip} aria-label="Bowlers per division">
+            {view.divisions.map((division) => (
+              <li key={division.id}>
+                {division.name}: {division.entries}
+              </li>
+            ))}
+            <li>
+              <strong>{formatTotals(view)}</strong>
             </li>
-          ))}
-          <li>
-            <strong>{formatTotals(view)}</strong>
-          </li>
-          <li>
-            <strong>{formatSpots(view)}</strong>
-          </li>
-        </ul>
+            <li>
+              <strong>{formatSpots(view)}</strong>
+            </li>
+          </ul>
+          <button
+            type="button"
+            onClick={() => {
+              setRecapOpen(true)
+            }}
+          >
+            Recap sheets
+          </button>
+        </div>
         {readOnly && <p className={styles.note}>This {kind} is complete. Lanes cannot change.</p>}
         <div className={styles.layout}>
           <UnassignedList
@@ -181,6 +193,16 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
           }}
           onClose={() => {
             setAssigning(undefined)
+          }}
+        />
+      )}
+      {recapOpen && (
+        <RecapDialog
+          kind={kind}
+          tournamentId={id}
+          sessionId={sessionId}
+          onClose={() => {
+            setRecapOpen(false)
           }}
         />
       )}

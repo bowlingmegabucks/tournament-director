@@ -1,6 +1,8 @@
 import { faker } from '@faker-js/faker'
 import type { Division } from '../features/divisions/types'
-import type { LaneBowler, LanePage, LanePair, SessionKind } from '../features/lanes/types'
+import type { LaneBowler, LanePage, LanePair } from '../features/lanes/types'
+import type { SessionKind } from '../shared/session'
+import type { RecapSheet, RecapSheets } from '../features/recapSheets/types'
 import type { Registration, RegistrationList } from '../features/registrations/types'
 import type { Squad } from '../features/squads/types'
 import type { Sweeper } from '../features/sweepers/types'
@@ -83,6 +85,7 @@ export function createSquad(overrides: Partial<Squad> = {}): Squad {
     finalsRatioOverridden: false,
     cashRatio: 5,
     cashRatioOverridden: false,
+    games: 3,
     ...overrides,
   }
 }
@@ -514,4 +517,81 @@ export function createDemoLanePage(
     entries: demoLaneBowlers.filter((bowler) => bowler.division === index).length,
   }))
   return page
+}
+
+/** A recap sheet for one bowler (RPT-05). Three games, handicap 47, the same lanes both ways. */
+export function createRecapSheet(overrides: Partial<RecapSheet> = {}): RecapSheet {
+  const firstName = faker.person.firstName()
+  const lastName = faker.person.lastName()
+  return {
+    registrationId: faker.string.uuid(),
+    name: `${firstName} ${lastName}`,
+    divisionName: 'Open',
+    position: '1A',
+    handicap: 47,
+    cross: { staggered: ['1A', '4A', '7A'], same: ['1A', '4A', '5A'] },
+    ...overrides,
+  }
+}
+
+/** The recap sheets of a session, with the session facts the sheet prints. */
+export function createRecapSheets(overrides: Partial<RecapSheets> = {}): RecapSheets {
+  const { session, ...rest } = overrides
+  return {
+    session: {
+      id: faker.string.uuid(),
+      kind: 'squad',
+      date: '2026-10-24T09:00:00',
+      games: 3,
+      complete: false,
+      ...session,
+    },
+    sheets: [],
+    withoutLane: 0,
+    withoutDivision: 0,
+    ...rest,
+  }
+}
+
+/**
+ * For the mock server: the recap sheets of a demo squad or sweeper, from the demo lane page. The
+ * lanes are made up (each game moves two lanes on, wrapping over the first six lanes) because the
+ * real cross lives in the API. The pages only show what the API sends.
+ */
+export function createDemoRecapSheets(
+  kind: SessionKind,
+  session: Parameters<typeof createDemoLanePage>[1] & { games: number },
+  divisions: Division[],
+): RecapSheets {
+  const page = createDemoLanePage(kind, session, divisions)
+  const sheets = page.pairs.flatMap((pair) =>
+    pair.bowlers.map((bowler) => {
+      const lane = Number.parseInt(bowler.position, 10)
+      const letter = bowler.position.slice(String(lane).length)
+      const cross = (step: number) =>
+        Array.from(
+          { length: session.games },
+          (_, game) => `${((lane - 1 + game * step) % 6) + 1}${letter}`,
+        )
+      return createRecapSheet({
+        registrationId: bowler.registrationId,
+        name: bowler.name,
+        divisionName: bowler.divisionName,
+        position: bowler.position,
+        handicap: bowler.pins,
+        cross: { staggered: cross(3), same: cross(2) },
+      })
+    }),
+  )
+  return createRecapSheets({
+    session: {
+      id: session.id,
+      kind,
+      date: session.date,
+      games: session.games,
+      complete: session.complete,
+    },
+    sheets,
+    withoutLane: page.unassigned.length + page.other.length,
+  })
 }

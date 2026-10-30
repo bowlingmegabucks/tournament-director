@@ -71,6 +71,7 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 - [ ] Database backups run, and a restore test passed.
 - [ ] Alerts set in Application Insights.
 - [ ] Hosting tier decided (the free App Service tier is slow after idle).
+- [ ] Live score updates reach every open Scores tab, signed in or not, without polling (Q-33; polls every 15 s until then, D-72).
 - [ ] Load test with a full tournament's users and score entry.
 - [ ] Several desk users can work at once: lane moves and new registrations show on every open screen (WebSockets or similar, Q-27), and two people racing for the last seat of a pair get one winner and a clear message for the other (Q-28).
 

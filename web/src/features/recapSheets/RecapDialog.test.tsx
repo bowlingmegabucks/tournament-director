@@ -65,7 +65,7 @@ async function pressPrint(name: string) {
   const before = print.mock.calls.length
   await userEvent.click(screen.getByRole('button', { name }))
   await waitFor(() => {
-    expect(print.mock.calls.length).toBe(before + 1)
+    expect(print.mock.calls).toHaveLength(before + 1)
   })
 }
 
@@ -184,7 +184,7 @@ describe('RecapDialog warning', () => {
     await loaded(createRecapSheets({ sheets: [joey, dana], withoutLane: 4 }))
 
     expect(
-      screen.getByText(/4 bowlers have no lane and get no sheet\./).closest('p'),
+      screen.getByText(/4 bowlers have no lane and get no sheet\./).closest('output'),
     ).toHaveTextContent(
       '4 bowlers have no lane and get no sheet. The lanes in use change the cross, so print after everyone has a lane.',
     )
@@ -263,7 +263,7 @@ describe('RecapDialog preview', () => {
     await userEvent.click(screen.getByRole('radio', { name: 'Same skip' }))
 
     expect(screen.getByRole('radio', { name: 'Same skip' })).toBeChecked()
-    expect(screen.queryByRole('cell', { name: '7A' })).toBeInTheDocument() // Maria's same cross ends on 7A
+    expect(screen.getByRole('cell', { name: '7A' })).toBeInTheDocument() // Maria's same cross ends on 7A
     expect(screen.getByRole('cell', { name: '5A' })).toBeInTheDocument()
     expect(screen.queryByRole('cell', { name: '9A' })).not.toBeInTheDocument()
 

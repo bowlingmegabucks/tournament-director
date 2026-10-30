@@ -10,13 +10,8 @@ const FLAG = 'recapPrinting'
  */
 export async function imagesReady(root: ParentNode = document): Promise<void> {
   const images = [...root.querySelectorAll<HTMLImageElement>('[data-recap-print-copy] img')]
-  await Promise.all(
-    images.map((image) =>
-      image.complete || typeof image.decode !== 'function'
-        ? undefined
-        : image.decode().catch(() => undefined),
-    ),
-  )
+  const loading = images.filter((image) => !image.complete && typeof image.decode === 'function')
+  await Promise.all(loading.map((image) => image.decode().catch(() => undefined)))
 }
 
 /**

@@ -202,7 +202,7 @@ export function RecapDialog({
                     setPattern('staggered')
                   }}
                 />
-                Staggered skip
+                <span>Staggered skip</span>
               </label>
               <label className={styles.skipOption}>
                 <input
@@ -213,7 +213,7 @@ export function RecapDialog({
                     setPattern('same')
                   }}
                 />
-                Same skip
+                <span>Same skip</span>
               </label>
             </fieldset>
             <span className={styles.spacer} />
@@ -301,16 +301,16 @@ export function RecapDialog({
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
       <div className={styles.scroller} tabIndex={0}>
         {data && data.withoutLane > 0 && (
-          <p className={styles.notice} role="status">
+          <output className={styles.notice}>
             <strong>
               {data.withoutLane} {plural(data.withoutLane, 'bowler has', 'bowlers have')} no lane
               and {plural(data.withoutLane, 'gets', 'get')} no sheet.
             </strong>{' '}
             The lanes in use change the cross, so print after everyone has a lane.
-          </p>
+          </output>
         )}
         {data && data.withoutDivision > 0 && (
-          <p className={styles.notice} role="status">
+          <output className={styles.notice}>
             <strong>
               {data.withoutDivision} {plural(data.withoutDivision, 'bowler has', 'bowlers have')} a
               lane but a division that is not in this tournament, so{' '}
@@ -318,7 +318,7 @@ export function RecapDialog({
             </strong>{' '}
             {plural(data.withoutDivision, 'That lane is', 'Those lanes are')} left out of the lanes
             in use too, so check the registration.
-          </p>
+          </output>
         )}
         {body}
       </div>

@@ -7,7 +7,9 @@ import {
   createLanePage,
   createScorePage,
   createSquad,
+  createSquadResults,
   createSweeper,
+  createSweeperResults,
   createTournament,
 } from '../../mocks/data'
 import { renderApp } from '../../test/renderApp'
@@ -68,7 +70,7 @@ describe('SessionPortal', () => {
       within(tabs)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['Lane assignments', 'Scores'])
+    ).toEqual(['Lane assignments', 'Scores', 'Results'])
     expect(within(tabs).getByRole('link', { name: 'Scores' })).not.toHaveAttribute('aria-current')
   })
 
@@ -103,6 +105,37 @@ describe('SessionPortal', () => {
     )
     expect(within(tabs).getByRole('link', { name: 'Lane assignments' })).not.toHaveAttribute(
       'aria-current',
+    )
+  })
+
+  it.each([
+    ['squads', 'Squad pages', () => squad.id],
+    ['sweepers', 'Sweeper pages', () => sweeper.id],
+  ])('has a Results tab that opens the %s results page (RES-32, D-60)', async (kind, nav, id) => {
+    serve()
+    server.use(
+      http.get('/v1/tournaments/:id/squads/:sessionId/results', () =>
+        HttpResponse.json(
+          createSquadResults({ session: { ...createSquadResults().session, id: squad.id } }),
+        ),
+      ),
+      http.get('/v1/tournaments/:id/sweepers/:sessionId/results', () =>
+        HttpResponse.json(
+          createSweeperResults({
+            session: { ...createSweeperResults().session, id: sweeper.id },
+          }),
+        ),
+      ),
+    )
+    renderApp(`${base}/${kind}/${id()}/lanes`)
+    const tabs = await screen.findByRole('navigation', { name: nav }, { timeout: 3000 })
+
+    await userEvent.click(within(tabs).getByRole('link', { name: 'Results' }))
+
+    expect(await screen.findByText('No scores entered yet.', {}, { timeout: 3000 })).toBeVisible()
+    expect(within(tabs).getByRole('link', { name: 'Results' })).toHaveAttribute(
+      'aria-current',
+      'page',
     )
   })
 

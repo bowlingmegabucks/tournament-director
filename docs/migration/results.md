@@ -8,7 +8,7 @@ Source: `business logic/Squads/Results/`, `business logic/Tournaments/Results/`,
 
 | ID | Rule |
 | --- | --- |
-| RES-01 | Results use every score saved so far. They do not wait for a squad to be complete. |
+| RES-01 | Results use every score saved so far. They do not wait for a squad to be complete. **D-74:** squad and sweeper results are public for good. **D-79:** the tab polls every 15 s until the session is complete. |
 
 ## Squad results
 
@@ -18,16 +18,16 @@ Computed per squad, per division. Squads are processed in date order, because a 
 
 | ID | Rule |
 | --- | --- |
-| RES-02 | **Entries** `N` = bowlers in the division with at least one score in the squad. No-shows count once the squad is complete (`SQD-15`). |
+| RES-02 | **Entries** `N` = bowlers in the division with at least one score in the squad. No-shows count once the squad is complete (`SQD-15`). **D-75:** a no-show or a bowler who did not finish still counts, but never advances or cashes, and lists in its own section. |
 | RES-03 | **Ratios:** squad finals ratio if set, else tournament. Same for cash ratio (`TRN-12`). |
 | RES-04 | **Advance spots** `A = floor(N / finalsRatio)`. |
 | RES-05 | **Extra cash spots** `C` (beyond the advancers): if `A = 0`, then `C = 1`; else `C = max(floor(N / cashRatio) − A, 0)`. So any division with entries pays at least one spot. |
 | RES-06 | **Previous advancers** = bowlers in this division who advanced in any earlier squad. |
 | RES-07 | **Advancers** = the top `A` bowlers, skipping previous advancers. |
-| RES-08 | **Cashers**, in two steps: (1) every previous advancer whose total is **at or above** the last advancer's total (they would have advanced, so they cash instead); (2) then the best remaining bowlers (not advancing, not previous advancers) until there are `C` cashers. If step 1 already reaches `C`, step 2 adds no one, and the cashers can number **more** than `C`. |
-| RES-09 | **Non-qualifiers** = everyone else, in rank order. A previous advancer below the cut lands here. |
+| RES-08 | **Cashers**, in two steps: (1) every previous advancer whose total is **at or above** the last advancer's total (they would have advanced, so they cash instead); (2) then the best remaining bowlers (not advancing, not previous advancers) until there are `C` cashers. If step 1 already reaches `C`, step 2 adds no one, and the cashers can number **more** than `C`. **D-81:** step 2 no longer skips previous advancers: they rank like everyone else, so one below the cut cashes when the rank puts them in a cash place. Only the advancing spots exclude them. |
+| RES-09 | **Non-qualifiers** = everyone else, in rank order. A previous advancer below the cut lands here unless the rank puts them in a cash place (D-81). |
 
-**Defects** (do not copy): if `A = 0` and a previous advancer bowled the squad, legacy crashes (there is no last advancer to compare with). If there are not enough bowlers left to fill `C`, legacy crashes. The new app should fill what it can.
+**Defects** (do not copy): if `A = 0` and a previous advancer bowled the squad, legacy crashes (there is no last advancer to compare with). If there are not enough bowlers left to fill `C`, legacy crashes. The new app should fill what it can. **D-81:** with `A = 0` there is no cut, so the top `C` bowlers cash and a previous advancer is not excluded.
 
 ### Worked examples
 
@@ -55,7 +55,7 @@ Previous advancers (from legacy tests for GitHub issue 9). 40 entries, so `A = 5
 | --- | --- |
 | RES-10 | One table per division, divisions sorted by name. Places run 1 to N through advancers, then cashers, then non-qualifiers. |
 | RES-11 | A "Cut Line" row follows the advancers ("No Advancers" when there are none). A "Cash Line" row follows the cashers. **D-14:** the cut line always splits advancers (above) from non-advancers (below). When bowlers on both sides of a line share the same total, the new standings mark them and say which tie-breaker decided it (for example "won on high game"). |
-| RES-11a | Columns: Place, Name, Total, HG (high game with handicap), HDCP. HDCP shows only if someone in the division has a handicap above 0. |
+| RES-11a | Columns: Place, Name, Total, HG (high game with handicap), HDCP. HDCP shows only if someone in the division has a handicap above 0. **D-76:** a Games column shows while the division's game counts differ. **D-75:** on a complete squad, "Did not finish" and "No show" sections follow the non-qualifiers. |
 | RES-11b | Header: "Squad Results", squad date and time, division. |
 
 ## At-large
@@ -90,10 +90,10 @@ Running the finals is out of scope. The app stops at the seeding list.
 
 | ID | Rule |
 | --- | --- |
-| RES-22 | Entries = every bowler with a score in the sweeper. **One list for the whole sweeper.** Divisions set bonus pins only; results are not split by division. |
+| RES-22 | Entries = every bowler with a score in the sweeper. **One list for the whole sweeper.** Divisions set bonus pins only; results are not split by division. **D-82:** each row shows the bowler's division under the name. |
 | RES-23 | Total = scratch + bonus pins × games (`SCR-09`). |
 | RES-24 | **Cashers** = `max(floor(N / sweeper.cashRatio), 1)`. The top ones cash. The cut score is the last casher's total. |
-| RES-25 | No scores yet: error "No scores entered for sweeper". |
+| RES-25 | No scores yet: error "No scores entered for sweeper". **D-77:** the new app shows the plain message "No scores entered yet." instead. |
 | RES-25a | Columns: Place, Name, Total, HG. A "Cash Line" row follows the cashers. Header "Sweeper Results" and the sweeper date. |
 
 ## Super sweeper results

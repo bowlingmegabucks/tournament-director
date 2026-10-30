@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Layout B: one division at a time · Results mockup</title>
+    <link rel="stylesheet" href="../../../web/src/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../web/src/styles/base.css" />
+    <link rel="stylesheet" href="mock.css" />
+  </head>
+  <body>
+    <main class="page">
+      <p class="mocknote">
+        Mockup, layout B. The same complete squad, one division on screen, chosen from a list. The
+        Print button still prints every division, one per page. The app header and sidebar are not
+        drawn. <a href="index.html">All mockups</a>.
+      </p>
+
+      <nav aria-label="Breadcrumb" class="crumbs">
+        <ol>
+          <li><a href="#">Northeast MegaBuck$ 2026</a></li>
+          <li><a href="#">Squads</a></li>
+          <li aria-current="page">Sat 10/10/2026 9:00 AM</li>
+        </ol>
+      </nav>
+      <h1 class="title">Sat 10/10/2026 9:00 AM<span class="status">Complete</span></h1>
+      <nav aria-label="Squad pages">
+        <ul class="tabs">
+          <li><a href="#">Lane assignments</a></li>
+          <li><a href="#">Scores</a></li>
+          <li><a href="#" aria-current="page">Results</a></li>
+        </ul>
+      </nav>
+
+      <div class="toolbar">
+        <div class="field">
+          <label for="division">Division</label>
+          <select id="division">
+            <option>Open (16 entries)</option>
+            <option>Scratch (5 entries)</option>
+            <option selected>Women/Senior (12 entries)</option>
+          </select>
+        </div>
+        <button type="button">Print all divisions</button>
+      </div>
+      <p class="note">Finals ratio 1 in 8 · cash ratio 1 in 5</p>
+
+      <section class="division" aria-labelledby="ws-h">
+        <h2>Women/Senior</h2>
+        <p class="meta" id="ws-h">12 entries · 1 advances · 1 cashes · handicap 90% of 220</p>
+        <table class="results">
+          <caption>
+            Results for the Women/Senior division
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Place</th>
+              <th scope="col">Name</th>
+              <th scope="col" class="num">Total</th>
+              <th scope="col" class="num">HG</th>
+              <th scope="col" class="num">HDCP</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="place">1</td>
+              <th scope="row" class="who">
+                Linda Perrault
+                <span class="mark">Tied on total at the cut line. Won the spot on high game.</span>
+              </th>
+              <td class="num total" data-label="Total">648</td>
+              <td class="num" data-label="HG">225</td>
+              <td class="num" data-label="HDCP">24</td>
+            </tr>
+            <tr class="line"><td colspan="5">Cut Line</td></tr>
+            <tr>
+              <td class="place">2</td>
+              <th scope="row" class="who">
+                Gail Whitmore
+                <span class="mark">Tied on total at the cut line. Lost the spot on high game.</span>
+              </th>
+              <td class="num total" data-label="Total">648</td>
+              <td class="num" data-label="HG">223</td>
+              <td class="num" data-label="HDCP">30</td>
+            </tr>
+            <tr class="line"><td colspan="5">Cash Line</td></tr>
+            <tr>
+              <td class="place">3</td>
+              <th scope="row" class="who">Rita Alvarez</th>
+              <td class="num total" data-label="Total">610</td>
+              <td class="num" data-label="HG">212</td>
+              <td class="num" data-label="HDCP">12</td>
+            </tr>
+            <tr>
+              <td class="place">4</td>
+              <th scope="row" class="who">Nancy Burke</th>
+              <td class="num total" data-label="Total">605</td>
+              <td class="num" data-label="HG">208</td>
+              <td class="num" data-label="HDCP">18</td>
+            </tr>
+            <tr>
+              <td class="place">5</td>
+              <th scope="row" class="who">Joan Pelletier</th>
+              <td class="num total" data-label="Total">602</td>
+              <td class="num" data-label="HG">210</td>
+              <td class="num" data-label="HDCP">40</td>
+            </tr>
+            <tr>
+              <td class="place">6</td>
+              <th scope="row" class="who">Carol Ng</th>
+              <td class="num total" data-label="Total">593</td>
+              <td class="num" data-label="HG">205</td>
+              <td class="num" data-label="HDCP">0</td>
+            </tr>
+            <tr>
+              <td colspan="5" class="note">Places 7 to 12 not drawn in this mockup.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </body>
+</html>

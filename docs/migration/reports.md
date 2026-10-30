@@ -10,7 +10,7 @@ Source: `main/ResultReportBase.cs`, `main/*/Results/*Report.cs`, `main/Tournamen
 | --- | --- |
 | RPT-01 | Page margin 35. Header: title (20 pt, semibold, centered); then "Date: `MM/dd/yyyy - hh:mm tt`" if the report has a date; then "Division: name" if it has a division. The Northeast Megabucks header image sits on the right (300 wide, 125 high). Footer: "page / total", centered. |
 | RPT-02 | One table. Header row semibold with a black bottom border. Rows have a light grey bottom border. Divider rows ("Cut Line", "Cash Line", "No Advancers") are small italic text with extra space. |
-| RPT-03 | Save offers a file name of `<title>.pdf`. Print renders each page as an image at 90 DPI and sends it to the printer. |
+| RPT-03 | Save offers a file name of `<title>.pdf`. Print renders each page as an image at 90 DPI and sends it to the printer. **D-78:** result reports print from the browser, one division per page, letter portrait; no PDF save. |
 
 ## The four PDF reports
 

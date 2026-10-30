@@ -63,7 +63,7 @@ Every results list (squad, at-large, seeding, sweeper, super sweeper) uses this 
 
 | ID | Rule |
 | --- | --- |
-| SCR-11 | Compare two entries in this order; the first difference decides: |
+| SCR-11 | Compare two entries in this order; the first difference decides. **D-76:** the results page shows a Games column while counts differ. |
 
 1. **More games bowled ranks higher.** (A bowler with 3 games entered ranks above one with 2, whatever the pins.)
 2. **Higher total with handicap.**

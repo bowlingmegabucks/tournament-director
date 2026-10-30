@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Layout A: all divisions stacked · Results mockup</title>
+    <link rel="stylesheet" href="../../../web/src/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../web/src/styles/base.css" />
+    <link rel="stylesheet" href="mock.css" />
+  </head>
+  <body>
+    <main class="page">
+      <p class="mocknote">
+        Mockup, layout A. A complete squad, three divisions on one scrolling page. The app header
+        and sidebar are not drawn. <a href="index.html">All mockups</a>.
+      </p>
+
+      <nav aria-label="Breadcrumb" class="crumbs">
+        <ol>
+          <li><a href="#">Northeast MegaBuck$ 2026</a></li>
+          <li><a href="#">Squads</a></li>
+          <li aria-current="page">Sat 10/10/2026 9:00 AM</li>
+        </ol>
+      </nav>
+      <h1 class="title">Sat 10/10/2026 9:00 AM<span class="status">Complete</span></h1>
+      <nav aria-label="Squad pages">
+        <ul class="tabs">
+          <li><a href="#">Lane assignments</a></li>
+          <li><a href="#">Scores</a></li>
+          <li><a href="#" aria-current="page">Results</a></li>
+        </ul>
+      </nav>
+
+      <div class="toolbar">
+        <p>Finals ratio 1 in 8 · cash ratio 1 in 5</p>
+        <button type="button">Print results</button>
+      </div>
+
+      <nav aria-label="Divisions">
+        <ul class="jump">
+          <li><a href="#open">Open</a></li>
+          <li><a href="#scratch">Scratch</a></li>
+          <li><a href="#women-senior">Women/Senior</a></li>
+        </ul>
+      </nav>
+
+      <section class="division" aria-labelledby="open-h">
+        <h2 id="open">Open</h2>
+        <p class="meta" id="open-h">16 entries · 2 advance · 1 cashes</p>
+        <table class="results">
+          <caption>
+            Results for the Open division
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Place</th>
+              <th scope="col">Name</th>
+              <th scope="col" class="num">Total</th>
+              <th scope="col" class="num">HG</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="place">1</td>
+              <th scope="row" class="who">Dave Kowalski</th>
+              <td class="num total" data-label="Total">735</td>
+              <td class="num" data-label="HG">258</td>
+            </tr>
+            <tr>
+              <td class="place">2</td>
+              <th scope="row" class="who">Marcus Reyes</th>
+              <td class="num total" data-label="Total">717</td>
+              <td class="num" data-label="HG">250</td>
+            </tr>
+            <tr class="line"><td colspan="4">Cut Line</td></tr>
+            <tr>
+              <td class="place">3</td>
+              <th scope="row" class="who">Tom Brandt</th>
+              <td class="num total" data-label="Total">702</td>
+              <td class="num" data-label="HG">244</td>
+            </tr>
+            <tr class="line"><td colspan="4">Cash Line</td></tr>
+            <tr>
+              <td class="place">4</td>
+              <th scope="row" class="who">Jim Albright</th>
+              <td class="num total" data-label="Total">692</td>
+              <td class="num" data-label="HG">236</td>
+            </tr>
+            <tr>
+              <td class="place">5</td>
+              <th scope="row" class="who">Ray Costa</th>
+              <td class="num total" data-label="Total">685</td>
+              <td class="num" data-label="HG">247</td>
+            </tr>
+            <tr>
+              <td class="place">6</td>
+              <th scope="row" class="who">Paul Nguyen</th>
+              <td class="num total" data-label="Total">677</td>
+              <td class="num" data-label="HG">232</td>
+            </tr>
+            <tr>
+              <td class="place">7</td>
+              <th scope="row" class="who">Steve Marsh</th>
+              <td class="num total" data-label="Total">674</td>
+              <td class="num" data-label="HG">238</td>
+            </tr>
+            <tr>
+              <td class="place">8</td>
+              <th scope="row" class="who">Frank DeLuca</th>
+              <td class="num total" data-label="Total">672</td>
+              <td class="num" data-label="HG">238</td>
+            </tr>
+            <tr>
+              <td class="place">9</td>
+              <th scope="row" class="who">Greg Olson</th>
+              <td class="num total" data-label="Total">667</td>
+              <td class="num" data-label="HG">243</td>
+            </tr>
+            <tr>
+              <td class="place">10</td>
+              <th scope="row" class="who">Walt Pruitt</th>
+              <td class="num total" data-label="Total">654</td>
+              <td class="num" data-label="HG">224</td>
+            </tr>
+            <tr>
+              <td class="place">11</td>
+              <th scope="row" class="who">Hank Dietrich</th>
+              <td class="num total" data-label="Total">640</td>
+              <td class="num" data-label="HG">226</td>
+            </tr>
+            <tr>
+              <td class="place">12</td>
+              <th scope="row" class="who">Lou Savage</th>
+              <td class="num total" data-label="Total">633</td>
+              <td class="num" data-label="HG">224</td>
+            </tr>
+            <tr>
+              <td class="place">13</td>
+              <th scope="row" class="who">Ed Brannigan</th>
+              <td class="num total" data-label="Total">608</td>
+              <td class="num" data-label="HG">207</td>
+            </tr>
+            <tr>
+              <td class="place">14</td>
+              <th scope="row" class="who">Carl Fenner</th>
+              <td class="num total" data-label="Total">589</td>
+              <td class="num" data-label="HG">201</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Did not finish</h3>
+        <p class="meta">Bowled fewer games than the squad. Not placed. Still one entry.</p>
+        <table class="results">
+          <caption>
+            Open division, did not finish
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col" class="num">Games</th>
+              <th scope="col" class="num">Total</th>
+              <th scope="col" class="num">HG</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row" class="who">Bob Whitaker</th>
+              <td class="num" data-label="Games">2 of 3</td>
+              <td class="num total" data-label="Total">445</td>
+              <td class="num" data-label="HG">230</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>No show</h3>
+        <p class="meta">Paid an entry and did not bowl. Not placed. Still one entry.</p>
+        <ul class="plain">
+          <li>Mike Tran</li>
+        </ul>
+      </section>
+
+      <section class="division" aria-labelledby="scratch-h">
+        <h2 id="scratch">Scratch</h2>
+        <p class="meta" id="scratch-h">5 entries · none advance · 1 cashes</p>
+        <table class="results">
+          <caption>
+            Results for the Scratch division
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Place</th>
+              <th scope="col">Name</th>
+              <th scope="col" class="num">Total</th>
+              <th scope="col" class="num">HG</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="line"><td colspan="4">No Advancers</td></tr>
+            <tr>
+              <td class="place">1</td>
+              <th scope="row" class="who">Ken Mahoney</th>
+              <td class="num total" data-label="Total">701</td>
+              <td class="num" data-label="HG">258</td>
+            </tr>
+            <tr class="line"><td colspan="4">Cash Line</td></tr>
+            <tr>
+              <td class="place">2</td>
+              <th scope="row" class="who">Phil Garner</th>
+              <td class="num total" data-label="Total">690</td>
+              <td class="num" data-label="HG">246</td>
+            </tr>
+            <tr>
+              <td class="place">3</td>
+              <th scope="row" class="who">Sam Whelan</th>
+              <td class="num total" data-label="Total">668</td>
+              <td class="num" data-label="HG">231</td>
+            </tr>
+            <tr>
+              <td class="place">4</td>
+              <th scope="row" class="who">Joe Ritter</th>
+              <td class="num total" data-label="Total">640</td>
+              <td class="num" data-label="HG">229</td>
+            </tr>
+            <tr>
+              <td class="place">5</td>
+              <th scope="row" class="who">Dan Kopp</th>
+              <td class="num total" data-label="Total">611</td>
+              <td class="num" data-label="HG">215</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="division" aria-labelledby="ws-h">
+        <h2 id="women-senior">Women/Senior</h2>
+        <p class="meta" id="ws-h">12 entries · 1 advances · 1 cashes · handicap 90% of 220</p>
+        <table class="results">
+          <caption>
+            Results for the Women/Senior division
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Place</th>
+              <th scope="col">Name</th>
+              <th scope="col" class="num">Total</th>
+              <th scope="col" class="num">HG</th>
+              <th scope="col" class="num">HDCP</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="place">1</td>
+              <th scope="row" class="who">
+                Linda Perrault
+                <span class="mark">Tied on total at the cut line. Won the spot on high game.</span>
+              </th>
+              <td class="num total" data-label="Total">648</td>
+              <td class="num" data-label="HG">225</td>
+              <td class="num" data-label="HDCP">24</td>
+            </tr>
+            <tr class="line"><td colspan="5">Cut Line</td></tr>
+            <tr>
+              <td class="place">2</td>
+              <th scope="row" class="who">
+                Gail Whitmore
+                <span class="mark">Tied on total at the cut line. Lost the spot on high game.</span>
+              </th>
+              <td class="num total" data-label="Total">648</td>
+              <td class="num" data-label="HG">223</td>
+              <td class="num" data-label="HDCP">30</td>
+            </tr>
+            <tr class="line"><td colspan="5">Cash Line</td></tr>
+            <tr>
+              <td class="place">3</td>
+              <th scope="row" class="who">Rita Alvarez</th>
+              <td class="num total" data-label="Total">610</td>
+              <td class="num" data-label="HG">212</td>
+              <td class="num" data-label="HDCP">12</td>
+            </tr>
+            <tr>
+              <td class="place">4</td>
+              <th scope="row" class="who">Nancy Burke</th>
+              <td class="num total" data-label="Total">605</td>
+              <td class="num" data-label="HG">208</td>
+              <td class="num" data-label="HDCP">18</td>
+            </tr>
+            <tr>
+              <td class="place">5</td>
+              <th scope="row" class="who">Joan Pelletier</th>
+              <td class="num total" data-label="Total">602</td>
+              <td class="num" data-label="HG">210</td>
+              <td class="num" data-label="HDCP">40</td>
+            </tr>
+            <tr>
+              <td class="place">6</td>
+              <th scope="row" class="who">Carol Ng</th>
+              <td class="num total" data-label="Total">593</td>
+              <td class="num" data-label="HG">205</td>
+              <td class="num" data-label="HDCP">0</td>
+            </tr>
+            <tr>
+              <td class="place">7</td>
+              <th scope="row" class="who">Sue Dunphy</th>
+              <td class="num total" data-label="Total">566</td>
+              <td class="num" data-label="HG">194</td>
+              <td class="num" data-label="HDCP">22</td>
+            </tr>
+            <tr>
+              <td class="place">8</td>
+              <th scope="row" class="who">Barb Hollis</th>
+              <td class="num total" data-label="Total">550</td>
+              <td class="num" data-label="HG">190</td>
+              <td class="num" data-label="HDCP">35</td>
+            </tr>
+            <tr>
+              <td class="place">9</td>
+              <th scope="row" class="who">Peg Sullivan</th>
+              <td class="num total" data-label="Total">542</td>
+              <td class="num" data-label="HG">188</td>
+              <td class="num" data-label="HDCP">28</td>
+            </tr>
+            <tr>
+              <td class="place">10</td>
+              <th scope="row" class="who">Ann Marchetti</th>
+              <td class="num total" data-label="Total">533</td>
+              <td class="num" data-label="HG">186</td>
+              <td class="num" data-label="HDCP">16</td>
+            </tr>
+            <tr>
+              <td class="place">11</td>
+              <th scope="row" class="who">Dot Ferris</th>
+              <td class="num total" data-label="Total">505</td>
+              <td class="num" data-label="HG">175</td>
+              <td class="num" data-label="HDCP">20</td>
+            </tr>
+            <tr>
+              <td class="place">12</td>
+              <th scope="row" class="who">Ellen Gray</th>
+              <td class="num total" data-label="Total">491</td>
+              <td class="num" data-label="HG">171</td>
+              <td class="num" data-label="HDCP">26</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </body>
+</html>

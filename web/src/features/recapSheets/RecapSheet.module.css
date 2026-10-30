@@ -1,0 +1,94 @@
+/*
+ * One half sheet, 8.5 x 5.5 in (D-62). Laid out at true size in inches and points, then shown
+ * smaller in the preview with `zoom`. Black on white whatever the theme (D-63).
+ */
+.sheet {
+  display: grid;
+  grid-template-columns: 3.4in 1fr;
+  column-gap: 0.3in;
+  inline-size: 8.5in;
+  block-size: 5.5in;
+  padding: 0.3in 0.35in;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: Calibri, Carlito, var(--font-body);
+  font-size: 11pt;
+  line-height: 1.2;
+  break-after: page;
+  break-inside: avoid;
+}
+
+.left {
+  display: grid;
+  grid-template-rows: auto auto auto auto 1fr auto auto;
+  justify-items: center;
+}
+
+.sponsors {
+  inline-size: 100%;
+  block-size: auto;
+}
+
+.when {
+  display: flex;
+  justify-content: space-between;
+  inline-size: 100%;
+  font-size: 12pt;
+}
+
+.name {
+  margin: 0.12in 0 0;
+  font-size: 15pt;
+  font-weight: 700;
+  text-align: center;
+}
+
+.division {
+  margin: 0.05in 0 0;
+  font-size: 13pt;
+  text-align: center;
+}
+
+.signature {
+  inline-size: 100%;
+  padding-block-start: 0.03in;
+  border-block-start: 2px solid var(--color-ink);
+}
+
+.bowlerSignature {
+  composes: signature;
+  font-size: 13pt;
+}
+
+.opposingSignature {
+  composes: signature;
+  margin-block-start: 0.55in;
+  font-size: 11.25pt;
+}
+
+.right {
+  display: grid;
+  grid-template-rows: 1fr auto;
+}
+
+.table {
+  inline-size: 100%;
+  block-size: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  border: 2px solid var(--color-ink);
+  text-align: center;
+}
+
+.table thead th {
+  block-size: 0.5in;
+}
+
+.office {
+  margin: 0.15in 0 0;
+  text-align: end;
+}

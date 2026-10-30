@@ -22,6 +22,8 @@
   --color-focus: #f3efe3;
   --color-backdrop: rgb(0 0 0 / 0.7); /* the dim layer behind a modal dialog */
   --color-brand-bg: #000000; /* the logo is designed for black, in both themes */
+  --color-paper: #ffffff; /* a printed sheet is black on white in both themes (D-63) */
+  --color-ink: #000000;
 
   /* Type */
   --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;

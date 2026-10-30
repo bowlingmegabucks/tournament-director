@@ -116,13 +116,17 @@ describe('SquadsPage', () => {
     expect(within(await cardOf('1:00 PM')).getByText('Open')).toBeVisible()
   })
 
-  it('has no links or buttons on a card or the page (D-44, D-21)', async () => {
-    serve([createSquad()])
+  it('links the date to the squad page and has no buttons (D-60, D-21)', async () => {
+    const squad = createSquad()
+    serve([squad])
 
     open()
 
     const card = await cardOf('9:00 AM')
-    expect(within(card).queryByRole('link')).not.toBeInTheDocument()
+    expect(within(card).getByRole('link', { name: /9:00 AM/ })).toHaveAttribute(
+      'href',
+      `/tournaments/${tournament.id}/squads/${squad.id}`,
+    )
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 

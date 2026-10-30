@@ -23,6 +23,12 @@
   --toast-fill: var(--color-danger);
 }
 
+/* A notice that is neither good nor bad news. The accent pair is the primary button's, so it meets contrast. */
+.info {
+  --toast-fill: var(--color-accent);
+  color: var(--color-accent-text);
+}
+
 .icon {
   font-size: var(--font-size-lg);
   font-weight: 700;

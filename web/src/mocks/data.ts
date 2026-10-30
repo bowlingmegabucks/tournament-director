@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker'
 import type { Division } from '../features/divisions/types'
+import type { LaneBowler, LanePage, LanePair, SessionKind } from '../features/lanes/types'
 import type { Registration, RegistrationList } from '../features/registrations/types'
 import type { Squad } from '../features/squads/types'
 import type { Sweeper } from '../features/sweepers/types'
@@ -319,4 +320,198 @@ export function createDemoTournaments(now: Date = new Date()): Tournament[] {
       bowlingCenter: 'Spare Time Lanes, Worcester MA',
     })
   })
+}
+
+/** A test that overrides only `name` gets a first and last name read from it: "Joe Fontaine, Jr" is Joe, Fontaine. */
+export function createLaneBowler(overrides: Partial<LaneBowler> = {}): LaneBowler {
+  const parts = overrides.name?.split(' ')
+  const firstName = overrides.firstName ?? parts?.[0] ?? faker.person.firstName()
+  const lastName =
+    overrides.lastName ?? parts?.slice(1).join(' ').split(',')[0] ?? faker.person.lastName()
+  return {
+    registrationId: faker.string.uuid(),
+    name: `${firstName} ${lastName}`,
+    firstName,
+    lastName,
+    divisionId: faker.string.uuid(),
+    divisionName: 'Open',
+    average: 200,
+    position: '',
+    pins: 0,
+    superSweeper: false,
+    ...overrides,
+  }
+}
+
+/** A pair with its lanes worked out from its first lane, as the API sends it. */
+export function createLanePair(
+  firstLane: number,
+  bowlers: LaneBowler[] = [],
+  capacity = 5,
+): LanePair {
+  return { firstLane, lanes: [firstLane, firstLane + 1], capacity, bowlers }
+}
+
+/** A lane page for a session of 10 lanes from lane 1, with five bowlers per pair. Override what a test cares about. */
+export function createLanePage(overrides: Partial<LanePage> = {}): LanePage {
+  const { session, ...rest } = overrides
+  const startingLane = session?.startingLane ?? 1
+  const numberOfLanes = session?.numberOfLanes ?? 10
+  const maxPerPair = session?.maxPerPair ?? 5
+  return {
+    session: {
+      id: faker.string.uuid(),
+      kind: 'squad',
+      date: '2026-10-24T09:00:00',
+      complete: false,
+      startingLane,
+      numberOfLanes,
+      maxPerPair,
+      ...session,
+    },
+    pairs: Array.from({ length: Math.floor(numberOfLanes / 2) }, (_, index) =>
+      createLanePair(startingLane + 2 * index, [], maxPerPair),
+    ),
+    unassigned: [],
+    other: [],
+    divisions: [],
+    ...rest,
+  }
+}
+
+// Who is on the demo lane page. `pair` counts from the session's first pair; the seat letter says
+// which lane of the pair (A and B are the odd lane, C to E the even one, D-56).
+interface DemoLaneBowler {
+  first: string
+  last: string
+  division: number
+  average: number | null
+  seat?: { pair: number; letter: 'A' | 'B' | 'C' | 'D' | 'E' }
+  superSweeper: boolean
+}
+
+const demoLaneBowlers: DemoLaneBowler[] = [
+  {
+    first: 'Joe',
+    last: 'Fontaine',
+    division: 0,
+    average: 212,
+    seat: { pair: 0, letter: 'A' },
+    superSweeper: true,
+  },
+  {
+    first: 'Dana',
+    last: 'Abbott',
+    division: 0,
+    average: 201,
+    seat: { pair: 0, letter: 'C' },
+    superSweeper: false,
+  },
+  {
+    first: 'Maria',
+    last: 'Chen',
+    division: 1,
+    average: 168,
+    seat: { pair: 0, letter: 'B' },
+    superSweeper: true,
+  },
+  {
+    first: 'Ray',
+    last: 'Baptiste',
+    division: 0,
+    average: 190,
+    seat: { pair: 0, letter: 'D' },
+    superSweeper: false,
+  },
+  {
+    first: 'Tom',
+    last: 'Delgado',
+    division: 0,
+    average: 205,
+    seat: { pair: 1, letter: 'A' },
+    superSweeper: false,
+  },
+  {
+    first: 'Priya',
+    last: 'Nair',
+    division: 2,
+    average: 175,
+    seat: { pair: 1, letter: 'C' },
+    superSweeper: false,
+  },
+  {
+    first: 'Wes',
+    last: 'Tanaka',
+    division: 0,
+    average: 190,
+    seat: { pair: 2, letter: 'A' },
+    superSweeper: false,
+  },
+  { first: 'Pat', last: 'Nguyen', division: 1, average: 168, superSweeper: true },
+  { first: 'Carl', last: 'Dubois', division: 0, average: 205, superSweeper: false },
+  { first: 'Rosa', last: 'Delgado', division: 3, average: 231, superSweeper: true },
+  { first: 'Sam', last: 'Okafor', division: 2, average: null, superSweeper: false },
+]
+
+const lanePins = (kind: SessionKind, division: Division | undefined, average: number | null) => {
+  if (kind === 'sweeper') {
+    if (division?.name === 'Women') return 6
+    return division?.name === 'Open' ? 10 : 0
+  }
+  const base = division?.handicapBase
+  const percent = division?.handicapPercentage
+  if (average === null || !base || !percent || average >= base) return 0
+  return Math.min(
+    Math.floor(((base - average) * percent) / 100),
+    division.maximumHandicapPerGame ?? 999,
+  )
+}
+
+/**
+ * For the mock server: the lane page of a demo squad or sweeper. Eight bowlers sit on the first
+ * three pairs and three wait, so the page shows both areas. Positions follow the session's lanes.
+ */
+export function createDemoLanePage(
+  kind: SessionKind,
+  session: Pick<
+    LanePage['session'],
+    'id' | 'date' | 'complete' | 'startingLane' | 'numberOfLanes' | 'maxPerPair'
+  >,
+  divisions: Division[],
+): LanePage {
+  const page = createLanePage({ session: { ...session, kind } })
+  const unassigned: LaneBowler[] = []
+  for (const demo of demoLaneBowlers) {
+    const division = divisions[demo.division]
+    const bowler = createLaneBowler({
+      name: `${demo.first} ${demo.last}`,
+      firstName: demo.first,
+      lastName: demo.last,
+      divisionId: division?.id ?? '',
+      divisionName: division?.name ?? '',
+      average: demo.average,
+      pins: lanePins(kind, division, demo.average),
+      superSweeper: demo.superSweeper,
+    })
+    const pair = demo.seat ? page.pairs[demo.seat.pair] : undefined
+    if (!demo.seat || !pair) {
+      unassigned.push(bowler)
+      continue
+    }
+    const lane = pair.firstLane + (['C', 'D', 'E'].includes(demo.seat.letter) ? 1 : 0)
+    pair.bowlers.push({ ...bowler, position: `${lane}${demo.seat.letter}` })
+  }
+  for (const pair of page.pairs) {
+    pair.bowlers.sort((a, b) => a.position.localeCompare(b.position, 'en', { numeric: true }))
+  }
+  page.unassigned = unassigned.toSorted(
+    (a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName),
+  )
+  page.divisions = divisions.map(({ id, number, name }, index) => ({
+    id,
+    number,
+    name,
+    entries: demoLaneBowlers.filter((bowler) => bowler.division === index).length,
+  }))
+  return page
 }

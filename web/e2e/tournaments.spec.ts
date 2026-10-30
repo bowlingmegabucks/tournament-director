@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 test('home shows the current tournament and leads to the list and the overview', async ({
   page,
@@ -168,4 +168,145 @@ test('a click outside the popup closes it (REG-28)', async ({ page }) => {
   await page.mouse.click(5, 5)
 
   await expect(popup).toBeHidden()
+})
+
+/** Open the squad whose card title has this time: the demo has 9:00 AM (complete), 1:00 PM (open), and a Sunday one. */
+async function openSquad(page: Page, time: string) {
+  await page.goto('/tournaments')
+  await page.getByRole('article').first().getByRole('link').click()
+  await page
+    .getByRole('navigation', { name: /Northeast MegaBuck/ })
+    .getByRole('link', { name: 'Squads' })
+    .click()
+  await page
+    .getByRole('link', { name: new RegExp(time) })
+    .first()
+    .click()
+  await expect(page.getByRole('heading', { name: 'Lanes (1 to 24)' })).toBeVisible()
+}
+
+/** Press on a handle, move in steps so the drag library sees a drag, and let go over a target. */
+async function dragTo(page: Page, handle: Locator, target: Locator) {
+  // The unassigned list scrolls; a handle below its edge would take the press as a text selection.
+  await handle.scrollIntoViewIfNeeded()
+  await target.scrollIntoViewIfNeeded()
+  await handle.scrollIntoViewIfNeeded()
+  const from = await handle.boundingBox()
+  const to = await target.boundingBox()
+  if (!from || !to) throw new Error('Nothing to drag')
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(from.x + from.width / 2 + 10, from.y + from.height / 2 + 10, { steps: 5 })
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 15 })
+  await page.mouse.up()
+}
+
+test('a squad card opens its lane page with the pairs and the bowlers who need a lane (LAN-10, D-60)', async ({
+  page,
+}) => {
+  await openSquad(page, '1:00 PM')
+
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Sat 10/24/2026 1:00 PM')
+  await expect(page.getByRole('link', { name: 'Lane assignments' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  )
+  await expect(page.getByRole('heading', { name: 'Unassigned (4)' })).toBeVisible()
+  // Twelve pairs of four, with eleven bowlers entered.
+  await expect(page.getByText('37 of 48 spots open')).toBeVisible()
+  await expect(page.getByRole('heading', { level: 3, name: /^Lanes 1-2/ })).toContainText(
+    '4 of 4, full',
+  )
+  await expect(page.getByRole('heading', { level: 3, name: /^Lanes 3-4/ })).toContainText('2 of 4')
+})
+
+test('a drop on a pair with room moves the bowler on screen and says nothing is saved (D-55, D-56, D-58)', async ({
+  page,
+}) => {
+  // Tall enough that the pair is in view: a drop needs a visible target.
+  await page.setViewportSize({ width: 1280, height: 1400 })
+  await openSquad(page, '1:00 PM')
+
+  await dragTo(
+    page,
+    page.getByRole('button', { name: 'Drag Pat Nguyen' }),
+    page.getByRole('heading', { level: 3, name: /^Lanes 3-4/ }),
+  )
+
+  await expect(page.getByText(/No save is configured yet/)).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Unassigned (3)' })).toBeVisible()
+  const pair = page.getByRole('heading', { level: 3, name: /^Lanes 3-4/ }).locator('xpath=..')
+  await expect(pair).toContainText('3 of 4')
+  await expect(pair.getByText('Pat Nguyen')).toBeVisible()
+  // The first free seat after 3A and 4C (D-56).
+  await expect(pair.getByText('3B')).toBeVisible()
+})
+
+test('a drop on a full pair is refused (D-56, D-58)', async ({ page }) => {
+  await openSquad(page, '1:00 PM')
+
+  await dragTo(
+    page,
+    page.getByRole('button', { name: 'Drag Pat Nguyen' }),
+    page.getByRole('heading', { level: 3, name: /^Lanes 1-2/ }),
+  )
+
+  await expect(page.getByRole('alert')).toContainText(
+    'Lanes 1-2 are full (4 of 4). Pick another pair.',
+  )
+})
+
+test('a bowler can be dragged with the keyboard (D-58)', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1400 })
+  await openSquad(page, '1:00 PM')
+
+  // Space picks up, Shift and the arrows move in big steps, Space drops over the first pair.
+  await page.getByRole('button', { name: 'Drag Rosa Delgado' }).focus()
+  await page.keyboard.press('Space')
+  for (let step = 0; step < 12; step++) await page.keyboard.press('Shift+ArrowRight')
+  for (let step = 0; step < 2; step++) await page.keyboard.press('Shift+ArrowDown')
+  await page.keyboard.press('Space')
+
+  await expect(page.getByRole('alert')).toContainText('Lanes 1-2 are full (4 of 4)')
+})
+
+test('the Assign to lanes dialog picks a pair, and Escape closes it (D-58)', async ({ page }) => {
+  await openSquad(page, '1:00 PM')
+  const button = page.getByRole('button', { name: 'Assign to lanes: Pat Nguyen' })
+
+  await button.click()
+
+  const dialog = page.getByRole('dialog', { name: 'Assign Pat Nguyen to lanes' })
+  await expect(dialog.getByRole('button', { name: /Lanes 1-2/ })).toBeDisabled()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await expect(button).toBeFocused()
+
+  await button.click()
+  await dialog.getByRole('button', { name: /Lanes 7-8/ }).click()
+
+  await expect(page.getByText(/No save is configured yet/)).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Unassigned (3)' })).toBeVisible()
+})
+
+test('a complete squad has no handles or buttons (LAN-13, D-10)', async ({ page }) => {
+  await openSquad(page, '9:00 AM')
+
+  await expect(page.getByText('This squad is complete. Lanes cannot change.')).toBeVisible()
+  await expect(page.getByRole('button', { name: /Drag/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Assign to lanes|Move/ })).toHaveCount(0)
+})
+
+test('a sweeper card opens its lane page with bonus pins (LAN-11, D-60)', async ({ page }) => {
+  await page.goto('/tournaments')
+  await page.getByRole('article').first().getByRole('link').click()
+  await page
+    .getByRole('navigation', { name: /Northeast MegaBuck/ })
+    .getByRole('link', { name: 'Sweepers' })
+    .click()
+
+  await page.getByRole('link', { name: /6:00 PM/ }).click()
+
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Sat 10/24/2026 6:00 PM')
+  await expect(page.getByText('Open · avg 205 · +10 pins · super sweeper: N')).toBeVisible()
 })

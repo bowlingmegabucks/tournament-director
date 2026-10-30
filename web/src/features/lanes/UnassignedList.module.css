@@ -1,0 +1,51 @@
+.area {
+  position: relative;
+  /* Level with the first pair, which sits one step inside its scrolling region. The title's own
+     margin collapses with this one, so this is the title's gap plus that step. */
+  margin-block-start: calc(var(--space-2) + var(--space-1));
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: var(--border-width) dashed var(--color-border);
+  border-radius: var(--radius);
+}
+
+/* An outline over the border and a cue laid over the bottom edge, so nothing takes space and
+   nothing moves when a drag starts (D-58). */
+.canDrop {
+  outline: 3px solid var(--color-success);
+  outline-offset: calc(-1 * var(--border-width));
+}
+
+.cue {
+  position: absolute;
+  inset-inline: var(--space-3);
+  inset-block-end: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  text-align: center;
+}
+
+.canDrop .cue::before {
+  content: '✓ ';
+  color: var(--color-success);
+}
+
+.bowlers {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.empty {
+  margin: 0;
+}
+
+/* This list starts a step lower than the pairs and its box has padding of its own. */
+.scrollOffset {
+  --above: 26.625rem;
+}

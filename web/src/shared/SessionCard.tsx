@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router'
 import styles from './SessionCard.module.css'
 import { formatLanes, formatPerPair, formatSessionDate } from './sessionFormat'
 
@@ -28,6 +29,8 @@ export function Fact({ label, children }: Readonly<{ label: string; children: Re
 
 interface SessionCardProps {
   session: Session
+  /** Where the date links to: the squad or sweeper page (D-60), relative to the list's route. */
+  href: string
   /** The facts that differ between squads and sweepers. */
   facts: ReactNode
   /** Anything below the facts. */
@@ -35,14 +38,14 @@ interface SessionCardProps {
 }
 
 /**
- * A squad or sweeper as a plain card (D-44). It does not link anywhere until the session pages
- * exist. The date is the title, as in legacy, followed by Open or Complete.
+ * A squad or sweeper as a card (D-44). The date is the title, as in legacy, followed by Open or
+ * Complete. It links to the session's page (D-60).
  */
-export function SessionCard({ session, facts, children }: Readonly<SessionCardProps>) {
+export function SessionCard({ session, href, facts, children }: Readonly<SessionCardProps>) {
   return (
     <li className={styles.card}>
       <h2 className={styles.title}>
-        {formatSessionDate(session.date)}
+        <Link to={href}>{formatSessionDate(session.date)}</Link>
         <span className={styles.status}>{session.complete ? 'Complete' : 'Open'}</span>
       </h2>
       <dl className={styles.facts}>

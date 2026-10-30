@@ -37,6 +37,7 @@ export function SweepersPage() {
             <SessionCard
               key={sweeper.id}
               session={sweeper}
+              href={sweeper.id}
               facts={
                 <>
                   <Fact label="Entry fee">{formatFee(sweeper.entryFee)}</Fact>

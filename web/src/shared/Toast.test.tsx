@@ -32,6 +32,20 @@ describe('Toast', () => {
     expect(screen.queryByText('✓')).not.toBeInTheDocument()
   })
 
+  it('announces an info politely, with an i', () => {
+    render(
+      <Toast kind="info" onDismiss={() => {}}>
+        Not saved
+      </Toast>,
+    )
+
+    expect(screen.getByRole('status')).toHaveTextContent('Not saved')
+    expect(screen.getByText('ℹ')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByText('✓')).not.toBeInTheDocument()
+    expect(screen.queryByText('✕')).not.toBeInTheDocument()
+  })
+
   it('calls onDismiss when the user presses Dismiss', async () => {
     const onDismiss = vi.fn()
     render(

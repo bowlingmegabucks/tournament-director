@@ -21,6 +21,7 @@ Version numbers follow content, not a countdown. 0.10.0 is fine.
 
 - [ ] Every legacy rule is `Done`, `Done, differs`, or `Dropped` with a decision ID (see the Status columns in `docs/migration/`).
 - [ ] Every open question in [decisions-and-questions.md](migration/decisions-and-questions.md) is settled.
+- [ ] The desk can generate and print recap sheets for a squad or sweeper, with the cross (`RPT-05`, `LAN-12`; plan notes in [reports.md](migration/reports.md#recap-sheet-in-the-new-app-plan-notes); Q-29 to Q-31).
 
 ## Data and cutover
 
@@ -60,6 +61,7 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 - [ ] Roles and permissions reviewed against [security.md](migration/security.md).
 - [ ] Personal data (bowler records) is behind auth.
 - [ ] Lock-down release done before any command route (D-52): every public read route and page reviewed, and those that should not be public put behind auth.
+- [ ] Lane assignments page and its route are signed-in only (D-59). They ship public in 0.2.0; label them in the lock-down release and hide the link when signed out.
 - [ ] Registrations list (`GET /v1/tournaments/{id}/registrations` and its page) is signed-in only. It ships public in 0.2.0 (D-46); lock it down once 0.3.0 has auth, and hide the sidebar link when signed out.
 - [ ] `npm audit` clean; pinned-version overrides in CLAUDE.md reviewed.
 
@@ -69,6 +71,7 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 - [ ] Alerts set in Application Insights.
 - [ ] Hosting tier decided (the free App Service tier is slow after idle).
 - [ ] Load test with a full tournament's users and score entry.
+- [ ] Several desk users can work at once: lane moves and new registrations show on every open screen (WebSockets or similar, Q-27), and two people racing for the last seat of a pair get one winner and a clear message for the other (Q-28).
 
 ## People
 

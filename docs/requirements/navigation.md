@@ -18,7 +18,7 @@ The sidebar lists Divisions, Squads, Sweepers, and Registrations (D-47).
 
 ## Designed, not built
 
-`NAV-04` (Later; D-22, D-23). Build it with the squad feature.
+`NAV-04` (Later; D-22, D-23). Built in part with lane assignments (D-60, [lane-assignments.md](lane-assignments.md), `LAN-15`): the breadcrumb, the date with its status, and the Lane assignments tab. The Complete button and the Scores and Results tabs are still to come, and the Squads and Sweepers card lists now link to the session pages.
 
 - The sidebar's **Squads** and **Sweepers** items open a **card list** of sessions: date and time, Open or Complete, lanes, fee, and ratios. The cards show no entry counts: those pages stay public, and the counts sit on the Registrations page (D-50). An Add button on the list comes with commands (0.4.0 and up).
 - Inside one squad or sweeper, the sidebar does not change, with its parent item marked `aria-current="location"`. The page header has a **breadcrumb** (Squads / the session), the **name** with its status badge, a **Complete** button (a complete squad is locked, D-10), and **tabs** for that session's pages: Lane assignments, Scores, Results.

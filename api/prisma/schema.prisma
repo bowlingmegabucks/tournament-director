@@ -28,19 +28,19 @@ model Tournament {
 }
 
 model Division {
-  id                     String   @id @map("Id") @db.Char(36)
-  name                   String   @map("Name") @db.LongText
-  number                 Int      @map("Number") @db.SmallInt
-  tournamentId           String   @map("TournamentId") @db.Char(36)
-  minimumAge             Int?     @map("MinimumAge") @db.SmallInt
-  maximumAge             Int?     @map("MaximumAge") @db.SmallInt
-  minimumAverage         Int?     @map("MinimumAverage")
-  maximumAverage         Int?     @map("MaximumAverage")
-  handicapPercentage     Decimal? @map("HandicapPercentage") @db.Decimal(3, 2)
-  handicapBase           Int?     @map("HandicapBase")
-  maximumHandicapPerGame Int?     @map("MaximumHandicapPerGame")
+  id                     String            @id @map("Id") @db.Char(36)
+  name                   String            @map("Name") @db.LongText
+  number                 Int               @map("Number") @db.SmallInt
+  tournamentId           String            @map("TournamentId") @db.Char(36)
+  minimumAge             Int?              @map("MinimumAge") @db.SmallInt
+  maximumAge             Int?              @map("MaximumAge") @db.SmallInt
+  minimumAverage         Int?              @map("MinimumAverage")
+  maximumAverage         Int?              @map("MaximumAverage")
+  handicapPercentage     Decimal?          @map("HandicapPercentage") @db.Decimal(3, 2)
+  handicapBase           Int?              @map("HandicapBase")
+  maximumHandicapPerGame Int?              @map("MaximumHandicapPerGame")
   /// 0 = Male, 1 = Female, NULL = any gender (docs/migration/database.md)
-  gender                 Int?     @map("Gender")
+  gender                 Int?              @map("Gender")
   sweeperPins            SweeperDivision[]
   registrations          Registration[]
 
@@ -50,22 +50,22 @@ model Division {
 /// Squads and sweepers share this table (EF "table per hierarchy"): squadType 0 is a squad,
 /// 1 is a sweeper. Columns that do not apply to a row's type are NULL.
 model Squad {
-  id              String   @id @map("Id") @db.Char(36)
-  tournamentId    String   @map("TournamentId") @db.Char(36)
-  squadType       Int      @map("SquadType")
-  date            DateTime @map("Date") @db.DateTime(6)
+  id              String              @id @map("Id") @db.Char(36)
+  tournamentId    String              @map("TournamentId") @db.Char(36)
+  squadType       Int                 @map("SquadType")
+  date            DateTime            @map("Date") @db.DateTime(6)
   /// Squad: optional override. Sweeper: its own required cash ratio.
-  cashRatio       Decimal? @map("CashRatio") @db.Decimal(3, 1)
-  maxPerPair      Int      @map("MaxPerPair") @db.SmallInt
-  startingLane    Int      @map("StartingLane") @db.SmallInt
-  numberOfLanes   Int      @map("NumberOfLanes") @db.SmallInt
-  complete        Boolean  @map("Complete")
-  finalsRatio     Decimal? @map("FinalsRatio") @db.Decimal(3, 1)
-  squadEntryFee   Decimal? @map("SquadEntryFee") @db.Decimal(5, 2)
-  sweeperEntryFee Decimal? @map("SweeperEntryFee") @db.Decimal(5, 2)
-  games           Int?     @map("Games") @db.SmallInt
+  cashRatio       Decimal?            @map("CashRatio") @db.Decimal(3, 1)
+  maxPerPair      Int                 @map("MaxPerPair") @db.SmallInt
+  startingLane    Int                 @map("StartingLane") @db.SmallInt
+  numberOfLanes   Int                 @map("NumberOfLanes") @db.SmallInt
+  complete        Boolean             @map("Complete")
+  finalsRatio     Decimal?            @map("FinalsRatio") @db.Decimal(3, 1)
+  squadEntryFee   Decimal?            @map("SquadEntryFee") @db.Decimal(5, 2)
+  sweeperEntryFee Decimal?            @map("SweeperEntryFee") @db.Decimal(5, 2)
+  games           Int?                @map("Games") @db.SmallInt
   /// The tournament it belongs to, for the fee and ratios a squad falls back on (TRN-12).
-  tournament      Tournament @relation(fields: [tournamentId], references: [id])
+  tournament      Tournament          @relation(fields: [tournamentId], references: [id])
   /// Bonus pins, for a sweeper.
   pins            SweeperDivision[]
   /// Who bowls this squad or sweeper (REG-24).
@@ -76,9 +76,9 @@ model Squad {
 
 /// Bonus pins per game for one division in one sweeper. NULL counts as 0.
 model SweeperDivision {
-  sweeperId        String @map("SweeperId") @db.Char(36)
-  divisionId       String @map("DivisionId") @db.Char(36)
-  bonusPinsPerGame Int?   @map("BonusPinsPerGame")
+  sweeperId        String   @map("SweeperId") @db.Char(36)
+  divisionId       String   @map("DivisionId") @db.Char(36)
+  bonusPinsPerGame Int?     @map("BonusPinsPerGame")
   sweeper          Squad    @relation(fields: [sweeperId], references: [id])
   division         Division @relation(fields: [divisionId], references: [id])
 
@@ -103,11 +103,13 @@ model Bowler {
 }
 
 /// One bowler in one division (REG-01). The tournament comes from the division: the table has no
-/// TournamentId column (Q-26). Average and payments are not read yet.
+/// TournamentId column (Q-26). Payments are not read yet.
 model Registration {
   id           String              @id @map("Id") @db.Char(36)
   bowlerId     String              @map("BowlerId") @db.Char(36)
   divisionId   String              @map("DivisionId") @db.Char(36)
+  /// Drives handicap (SCR-07). NULL means no average.
+  average      Int?                @map("Average")
   superSweeper Boolean             @map("SuperSweeper")
   bowler       Bowler              @relation(fields: [bowlerId], references: [id])
   division     Division            @relation(fields: [divisionId], references: [id])
@@ -116,10 +118,13 @@ model Registration {
   @@map("Registrations")
 }
 
-/// A registration bowling one squad or sweeper (REG-24). The lane position is not read yet.
+/// A registration bowling one squad or sweeper (REG-24). `laneAssignment` is the position, such as
+/// `15A` (LAN-01). The column is NOT NULL with default '' in the legacy table; the model reads NULL
+/// too, since both mean "not assigned" (D-58).
 model SquadRegistration {
   registrationId String       @map("RegistrationId") @db.Char(36)
   squadId        String       @map("SquadId") @db.Char(36)
+  laneAssignment String?      @map("LaneAssignment") @db.VarChar(3)
   registration   Registration @relation(fields: [registrationId], references: [id])
   squad          Squad        @relation(fields: [squadId], references: [id])
 

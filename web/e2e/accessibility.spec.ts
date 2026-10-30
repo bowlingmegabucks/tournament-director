@@ -87,6 +87,47 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('lane assignments page (loaded, and with the Assign dialog open) has no WCAG 2.2 AA violations', async ({
+      page,
+    }) => {
+      await page.goto('/tournaments')
+      await page.getByRole('article').first().getByRole('link').click()
+      await page
+        .getByRole('navigation', { name: /Northeast MegaBuck/ })
+        .getByRole('link', { name: 'Squads' })
+        .click()
+      await page.getByRole('link', { name: /1:00 PM/ }).click()
+      await expect(page.getByRole('heading', { name: 'Unassigned (4)' })).toBeVisible()
+      await expectNoViolations(page)
+
+      await page.getByRole('button', { name: 'Assign to lanes: Pat Nguyen' }).click()
+      await expect(page.getByRole('dialog', { name: 'Assign Pat Nguyen to lanes' })).toBeVisible()
+      await expectNoViolations(page)
+
+      // The "not saved" notice, with the moved bowler in place.
+      await page.getByRole('button', { name: /Lanes 7-8/ }).click()
+      await expect(page.getByText(/No save is configured yet/)).toBeVisible()
+      await expectNoViolations(page)
+    })
+
+    test('lane assignments page of a complete squad has no WCAG 2.2 AA violations', async ({
+      page,
+    }) => {
+      await page.goto('/tournaments')
+      await page.getByRole('article').first().getByRole('link').click()
+      await page
+        .getByRole('navigation', { name: /Northeast MegaBuck/ })
+        .getByRole('link', { name: 'Squads' })
+        .click()
+      await page
+        .getByRole('link', { name: /9:00 AM/ })
+        .first()
+        .click()
+      await expect(page.getByText('This squad is complete. Lanes cannot change.')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
     test('registrations squad popup (open) has no WCAG 2.2 AA violations', async ({ page }) => {
       await page.goto('/tournaments')
       await page.getByRole('article').first().getByRole('link').click()

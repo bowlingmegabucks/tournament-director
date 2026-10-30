@@ -33,6 +33,7 @@ export function SquadsPage() {
             <SessionCard
               key={squad.id}
               session={squad}
+              href={squad.id}
               facts={
                 <>
                   <Fact label="Entry fee">

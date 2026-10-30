@@ -112,13 +112,17 @@ describe('SweepersPage', () => {
     expect(within(second).getByText('Women: +6')).toBeVisible()
   })
 
-  it('has no links or buttons on a card or the page (D-44, D-21)', async () => {
-    serve([createSweeper()])
+  it('links the date to the sweeper page and has no buttons (D-60, D-21)', async () => {
+    const sweeper = createSweeper()
+    serve([sweeper])
 
     open()
 
     const card = await cardOf('6:00 PM')
-    expect(within(card).queryByRole('link')).not.toBeInTheDocument()
+    expect(within(card).getByRole('link', { name: /6:00 PM/ })).toHaveAttribute(
+      'href',
+      `/tournaments/${tournament.id}/sweepers/${sweeper.id}`,
+    )
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 

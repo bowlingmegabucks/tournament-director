@@ -36,7 +36,10 @@ export async function loadSquadResults(
   sessionId: string,
 ): Promise<SquadResults> {
   if (!(await deps.tournaments.get(tournamentId))) throw new HttpError(404, 'Tournament not found')
-  const all = await deps.squads.listByTournament(tournamentId)
+  const [all, divisions] = await Promise.all([
+    deps.squads.listByTournament(tournamentId),
+    deps.divisions.listByTournament(tournamentId),
+  ])
   const index = all.findIndex((item) => item.id === sessionId)
   const squad = all[index]
   if (!squad) throw new HttpError(404, 'Squad not found')
@@ -49,7 +52,6 @@ export async function loadSquadResults(
     })
   }
 
-  const divisions = await deps.divisions.listByTournament(tournamentId)
   const worked = await workOutSquads(deps, upTo, divisions)
   const current = worked[index]
   // Stryker disable next-line all: unreachable. `worked` has one entry for each squad up to this one.

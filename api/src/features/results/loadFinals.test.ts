@@ -294,16 +294,6 @@ describe('loadAtLarge', () => {
     })
   })
 
-  it('answers 404 when the tournament row is missing even if ratios exist', async () => {
-    const { deps, reporting, tournament } = setup({})
-    deps.tournaments = { ...deps.tournaments, get: () => Promise.resolve(undefined) }
-
-    await expect(loadAtLarge(deps, reporting, tournament.id)).rejects.toMatchObject({
-      status: 404,
-      message: 'Tournament not found',
-    })
-  })
-
   it.each([
     [
       'tournament finals ratio',
@@ -675,19 +665,10 @@ describe('loadSuperSweeper', () => {
     ).rejects.toMatchObject({ status: 404, message: 'Tournament not found' })
   })
 
-  it('answers 404 when the row is missing or the ratios are', async () => {
+  it('answers 404 when the ratios are missing', async () => {
     const { deps, reporting, tournament } = setup({})
 
-    deps.tournaments = { ...deps.tournaments, get: () => Promise.resolve(undefined) }
-    await expect(loadSuperSweeper(deps, reporting, tournament.id)).rejects.toMatchObject({
-      status: 404,
-      message: 'Tournament not found',
-    })
-    deps.tournaments = {
-      ...deps.tournaments,
-      get: () => Promise.resolve(tournament),
-      getRatios: () => Promise.resolve(undefined),
-    }
+    deps.tournaments = { ...deps.tournaments, getRatios: () => Promise.resolve(undefined) }
     await expect(loadSuperSweeper(deps, reporting, tournament.id)).rejects.toMatchObject({
       status: 404,
       message: 'Tournament not found',

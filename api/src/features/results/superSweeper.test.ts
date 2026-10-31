@@ -168,6 +168,73 @@ describe('buildSuperSweeperEntries', () => {
     expect(entries[0]?.flags[0]?.kind).toBe('missed')
   })
 
+  it('treats stored zeros as a missed sweeper: no pins, flagged, zero-filled (D-06, D-75, D-90)', () => {
+    const noShow = registrant()
+    const input = sweeperOf({ bonusPins: [pinsFor(open, 10)] }, [
+      { entry: noShow, scores: [0, 0, 0] },
+    ])
+
+    const { entries } = buildSuperSweeperEntries([input], [open])
+
+    expect(entries[0]?.sweeperTotals).toEqual([0])
+    expect(entries[0]?.entry).toMatchObject({ total: 0, highGame: 0 })
+    expect(entries[0]?.entry.games).toEqual([0, 0, 0])
+    expect(entries[0]?.flags).toEqual([
+      { kind: 'missed', sweeperId: input.sweeper.id, gamesBowled: 0 },
+    ])
+  })
+
+  it('keeps the real scores of a bowler who has some zeros among them (D-90)', () => {
+    const bowler = registrant()
+    const input = sweeperOf({ bonusPins: [pinsFor(open, 10)] }, [
+      { entry: bowler, scores: [200, 0, 190] },
+    ])
+
+    const { entries } = buildSuperSweeperEntries([input], [open])
+
+    expect(entries[0]?.sweeperTotals).toEqual([420])
+    expect(entries[0]?.flags).toEqual([])
+  })
+
+  it('does not flag stored zeros in a sweeper that is still open', () => {
+    const early = registrant()
+    const done = sweeperOf({}, [{ entry: early, scores: [200, 200, 200] }])
+    const running = sweeperOf({ complete: false }, [{ entry: early, scores: [0, 0, 0] }])
+
+    const { entries } = buildSuperSweeperEntries([done, running], [open])
+
+    expect(entries[0]?.sweeperTotals).toEqual([600, null])
+    expect(entries[0]?.flags).toEqual([])
+  })
+
+  it('ranks a no-show and a bowler who did not finish after everyone who bowled (D-90)', () => {
+    const pins = [pinsFor(open, 10)]
+    const bowler = registrant()
+    const unfinished = registrant()
+    const noShow = registrant()
+    const input = sweeperOf({ bonusPins: pins }, [
+      { entry: bowler, scores: [120, 120, 120] },
+      { entry: unfinished, scores: [250, 250] },
+      { entry: noShow, scores: [0, 0, 0] },
+    ])
+
+    const { entries } = buildSuperSweeperEntries([input], [open])
+    const outcome = workOutSuperSweeper(entries, 1)
+
+    // Pins make the real bowler 390 against 520 for the two games of the one who left early. The
+    // no-show stays last on zeros with no pins, and the unfinished flag sits on the middle row.
+    expect(outcome.cashers.map((item) => item.entry.registrationId)).toEqual([
+      unfinished.registrationId,
+      bowler.registrationId,
+      noShow.registrationId,
+    ])
+    expect(outcome.cashers.map((item) => item.flags[0]?.kind)).toEqual([
+      'unfinished',
+      undefined,
+      'missed',
+    ])
+  })
+
   it('counts every game, so a bowler with 6 games ranks above one with 3 (SS-9)', () => {
     const full = registrant()
     const partial = registrant()

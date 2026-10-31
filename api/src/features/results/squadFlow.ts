@@ -63,11 +63,13 @@ export async function workOutSquads(
   divisions: readonly Division[],
 ): Promise<WorkedSquad[]> {
   const reads = await Promise.all(
-    squads.map(async (squad) => ({
-      squad,
-      entries: await deps.lanes.listEntries(squad.id),
-      scores: await deps.scores.listScores(squad.id),
-    })),
+    squads.map(async (squad) => {
+      const [entries, scores] = await Promise.all([
+        deps.lanes.listEntries(squad.id),
+        deps.scores.listScores(squad.id),
+      ])
+      return { squad, entries, scores }
+    }),
   )
   const advanced = new Set<string>()
   return reads.map((read) => {

@@ -42,16 +42,17 @@ async function loadRuns(
   reporting: Reporting,
   tournamentId: string,
 ): Promise<TournamentRuns> {
-  if (!(await deps.tournaments.get(tournamentId))) throw new HttpError(404, 'Tournament not found')
   const ratios = await deps.tournaments.getRatios(tournamentId)
   if (!ratios) throw new HttpError(404, 'Tournament not found')
   requireRatios("This tournament's", { finals: ratios.finalsRatio })
 
-  const squads = await deps.squads.listByTournament(tournamentId)
+  const [squads, divisions] = await Promise.all([
+    deps.squads.listByTournament(tournamentId),
+    deps.divisions.listByTournament(tournamentId),
+  ])
   for (const squad of squads) {
     requireRatios("A squad's", { finals: squad.finalsRatio, cash: squad.cashRatio })
   }
-  const divisions = await deps.divisions.listByTournament(tournamentId)
   const worked = await workOutSquads(deps, squads, divisions)
   for (const { squad, skipped } of worked) reportSkipped(reporting, squad.id, skipped)
 
@@ -174,7 +175,6 @@ export async function loadSuperSweeper(
   reporting: Reporting,
   tournamentId: string,
 ): Promise<SuperSweeperResults> {
-  if (!(await deps.tournaments.get(tournamentId))) throw new HttpError(404, 'Tournament not found')
   const ratios = await deps.tournaments.getRatios(tournamentId)
   if (!ratios) throw new HttpError(404, 'Tournament not found')
   // D-17, D-93: old tournaments may hold the legacy 0.
@@ -185,11 +185,13 @@ export async function loadSuperSweeper(
     deps.divisions.listByTournament(tournamentId),
   ])
   const inputs = await Promise.all(
-    sweepers.map(async (sweeper) => ({
-      sweeper,
-      entries: await deps.lanes.listEntries(sweeper.id),
-      scores: await deps.scores.listScores(sweeper.id),
-    })),
+    sweepers.map(async (sweeper) => {
+      const [entries, scores] = await Promise.all([
+        deps.lanes.listEntries(sweeper.id),
+        deps.scores.listScores(sweeper.id),
+      ])
+      return { sweeper, entries, scores }
+    }),
   )
   const built = buildSuperSweeperEntries(inputs, divisions)
   reportSkipped(reporting, tournamentId, built.skipped)

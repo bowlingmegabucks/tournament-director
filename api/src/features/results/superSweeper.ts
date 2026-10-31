@@ -48,7 +48,8 @@ function gamesByBowler(scores: readonly ScoreRow[]): Map<string, number[]> {
  * RES-26, RES-27, D-90: one combined entry for each bowler who opted in to the super sweeper.
  * `inputs` are in date order. Each game takes its own sweeper's bonus pins (the RES-27 defect). In a
  * complete sweeper, a bowler with no score or fewer games than the sweeper has gets 0 for each missing
- * game, with no pins, and a flag. An open sweeper adds nothing. A bowler with no game at all is left
+ * game, with no pins, and a flag. Stored scores that are all 0 (the zeros Complete writes for a
+ * no-show, D-06) count as no score. An open sweeper adds nothing. A bowler with no game at all is left
  * out. Games bowled for ranking is every game, zero-filled ones included.
  */
 export function buildSuperSweeperEntries(
@@ -86,7 +87,9 @@ export function buildSuperSweeperEntries(
     let total = 0
 
     for (const { sweeper, pins, games: stored } of perSweeper) {
-      const bowled = stored.get(registrant.bowlerId) ?? []
+      // Complete writes zero rows for a no-show (D-06), so all zeros is a missed sweeper (D-75, D-90).
+      const rows = stored.get(registrant.bowlerId) ?? []
+      const bowled = rows.every((score) => score === 0) ? [] : rows
       const pinsPerGame = pins(registrant, division)
       if (bowled.length === 0 && !sweeper.complete) {
         sweeperTotals.push(null)

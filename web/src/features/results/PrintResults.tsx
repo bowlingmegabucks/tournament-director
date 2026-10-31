@@ -1,5 +1,6 @@
 import { createPortal } from 'react-dom'
 import { DivisionBody } from './DivisionResults'
+import { plural } from './format'
 import { PrintHeader } from './PrintHeader'
 import styles from './PrintResults.module.css'
 import tableStyles from './ResultsTable.module.css'
@@ -39,8 +40,8 @@ export function PrintResults({
         <section className={styles.sheet} aria-label="Sweeper results">
           <PrintHeader title="Sweeper Results" date={session.date} unofficial={!session.complete} />
           <p className={tableStyles.sub}>
-            {results.entries === 1 ? '1 entry' : `${results.entries} entries`} · Cashing{' '}
-            {results.cashers} · Cut score {results.cutScore}
+            {plural(results.entries, 'entry', 'entries')} · Cashing {results.cashers} · Cut score{' '}
+            {results.cutScore}
           </p>
           <SweeperTable rows={results.rows} />
         </section>

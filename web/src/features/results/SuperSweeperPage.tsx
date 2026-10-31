@@ -4,6 +4,7 @@ import { QueryError } from '../../shared/QueryError'
 import type { Tournament } from '../tournaments/types'
 import { formatRatio } from '../../shared/sessionFormat'
 import { PrintSuperSweeper } from './PrintFinals'
+import { plural } from './format'
 import styles from './ResultsPage.module.css'
 import tableStyles from './ResultsTable.module.css'
 import { SuperSweeperTable } from './SuperSweeperTable'
@@ -37,7 +38,7 @@ export function SuperSweeperPage() {
     return <Loading label="Loading super sweeper results…" rows={4} />
   }
 
-  const entries = data.entries === 1 ? '1 entry' : `${data.entries} entries`
+  const entries = plural(data.entries, 'entry', 'entries')
   return (
     <>
       <title>{`Super sweeper results · ${tournament.name} · Tournament Director`}</title>
@@ -51,8 +52,8 @@ export function SuperSweeperPage() {
         <>
           <div className={styles.toolbar}>
             <p className={styles.note}>
-              {data.sweepers.length === 1 ? '1 sweeper' : `${data.sweepers.length} sweepers`} · cash
-              ratio {formatRatio(data.cashRatio)}
+              {plural(data.sweepers.length, 'sweeper', 'sweepers')} · cash ratio{' '}
+              {formatRatio(data.cashRatio)}
             </p>
             <button
               type="button"

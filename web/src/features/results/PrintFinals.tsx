@@ -1,5 +1,6 @@
 import { createPortal } from 'react-dom'
 import { AtLargeBody } from './AtLargeTable'
+import { plural } from './format'
 import { PrintHeader } from './PrintHeader'
 import styles from './PrintResults.module.css'
 import tableStyles from './ResultsTable.module.css'
@@ -77,8 +78,8 @@ export function PrintSuperSweeper({ results }: Readonly<{ results: SuperSweeperR
       <section className={styles.sheet} aria-label="Super sweeper results">
         <PrintHeader title="Super Sweeper Results" unofficial={!results.complete} />
         <p className={tableStyles.sub}>
-          {results.entries === 1 ? '1 entry' : `${results.entries} entries`} · Cashing{' '}
-          {results.cashers} · Cut score {results.cutScore}
+          {plural(results.entries, 'entry', 'entries')} · Cashing {results.cashers} · Cut score{' '}
+          {results.cutScore}
         </p>
         <SuperSweeperTable results={results} />
       </section>

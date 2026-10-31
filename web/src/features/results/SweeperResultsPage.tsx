@@ -4,6 +4,7 @@ import { QueryError } from '../../shared/QueryError'
 import { formatRatio, formatSessionDate } from '../../shared/sessionFormat'
 import type { Tournament } from '../tournaments/types'
 import styles from './ResultsPage.module.css'
+import { plural } from './format'
 import tableStyles from './ResultsTable.module.css'
 import { PrintResults } from './PrintResults'
 import { SweeperTable } from './SweeperTable'
@@ -37,7 +38,7 @@ export function SweeperResultsPage() {
   }
 
   const { session } = data
-  const entries = data.entries === 1 ? '1 entry' : `${data.entries} entries`
+  const entries = plural(data.entries, 'entry', 'entries')
   return (
     <>
       <title>{`Results · ${formatSessionDate(session.date)} · ${tournament.name} · Tournament Director`}</title>

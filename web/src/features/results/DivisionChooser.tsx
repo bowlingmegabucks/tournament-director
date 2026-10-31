@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import { useSearchParams } from 'react-router'
+import { plural } from './format'
 import styles from './ResultsPage.module.css'
 
 export interface ChooserDivision {
@@ -41,7 +42,7 @@ export function DivisionChooser({
       >
         {divisions.map((division) => (
           <option key={division.id} value={division.id}>
-            {division.name} ({division.entries} {division.entries === 1 ? 'entry' : 'entries'})
+            {division.name} ({plural(division.entries, 'entry', 'entries')})
           </option>
         ))}
       </select>

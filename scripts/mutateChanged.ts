@@ -11,8 +11,10 @@ const config: unknown = JSON.parse(readFileSync(`${folder}/stryker.config.json`,
 const mutate = typeof config === 'object' && config !== null ? Reflect.get(config, 'mutate') : []
 const patterns = Array.isArray(mutate) ? mutate.filter((p) => typeof p === 'string') : []
 
+// A fixed path, so a writable directory on PATH cannot supply a different `git`. macOS and the
+// Ubuntu runners both keep it here.
 const changed = execFileSync(
-  'git',
+  '/usr/bin/git',
   ['diff', '--name-only', '--diff-filter=d', '--relative', `${base}...HEAD`, '--', `${folder}/`],
   { encoding: 'utf8' },
 )

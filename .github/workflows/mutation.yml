@@ -25,6 +25,8 @@ on:
 
 permissions:
   contents: read
+  # A pull request run posts its result as a comment.
+  pull-requests: write
 
 jobs:
   mutation:
@@ -86,7 +88,7 @@ jobs:
           REPORT: ${{ inputs.report }}
           STRYKER_DASHBOARD_API_KEY: ${{ secrets.STRYKER_DASHBOARD_API_KEY }}
         run: |
-          reporters=clear-text,html
+          reporters=clear-text,html,json
           if [ "$REPORT" = true ]; then
             if [ -n "$STRYKER_DASHBOARD_API_KEY" ]; then
               reporters="$reporters,dashboard"
@@ -105,6 +107,39 @@ jobs:
         with:
           path: ${{ inputs.folder }}/reports/stryker-incremental.json
           key: stryker-${{ inputs.folder }}-${{ github.run_id }}
+
+      # One comment per folder, updated on each push. The step summary shows it for forks too, whose
+      # token cannot write comments.
+      - name: Post the result on the pull request
+        if: ${{ always() && inputs.changed-only }}
+        working-directory: .
+        env:
+          FOLDER: ${{ inputs.folder }}
+          MODE: ${{ steps.plan.outputs.mode }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          report="$FOLDER/reports/mutation/mutation.json"
+          if [ "$MODE" = none ]; then
+            body="<!-- mutation-$FOLDER -->"$'\n'"### Mutation tests ($FOLDER)"$'\n\n'"No source file changed, so no mutants ran."
+          elif [ -f "$report" ]; then
+            body=$(node scripts/mutationSummary.ts "$FOLDER" "$report" "$RUN_URL" changed)
+          else
+            exit 0
+          fi
+          echo "$body" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$SAME_REPO" != true ]; then exit 0; fi
+          marker="<!-- mutation-$FOLDER -->"
+          id=$(gh api --paginate "repos/$REPO/issues/$PR/comments" \
+            --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -n 1)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$id" -f body="$body" > /dev/null
+          else
+            gh api -X POST "repos/$REPO/issues/$PR/comments" -f body="$body" > /dev/null
+          fi
 
       - name: Upload mutation report
         if: always()

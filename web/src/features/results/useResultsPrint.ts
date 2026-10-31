@@ -12,10 +12,16 @@ export function useResultsPrint() {
   const [printing, setPrinting] = useState(false)
   const endPrint = useRef<() => void>(undefined)
   const preparing = useRef(false)
+  // Stryker disable next-line BooleanLiteral: the effect sets it before any press, so the first value is never read.
+  const mounted = useRef(false)
 
   useEffect(
-    () => () => {
-      endPrint.current?.()
+    () => {
+      mounted.current = true
+      return () => {
+        mounted.current = false
+        endPrint.current?.()
+      }
     },
     // Stryker disable next-line ArrayDeclaration: a constant list also runs the cleanup only on unmount.
     [],
@@ -27,12 +33,21 @@ export function useResultsPrint() {
     flushSync(() => {
       setPrinting(true)
     })
-    await imagesReady('results')
-    preparing.current = false
-    endPrint.current = startPrint('results', () => {
-      endPrint.current = undefined
+    try {
+      await imagesReady('results')
+      // The user left the page while the images loaded: there is no copy to print.
+      if (!mounted.current) return
+      endPrint.current = startPrint('results', () => {
+        endPrint.current = undefined
+        setPrinting(false)
+      })
+    } catch (error) {
+      // Unlock the button and drop the copy, then let the failure show.
       setPrinting(false)
-    })
+      throw error
+    } finally {
+      preparing.current = false
+    }
   }
 
   return { printing, print }

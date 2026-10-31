@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { delay, http, HttpResponse } from 'msw'
+import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import {
   createLanePage,
@@ -37,6 +37,13 @@ function serve() {
 }
 
 const base = `/tournaments/${tournament.id}`
+
+/** What each kind of session list serves, and the words shown while it loads. */
+const lists = {
+  squads: { id: squad.id, words: 'Loading squad…', body: { squads: [squad] } },
+  sweepers: { id: sweeper.id, words: 'Loading sweeper…', body: { sweepers: [sweeper] } },
+} as const
+const kinds = ['squads', 'sweepers'] as const
 
 describe('SessionPortal', () => {
   it('shows the squad date, its status, a breadcrumb, and the Lane assignments tab (D-22, D-60)', async () => {
@@ -207,21 +214,24 @@ describe('SessionPortal', () => {
     expect(screen.getByRole('link', { name: 'All sweepers' })).toBeVisible()
   })
 
-  it.each([
-    ['squads', 'Loading squad…'],
-    ['sweepers', 'Loading sweeper…'],
-  ])('says %s load until the session list arrives', async (kind, words) => {
+  it.each(kinds)('says the %s are loading until the session list arrives', async (kind) => {
     serve()
+    const { id, words, body } = lists[kind]
+    let release: () => void = () => undefined
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
     server.use(
       http.get(`/v1/tournaments/:id/${kind}`, async () => {
-        await delay(200)
-        return HttpResponse.json(kind === 'squads' ? { squads: [squad] } : { sweepers: [sweeper] })
+        await held
+        return HttpResponse.json(body)
       }),
     )
 
-    renderApp(`${base}/${kind}/${kind === 'squads' ? squad.id : sweeper.id}/lanes`)
+    renderApp(`${base}/${kind}/${id}/lanes`)
 
     expect(await screen.findByText(words)).toBeVisible()
+    release()
     expect(await screen.findByRole('heading', { level: 1 }, { timeout: 3000 })).toBeVisible()
   })
 
@@ -239,21 +249,17 @@ describe('SessionPortal', () => {
     })
   })
 
-  it.each([
-    ['squads', () => squad.id, 'squads'],
-    ['sweepers', () => sweeper.id, 'sweepers'],
-  ])('loads the %s again when Try again is pressed', async (kind, id) => {
+  it.each(kinds)('loads the %s again when Try again is pressed', async (kind) => {
     serve()
+    const { id, body } = lists[kind]
     let failing = true
     server.use(
       http.get(`/v1/tournaments/:id/${kind}`, () =>
-        failing
-          ? new HttpResponse(null, { status: 503 })
-          : HttpResponse.json(kind === 'squads' ? { squads: [squad] } : { sweepers: [sweeper] }),
+        failing ? new HttpResponse(null, { status: 503 }) : HttpResponse.json(body),
       ),
     )
     const user = userEvent.setup()
-    renderApp(`${base}/${kind}/${id()}/lanes`)
+    renderApp(`${base}/${kind}/${id}/lanes`)
     const retry = await screen.findByRole('button', { name: 'Try again' }, { timeout: 3000 })
     failing = false
     await user.click(retry)

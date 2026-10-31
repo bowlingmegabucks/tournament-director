@@ -17,12 +17,13 @@ export async function imagesReady(name: string, root: ParentNode = document): Pr
  * Mark the page, open the print dialog, and call `done` once, when the browser says printing is
  * over. Two signals end it, because browsers differ on a cancelled dialog: the `afterprint` event
  * and the print media query going off. The returned function ends it early (the dialog closed),
- * and is safe to call more than once.
+ * and is safe to call more than once. If the dialog cannot open, the page is unmarked and the
+ * error is thrown.
  */
 export function startPrint(name: string, done: () => void): () => void {
   const flag = `${name}Printing`
-  document.body.dataset[flag] = ''
   const query = window.matchMedia('print')
+  document.body.dataset[flag] = ''
   let ended = false
 
   const end = () => {
@@ -39,6 +40,11 @@ export function startPrint(name: string, done: () => void): () => void {
 
   window.addEventListener('afterprint', end)
   query.addEventListener('change', onChange)
-  window.print()
+  try {
+    window.print()
+  } catch (error) {
+    end()
+    throw error
+  }
   return end
 }

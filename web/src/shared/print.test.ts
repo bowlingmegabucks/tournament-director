@@ -45,6 +45,19 @@ describe('startPrint (D-62, D-78)', () => {
     expect(document.body).not.toHaveAttribute('data-results-printing')
   })
 
+  it('unmarks the page, stops listening, and throws when the print dialog cannot open', () => {
+    print.mockImplementationOnce(() => {
+      throw new Error('no print here')
+    })
+    const done = vi.fn()
+
+    expect(() => startPrint('recap', done)).toThrow('no print here')
+
+    expect(document.body).not.toHaveAttribute('data-recap-printing')
+    expect(listeners).toHaveLength(0)
+    expect(done).toHaveBeenCalledTimes(1)
+  })
+
   it('ends on afterprint: clears the mark and says done once', () => {
     const done = vi.fn()
     startPrint('recap', done)

@@ -89,4 +89,52 @@ describe('useResultsPrint (RES-33, D-78)', () => {
 
     expect(document.body).not.toHaveAttribute('data-results-printing')
   })
+
+  it('does not open the print dialog when the user leaves the page while the images load', async () => {
+    let finishDecoding: () => void = () => undefined
+    const decoded = new Promise<void>((resolve) => {
+      finishDecoding = resolve
+    })
+    const copy = document.createElement('div')
+    copy.setAttribute('data-results-print-copy', '')
+    copy.innerHTML = '<img alt="" src="/a.png">'
+    document.body.append(copy)
+    const image = copy.querySelector('img') as HTMLImageElement
+    vi.spyOn(image, 'complete', 'get').mockReturnValue(false)
+    image.decode = () => decoded
+    const { result, unmount } = renderHook(() => useResultsPrint())
+
+    let pending: Promise<void> = Promise.resolve()
+    act(() => {
+      pending = result.current.print()
+    })
+    unmount()
+    finishDecoding()
+    await pending
+
+    expect(print).not.toHaveBeenCalled()
+    expect(document.body).not.toHaveAttribute('data-results-printing')
+    copy.remove()
+  })
+
+  it('unlocks the button and drops the copy when the print dialog cannot open', async () => {
+    print.mockImplementationOnce(() => {
+      throw new Error('no print here')
+    })
+    const { result } = renderHook(() => useResultsPrint())
+
+    let failure: unknown
+    await act(async () => {
+      await result.current.print().catch((error: unknown) => {
+        failure = error
+      })
+    })
+
+    expect(failure).toEqual(new Error('no print here'))
+
+    expect(result.current.printing).toBe(false)
+    expect(document.body).not.toHaveAttribute('data-results-printing')
+    await act(() => result.current.print())
+    expect(print).toHaveBeenCalledTimes(2)
+  })
 })

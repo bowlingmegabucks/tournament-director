@@ -64,17 +64,14 @@ describe.each([
     await waitFor(() => expect(result.current.data).toEqual(results), { timeout: 3000 })
   })
 
-  it.each([
-    [false, 2],
-    [true, 1],
-  ])('with complete=%s asks %i time(s) in 15 seconds (RES-34, D-10)', async (complete, asked) => {
+  it('asks again after 15 seconds while the session is open (RES-34)', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const results = create()
     let count = 0
     server.use(
       http.get(path, () => {
         count += 1
-        return HttpResponse.json({ ...results, session: { ...results.session, complete } })
+        return HttpResponse.json(results)
       }),
     )
     const { result } = renderHook(() => useResults('t1', 's1'), { wrapper: wrapper() })
@@ -82,7 +79,28 @@ describe.each([
 
     await vi.advanceTimersByTimeAsync(RESULTS_REFRESH_MS + 100)
 
-    await waitFor(() => expect(count).toBe(asked))
+    await waitFor(() => expect(count).toBe(2))
+  })
+
+  it('never asks again once the session is complete (D-10)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const results = create()
+    let count = 0
+    server.use(
+      http.get(path, () => {
+        count += 1
+        return HttpResponse.json({ ...results, session: { ...results.session, complete: true } })
+      }),
+    )
+    const { result } = renderHook(() => useResults('t1', 's1'), { wrapper: wrapper() })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 3000 })
+
+    // Several intervals, with real time passing, so a refresh that should not happen has time to land.
+    await vi.advanceTimersByTimeAsync(RESULTS_REFRESH_MS * 3)
+    await vi.advanceTimersByTimeAsync(RESULTS_REFRESH_MS * 3)
+
+    expect(result.current.fetchStatus).toBe('idle')
+    expect(count).toBe(1)
   })
 
   it.each([

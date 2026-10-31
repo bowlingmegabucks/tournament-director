@@ -4,6 +4,20 @@ import { PrintAtLarge } from './PrintFinals'
 import { UnofficialNotice } from './UnofficialNotice'
 import { useAtLarge } from './useResults'
 
+type Data = NonNullable<ReturnType<typeof useAtLarge>['data']>
+
+function notice(data: Data) {
+  return !data.complete && <UnofficialNotice kind="squads" />
+}
+
+function renderBody(division: Data['divisions'][number], data: Data) {
+  return <AtLargeBody division={division} finalsRatio={data.finalsRatio} />
+}
+
+function renderPrint(data: Data, only: string | undefined) {
+  return <PrintAtLarge results={data} only={only} />
+}
+
 /**
  * The at-large advancers of the tournament, one division at a time (RES-12 to RES-17, D-87, D-89).
  * It says "Unofficial results" until every squad is complete and asks again every 15 seconds until
@@ -16,11 +30,9 @@ export function AtLargePage() {
       loadingLabel="Loading at-large results…"
       useData={useAtLarge}
       divisionsOf={(data) => data.divisions}
-      notice={(data) => !data.complete && <UnofficialNotice kind="squads" />}
-      renderBody={(division, data) => (
-        <AtLargeBody division={division} finalsRatio={data.finalsRatio} />
-      )}
-      renderPrint={(data, only) => <PrintAtLarge results={data} only={only} />}
+      notice={notice}
+      renderBody={renderBody}
+      renderPrint={renderPrint}
     />
   )
 }

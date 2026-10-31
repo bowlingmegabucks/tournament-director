@@ -44,6 +44,65 @@ function gamesByBowler(scores: readonly ScoreRow[]): Map<string, number[]> {
   return new Map([...byGame.entries()].map(([bowlerId, games]) => [bowlerId, [...games.values()]]))
 }
 
+interface SweeperScores {
+  sweeper: Sweeper
+  pins: (entry: LaneEntry, division: Division) => number
+  games: Map<string, number[]>
+}
+
+/** One bowler's combined entry, or `null` with no game in any sweeper. */
+function buildEntry(
+  registrant: LaneEntry,
+  division: Division,
+  perSweeper: readonly SweeperScores[],
+): SuperSweeperEntry | null {
+  const games: number[] = []
+  const highGames: number[] = []
+  const sweeperTotals: (number | null)[] = []
+  const flags: SweeperFlag[] = []
+  let total = 0
+
+  for (const { sweeper, pins, games: stored } of perSweeper) {
+    // Complete writes zero rows for a no-show (D-06), so all zeros is a missed sweeper (D-75, D-90).
+    const rows = stored.get(registrant.bowlerId) ?? []
+    const bowled = rows.every((score) => score === 0) ? [] : rows
+    if (bowled.length === 0 && !sweeper.complete) {
+      sweeperTotals.push(null)
+      continue
+    }
+    const pinsPerGame = pins(registrant, division)
+    const scratch = bowled.reduce((sum, score) => sum + score, 0)
+    const sweeperTotal = scratch + pinsPerGame * bowled.length
+    const missing = sweeper.complete ? Math.max(sweeper.games - bowled.length, 0) : 0
+    if (missing > 0) {
+      flags.push({
+        kind: bowled.length === 0 ? 'missed' : 'unfinished',
+        sweeperId: sweeper.id,
+        gamesBowled: bowled.length,
+      })
+    }
+    games.push(...bowled, ...Array.from({ length: missing }, () => 0))
+    highGames.push(...bowled.map((score) => score + pinsPerGame))
+    sweeperTotals.push(sweeperTotal)
+    total += sweeperTotal
+  }
+  if (games.length === 0) return null
+
+  const base = toResultEntry({
+    registrationId: registrant.registrationId,
+    bowlerId: registrant.bowlerId,
+    firstName: registrant.firstName,
+    lastName: registrant.lastName,
+    name: registrant.name,
+    divisionId: division.id,
+    divisionName: division.name,
+    games,
+    pins: 0,
+  })
+  // The pins differ by sweeper, so the total and high game are set here, not by `toResultEntry`.
+  return { entry: { ...base, total, highGame: Math.max(0, ...highGames) }, sweeperTotals, flags }
+}
+
 /**
  * RES-26, RES-27, D-90: one combined entry for each bowler who opted in to the super sweeper.
  * `inputs` are in date order. Each game takes its own sweeper's bonus pins (the RES-27 defect). In a
@@ -80,55 +139,8 @@ export function buildSuperSweeperEntries(
       skipped.push(registrant.registrationId)
       continue
     }
-    const games: number[] = []
-    const highGames: number[] = []
-    const sweeperTotals: (number | null)[] = []
-    const flags: SweeperFlag[] = []
-    let total = 0
-
-    for (const { sweeper, pins, games: stored } of perSweeper) {
-      // Complete writes zero rows for a no-show (D-06), so all zeros is a missed sweeper (D-75, D-90).
-      const rows = stored.get(registrant.bowlerId) ?? []
-      const bowled = rows.every((score) => score === 0) ? [] : rows
-      const pinsPerGame = pins(registrant, division)
-      if (bowled.length === 0 && !sweeper.complete) {
-        sweeperTotals.push(null)
-        continue
-      }
-      const scratch = bowled.reduce((sum, score) => sum + score, 0)
-      const sweeperTotal = scratch + pinsPerGame * bowled.length
-      const missing = sweeper.complete ? Math.max(sweeper.games - bowled.length, 0) : 0
-      if (missing > 0) {
-        flags.push({
-          kind: bowled.length === 0 ? 'missed' : 'unfinished',
-          sweeperId: sweeper.id,
-          gamesBowled: bowled.length,
-        })
-      }
-      games.push(...bowled, ...Array.from({ length: missing }, () => 0))
-      highGames.push(...bowled.map((score) => score + pinsPerGame))
-      sweeperTotals.push(sweeperTotal)
-      total += sweeperTotal
-    }
-    if (games.length === 0) continue
-
-    const base = toResultEntry({
-      registrationId: registrant.registrationId,
-      bowlerId: registrant.bowlerId,
-      firstName: registrant.firstName,
-      lastName: registrant.lastName,
-      name: registrant.name,
-      divisionId: division.id,
-      divisionName: division.name,
-      games,
-      pins: 0,
-    })
-    // The pins differ by sweeper, so the total and high game are set here, not by `toResultEntry`.
-    built.push({
-      entry: { ...base, total, highGame: Math.max(0, ...highGames) },
-      sweeperTotals,
-      flags,
-    })
+    const item = buildEntry(registrant, division, perSweeper)
+    if (item) built.push(item)
   }
   return { entries: built, skipped }
 }

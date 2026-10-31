@@ -13,10 +13,9 @@ export function UnofficialNotice({
   /** What can still change besides the scores: the places, or on the seeding page the seeds. */
   outcome?: 'places' | 'seeds'
 }>) {
-  const reason =
-    kind === 'squad' || kind === 'sweeper'
-      ? `This ${kind} is not complete`
-      : `Not every ${kind === 'squads' ? 'squad' : 'sweeper'} is complete`
+  const one = kind === 'squads' ? 'squad' : 'sweeper'
+  const single = kind === 'squad' || kind === 'sweeper'
+  const reason = single ? `This ${kind} is not complete` : `Not every ${one} is complete`
   return (
     <output className={styles.unofficial}>
       <strong>Unofficial results.</strong> {reason}, so scores and {outcome} can still change.

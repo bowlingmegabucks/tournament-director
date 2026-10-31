@@ -115,7 +115,7 @@ describe('SeedingPage', () => {
         '1498',
         '255',
         '8',
-        '$Cashed on a squad',
+        '$ Cashed on a squad',
       ],
       ['#3', '10/09 01:00 PM', 'Sam Ortiz', '1210', '220', '0', ''],
       ['Cut Line'],

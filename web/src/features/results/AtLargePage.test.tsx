@@ -106,7 +106,7 @@ describe('AtLargePage', () => {
       'Joe Fontaine',
       '1402',
       '248',
-      '$Cashed on a squad',
+      '$ Cashed on a squad',
     ])
     expect(Array.from(rows[1]?.children ?? []).map((cell) => cell.textContent)).toEqual([
       '2',

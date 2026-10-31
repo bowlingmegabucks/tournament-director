@@ -67,7 +67,7 @@ export function AtLargeBody({
                     <>
                       <span className={styles.cash} aria-hidden="true">
                         $
-                      </span>
+                      </span>{' '}
                       Cashed on a squad
                     </>
                   )}

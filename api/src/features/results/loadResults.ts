@@ -37,8 +37,9 @@ export async function loadSquadResults(
 ): Promise<SquadResults> {
   if (!(await deps.tournaments.get(tournamentId))) throw new HttpError(404, 'Tournament not found')
   const all = await deps.squads.listByTournament(tournamentId)
-  const index = all.findIndex((squad) => squad.id === sessionId)
-  if (index === -1) throw new HttpError(404, 'Squad not found')
+  const index = all.findIndex((item) => item.id === sessionId)
+  const squad = all[index]
+  if (!squad) throw new HttpError(404, 'Squad not found')
 
   const upTo = all.slice(0, index + 1)
   for (const earlier of upTo) {
@@ -51,8 +52,9 @@ export async function loadSquadResults(
   const divisions = await deps.divisions.listByTournament(tournamentId)
   const worked = await workOutSquads(deps, upTo, divisions)
   const current = worked[index]
+  // Stryker disable next-line all: unreachable. `worked` has one entry for each squad up to this one.
   if (!current) throw new HttpError(404, 'Squad not found')
-  const { squad, outcomes, skipped, advancedBefore } = current
+  const { outcomes, skipped, advancedBefore } = current
   // The advancers of every squad before this one decide who is an earlier advancer (RES-06).
   const divisionById = new Map(divisions.map((division) => [division.id, division]))
   reportSkipped(reporting, sessionId, skipped)

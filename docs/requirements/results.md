@@ -2,7 +2,7 @@
 
 Built on branch `squadResults`. Migration source: [docs/migration/results.md](../migration/results.md), [scores.md](../migration/scores.md) (`SCR-07` to `SCR-12`), and [reports.md](../migration/reports.md) (`RPT-01` to `RPT-04b`).
 
-This slice builds squad results (per division) and sweeper results, on screen and for print. At-large, finals seeding, and super sweeper results come later. Their legacy test cases are listed at the end so that work starts with the cases already written.
+This slice builds squad results (per division) and sweeper results, on screen and for print. At-large, finals seeding, and super sweeper results are in [finals-results.md](finals-results.md).
 
 ## Fields
 
@@ -45,12 +45,12 @@ Tests live in `api/src/features/results/` and `web/src/features/results/` (the `
 | RES-30 | New. On a complete squad, a bowler with fewer stored games than the squad's `games` lists under "Did not finish", and a bowler whose stored scores are all 0 lists under "No show". Neither has a place, advances, or cashes. Both still count in `N`. Squads only. | New (D-75, legacy issue #92) | `squadResults.test.ts`, `divisionResult.test.ts` |
 | RES-31 | New. Two web-only routes serve the results (API section). Public for good (D-74). Not vendor-visible (D-09). | New | `routes.test.ts`, `app.test.ts`, `results.db.test.ts` |
 | RES-32 | New. The squad and sweeper page has a Results tab. | New | `SessionPortal` tests, `SquadResultsPage.test.tsx`, `SweeperResultsPage.test.tsx`, e2e |
-| RES-33 | New. "Print all divisions" (squad) and "Print results" (sweeper) open the browser print dialog with the print copy. | New (D-78) | `PrintResults.test.tsx`, `useResultsPrint` page tests, e2e print tests |
+| RES-33 | New. "Print all divisions" (squad) and "Print results" (sweeper) open the browser print dialog with the print copy. A squad also has "Print this division", which prints only the chosen division (RES-39, D-89). | New (D-78, D-89) | `PrintResults.test.tsx`, `useResultsPrint` page tests, e2e print tests |
 | RES-34 | New. The tab asks again every 15 seconds until the session is complete. A failed refresh keeps the last results. | New (D-79) | `SquadResultsPage.test.tsx`, `SweeperResultsPage.test.tsx` |
 | RES-35 | New. A stored ratio of 0 or less answers 422 with a message instead of dividing by zero. | New (D-83, D-02) | `loadResults.test.ts`, `routes.test.ts`, `api.test.ts`, page tests |
 | RES-36 | New. While the squad or sweeper is not complete, the page and every printed page say "Unofficial results". A complete session shows no notice. | New (D-84) | `SquadResultsPage.test.tsx`, `SweeperResultsPage.test.tsx`, `PrintResults.test.tsx` |
 
-Later: `RES-12` to `RES-21a` (at-large and seeding) and `RES-26` to `RES-29a` (super sweeper), `RPT-04c`, `RPT-04d`, `SQD-15`, `SQD-16`. By D-84, at-large and seeding will not be official until every squad is complete, and the super sweeper not until every sweeper is complete.
+Built later, on branch `finalResults`: `RES-12` to `RES-21a` (at-large and seeding), `RES-26` to `RES-29a` (super sweeper), `RPT-04b` (super sweeper), `RPT-04c`, `RPT-04d`: see [finals-results.md](finals-results.md). Still later: `SQD-15`, `SQD-16`.
 
 ## API
 
@@ -278,62 +278,3 @@ Files: `SquadResultsPage.test.tsx`, `SweeperResultsPage.test.tsx`, `PrintResults
 | WB-3 | The page refreshes every 15 s while open and stops when complete; a failed refresh keeps the last results | As D-79 | gap (copies the Scores tab test) |
 | WB-4 | Print | One section per division, with the header, the sponsor image, and the table; the browser print dialog opens | gap |
 | WB-5 | Narrow screen | A row is a block; no sideways scroll | gap |
-
-## Test cases for later features
-
-Not built in this slice. Recorded here from the legacy tests, with gaps, so the later work starts with its cases.
-
-### At-large (RES-12 to RES-17)
-
-File when built: `api/src/features/results/atLarge.test.ts`.
-
-| ID | Case | Expected | Source |
-| --- | --- | --- | --- |
-| AL-1 | Finals ratio 2. One squad: 3 advancers and 1 casher | Total spots are fewer than the squad finalists. No at-large advancers, no earlier cashers | legacy `TotalFinalsSpotsLessThanSquadFinalistCount_ReturnsEmptyAtLargeResults` |
-| AL-2 | Finals ratio 2. One squad: 2 advancers and 2 cashers | Spots equal the finalists. Empty at-large | legacy `TotalFinalsSpotsEqualToSquadFinalistCount_ReturnsEmptyAtLargeResults` |
-| AL-3 | Finals ratio 2. One squad: advancers 250 and 249, no cashers, non-qualifiers 200, 199, 198, 197 | `S` = `floor(6 / 2)` = 3, `Q` = 2, so 1 at-large advancer: the 200. No earlier cashers | legacy `...NoAdvancersWhoPreviouslyCashed_ReturnsCorrectResults` |
-| AL-4 | Same, but the 200 bowler cashed in the squad | One at-large advancer (200), flagged as an earlier casher (D-07) | legacy `...AdvancersHavePreviouslyCashed_ReturnsCorrectResults` |
-| AL-5 | The tournament result for a division is built from every squad's result and the tournament finals ratio | Called once per division with all its squad results | legacy `TournamentResultsBOTests` (calculator called correctly, returns the model) |
-| AL-6 | An error reading the tournament or the squad results | Error flow: no result | legacy `TournamentResultsBOTests` |
-| AL-7 | Three squads with 30, 27, 23 entries, ratio 8 | `E` = 80, `S` = 10, `Q` = 3 + 3 + 2 = 8, so 2 at-large spots | doc |
-| AL-8 | The pool | Every casher and non-qualifier of every squad, less any bowler who advanced in any squad | gap |
-| AL-9 | A bowler in the pool twice | Appears once, with the best squad (highest total; on a tie, the earliest squad) | gap |
-| AL-10 | A squad has its own finals ratio | At-large still uses the tournament ratio (RES-12, Q-13 open) | gap |
-| AL-11 | A tie for the last at-large spot | The same tie marks as squads (D-14) | gap |
-| AL-12 | Two divisions | Each is worked out alone | gap |
-| AL-14 | Some squad of the tournament is not complete | The at-large list is marked unofficial; it is official only when every squad is complete (D-84) | gap |
-| AL-13 | The display | Columns Place, Squad (`MM/dd hh:mm tt`), Name, Total, HG, Casher | doc (RES-17) |
-
-### Finals seeding (RES-18 to RES-21a)
-
-File when built: `api/src/features/results/seeding.test.ts`.
-
-| ID | Case | Expected | Source |
-| --- | --- | --- | --- |
-| SD-1 | Squad advancers 297 and 299, an at-large 250, other scores 150, 198, 197, 167, no re-entries | Seeds 299, 297, 250. Non-finalists 198, 197, 167, 150, numbering on | legacy `Execute_NoReEntries_CorrectSeedingReturned` |
-| SD-2 | One bowler appears twice (198 and 167) | Counts once, with the best entry (198). Non-finalists 198, 197, 150. The at-large casher flags carry over | legacy `Execute_ReEntries_CorrectSeedingReturned` |
-| SD-3 | A finalist who advanced from squad 1 but scored higher in squad 2 | Seeded on the squad 2 score (RES-19) | gap |
-| SD-4 | Ranking uses SCR-11 with handicap | As squads | gap (legacy issue #122 asks for handicap on the report) |
-| SD-5 | The "Cut Line" between finalists and the rest | Present | doc |
-| SD-6 | Errors from the tournament result | Error flow | legacy `TournamentSeedingBOTests` |
-| SD-7 | Some squad of the tournament is not complete | The seeding is marked unofficial; official only when every squad is complete (D-84) | gap |
-
-### Super sweeper (RES-26 to RES-29a)
-
-File when built: `api/src/features/results/superSweeper.test.ts`.
-
-| ID | Case | Expected | Source |
-| --- | --- | --- | --- |
-| SS-1 | A tournament with 2 sweepers | Scores of both are read | legacy `RetrieveScoresExecute_CalledCorrectly` |
-| SS-2 | An error reading the tournament or scores | Error flow | legacy `...HasError_ErrorFlow` |
-| SS-3 | No scores | The same message as a sweeper (D-77) | legacy `NoScoreFlow` |
-| SS-4 | 4 super sweeper bowlers, 2 games, cash ratio 2 | 2 cashers, cut score 411 | legacy `SuperSweeperSuccess_SweeperCutReturnedWithCorrectFields` |
-| SS-5 | Same, cash ratio 500 | 1 casher, cut score 415 | legacy `CashRatioMakesCasherCountLessThan1` |
-| SS-6 | A bowler who is not in the super sweeper (scores 300, 300) | Left out of the results | legacy `BowlerNotInSuperSweepers` |
-| SS-7 | Two sweepers with different bonus pins | Each game gets its own sweeper's pins | gap: legacy uses the first sweeper's pins for every game (RES-27 defect) |
-| SS-8 | A bowler who skipped a whole sweeper | Handled as Q-14 decides | gap (Q-14 open) |
-| SS-9 | Games bowled | Counts distinct game numbers, per the `SCR-11` note, so a bowler with 6 games over 2 sweepers ranks above one with 3 | gap |
-| SS-10 | Cash ratio 0 on an old tournament | A clear message, not a crash (D-17) | gap |
-| SS-11 | Cash ratio 1 | Every bowler cashes | gap |
-| SS-12 | Results reached from the sweeper list (D-23) | The route and access label are decided then | gap |
-| SS-13 | Some sweeper of the tournament is not complete | The super sweeper results are marked unofficial; official only when every sweeper is complete (D-84) | gap |

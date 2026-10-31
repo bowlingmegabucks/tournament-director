@@ -64,25 +64,25 @@ After the squads, more finals spots open so the total number of finalists in a d
 
 | ID | Rule | Status |
 | --- | --- | --- |
-| RES-12 | **Total spots** `S = floor(E / tournament.finalsRatio)`, where `E` = the division's entries summed over every squad (a bowler in 3 squads counts 3 times). Squad finals ratio overrides are **ignored** here (**D-86**). **D-84, D-88:** the at-large list stays unofficial until every squad of the tournament is complete. **D-85:** public for good. |  |
-| RES-13 | `Q` = advancers from all squads. If `S ≤ Q`, there are no at-large spots. |  |
-| RES-14 | **Pool**: every casher and non-qualifier from every squad, minus any bowler who advanced from a squad. Each bowler appears once, with their **best squad** (highest total; on a tie, the earliest squad). **D-91:** a did-not-finish or no-show bowler is not in the pool. |  |
-| RES-15 | **At-large advancers** = the top `S − Q` of the pool. |  |
-| RES-16 | **Previous casher** flag: an at-large advancer who cashed in any squad. Reports show a dollar-sign icon. It tells the director this bowler already received a squad cash payout. It happens because the finals ratio (say 1 in 7) is tighter than the cash ratio (1 in 5): a bowler can cash without advancing, then make the at-large. The app changes no amounts (D-07). |  |
+| RES-12 | **Total spots** `S = floor(E / tournament.finalsRatio)`, where `E` = the division's entries summed over every squad (a bowler in 3 squads counts 3 times). Squad finals ratio overrides are **ignored** here (**D-86**). **D-84, D-88:** the at-large list stays unofficial until every squad of the tournament is complete. **D-85:** public for good. | | Done, differs (D-84, D-86, D-88) |
+| RES-13 | `Q` = advancers from all squads. If `S ≤ Q`, there are no at-large spots. | | Done |
+| RES-14 | **Pool**: every casher and non-qualifier from every squad, minus any bowler who advanced from a squad. Each bowler appears once, with their **best squad** (highest total; on a tie, the earliest squad). **D-91:** a did-not-finish or no-show bowler is not in the pool. | | Done, differs (D-91) |
+| RES-15 | **At-large advancers** = the top `S − Q` of the pool. | | Done |
+| RES-16 | **Previous casher** flag: an at-large advancer who cashed in any squad. Reports show a dollar-sign icon. It tells the director this bowler already received a squad cash payout. It happens because the finals ratio (say 1 in 7) is tighter than the cash ratio (1 in 5): a bowler can cash without advancing, then make the at-large. The app changes no amounts (D-07). | | Done |
 
 Example: 3 squads in a division with 30, 27, and 23 entries, ratio 8. `E = 80`, `S = 10`. Squad advancers: `floor(30/8) + floor(27/8) + floor(23/8) = 3 + 3 + 2 = 8`. Two at-large spots go to the best two bowlers in the pool.
 
-Display (`RES-17`; **D-89:** one division at a time, printed one per page): one table per division. Columns: Place, Squad (date as `MM/dd hh:mm tt`), Name, Total, HG, Casher (icon). Only the at-large advancers are listed. Header "At Large" and the division.
+Display (`RES-17`, Done, differs (D-89); **D-89:** one division at a time, printed one per page): one table per division. Columns: Place, Squad (date as `MM/dd hh:mm tt`), Name, Total, HG, Casher (icon). Only the at-large advancers are listed. Header "At Large" and the division.
 
 ## Finals seeding
 
 | ID | Rule | Status |
 | --- | --- | --- |
-| RES-18 | **Finalists** = squad advancers plus at-large advancers. **D-84, D-88:** seeding stays unofficial until every squad of the tournament is complete. |  |
-| RES-19 | Each bowler's seeding score is their **best squad entry** across all squads in the division, not necessarily the squad they advanced from. |  |
-| RES-20 | Finalists rank by `SCR-11` and take seeds 1, 2, 3, .... Then every non-finalist follows in rank order, numbering on from the last seed. A "Cut Line" separates the two groups. |  |
-| RES-21 | The Casher icon marks at-large advancers who cashed in a squad (`RES-16`). |  |
-| RES-21a | Columns: Seed (`#1`), Name, Total, HG, Casher. **D-92:** plus Squad and, when someone has one, HDCP. One table per division. Header "Finals Seeding" and the division. |  |
+| RES-18 | **Finalists** = squad advancers plus at-large advancers. **D-84, D-88:** seeding stays unofficial until every squad of the tournament is complete. | | Done, differs (D-84, D-88) |
+| RES-19 | Each bowler's seeding score is their **best squad entry** across all squads in the division, not necessarily the squad they advanced from. | | Done |
+| RES-20 | Finalists rank by `SCR-11` and take seeds 1, 2, 3, .... Then every non-finalist follows in rank order, numbering on from the last seed. A "Cut Line" separates the two groups. | | Done |
+| RES-21 | The Casher icon marks at-large advancers who cashed in a squad (`RES-16`). | | Done |
+| RES-21a | Columns: Seed (`#1`), Name, Total, HG, Casher. **D-92:** plus Squad and, when someone has one, HDCP. One table per division. Header "Finals Seeding" and the division. | | Done, differs (D-92) |
 
 Running the finals is out of scope. The app stops at the seeding list.
 
@@ -100,14 +100,14 @@ Running the finals is out of scope. The app stops at the seeding list.
 
 | ID | Rule | Status |
 | --- | --- | --- |
-| RES-26 | Bowlers = registrations in the tournament with `superSweeper` on. **D-84, D-88:** super sweeper results stay unofficial until every sweeper of the tournament is complete. **D-90:** a missed sweeper scores zero and is tagged. |  |
-| RES-27 | Each bowler gets **one combined entry**: every game from every sweeper. Total = all scratch pins + bonus pins × all games. **D-90:** each game takes its own sweeper's bonus pins, and a game not bowled in a complete sweeper counts 0 with no pins. |  |
-| RES-28 | **Cashers** = `max(floor(N / tournament.superSweeperCashRatio), 1)`. **D-93:** a ratio of 0 or less gives a clear message. |  |
-| RES-29 | No scores yet: same error as `RES-25`. |  |
-| RES-29a | Same columns as sweeper results. Header "Super Sweeper Results", no date. |  |
+| RES-26 | Bowlers = registrations in the tournament with `superSweeper` on. **D-84, D-88:** super sweeper results stay unofficial until every sweeper of the tournament is complete. **D-90:** a missed sweeper scores zero and is tagged. | | Done, differs (D-84, D-88, D-90) |
+| RES-27 | Each bowler gets **one combined entry**: every game from every sweeper. Total = all scratch pins + bonus pins × all games. **D-90:** each game takes its own sweeper's bonus pins, and a game not bowled in a complete sweeper counts 0 with no pins. | | Done, differs (D-90, D-02) |
+| RES-28 | **Cashers** = `max(floor(N / tournament.superSweeperCashRatio), 1)`. **D-93:** a ratio of 0 or less gives a clear message. | | Done, differs (D-93) |
+| RES-29 | No scores yet: same error as `RES-25`. | | Done, differs (D-77) |
+| RES-29a | Same columns as sweeper results. Header "Super Sweeper Results", no date. | | Done, differs (D-90) |
 
 **Defects** (do not copy):
 
 - Bonus pins for the combined entry come from the bowler's **first** sweeper score row and are applied to every game. If a division's bonus pins differ between sweepers, the total is wrong. Use each sweeper's own pins.
-- The ranking's game count uses distinct game numbers, so it does not see that a bowler missed a whole sweeper (`SCR-11` note). Nothing checks that the bowler bowled every sweeper. See D-90 (Q-14).
+- The ranking's game count uses distinct game numbers, so it does not see that a bowler missed a whole sweeper (`SCR-11` note). Nothing checks that the bowler bowled every sweeper. See D-90 (Q-14). **Fixed** in the new app (D-90).
 - With `superSweeperCashRatio = 0`, results fail with divide by zero (`TRN-09`). **D-17:** old tournaments keep 0; the new app shows a clear message for them instead of crashing.

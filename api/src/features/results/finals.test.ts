@@ -236,6 +236,22 @@ describe('workOutSeeding', () => {
     expect(seeding.previousCashers.size).toBe(1)
   })
 
+  it('does not flag a squad advancer who cashed in an earlier squad (RES-21)', async () => {
+    const same = { bowlerId: faker.string.uuid() }
+    const earlier = run({
+      advancers: scores(250),
+      cashers: [bowler(200, same)],
+      others: scores(10),
+    })
+    const later = run({ advancers: [bowler(260, same)], others: scores(20, 15) })
+    const atLarge = workOutAtLarge([earlier, later], 4)
+
+    const seeding = workOutSeeding([earlier, later], atLarge)
+
+    expect(seeding.finalists.map((item) => item.entry.bowlerId)).toContain(same.bowlerId)
+    expect(seeding.previousCashers.has(same.bowlerId)).toBe(false)
+  })
+
   it('leaves out bowlers who did not finish or did not show (D-75)', () => {
     const quit = bowler(150)
     const squad = run({ advancers: scores(250), others: scores(100), didNotFinish: [quit] })

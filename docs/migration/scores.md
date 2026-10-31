@@ -75,7 +75,7 @@ Every results list (squad, at-large, seeding, sweeper, super sweeper) uses this 
 
 Example from the legacy tests (scratch, 3 games): totals 109 each. Bowler A games 35, 36, 38; bowler B 36, 36, 37. High game 38 beats 37, so A ranks first.
 
-**Note for super sweeper:** the combined entry joins games from every sweeper, so "game 1" appears once per sweeper. Steps 1 and 4 use the number of distinct game numbers, not the number of games. See `RES-24`.
+**Note for super sweeper:** the combined entry joins games from every sweeper, so "game 1" appears once per sweeper. Legacy's steps 1 and 4 use the number of distinct game numbers, not the number of games. **D-90:** the new app counts every game, zero-filled ones included, so a bowler who missed a whole sweeper ranks lower.
 
 | ID | Rule | Status |
 | --- | --- | --- |

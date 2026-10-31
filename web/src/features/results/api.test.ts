@@ -474,6 +474,12 @@ describe.each([
     expect(failure).toHaveProperty('message', 'The ratio is 0.')
   })
 
+  it('reports a 422 whose body is not JSON', async () => {
+    server.use(http.get(path, () => new HttpResponse('<html></html>', { status: 422 })))
+
+    await expect(load('t1')).rejects.toThrow('Failed to load results (response is not JSON)')
+  })
+
   it('has a plain message when a 422 carries none', async () => {
     server.use(http.get(path, () => HttpResponse.json({}, { status: 422 })))
 
@@ -525,6 +531,14 @@ describe('the at-large, seeding, and super sweeper shape checks (RES-37)', () =>
     ['no finals ratio', { ...atLarge, finalsRatio: 'eight' }],
     ['divisions that is not an array', { ...atLarge, divisions: {} }],
     ['a division with no name', { ...atLarge, divisions: [{ ...atLargeDivision, name: 1 }] }],
+    ['a division with no id', { ...atLarge, divisions: [{ ...atLargeDivision, id: 7 }] }],
+    [
+      'a row with no registration id',
+      {
+        ...atLarge,
+        divisions: [{ ...atLargeDivision, rows: [{ ...atLargeRow, registrationId: 7 }] }],
+      },
+    ],
     [
       'a division with no spots',
       { ...atLarge, divisions: [{ ...atLargeDivision, totalSpots: null }] },
@@ -563,6 +577,14 @@ describe('the at-large, seeding, and super sweeper shape checks (RES-37)', () =>
 
   it.each([
     ['no complete flag', { ...seeding, complete: undefined }],
+    ['a division with no id', { ...seeding, divisions: [{ ...seedingDivision, id: 7 }] }],
+    [
+      'a row with no registration id',
+      {
+        ...seeding,
+        divisions: [{ ...seedingDivision, rows: [{ ...seedingRow, registrationId: 7 }] }],
+      },
+    ],
     [
       'a division with no finalists',
       { ...seeding, divisions: [{ ...seedingDivision, finalists: null }] },

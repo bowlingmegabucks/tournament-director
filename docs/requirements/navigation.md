@@ -14,7 +14,7 @@ Built on branch `landingPage`. These rules have no legacy twin: the WinForms app
 
 Top bar for the app, sidebar for the tournament, page header for a squad or sweeper (D-22). On a phone the sidebar stacks above the page. The routes are in `web/src/App.tsx`; see "Routing and layout" in [docs/frontend-standards.md](../frontend-standards.md) for how to add a page.
 
-The sidebar lists Divisions, Squads, Sweepers, and Registrations (D-47).
+The sidebar lists Divisions, Squads, Sweepers, Registrations, At-large, and Seeding (D-47, D-87). The super sweeper results open from a link above the Sweepers cards, not from the sidebar (D-23, D-87).
 
 ## Designed, not built
 

@@ -133,8 +133,8 @@ Legacy behavior to fix, not copy (D-02).
 | `REG-37` | API allows a division change after scores; the desk does not |
 | `SCR-05`, `SCR-06` | A bowler who fails score validation has their saved scores deleted |
 | `RES-08` | Crash when no one advances but a previous advancer bowled; crash when not enough bowlers to fill cash spots. **Fixed** (D-81, D-02) |
-| `RES-27` | Super sweeper uses the first sweeper's bonus pins for every game (D-90, to be marked Fixed when built) |
-| `TRN-09`, `RES-28` | Super sweeper cash ratio 0 divides by zero |
+| `RES-27` | Super sweeper uses the first sweeper's bonus pins for every game. **Fixed** (D-90, D-02) |
+| `TRN-09`, `RES-28` | Super sweeper cash ratio 0 divides by zero. **Fixed** for the results: a clear 422 message (D-93, D-17); the save check waits for tournament edit (D-13) |
 | `API-12` | Not found and conflict errors return HTTP 500. **Kept until a vendor change is agreed (D-09)** |
 | `API-14` | Rate limit runs before auth, so the authenticated limit never applies. **Vendor-visible; see D-09** |
 | `REG-31` | `PATCH` can remove every qualifying squad (D-04) |

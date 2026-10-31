@@ -4,7 +4,6 @@ import type { Squad } from '../squads/types.ts'
 import {
   workOutAtLarge,
   workOutSeeding,
-  type AtLargeOutcome,
   type PlacedEntry,
   type SeedingOutcome,
   type SquadRun,
@@ -116,7 +115,7 @@ export async function loadAtLarge(
   }
 }
 
-function seedingRows(seeding: SeedingOutcome, atLarge: AtLargeOutcome) {
+function seedingRows(seeding: SeedingOutcome) {
   const marks = markCutLine(entriesOf(seeding.finalists), entriesOf(seeding.others))
   const toRow = (item: PlacedEntry, seed: number, group: 'finalist' | 'other') => ({
     registrationId: item.entry.registrationId,
@@ -127,9 +126,7 @@ function seedingRows(seeding: SeedingOutcome, atLarge: AtLargeOutcome) {
     total: item.entry.total,
     highGame: item.entry.highGame,
     handicap: item.entry.pins,
-    previousCasher:
-      seeding.previousCashers.has(item.entry.bowlerId) &&
-      atLarge.advancers.some((spot) => spot.entry.bowlerId === item.entry.bowlerId),
+    previousCasher: seeding.previousCashers.has(item.entry.bowlerId),
     ties: marks.get(item.entry.registrationId) ?? [],
   })
   return [
@@ -153,7 +150,7 @@ export async function loadSeeding(
     divisions: divisions.map(({ division, runs }) => {
       const atLarge = workOutAtLarge(runs, finalsRatio)
       const seeding = workOutSeeding(runs, atLarge)
-      const rows = seedingRows(seeding, atLarge)
+      const rows = seedingRows(seeding)
       return {
         id: division.id,
         number: division.number,

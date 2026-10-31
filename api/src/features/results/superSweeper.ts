@@ -33,7 +33,7 @@ export interface SuperSweeperBuilt {
   skipped: string[]
 }
 
-/** The scratch games of each bowler in one sweeper, in game order. */
+/** The scratch games of each bowler in one sweeper. A game saved twice keeps the last score. */
 function gamesByBowler(scores: readonly ScoreRow[]): Map<string, number[]> {
   const byGame = new Map<string, Map<number, number>>()
   for (const { bowlerId, game, score } of scores) {
@@ -41,12 +41,7 @@ function gamesByBowler(scores: readonly ScoreRow[]): Map<string, number[]> {
     games.set(game, score)
     byGame.set(bowlerId, games)
   }
-  return new Map(
-    [...byGame.entries()].map(([bowlerId, games]) => [
-      bowlerId,
-      [...games.entries()].sort(([a], [b]) => a - b).map(([, score]) => score),
-    ]),
-  )
+  return new Map([...byGame.entries()].map(([bowlerId, games]) => [bowlerId, [...games.values()]]))
 }
 
 /**
@@ -61,11 +56,10 @@ export function buildSuperSweeperEntries(
   divisions: readonly Division[],
 ): SuperSweeperBuilt {
   const divisionById = new Map(divisions.map((division) => [division.id, division]))
-  const perSweeper = inputs.map(({ sweeper, entries, scores }) => ({
+  const perSweeper = inputs.map(({ sweeper, scores }) => ({
     sweeper,
     pins: sweeperPins(sweeper.bonusPins),
     games: gamesByBowler(scores),
-    enteredBowlers: new Set(entries.map((entry) => entry.bowlerId)),
   }))
 
   const registrants = new Map<string, LaneEntry>()

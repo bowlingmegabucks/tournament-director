@@ -123,6 +123,22 @@ describe('SeedingPage', () => {
     ])
   })
 
+  it('spans the cut line across every column, with and without HDCP (D-92)', async () => {
+    serve(filled())
+    const view = open()
+    expect(
+      (await screen.findByText('Cut Line', {}, { timeout: 3000 })).closest('td'),
+    ).toHaveAttribute('colspan', '7')
+    view.unmount()
+
+    serve(filled({}, false))
+    open()
+
+    expect(
+      (await screen.findByText('Cut Line', {}, { timeout: 3000 })).closest('td'),
+    ).toHaveAttribute('colspan', '6')
+  })
+
   it('leaves out the HDCP column when nobody has a handicap (D-92)', async () => {
     serve(filled({}, false))
 

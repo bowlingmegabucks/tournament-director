@@ -232,21 +232,69 @@ describe('loadAtLarge', () => {
     const { deps, reporting, tournament } = setup({})
     deps.tournaments = { ...deps.tournaments, getRatios: () => Promise.resolve(undefined) }
 
-    await expect(loadAtLarge(deps, reporting, tournament.id)).rejects.toMatchObject({ status: 404 })
+    await expect(loadAtLarge(deps, reporting, tournament.id)).rejects.toMatchObject({
+      status: 404,
+      message: 'Tournament not found',
+    })
+  })
+
+  it('answers 404 when the tournament row is missing even if ratios exist', async () => {
+    const { deps, reporting, tournament } = setup({})
+    deps.tournaments = { ...deps.tournaments, get: () => Promise.resolve(undefined) }
+
+    await expect(loadAtLarge(deps, reporting, tournament.id)).rejects.toMatchObject({
+      status: 404,
+      message: 'Tournament not found',
+    })
   })
 
   it.each([
-    ['tournament finals ratio', { finalsRatio: 0, superSweeperCashRatio: 5 }, undefined],
-    ['squad finals ratio', undefined, { finalsRatio: 0 }],
-    ['squad cash ratio', undefined, { cashRatio: -1 }],
-  ])('answers 422 for a %s of 0 or less (D-93)', async (_name, ratios, squadOver) => {
+    [
+      'tournament finals ratio',
+      { finalsRatio: 0, superSweeperCashRatio: 5 },
+      undefined,
+      "This tournament's finals ratio is 0, so results cannot be worked out. Set a ratio of 1 or more.",
+    ],
+    [
+      'squad finals ratio',
+      undefined,
+      { finalsRatio: 0 },
+      "A squad's finals ratio is 0, so results cannot be worked out. Set a ratio of 1 or more.",
+    ],
+    [
+      'squad cash ratio',
+      undefined,
+      { cashRatio: -1 },
+      "A squad's cash ratio is -1, so results cannot be worked out. Set a ratio of 1 or more.",
+    ],
+  ])('answers 422 for a %s of 0 or less (D-93)', async (_name, ratios, squadOver, message) => {
     const squad = squadAt(morning, squadOver)
     const { deps, reporting, tournament } = setup({ squads: [squad], ratios })
 
     const error = await loadAtLarge(deps, reporting, tournament.id).catch((e: unknown) => e)
 
     expect(error).toBeInstanceOf(HttpError)
-    expect(error).toMatchObject({ status: 422 })
+    expect(error).toMatchObject({ status: 422, message })
+  })
+
+  it('lists divisions of one name by number', async () => {
+    const squad = squadAt(morning)
+    const second = createDivision({ number: 2, name: 'Open' })
+    const first = createDivision({ number: 1, name: 'Open' })
+    const seat = (divisionId: string) => ({
+      sessionId: squad.id,
+      entry: bowler({ divisionId }),
+      games: [200, 200, 200],
+    })
+    const { deps, reporting, tournament } = setup({
+      squads: [squad],
+      seats: [seat(second.id), seat(first.id)],
+      divisions: [second, first],
+    })
+
+    const result = await loadAtLarge(deps, reporting, tournament.id)
+
+    expect(result.divisions.map((division) => division.number)).toEqual([1, 2])
   })
 
   it('skips an entry whose division is not the tournament’s and logs it once (D-51)', async () => {
@@ -312,9 +360,11 @@ describe('loadSeeding', () => {
       maximumHandicapPerGame: 50,
     })
     const star = bowler({ average: 180, divisionId: handicapDivision.id })
-    const rest = Array.from({ length: 5 }, () =>
-      bowler({ average: 180, divisionId: handicapDivision.id }),
-    )
+    // One bowler has no average, so no handicap: the column shows when only some have one.
+    const rest = [
+      ...Array.from({ length: 4 }, () => bowler({ average: 180, divisionId: handicapDivision.id })),
+      bowler({ average: null, divisionId: handicapDivision.id }),
+    ]
     const seats = [
       { sessionId: early.id, entry: star, games: [250, 250, 250] },
       ...rest.map((entry) => ({ sessionId: early.id, entry, games: [100, 100, 100] })),
@@ -402,6 +452,7 @@ describe('loadSuperSweeper', () => {
 
     const result = await loadSuperSweeper(deps, reporting, tournament.id)
 
+    expect(result.rows.map((row) => row.place)).toEqual([1, 2, 3, 4])
     expect(result.sweepers).toEqual([
       { id: first.id, date: morning, games: 3, complete: true },
       { id: second.id, date: noon, games: 3, complete: true },
@@ -542,7 +593,26 @@ describe('loadSuperSweeper', () => {
 
     await expect(
       loadSuperSweeper(deps, reporting, '7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01'),
-    ).rejects.toMatchObject({ status: 404 })
+    ).rejects.toMatchObject({ status: 404, message: 'Tournament not found' })
+  })
+
+  it('answers 404 when the row is missing or the ratios are', async () => {
+    const { deps, reporting, tournament } = setup({})
+
+    deps.tournaments = { ...deps.tournaments, get: () => Promise.resolve(undefined) }
+    await expect(loadSuperSweeper(deps, reporting, tournament.id)).rejects.toMatchObject({
+      status: 404,
+      message: 'Tournament not found',
+    })
+    deps.tournaments = {
+      ...deps.tournaments,
+      get: () => Promise.resolve(tournament),
+      getRatios: () => Promise.resolve(undefined),
+    }
+    await expect(loadSuperSweeper(deps, reporting, tournament.id)).rejects.toMatchObject({
+      status: 404,
+      message: 'Tournament not found',
+    })
   })
 
   it('skips a registrant whose division is not the tournament’s and logs it (D-51)', async () => {

@@ -50,7 +50,7 @@ export function useSweeperResults(tournamentId: string, sessionId: string) {
 }
 
 /** Retry once, but not a missing tournament or a ratio the results cannot use. */
-function retryUnlessFinalFinals(failureCount: number, error: Error): boolean {
+export function retryUnlessFinalFinals(failureCount: number, error: Error): boolean {
   return (
     !(error instanceof ResultsUnavailableError) &&
     !(error instanceof TournamentNotFoundError) &&

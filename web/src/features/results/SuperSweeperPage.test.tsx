@@ -114,6 +114,42 @@ describe('SuperSweeperPage', () => {
     expect(screen.getByText('4 entries · Cashing 2 · Cut score 2040')).toBeVisible()
   })
 
+  it('says "1 entry" and "1 sweeper" for one of each', async () => {
+    serve(
+      filled({
+        entries: 1,
+        cashers: 1,
+        sweepers: [friday],
+        rows: [createSuperSweeperRow({ name: 'Dana Whitfield', sweeperTotals: [600] })],
+      }),
+    )
+
+    open()
+
+    expect(
+      await screen.findByText('1 entry · Cashing 1 · Cut score 2040', {}, { timeout: 3000 }),
+    ).toBeVisible()
+    expect(screen.getByText('1 sweeper · cash ratio 1 in 2.0')).toBeVisible()
+  })
+
+  it('spans the cash line across every column (RES-29a)', async () => {
+    serve(filled())
+
+    open()
+
+    const view = await table()
+    expect(view.getByText('Cash Line').closest('td')).toHaveAttribute('colspan', '6')
+  })
+
+  it('reads a real total aloud (D-90)', async () => {
+    serve(filled())
+
+    open()
+
+    const view = await table()
+    expect(view.getByText('712')).not.toHaveAttribute('aria-hidden')
+  })
+
   it('links back to the sweepers, and sets the page title', async () => {
     serve(filled())
 
@@ -317,6 +353,24 @@ describe('SuperSweeperPage printing (RPT-04b, D-89)', () => {
     expect(text).toContain('Super Sweeper Results')
     expect(text).toContain('UNOFFICIAL RESULTS')
     expect(text).toContain('4 entries · Cashing 2 · Cut score 2040')
+  })
+
+  it('prints "1 entry" for one', async () => {
+    serve(filled({ entries: 1, rows: [createSuperSweeperRow({ sweeperTotals: [600, 600] })] }))
+    open()
+    let text = ''
+    print.mockImplementation(() => {
+      text = copySections()[0]?.textContent ?? ''
+    })
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Print results' }, { timeout: 3000 }),
+    )
+
+    await waitFor(() => {
+      expect(print).toHaveBeenCalledTimes(1)
+    })
+    expect(text).toContain('1 entry · Cashing 2')
   })
 
   it('prints no unofficial mark once every sweeper is complete', async () => {

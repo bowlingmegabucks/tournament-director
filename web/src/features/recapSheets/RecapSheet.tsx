@@ -54,6 +54,7 @@ export function RecapSheet({ sheet, session, pattern }: Readonly<RecapSheetProps
           <tbody>
             {lanes.map((lane, index) => (
               // The cross repeats a label (lane 4A can come up twice), so the game number is the key.
+              // Stryker disable next-line StringLiteral,ArithmeticOperator: a key is never read back, and any unique string works.
               <tr key={`game-${index + 1}`}>
                 <td className={styles.cell}>{lane}</td>
                 <td className={styles.cell} />

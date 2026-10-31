@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { http, HttpResponse } from 'msw'
+import { delay, http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import {
   createLanePage,
@@ -205,6 +205,60 @@ describe('SessionPortal', () => {
       await screen.findByRole('heading', { name: 'Sweeper not found' }, { timeout: 3000 }),
     ).toBeVisible()
     expect(screen.getByRole('link', { name: 'All sweepers' })).toBeVisible()
+  })
+
+  it.each([
+    ['squads', 'Loading squad…'],
+    ['sweepers', 'Loading sweeper…'],
+  ])('says %s load until the session list arrives', async (kind, words) => {
+    serve()
+    server.use(
+      http.get(`/v1/tournaments/:id/${kind}`, async () => {
+        await delay(200)
+        return HttpResponse.json(kind === 'squads' ? { squads: [squad] } : { sweepers: [sweeper] })
+      }),
+    )
+
+    renderApp(`${base}/${kind}/${kind === 'squads' ? squad.id : sweeper.id}/lanes`)
+
+    expect(await screen.findByText(words)).toBeVisible()
+    expect(await screen.findByRole('heading', { level: 1 }, { timeout: 3000 })).toBeVisible()
+  })
+
+  it.each([
+    ['squads', 'Squad'],
+    ['sweepers', 'Sweeper'],
+  ])('titles the %s not-found page for the tab (D-60)', async (kind, label) => {
+    serve()
+
+    renderApp(`${base}/${kind}/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01/lanes`)
+
+    await screen.findByRole('heading', { name: `${label} not found` }, { timeout: 3000 })
+    await waitFor(() => {
+      expect(document.title).toBe(`${label} not found · Tournament Director`)
+    })
+  })
+
+  it.each([
+    ['squads', () => squad.id, 'squads'],
+    ['sweepers', () => sweeper.id, 'sweepers'],
+  ])('loads the %s again when Try again is pressed', async (kind, id) => {
+    serve()
+    let failing = true
+    server.use(
+      http.get(`/v1/tournaments/:id/${kind}`, () =>
+        failing
+          ? new HttpResponse(null, { status: 503 })
+          : HttpResponse.json(kind === 'squads' ? { squads: [squad] } : { sweepers: [sweeper] }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderApp(`${base}/${kind}/${id()}/lanes`)
+    const retry = await screen.findByRole('button', { name: 'Try again' }, { timeout: 3000 })
+    failing = false
+    await user.click(retry)
+
+    expect(await screen.findByRole('heading', { level: 1 }, { timeout: 3000 })).toBeVisible()
   })
 
   it('shows an error with Try again when the session list fails', async () => {

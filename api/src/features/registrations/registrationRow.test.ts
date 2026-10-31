@@ -6,17 +6,21 @@ const otherTournamentId = '22222222-2222-4222-8222-222222222222'
 const squadId = '33333333-3333-4333-8333-333333333333'
 const sweeperId = '44444444-4444-4444-8444-444444444444'
 
+function createBowler(): NonNullable<RegistrationRow['bowler']> {
+  return {
+    id: '66666666-6666-4666-8666-666666666666',
+    firstName: 'Ray',
+    lastName: 'Baptiste',
+    suffix: '',
+    usbcId: '1190-55820',
+  }
+}
+
 function createRow(overrides: Partial<RegistrationRow> = {}): RegistrationRow {
   return {
     id: '55555555-5555-4555-8555-555555555555',
     superSweeper: false,
-    bowler: {
-      id: '66666666-6666-4666-8666-666666666666',
-      firstName: 'Ray',
-      lastName: 'Baptiste',
-      suffix: '',
-      usbcId: '1190-55820',
-    },
+    bowler: createBowler(),
     divisionId: '77777777-7777-4777-8777-777777777777',
     division: { name: 'Open' },
     squads: [],
@@ -37,11 +41,17 @@ describe('displayName', () => {
 })
 
 describe('toRegistration', () => {
+  it('does not fit when the bowler is missing, and does not throw (D-51)', () => {
+    const result = toRegistration(createRow({ bowler: null }), tournamentId)
+
+    expect(result.success).toBe(false)
+  })
+
   it('reads a stored row into the list shape (REG-23, BWL-13)', () => {
     const result = toRegistration(
       createRow({
         superSweeper: true,
-        bowler: { ...createRow().bowler, suffix: 'Jr' },
+        bowler: { ...createBowler(), suffix: 'Jr' },
         squads: [
           { squad: { id: squadId, tournamentId, squadType: 0 } },
           { squad: { id: sweeperId, tournamentId, squadType: 1 } },
@@ -70,7 +80,7 @@ describe('toRegistration', () => {
 
   it('keeps an empty USBC ID as an empty string (REG-23)', () => {
     const result = toRegistration(
-      createRow({ bowler: { ...createRow().bowler, usbcId: '' } }),
+      createRow({ bowler: { ...createBowler(), usbcId: '' } }),
       tournamentId,
     )
 
@@ -103,7 +113,7 @@ describe('toRegistration', () => {
     ['last name', { lastName: '' }],
   ])('rejects a bowler with an empty %s (D-51)', (_label, bowlerFields) => {
     const result = toRegistration(
-      createRow({ bowler: { ...createRow().bowler, ...bowlerFields } }),
+      createRow({ bowler: { ...createBowler(), ...bowlerFields } }),
       tournamentId,
     )
 
@@ -118,7 +128,7 @@ describe('toRegistration', () => {
     const row = {
       ...createRow(),
       bowler: {
-        ...createRow().bowler,
+        ...createBowler(),
         socialSecurityNumber: 'c2VjcmV0',
         gender: 0,
         dateOfBirth: new Date('1980-01-01'),

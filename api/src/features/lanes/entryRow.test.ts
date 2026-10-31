@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { toLaneEntry, type LaneEntryRow } from './entryRow.ts'
 
 function row(
-  overrides: Partial<LaneEntryRow['registration']> = {},
+  overrides: Partial<NonNullable<LaneEntryRow['registration']>> = {},
   laneAssignment: string | null = '1A',
 ): LaneEntryRow {
   return {
+    registrationId: '2f6d8b3a-4c55-4d0e-8a11-9b7e5c3d1f02',
     laneAssignment,
     registration: {
       id: '2f6d8b3a-4c55-4d0e-8a11-9b7e5c3d1f02',
@@ -66,5 +67,12 @@ describe('toLaneEntry', () => {
     ['no last name', { bowler: { firstName: 'Joe', lastName: '', suffix: '' } }],
   ])('does not fit with %s (D-51)', (_name, overrides) => {
     expect(toLaneEntry(row(overrides)).success).toBe(false)
+  })
+
+  it.each([
+    ['no registration', { ...row(), registration: null }],
+    ['no bowler', row({ bowler: null })],
+  ])('does not fit with %s and does not throw (D-51)', (_name, entry) => {
+    expect(toLaneEntry(entry).success).toBe(false)
   })
 })

@@ -19,6 +19,7 @@ export function createPrismaLaneRepository(client: PrismaClient, logger: Logger)
           where: { squadId: sessionId },
           // Named columns only: the bowler's SSN, birth date, and contact details are never read (BWL-17).
           select: {
+            registrationId: true,
             laneAssignment: true,
             registration: {
               select: {
@@ -36,12 +37,12 @@ export function createPrismaLaneRepository(client: PrismaClient, logger: Logger)
       return rows.flatMap((row) => {
         const result = toLaneEntry(row)
         if (result.success) return [result.data]
-        const key = `skipped:${sessionId}:${row.registration.id}`
+        const key = `skipped:${sessionId}:${row.registrationId}`
         if (!reported.has(key)) {
           reported.add(key)
           logger.warn(
             {
-              registrationId: row.registration.id,
+              registrationId: row.registrationId,
               sessionId,
               problems: result.error.issues.map(describeIssue),
             },

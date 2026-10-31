@@ -1,6 +1,6 @@
 .row {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: var(--space-1) var(--space-2);
   align-items: start;
   padding: var(--space-2);
@@ -11,12 +11,19 @@
 
 /* A bowler in a pair: handle, position, details, and the Move button on one line. */
 .placed {
-  grid-template-columns: auto auto 1fr auto;
+  grid-template-columns: auto auto minmax(0, 1fr);
   align-items: center;
 }
 
-.placed .actions {
-  grid-column: auto;
+/* On a phone the Move button takes its own line, so the name keeps room beside the scrollbar. */
+@media (min-width: 40rem) {
+  .placed {
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+  }
+
+  .placed .actions {
+    grid-column: auto;
+  }
 }
 
 /* The card that follows the pointer. The row it came from stays put, dimmed. */

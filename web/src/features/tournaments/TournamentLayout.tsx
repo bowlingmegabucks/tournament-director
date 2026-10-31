@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import { Link, NavLink, Outlet, useParams } from 'react-router'
 import { Loading } from '../../shared/Loading'
 import { Page } from '../../shared/Page'
@@ -18,6 +18,12 @@ export function TournamentLayout() {
   const { id = '' } = useParams()
   const { data, isPending, error, refetch } = useTournament(id)
   const titleId = useId()
+  const menuId = useId()
+  // Phone only: the menu starts closed so the page is the first thing on screen. CSS ignores it on wider screens.
+  const [menuOpen, setMenuOpen] = useState(false)
+  const closeMenu = () => {
+    setMenuOpen(false)
+  }
 
   if (isPending) {
     return (
@@ -58,29 +64,56 @@ export function TournamentLayout() {
           {data.name}
         </h2>
         <p className={styles.meta}>{formatDateRange(data.startDate, data.endDate)}</p>
-        <ul className={styles.items}>
-          <li>
-            <NavLink to={`/tournaments/${data.id}/divisions`}>Divisions</NavLink>
-          </li>
-          <li>
-            <NavLink to={`/tournaments/${data.id}/squads`}>Squads</NavLink>
-          </li>
-          <li>
-            <NavLink to={`/tournaments/${data.id}/sweepers`}>Sweepers</NavLink>
-          </li>
-          <li>
-            <NavLink to={`/tournaments/${data.id}/registrations`}>Registrations</NavLink>
-          </li>
-          <li>
-            <NavLink to={`/tournaments/${data.id}/at-large`}>At-large</NavLink>
-          </li>
-          <li>
-            <NavLink to={`/tournaments/${data.id}/seeding`}>Seeding</NavLink>
-          </li>
-        </ul>
-        <p>
-          <Link to="/tournaments">Change tournament</Link>
-        </p>
+        <button
+          type="button"
+          className={styles.toggle}
+          aria-expanded={menuOpen}
+          aria-controls={menuId}
+          onClick={() => {
+            setMenuOpen((open) => !open)
+          }}
+        >
+          Tournament menu
+        </button>
+        <div id={menuId} className={menuOpen ? styles.menu : `${styles.menu} ${styles.closed}`}>
+          <ul className={styles.items}>
+            <li>
+              <NavLink onClick={closeMenu} to={`/tournaments/${data.id}/divisions`}>
+                Divisions
+              </NavLink>
+            </li>
+            <li>
+              <NavLink onClick={closeMenu} to={`/tournaments/${data.id}/squads`}>
+                Squads
+              </NavLink>
+            </li>
+            <li>
+              <NavLink onClick={closeMenu} to={`/tournaments/${data.id}/sweepers`}>
+                Sweepers
+              </NavLink>
+            </li>
+            <li>
+              <NavLink onClick={closeMenu} to={`/tournaments/${data.id}/registrations`}>
+                Registrations
+              </NavLink>
+            </li>
+            <li>
+              <NavLink onClick={closeMenu} to={`/tournaments/${data.id}/at-large`}>
+                At-large
+              </NavLink>
+            </li>
+            <li>
+              <NavLink onClick={closeMenu} to={`/tournaments/${data.id}/seeding`}>
+                Seeding
+              </NavLink>
+            </li>
+          </ul>
+          <p>
+            <Link onClick={closeMenu} to="/tournaments">
+              Change tournament
+            </Link>
+          </p>
+        </div>
       </nav>
       <main className={styles.content}>
         <Outlet context={data} />

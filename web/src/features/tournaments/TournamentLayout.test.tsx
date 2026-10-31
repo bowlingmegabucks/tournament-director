@@ -27,6 +27,21 @@ function serveTournament() {
 const sidebar = () => screen.getByRole('navigation', { name: 'Spring Open' })
 
 describe('tournament pages', () => {
+  it('has a menu button that shows whether the links are open, and closes after a link is followed (phone menu)', async () => {
+    serveTournament()
+    const user = userEvent.setup()
+    renderApp(`/tournaments/${tournament.id}`)
+
+    const button = await screen.findByRole('button', { name: 'Tournament menu' })
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+
+    await user.click(button)
+    expect(button).toHaveAttribute('aria-expanded', 'true')
+
+    await user.click(within(sidebar()).getByRole('link', { name: 'Divisions' }))
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+  })
+
   it('shows the tournament overview (TRN-15)', async () => {
     serveTournament()
 

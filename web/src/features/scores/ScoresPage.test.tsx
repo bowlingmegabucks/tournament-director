@@ -194,7 +194,7 @@ describe('ScoresPage', () => {
     ).toBeVisible()
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
     expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(within(screen.getByRole('main')).queryByRole('button')).not.toBeInTheDocument()
   })
 
   it('has no entry controls on an open squad either (D-69)', async () => {
@@ -207,7 +207,7 @@ describe('ScoresPage', () => {
     expect(screen.queryByText(/complete/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
     expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(within(screen.getByRole('main')).queryByRole('button')).not.toBeInTheDocument()
   })
 
   it('says a complete sweeper cannot change (SCR-14)', async () => {

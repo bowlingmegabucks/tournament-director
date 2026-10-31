@@ -123,7 +123,7 @@ describe('SweepersPage', () => {
       'href',
       `/tournaments/${tournament.id}/sweepers/${sweeper.id}`,
     )
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(within(screen.getByRole('main')).queryByRole('button')).not.toBeInTheDocument()
   })
 
   it('names the page and the tournament in the title', async () => {

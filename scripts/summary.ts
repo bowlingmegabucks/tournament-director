@@ -14,27 +14,38 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
+function startLine(mutant: Record<string, unknown>): number | undefined {
+  const start = isRecord(mutant.location) ? mutant.location.start : undefined
+  const line = isRecord(start) ? start.line : undefined
+  return typeof line === 'number' ? line : undefined
+}
+
+function addMutant(result: FileResult, mutant: unknown): void {
+  if (!isRecord(mutant) || typeof mutant.status !== 'string') return
+  if (DETECTED.has(mutant.status)) {
+    result.killed++
+    return
+  }
+  if (!UNDETECTED.has(mutant.status)) return
+  if (mutant.status === 'Survived') result.survived++
+  else result.noCoverage++
+  const line = startLine(mutant)
+  if (line !== undefined) result.lines.push(line)
+}
+
+function readFile(file: string, entry: unknown): FileResult {
+  const result: FileResult = { file, killed: 0, survived: 0, noCoverage: 0, lines: [] }
+  const mutants = isRecord(entry) && Array.isArray(entry.mutants) ? entry.mutants : []
+  for (const mutant of mutants) addMutant(result, mutant)
+  result.lines.sort((a, b) => a - b)
+  return result
+}
+
 /** Reads the `files` of a Stryker JSON report (mutation-testing-elements schema). */
 export function readReport(report: unknown): FileResult[] {
   const files = isRecord(report) ? report.files : undefined
   if (!isRecord(files)) return []
-  return Object.entries(files).map(([file, entry]) => {
-    const result: FileResult = { file, killed: 0, survived: 0, noCoverage: 0, lines: [] }
-    const mutants = isRecord(entry) && Array.isArray(entry.mutants) ? entry.mutants : []
-    for (const mutant of mutants) {
-      if (!isRecord(mutant) || typeof mutant.status !== 'string') continue
-      if (DETECTED.has(mutant.status)) result.killed++
-      else if (UNDETECTED.has(mutant.status)) {
-        if (mutant.status === 'Survived') result.survived++
-        else result.noCoverage++
-        const start = isRecord(mutant.location) ? mutant.location.start : undefined
-        const line = isRecord(start) ? start.line : undefined
-        if (typeof line === 'number') result.lines.push(line)
-      }
-    }
-    result.lines.sort((a, b) => a - b)
-    return result
-  })
+  return Object.entries(files).map(([file, entry]) => readFile(file, entry))
 }
 
 /** Stryker's score: caught mutants over caught and uncaught ones. `undefined`: none counted. */
@@ -59,12 +70,14 @@ export function formatSummary(
   const survived = results.reduce((sum, r) => sum + r.survived, 0)
   const noCoverage = results.reduce((sum, r) => sum + r.noCoverage, 0)
   const lines = [`<!-- mutation-${folder} -->`, `### Mutation tests (${folder})`, '']
-  lines.push(
-    total === undefined
-      ? 'No mutants were counted.'
-      : `**Score ${total.toFixed(2)}%** · ${killed} caught · ${survived} survived · ${noCoverage} not covered` +
-          (scope === 'changed' ? ' · the files this pull request changed' : ''),
-  )
+  const scopeNote = scope === 'changed' ? ' · the files this pull request changed' : ''
+  if (total === undefined) {
+    lines.push('No mutants were counted.')
+  } else {
+    lines.push(
+      `**Score ${total.toFixed(2)}%** · ${killed} caught · ${survived} survived · ${noCoverage} not covered${scopeNote}`,
+    )
+  }
   const weak = results
     .filter((r) => r.survived + r.noCoverage > 0)
     .sort((a, b) => b.survived + b.noCoverage - (a.survived + a.noCoverage))

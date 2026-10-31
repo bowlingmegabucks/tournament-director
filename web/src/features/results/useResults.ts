@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { retryUnlessFinal } from '../../shared/session'
-import { TournamentNotFoundError, tournamentKeys } from '../../shared/tournamentQuery'
+import { tournamentKeys } from '../../shared/tournamentQuery'
 import {
   fetchAtLarge,
   fetchSeeding,
@@ -25,8 +25,11 @@ export const resultKeys = {
     [...tournamentKeys.detail(tournamentId), kind, 'results'] as const,
 }
 
-/** Retry once, but not a missing session or a ratio the results cannot use: a second try answers the same. */
-function retryUnlessFinalResults(failureCount: number, error: Error): boolean {
+/**
+ * The one retry rule of every results query: once, but not for a missing tournament or session or a
+ * ratio the results cannot use (a second try answers the same).
+ */
+export function retryUnlessFinalResults(failureCount: number, error: Error): boolean {
   return !(error instanceof ResultsUnavailableError) && retryUnlessFinal(failureCount, error)
 }
 
@@ -49,15 +52,6 @@ export function useSweeperResults(tournamentId: string, sessionId: string) {
   })
 }
 
-/** Retry once, but not a missing tournament or a ratio the results cannot use. */
-export function retryUnlessFinalFinals(failureCount: number, error: Error): boolean {
-  return (
-    !(error instanceof ResultsUnavailableError) &&
-    !(error instanceof TournamentNotFoundError) &&
-    failureCount < 1
-  )
-}
-
 // A tournament part that is not complete can still change (D-88), so it asks again every 15
 // seconds; once every squad (or sweeper) is complete it stops. A failed refresh keeps the last results.
 const stopWhenComplete = (query: { state: { data?: { complete: boolean } } }) =>
@@ -67,7 +61,7 @@ export function useAtLarge(tournamentId: string) {
   return useQuery({
     queryKey: resultKeys.finals('at-large', tournamentId),
     queryFn: () => fetchAtLarge(tournamentId),
-    retry: retryUnlessFinalFinals,
+    retry: retryUnlessFinalResults,
     refetchInterval: stopWhenComplete,
   })
 }
@@ -76,7 +70,7 @@ export function useSeeding(tournamentId: string) {
   return useQuery({
     queryKey: resultKeys.finals('seeding', tournamentId),
     queryFn: () => fetchSeeding(tournamentId),
-    retry: retryUnlessFinalFinals,
+    retry: retryUnlessFinalResults,
     refetchInterval: stopWhenComplete,
   })
 }
@@ -85,7 +79,7 @@ export function useSuperSweeper(tournamentId: string) {
   return useQuery({
     queryKey: resultKeys.finals('super-sweeper', tournamentId),
     queryFn: () => fetchSuperSweeper(tournamentId),
-    retry: retryUnlessFinalFinals,
+    retry: retryUnlessFinalResults,
     refetchInterval: stopWhenComplete,
   })
 }

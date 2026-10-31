@@ -1152,7 +1152,7 @@ export function createDemoSeeding(): SeedingResults {
   })
 }
 
-/** For the mock server: the super sweeper over the demo sweepers, with a missed and an unfinished sweeper. */
+/** For the mock server: the super sweeper over the demo sweepers, with an unfinished sweeper, a missed one, and a no-show last. */
 export function createDemoSuperSweeper(
   sweepers: readonly { id: string; date: string; games: number; complete: boolean }[],
 ): SuperSweeperResults {
@@ -1162,6 +1162,14 @@ export function createDemoSuperSweeper(
     ['Dana Whitfield', 'Women/Senior', [712, 698], 1410, 262, []],
     ['Dave Kowalski', 'Open', [690, 681], 1371, 248, []],
     [
+      'Lee Park',
+      'Women/Senior',
+      [390, 380],
+      770,
+      231,
+      first ? [{ kind: 'unfinished', sweeperId: first.id, gamesBowled: 2 }] : [],
+    ],
+    [
       'Sam Ortiz',
       'Open',
       [605, 0],
@@ -1169,13 +1177,14 @@ export function createDemoSuperSweeper(
       220,
       second ? [{ kind: 'missed', sweeperId: second.id, gamesBowled: 0 }] : [],
     ],
+    // A no-show holds zero rows (D-06), so every sweeper is missed and the total is 0: last (D-90).
     [
-      'Lee Park',
-      'Women/Senior',
-      [390, 380],
-      770,
-      231,
-      first ? [{ kind: 'unfinished', sweeperId: first.id, gamesBowled: 2 }] : [],
+      'Pat Romano',
+      'Open',
+      [0, 0],
+      0,
+      0,
+      columns.map((column) => ({ kind: 'missed' as const, sweeperId: column.id, gamesBowled: 0 })),
     ],
   ]
   return createSuperSweeperResults({

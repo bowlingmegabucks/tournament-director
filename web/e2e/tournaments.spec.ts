@@ -579,8 +579,17 @@ test('Super sweeper results open from the Sweepers page, with a column for each 
   await expect(page.getByRole('heading', { level: 1, name: 'Super sweeper results' })).toBeVisible()
   const list = page.getByRole('table', { name: 'Super sweeper results' })
   await expect(list.getByRole('row', { name: 'Cash Line' })).toBeVisible()
-  await expect(list.getByText('Missed a sweeper')).toBeVisible()
   await expect(list.getByText('Did not finish a sweeper')).toBeVisible()
+  // A bowler who did not finish and one who missed a sweeper rank by total; a no-show is last (D-90).
+  const names = list.getByRole('rowheader')
+  await expect(names).toHaveText([
+    /Dana Whitfield/,
+    /Dave Kowalski/,
+    /Lee Park/,
+    /Sam Ortiz/,
+    /Pat Romano/,
+  ])
+  await expect(names.last().getByText('Missed a sweeper')).toHaveCount(2)
   await expect(page.getByText(/Unofficial results\. Not every sweeper is complete/)).toBeVisible()
 })
 

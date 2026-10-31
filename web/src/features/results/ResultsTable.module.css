@@ -135,6 +135,11 @@
     border: 0;
   }
 
+  /* No casher mark: no label above an empty value. */
+  .table td:empty {
+    display: none;
+  }
+
   .table .line td {
     padding: var(--space-2) 0;
   }

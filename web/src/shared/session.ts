@@ -1,5 +1,7 @@
 // What the squad pages and the recap sheets share: a session is a squad or a sweeper (D-60).
 
+import { TournamentNotFoundError } from './tournamentQuery'
+
 /** A squad or a sweeper: both use the lane page and the recap sheets. */
 export type SessionKind = 'squad' | 'sweeper'
 
@@ -13,9 +15,10 @@ export class SessionNotFoundError extends Error {
 /** The session cannot take lane assignments as set up, such as 6 bowlers per pair (422, LAN-02). */
 export class LaneSetupError extends Error {}
 
-/** Retry once, but not a missing session or a setup problem: a second try answers the same. */
+/** Retry once, but not a missing tournament or session or a setup problem: a second try answers the same. */
 export function retryUnlessFinal(failureCount: number, error: Error): boolean {
   return (
+    !(error instanceof TournamentNotFoundError) &&
     !(error instanceof SessionNotFoundError) &&
     !(error instanceof LaneSetupError) &&
     failureCount < 1

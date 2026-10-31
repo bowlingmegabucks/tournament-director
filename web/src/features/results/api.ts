@@ -132,6 +132,18 @@ function isSweeperResults(value: unknown): value is SweeperResults {
   )
 }
 
+/** The 422 and failure handling every results route shares (D-83), after the caller's 404 check. */
+async function readResultsBody(response: Response): Promise<unknown> {
+  if (response.status === 422) {
+    const message = field(await readJson(response, 'Failed to load results'), 'message')
+    throw new ResultsUnavailableError(
+      isText(message) ? String(message) : 'The results cannot be worked out',
+    )
+  }
+  if (!response.ok) throw new Error(`Failed to load results (${response.status})`)
+  return readJson(response, 'Failed to load results')
+}
+
 async function fetchResultsBody(
   kind: SessionKind,
   tournamentId: string,
@@ -143,14 +155,7 @@ async function fetchResultsBody(
     ),
   )
   if (response.status === 404 || response.status === 400) throw new SessionNotFoundError(kind)
-  if (response.status === 422) {
-    const message = field(await readJson(response, 'Failed to load results'), 'message')
-    throw new ResultsUnavailableError(
-      isText(message) ? String(message) : 'The results cannot be worked out',
-    )
-  }
-  if (!response.ok) throw new Error(`Failed to load results (${response.status})`)
-  return readJson(response, 'Failed to load results')
+  return readResultsBody(response)
 }
 
 /** The results of one squad, by division (RES-31). */
@@ -291,14 +296,7 @@ async function fetchFinalsBody(kind: FinalsKind, tournamentId: string): Promise<
     apiUrl(`/v1/tournaments/${encodeURIComponent(tournamentId)}/${kind}`),
   )
   if (response.status === 404 || response.status === 400) throw new TournamentNotFoundError()
-  if (response.status === 422) {
-    const message = field(await readJson(response, 'Failed to load results'), 'message')
-    throw new ResultsUnavailableError(
-      isText(message) ? String(message) : 'The results cannot be worked out',
-    )
-  }
-  if (!response.ok) throw new Error(`Failed to load results (${response.status})`)
-  return readJson(response, 'Failed to load results')
+  return readResultsBody(response)
 }
 
 /** The at-large advancers of every division (RES-37). */

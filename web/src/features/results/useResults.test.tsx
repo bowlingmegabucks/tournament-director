@@ -10,7 +10,7 @@ import { ResultsUnavailableError } from './api'
 import {
   RESULTS_REFRESH_MS,
   resultKeys,
-  retryUnlessFinalFinals,
+  retryUnlessFinalResults,
   useSquadResults,
   useSweeperResults,
 } from './useResults'
@@ -133,15 +133,15 @@ describe.each([
   })
 })
 
-describe('retryUnlessFinalFinals (D-88, D-93)', () => {
+describe('retryUnlessFinalResults (D-88, D-93)', () => {
   it('retries one failure once, then stops', () => {
-    expect(retryUnlessFinalFinals(0, new Error('boom'))).toBe(true)
-    expect(retryUnlessFinalFinals(1, new Error('boom'))).toBe(false)
-    expect(retryUnlessFinalFinals(2, new Error('boom'))).toBe(false)
+    expect(retryUnlessFinalResults(0, new Error('boom'))).toBe(true)
+    expect(retryUnlessFinalResults(1, new Error('boom'))).toBe(false)
+    expect(retryUnlessFinalResults(2, new Error('boom'))).toBe(false)
   })
 
   it('never retries a ratio the results cannot use, or a missing tournament', () => {
-    expect(retryUnlessFinalFinals(0, new ResultsUnavailableError('ratio is 0'))).toBe(false)
-    expect(retryUnlessFinalFinals(0, new TournamentNotFoundError())).toBe(false)
+    expect(retryUnlessFinalResults(0, new ResultsUnavailableError('ratio is 0'))).toBe(false)
+    expect(retryUnlessFinalResults(0, new TournamentNotFoundError())).toBe(false)
   })
 })

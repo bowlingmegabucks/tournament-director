@@ -1,0 +1,22 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="../../../web/src/styles/tokens.css"><link rel="stylesheet" href="../../../web/src/styles/base.css"><link rel="stylesheet" href="mock.css"><title>Super sweeper mockup</title></head><body><main>
+<section class="state"><h2 class="label">Filled, one sweeper still open</h2>
+<p><a href="navigation.html">Sweepers</a> / Super sweeper</p>
+<h1>Super sweeper results</h1>
+<div class="toolbar"><p class="sub">3 sweepers · cash ratio 8</p><button type="button">Print results</button></div>
+<output class="unofficial"><strong>Unofficial results.</strong> Not every sweeper is complete, so scores and places can still change.</output>
+<p class="sub">41 entries · Cashing 5 · Cut score 1840</p>
+<table class="table"><caption style="position:absolute;inline-size:1px;overflow:hidden">Super sweeper results</caption>
+<thead><tr><th scope="col">Place</th><th scope="col">Name</th><th scope="col" class="num">Fri 10/9</th><th scope="col" class="num">Sat 10/10</th><th scope="col" class="num">Sun 10/11</th><th scope="col" class="num">Total</th><th scope="col" class="num">HG</th></tr></thead><tbody>
+<tr><td>1</td><th scope="row" class="who">Dana Whitfield<span class="sub">Women</span></th><td class="num">712</td><td class="num">698</td><td class="num">693</td><td class="total">2103</td><td class="num">262</td></tr>
+<tr><td>2</td><th scope="row" class="who">Joe Fontaine<span class="sub">Open</span></th><td class="num">690</td><td class="num">681</td><td class="num">669</td><td class="total">2040</td><td class="num">248</td></tr>
+<tr class="line"><td colspan="7" style="padding-block:var(--space-3);border-block-end:var(--marker-width) solid var(--color-accent);color:var(--color-text-muted);font-size:var(--font-size-sm);font-style:italic">Cash Line</td></tr>
+<tr><td>3</td><th scope="row" class="who">Sam Ortiz<span class="tag">Missed a sweeper</span><span class="sub">Open</span><span class="mark">Missed the Sat 10/10 sweeper; scored 0 for 3 games</span></th><td class="num">605</td><td class="num">0</td><td class="num">605</td><td class="total">1210</td><td class="num">220</td></tr>
+<tr><td>4</td><th scope="row" class="who">Lee Park<span class="tag">Did not finish a sweeper</span><span class="sub">Senior</span><span class="mark">Fri 10/9 sweeper: 2 of 3 games; scored 0 for game 3</span></th><td class="num">390</td><td class="num">380</td><td class="num">380</td><td class="total">1150</td><td class="num">231</td></tr>
+<tr><td>5</td><th scope="row" class="who">Ray Dunn<span class="sub">Open</span></th><td class="num">560</td><td class="num">575</td><td class="num" aria-label="not bowled yet">&ndash;</td><td class="total">1135</td><td class="num">214</td></tr>
+</tbody></table>
+<p class="sub">Each sweeper column is that sweeper's total with its bonus pins. A dash means that sweeper is still open and the bowler has no score in it yet. Under 40rem each row is a block, with the sweeper date above each figure.</p>
+</section>
+<section class="state"><h2 class="label">Official (every sweeper complete): no notice</h2><h1>Super sweeper results</h1><p class="sub">Same table, no notice.</p></section>
+<section class="state"><h2 class="label">Loading / Empty / Error</h2><output>Loading super sweeper results…</output><p>No scores entered yet.</p>
+<div class="alert" role="alert"><p>This tournament's super sweeper cash ratio is 0, so results cannot be worked out. Set a ratio of 1 or more.</p><button type="button">Try again</button></div></section>
+</main></body></html>

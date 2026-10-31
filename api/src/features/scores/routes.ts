@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import type { Logger } from '../../shared/logger.ts'
 import { requestLogger } from '../../shared/requestLogging.ts'
-import { createTtlCache, LIVE_CACHE_MS } from '../../shared/ttlCache.ts'
+import { cacheKey, createTtlCache, LIVE_CACHE_MS } from '../../shared/ttlCache.ts'
 import { loadLanePage, type FindSession, type LanePageDeps } from '../lanes/loadLanePage.ts'
 import { reportLanePageProblems } from '../lanes/reportProblems.ts'
 import type { ScoreRepository } from './repository.ts'
@@ -38,7 +38,7 @@ export function createScoreRouter(
   router.get('/', async (req, res) => {
     const { id, sessionId } = params.parse(req.params)
     res.json(
-      await cached(`${id}/${sessionId}`, async () => {
+      await cached(cacheKey(id, sessionId), async () => {
         // Both reads start together. An unknown session still throws a 404 from the lane page, and the
         // score read is then dropped (its failure is ignored so it cannot go unhandled).
         const storedRead = scores.listScores(sessionId)

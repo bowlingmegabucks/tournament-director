@@ -281,6 +281,13 @@ describe('score cache', () => {
     expect(calls()).toBe(1)
   })
 
+  it('shares one entry between an upper-case and a lower-case id', async () => {
+    const { app, path, calls } = countingRouter(60_000)
+    await request(app).get(path).expect(200)
+    await request(app).get(path.toUpperCase()).expect(200)
+    expect(calls()).toBe(1)
+  })
+
   it('reads again when the window is zero', async () => {
     const { app, path, calls } = countingRouter(0)
     await request(app).get(path).expect(200)

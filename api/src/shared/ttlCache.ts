@@ -11,6 +11,9 @@ interface Slot<T> {
  */
 export const LIVE_CACHE_MS = 5000
 
+/** The cache key for ids from a request. UUIDs match in any case, so lower-case them: one entry per session. */
+export const cacheKey = (...ids: string[]) => ids.join('/').toLowerCase()
+
 /** The most keys a cache holds. Past it the cache starts over, so a long run cannot grow it without limit. */
 export const MAX_CACHED = 500
 

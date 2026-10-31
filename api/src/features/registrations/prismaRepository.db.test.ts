@@ -305,6 +305,26 @@ describe('Prisma registration repository', () => {
     ])
   })
 
+  it('skips a registration whose bowler row is gone and logs it (D-51)', async () => {
+    const tournamentId = await insertTournament()
+    const divisionId = await insertDivision(tournamentId)
+    const good = await insertRegistration(await insertBowler(), divisionId)
+    const orphanBowlerId = await insertBowler()
+    const orphan = await insertRegistration(orphanBowlerId, divisionId)
+    // MyISAM has no foreign keys, so the legacy app could delete a bowler and leave this row.
+    await client.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 0')
+      await tx.$executeRawUnsafe('DELETE FROM Bowlers WHERE Id = ?', orphanBowlerId)
+      await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 1')
+    })
+    const { repository, records } = setup()
+
+    const listed = await repository.listByTournament(tournamentId)
+
+    expect(listed.map((r) => r.id)).toEqual([good])
+    expect(records()).toEqual([expect.objectContaining({ registrationId: orphan, tournamentId })])
+  })
+
   it('never returns the SSN or other personal fields (BWL-17)', async () => {
     const tournamentId = await insertTournament()
     await insertRegistration(

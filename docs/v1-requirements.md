@@ -88,4 +88,4 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 
 Add items here as they come up, then move them to a section above.
 
--
+- [ ] Look into caching in the final 0.2.0 review, before the tag and before 0.3.0 work. Today only the at-large, seeding, and super sweeper routes cache (5 s per tournament, `FINALS_CACHE_MS` in `api/src/features/results/routes.ts`). Check the squad and sweeper results, scores, lanes, and registrations routes, which poll or recompute on each call, and decide what to cache, for how long, and whether the cache must change once routes sit behind auth (a per-user answer must not be shared).

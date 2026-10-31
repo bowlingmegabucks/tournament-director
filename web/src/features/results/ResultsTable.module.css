@@ -1,0 +1,136 @@
+/*
+ * The results tables (RES-10, RES-11). Element selectors (th, td, tr) sit under .table on purpose:
+ * a table needs them to restyle its cells on narrow screens without a class on every cell, and they
+ * cannot leak out of this module. Below 40rem each row is a block, so nothing scrolls sideways (D-73).
+ */
+
+.table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  padding: var(--space-2) var(--space-3);
+  border-block-end: var(--border-width) solid var(--color-border);
+  text-align: start;
+  font-weight: 400;
+}
+
+.table thead th {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.who {
+  font-weight: 600;
+}
+
+.table .num {
+  text-align: end;
+}
+
+.totalCell {
+  composes: num;
+  font-weight: 700;
+}
+
+.table .line td {
+  padding-block: var(--space-3);
+  border-block-end: var(--marker-width) solid var(--color-accent);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}
+
+.sub,
+.mark {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+}
+
+.tag {
+  display: inline-block;
+  margin-inline-start: var(--space-2);
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius);
+  color: var(--color-accent);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* Read by a screen reader, not seen. */
+.hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 40rem) {
+  .table,
+  .table tbody,
+  .table tr,
+  .table th,
+  .table td {
+    display: block;
+  }
+
+  .head {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(3.5rem, 1fr));
+    gap: var(--space-1) var(--space-3);
+    padding: var(--space-2) 0;
+    border-block-end: var(--border-width) solid var(--color-border);
+  }
+
+  .table tbody tr.line {
+    display: block;
+  }
+
+  .table tr > .place {
+    grid-column: 1;
+  }
+
+  .table tr > .who {
+    grid-column: 2 / -1;
+  }
+
+  .table th,
+  .table td {
+    padding: 0;
+    border: 0;
+  }
+
+  .table .line td {
+    padding: var(--space-2) 0;
+  }
+
+  .table .num {
+    text-align: start;
+  }
+
+  .table td.num::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    font-weight: 400;
+  }
+}

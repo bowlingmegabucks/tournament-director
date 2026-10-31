@@ -57,3 +57,21 @@ export function formatPins(pins: number): string {
 export function withOverride(text: string, overridden: boolean): string {
   return overridden ? `${text} (override)` : text
 }
+
+/** "10/24/2026" from (printed sheets and reports: RPT-01, RPT-05) "2026-10-24T09:00:00". The digits are read as they are, with no time zone. */
+export function formatSheetDate(value: string): string {
+  const match = DATE_TIME.exec(value)
+  if (!match) return value
+  const [, year, month, day] = match
+  return `${month}/${day}/${year}`
+}
+
+/** "09:00 AM" from "2026-10-24T09:00:00": two-digit hour, as legacy's `hh:mm tt`. */
+export function formatSheetTime(value: string): string {
+  const match = DATE_TIME.exec(value)
+  if (!match) return value
+  const [, , , , hour, minute] = match
+  const hours = Number(hour)
+  const clock = String(hours % 12 || 12).padStart(2, '0')
+  return `${clock}:${minute} ${hours < 12 ? 'AM' : 'PM'}`
+}

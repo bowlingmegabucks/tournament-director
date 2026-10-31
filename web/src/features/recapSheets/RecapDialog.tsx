@@ -5,8 +5,8 @@ import { QueryError } from '../../shared/QueryError'
 import { formatSessionDate } from '../../shared/sessionFormat'
 import type { SessionKind } from '../../shared/session'
 import { filterSheets } from './filter'
+import { imagesReady, startPrint } from '../../shared/print'
 import { PrintSheets } from './PrintSheets'
-import { imagesReady, startPrint } from './print'
 import styles from './RecapDialog.module.css'
 import { RecapSheet } from './RecapSheet'
 import type { RecapSheet as Sheet, SkipPattern } from './types'
@@ -74,9 +74,9 @@ export function RecapDialog({
     flushSync(() => {
       setPrinting(list)
     })
-    await imagesReady()
+    await imagesReady('recap')
     preparing.current = false
-    endPrint.current = startPrint(() => {
+    endPrint.current = startPrint('recap', () => {
       endPrint.current = undefined
       setPrinting(undefined)
     })

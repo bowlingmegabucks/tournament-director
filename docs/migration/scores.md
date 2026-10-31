@@ -31,7 +31,7 @@ The score count is not checked against the squad's game count. A bowler can have
 
 | ID | Rule | Status |
 | --- | --- | --- |
-| SCR-07 | **Handicap per game** for a registration in a division. The function is built for the lane page ([lane-assignments.md](../requirements/lane-assignments.md)); scoring uses it later: | |
+| SCR-07 | **Handicap per game** for a registration in a division. The function is built for the lane page ([lane-assignments.md](../requirements/lane-assignments.md)); scoring uses it later: | Done |
 
 ```
 if average, handicapBase, or handicapPercentage is missing: 0
@@ -51,8 +51,8 @@ Examples with base 220, 90%, cap 50:
 
 | ID | Rule | Status |
 | --- | --- | --- |
-| SCR-08 | Handicap is the same every game. Squad total with handicap = scratch total + handicap × games bowled. **D-68:** the score view and entry show scratch only; this applies with results. | |
-| SCR-09 | **Sweeper bonus pins** replace handicap in sweepers: the `BonusPinsPerGame` for the bowler's division in that sweeper. Missing row or NULL = 0. Same use as handicap: total = scratch + pins × games. The lane page reads the pins ([lane-assignments.md](../requirements/lane-assignments.md)); scoring uses them later. **D-68:** not shown on the score view. | |
+| SCR-08 | Handicap is the same every game. Squad total with handicap = scratch total + handicap × games bowled. **D-68:** the score view and entry show scratch only; this applies with results. | Done |
+| SCR-09 | **Sweeper bonus pins** replace handicap in sweepers: the `BonusPinsPerGame` for the bowler's division in that sweeper. Missing row or NULL = 0. Same use as handicap: total = scratch + pins × games. The lane page reads the pins ([lane-assignments.md](../requirements/lane-assignments.md)); scoring uses them later. **D-68:** not shown on the score view. | Done |
 | SCR-10 | The division for a score is the bowler's current registration division in that tournament. | Done |
 
 The old `rewrite/` spec listed set amounts (+10 handicap, +6 for 55+ or women, 0 scratch). Those are not in the code; the desk types a number per division per sweeper. See Q-11.
@@ -61,9 +61,9 @@ The old `rewrite/` spec listed set amounts (+10 handicap, +6 for 55+ or women, 0
 
 Every results list (squad, at-large, seeding, sweeper, super sweeper) uses this order. Each entry carries its games, its scratch total, and its handicap per game.
 
-| ID | Rule |
-| --- | --- |
-| SCR-11 | Compare two entries in this order; the first difference decides: |
+| ID | Rule | Status |
+| --- | --- | --- |
+| SCR-11 | Compare two entries in this order; the first difference decides. **D-76:** the results page shows a Games column while counts differ. | Done, differs (D-16) |
 
 1. **More games bowled ranks higher.** (A bowler with 3 games entered ranks above one with 2, whatever the pins.)
 2. **Higher total with handicap.**
@@ -77,9 +77,9 @@ Example from the legacy tests (scratch, 3 games): totals 109 each. Bowler A game
 
 **Note for super sweeper:** the combined entry joins games from every sweeper, so "game 1" appears once per sweeper. Steps 1 and 4 use the number of distinct game numbers, not the number of games. See `RES-24`.
 
-| ID | Rule |
-| --- | --- |
-| SCR-12 | Places and seeds number 1, 2, 3, ... in ranked order. Ties do not share a place. |
+| ID | Rule | Status |
+| --- | --- | --- |
+| SCR-12 | Places and seeds number 1, 2, 3, ... in ranked order. Ties do not share a place. | Done |
 
 ## Screen
 

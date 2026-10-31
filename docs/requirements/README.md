@@ -50,5 +50,6 @@ What the user sees and can do.
 | Lane assignments (page, drag, portal)   | [lane-assignments.md](lane-assignments.md)       |
 | Recap sheets (preview, print, the cross) | [recap-sheets.md](recap-sheets.md)              |
 | Scores (view)                           | [scores.md](scores.md)                           |
+| Results (squad and sweeper)             | [results.md](results.md)                         |
 | Navigation and layout                   | [navigation.md](navigation.md)                   |
 | API route access                        | [api-access.md](api-access.md)                   |

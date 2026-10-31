@@ -26,7 +26,7 @@ Version numbers follow content, not a countdown. 0.10.0 is fine.
 ## Data and cutover
 
 - [ ] The API reads and writes the existing database; the schema matches [database.md](migration/database.md).
-- [ ] Compare app output with WinForms output on real tournament data (results, rankings, reports).
+- [ ] Compare app output with WinForms output on real tournament data (results, rankings, reports). Still open: squad and sweeper results are built but not yet compared on real data.
 - [ ] Legacy sunset date set and a freeze date for the old app.
 - [ ] Rollback plan written.
 - [ ] Rename the misspelled `SuperSweeperCashRatio` column (legacy issue #101) after WinForms is off, and remove the mapping workaround in the API.
@@ -46,10 +46,10 @@ Review each open issue in [bowlingmegabucks/tournament-manager](https://github.c
 - [ ] #101 Fix SuperSweeperCashRatio spelling on Tournament entity (bug; database change). **Rename the column right before the 1.0.0 release, once WinForms is sunset** (it needs the bad name). Until then the API maps the misspelled column to the correct name in code. The release checklist must include the rename.
 - [ ] #97 Add/Update Unit Tests. Likely moot.
 - [ ] #94 Update Squad/Sweeper Info
-- [ ] #92 DNF in Squad Result Report
+- [x] #92 DNF in Squad Result Report. Built as the "Did not finish" and "No show" sections (D-75). The owner is moving the issue to this repo
 - [ ] #90 Sponsor Logos (database change; likely 1.x)
 - [ ] #88 Duplicate Bowler Clean-Up
-- [ ] #79 Running Totals on Squad Reports (question)
+- [ ] #79 Running Totals on Squad Reports (question). Later: not part of the squad results slice
 - [ ] #63 Lane Assignment (Changes) (bug)
 
 Issues that need schema changes wait for a 1.x release, after WinForms is sunset. We do not read every issue body now; we check the relevant ones as we build each feature, and re-run `gh issue list` in the legacy repo before 1.0.0 for new ones.

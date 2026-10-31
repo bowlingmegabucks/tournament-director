@@ -68,7 +68,7 @@ A squad has no game count. It always uses the tournament's `games`.
 | SQD-16 | **Complete a sweeper.** Sets `complete` only. No zeros are filled in. The menu item hides once the sweeper is complete; the squad menu item does not hide. |  |
 | SQD-17 | **What "complete" locks.** On the desk: lane assignment is read-only, and score paste and save are off. The add registration screen hides complete sessions. API update refuses to add complete sessions (`REG-33`). Adding super sweeper is refused if any of the bowler's sweepers are complete (`REG-17`). The **server** does not block score saves or lane moves on complete sessions; only the screens do. **D-10:** the new server locks a complete session: no score changes, lane moves, removals, or refunds. |  |
 | SQD-18 | There is no way to undo "complete". |  |
-| SQD-19 | Results do not wait for "complete". They use whatever scores exist (`RES-01`). |  |
+| SQD-19 | Results do not wait for "complete". They use whatever scores exist (`RES-01`). **D-84:** the results page marks them "Unofficial results" until the session is complete. | Done, differs (D-84) |
 | SQD-20 | Order between squads is by `date`. "Earlier squad" in the results rules means an earlier `date`. Two squads with the same date and time have no defined order. **D-45:** the new app breaks a tie by `startingLane`, then `id`. | Done, differs (D-45) |
 
 **Why zeros for no-shows matter:** the zeros make the no-show an entry. Entries drive how many advance and cash (`RES-02`). So a paid no-show still adds to the prize spots. **D-06:** keep this. A refunded entry is removed from the squad instead, so it stops counting. Refunds must happen before the squad is completed (D-10, D-11).

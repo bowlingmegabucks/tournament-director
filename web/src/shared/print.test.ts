@@ -23,20 +23,44 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals()
   delete document.body.dataset.recapPrinting
+  delete document.body.dataset.resultsPrinting
 })
 
-describe('startPrint (D-62)', () => {
+describe('startPrint (D-62, D-78)', () => {
   it('marks the page, asks about the print media, and opens the print dialog', () => {
-    startPrint(vi.fn())
+    startPrint('recap', vi.fn())
 
     expect(document.body).toHaveAttribute('data-recap-printing', '')
     expect(matchMedia).toHaveBeenCalledWith('print')
     expect(print).toHaveBeenCalledTimes(1)
   })
 
+  it('marks the page with the name it is given, so two features do not clash (D-78)', () => {
+    const end = startPrint('results', vi.fn())
+
+    expect(document.body).toHaveAttribute('data-results-printing', '')
+    expect(document.body).not.toHaveAttribute('data-recap-printing')
+
+    end()
+    expect(document.body).not.toHaveAttribute('data-results-printing')
+  })
+
+  it('unmarks the page, stops listening, and throws when the print dialog cannot open', () => {
+    print.mockImplementationOnce(() => {
+      throw new Error('no print here')
+    })
+    const done = vi.fn()
+
+    expect(() => startPrint('recap', done)).toThrow('no print here')
+
+    expect(document.body).not.toHaveAttribute('data-recap-printing')
+    expect(listeners).toHaveLength(0)
+    expect(done).toHaveBeenCalledTimes(1)
+  })
+
   it('ends on afterprint: clears the mark and says done once', () => {
     const done = vi.fn()
-    startPrint(done)
+    startPrint('recap', done)
 
     window.dispatchEvent(new Event('afterprint'))
     window.dispatchEvent(new Event('afterprint'))
@@ -48,7 +72,7 @@ describe('startPrint (D-62)', () => {
 
   it('ends when the print media query goes off, not when it comes on', () => {
     const done = vi.fn()
-    startPrint(done)
+    startPrint('recap', done)
 
     for (const listener of listeners) listener({ matches: true })
     expect(done).not.toHaveBeenCalled()
@@ -59,7 +83,7 @@ describe('startPrint (D-62)', () => {
 
   it('ends early when asked, and asking again does nothing more', () => {
     const done = vi.fn()
-    const end = startPrint(done)
+    const end = startPrint('recap', done)
 
     end()
     end()
@@ -93,7 +117,7 @@ describe('imagesReady (D-62)', () => {
       configurable: true,
     })
 
-    await imagesReady(root)
+    await imagesReady('recap', root)
 
     expect(decode).toHaveBeenCalledTimes(1)
   })
@@ -107,7 +131,7 @@ describe('imagesReady (D-62)', () => {
       configurable: true,
     })
 
-    await imagesReady(root)
+    await imagesReady('recap', root)
 
     expect(decode).not.toHaveBeenCalled()
   })
@@ -115,12 +139,12 @@ describe('imagesReady (D-62)', () => {
   it('does not wait on a browser with no decode, or on an image that fails', async () => {
     const root = copyWithImage()
     vi.spyOn(HTMLImageElement.prototype, 'complete', 'get').mockReturnValue(false)
-    await expect(imagesReady(root)).resolves.toBeUndefined()
+    await expect(imagesReady('recap', root)).resolves.toBeUndefined()
 
     Object.defineProperty(HTMLImageElement.prototype, 'decode', {
       value: () => Promise.reject(new Error('broken')),
       configurable: true,
     })
-    await expect(imagesReady(root)).resolves.toBeUndefined()
+    await expect(imagesReady('recap', root)).resolves.toBeUndefined()
   })
 })

@@ -13,6 +13,7 @@ import type { LaneRepository } from './features/lanes/repository.ts'
 import { createRecapSheetRouter } from './features/recapSheets/routes.ts'
 import { createRegistrationRouter } from './features/registrations/routes.ts'
 import type { RegistrationRepository } from './features/registrations/repository.ts'
+import { createResultsRouter } from './features/results/routes.ts'
 import { createScoreRouter } from './features/scores/routes.ts'
 import type { ScoreRepository } from './features/scores/repository.ts'
 import { createSquadRouter } from './features/squads/routes.ts'
@@ -128,6 +129,32 @@ export function createApp({
         lanes,
         tournaments,
         divisions,
+        scores,
+        logger,
+      }),
+    },
+    {
+      path: '/v1/tournaments/:id/squads/:sessionId/results',
+      access: 'public', // D-74: public for good, so bowlers check the standings
+      router: createResultsRouter('squad', {
+        tournaments,
+        divisions,
+        squads,
+        sweepers,
+        lanes,
+        scores,
+        logger,
+      }),
+    },
+    {
+      path: '/v1/tournaments/:id/sweepers/:sessionId/results',
+      access: 'public', // D-74
+      router: createResultsRouter('sweeper', {
+        tournaments,
+        divisions,
+        squads,
+        sweepers,
+        lanes,
         scores,
         logger,
       }),

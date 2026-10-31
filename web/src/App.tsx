@@ -1,6 +1,8 @@
 import { Route, Routes } from 'react-router'
 import { DivisionsPage } from './features/divisions/DivisionsPage'
 import { LanesPage } from './features/lanes/LanesPage'
+import { SquadResultsPage } from './features/results/SquadResultsPage'
+import { SweeperResultsPage } from './features/results/SweeperResultsPage'
 import { ScoresPage } from './features/scores/ScoresPage'
 import { OpenLanes, SquadPortal, SweeperPortal } from './features/lanes/SessionPortal'
 import { RegistrationsPage } from './features/registrations/RegistrationsPage'
@@ -28,12 +30,14 @@ export default function App() {
             <Route index element={<OpenLanes />} />
             <Route path="lanes" element={<LanesPage kind="squad" />} />
             <Route path="scores" element={<ScoresPage kind="squad" />} />
+            <Route path="results" element={<SquadResultsPage />} />
           </Route>
           <Route path="sweepers" element={<SweepersPage />} />
           <Route path="sweepers/:sessionId" element={<SweeperPortal />}>
             <Route index element={<OpenLanes />} />
             <Route path="lanes" element={<LanesPage kind="sweeper" />} />
             <Route path="scores" element={<ScoresPage kind="sweeper" />} />
+            <Route path="results" element={<SweeperResultsPage />} />
           </Route>
           <Route path="registrations" element={<RegistrationsPage />} />
         </Route>

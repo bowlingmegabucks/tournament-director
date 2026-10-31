@@ -5,6 +5,8 @@ import {
   createDemoRecapSheets,
   createDemoRegistrationList,
   createDemoScorePage,
+  createDemoSquadResults,
+  createDemoSweeperResults,
   createDemoSquads,
   createDemoSweepers,
   createDemoTournaments,
@@ -68,6 +70,20 @@ export const handlers = [
     const sweeper = sweepers.find((candidate) => candidate.id === params.sessionId)
     return sweeper
       ? HttpResponse.json(createDemoScorePage('sweeper', sweeper, divisions))
+      : HttpResponse.json({ message: 'Sweeper not found' }, { status: 404 })
+  }),
+  http.get('/v1/tournaments/:id/squads/:sessionId/results', ({ params }) => {
+    if (!tournaments.some((candidate) => candidate.id === params.id)) return notFound()
+    const squad = squads.find((candidate) => candidate.id === params.sessionId)
+    return squad
+      ? HttpResponse.json(createDemoSquadResults(squad, divisions))
+      : HttpResponse.json({ message: 'Squad not found' }, { status: 404 })
+  }),
+  http.get('/v1/tournaments/:id/sweepers/:sessionId/results', ({ params }) => {
+    if (!tournaments.some((candidate) => candidate.id === params.id)) return notFound()
+    const sweeper = sweepers.find((candidate) => candidate.id === params.sessionId)
+    return sweeper
+      ? HttpResponse.json(createDemoSweeperResults(sweeper))
       : HttpResponse.json({ message: 'Sweeper not found' }, { status: 404 })
   }),
   http.get('/v1/tournaments/:id/squads/:sessionId/recap-sheets', ({ params }) => {

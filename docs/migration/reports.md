@@ -6,20 +6,20 @@ Source: `main/ResultReportBase.cs`, `main/*/Results/*Report.cs`, `main/Tournamen
 
 ## Common PDF layout
 
-| ID | Rule |
-| --- | --- |
-| RPT-01 | Page margin 35. Header: title (20 pt, semibold, centered); then "Date: `MM/dd/yyyy - hh:mm tt`" if the report has a date; then "Division: name" if it has a division. The Northeast Megabucks header image sits on the right (300 wide, 125 high). Footer: "page / total", centered. |
-| RPT-02 | One table. Header row semibold with a black bottom border. Rows have a light grey bottom border. Divider rows ("Cut Line", "Cash Line", "No Advancers") are small italic text with extra space. |
-| RPT-03 | Save offers a file name of `<title>.pdf`. Print renders each page as an image at 90 DPI and sends it to the printer. |
+| ID | Rule | Status |
+| --- | --- | --- |
+| RPT-01 | Page margin 35. Header: title (20 pt, semibold, centered); then "Date: `MM/dd/yyyy - hh:mm tt`" if the report has a date; then "Division: name" if it has a division. The Northeast Megabucks header image sits on the right (300 wide, 125 high). Footer: "page / total", centered. | Done |
+| RPT-02 | One table. Header row semibold with a black bottom border. Rows have a light grey bottom border. Divider rows ("Cut Line", "Cash Line", "No Advancers") are small italic text with extra space. | Done |
+| RPT-03 | Save offers a file name of `<title>.pdf`. Print renders each page as an image at 90 DPI and sends it to the printer. **D-78:** result reports print from the browser, one division per page, letter portrait; no PDF save. | Done, differs (D-78) |
 
 ## The four PDF reports
 
-| ID | Report | Title | Date | Division | Columns | Dividers | Detail |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| RPT-04a | Squad results | Squad Results | yes | yes, one PDF per division | Place, Name, Total, HG, HDCP (handicap divisions only) | Cut Line (or No Advancers), Cash Line | [results.md](results.md#squad-results) |
-| RPT-04b | Sweeper and super sweeper results | Sweeper Results / Super Sweeper Results | sweeper only | no | Place, Name, Total, HG | Cash Line | [results.md](results.md#sweeper-results) |
-| RPT-04c | At-large | At Large | no | yes, one per division | Place, Squad, Name, Total, HG, Casher ($ icon) | none | [results.md](results.md#at-large) |
-| RPT-04d | Finals seeding | Finals Seeding | no | yes, one per division | Seed (`#n`), Name, Total, HG, Casher ($ icon) | Cut Line | [results.md](results.md#finals-seeding) |
+| ID | Report | Title | Date | Division | Columns | Dividers | Detail | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| RPT-04a | Squad results | Squad Results | yes | yes, one PDF per division | Place, Name, Total, HG, HDCP (handicap divisions only) | Cut Line (or No Advancers), Cash Line | [results.md](results.md#squad-results) | Done, differs (D-78) |
+| RPT-04b | Sweeper and super sweeper results | Sweeper Results / Super Sweeper Results | sweeper only | no | Place, Name, Total, HG | Cash Line | [results.md](results.md#sweeper-results) | Sweeper done, differs (D-78); super sweeper later |
+| RPT-04c | At-large | At Large | no | yes, one per division | Place, Squad, Name, Total, HG, Casher ($ icon) | none | [results.md](results.md#at-large) |  |
+| RPT-04d | Finals seeding | Finals Seeding | no | yes, one per division | Seed (`#n`), Name, Total, HG, Casher ($ icon) | Cut Line | [results.md](results.md#finals-seeding) |  |
 
 ## Recap sheet
 

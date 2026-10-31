@@ -105,6 +105,46 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('squad results page (a division with lines, ties and sections, on a wide and a narrow screen) has no WCAG 2.2 AA violations', async ({
+      page,
+    }) => {
+      await page.goto('/tournaments')
+      await page.getByRole('article').first().getByRole('link').click()
+      await page
+        .getByRole('navigation', { name: /Northeast MegaBuck/ })
+        .getByRole('link', { name: 'Squads' })
+        .click()
+      await page
+        .getByRole('link', { name: /9:00 AM/ })
+        .first()
+        .click()
+      await page.getByRole('link', { name: 'Results' }).click()
+      await expect(page.getByRole('heading', { level: 3, name: 'Did not finish' })).toBeVisible()
+      await expectNoViolations(page)
+
+      await page
+        .getByRole('combobox', { name: 'Division' })
+        .selectOption({ label: 'Women (12 entries)' })
+      await expect(page.getByRole('columnheader', { name: 'HDCP' })).toBeVisible()
+      await expectNoViolations(page)
+
+      await page.setViewportSize({ width: 320, height: 800 })
+      await expectNoViolations(page)
+    })
+
+    test('sweeper results page (loaded) has no WCAG 2.2 AA violations', async ({ page }) => {
+      await page.goto('/tournaments')
+      await page.getByRole('article').first().getByRole('link').click()
+      await page
+        .getByRole('navigation', { name: /Northeast MegaBuck/ })
+        .getByRole('link', { name: 'Sweepers' })
+        .click()
+      await page.getByRole('link', { name: /6:00 PM/ }).click()
+      await page.getByRole('link', { name: 'Results' }).click()
+      await expect(page.getByRole('table', { name: 'Sweeper results' })).toBeVisible()
+      await expectNoViolations(page)
+    })
+
     test('lane assignments page (loaded, and with the Assign dialog open) has no WCAG 2.2 AA violations', async ({
       page,
     }) => {

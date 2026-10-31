@@ -1,3 +1,4 @@
+import express from 'express'
 import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 import { HttpError } from '../../shared/errors.ts'
@@ -17,6 +18,7 @@ import { createInMemorySquadRepository } from '../squads/repository.ts'
 import { createInMemorySweeperRepository } from '../sweepers/repository.ts'
 import { createInMemoryTournamentRepository } from '../tournaments/repository.ts'
 import type { TournamentRatios } from '../tournaments/types.ts'
+import { createFinalsRouter } from './routes.ts'
 import { atLargeResultsSchema, seedingResultsSchema, superSweeperResultsSchema } from './types.ts'
 
 function setup(ratios: TournamentRatios = { finalsRatio: 2, superSweeperCashRatio: 2 }) {
@@ -227,3 +229,49 @@ describe.each(['at-large', 'seeding', 'super-sweeper'])(
     })
   },
 )
+
+describe('finals cache', () => {
+  function countingRouter(cacheMs: number) {
+    const tournament = createTournament()
+    const inner = createInMemoryTournamentRepository([tournament], {
+      [tournament.id]: { finalsRatio: 2, superSweeperCashRatio: 2 },
+    })
+    let calls = 0
+    const tournaments = {
+      ...inner,
+      getRatios: (id: string) => {
+        calls++
+        return inner.getRatios(id)
+      },
+    }
+    const router = createFinalsRouter(
+      'at-large',
+      {
+        tournaments,
+        divisions: createInMemoryDivisionRepository([]),
+        squads: createInMemorySquadRepository([]),
+        sweepers: createInMemorySweeperRepository([]),
+        lanes: createInMemoryLaneRepository([]),
+        scores: createInMemoryScoreRepository([]),
+        logger: createCapturedLogger().logger,
+      },
+      cacheMs,
+    )
+    const app = express().use('/:id', router)
+    return { app, tournament, calls: () => calls }
+  }
+
+  it('answers a second poll in the window without reading again', async () => {
+    const { app, tournament, calls } = countingRouter(60_000)
+    await request(app).get(`/${tournament.id}`).expect(200)
+    await request(app).get(`/${tournament.id}`).expect(200)
+    expect(calls()).toBe(1)
+  })
+
+  it('reads again when the window is zero', async () => {
+    const { app, tournament, calls } = countingRouter(0)
+    await request(app).get(`/${tournament.id}`).expect(200)
+    await request(app).get(`/${tournament.id}`).expect(200)
+    expect(calls()).toBe(2)
+  })
+})

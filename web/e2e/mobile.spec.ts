@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { menuLink, sidebar } from './menu'
 
 /**
  * Every public page fits a 320 px phone with no sideways scroll, on the page or inside a table or
@@ -38,15 +39,6 @@ async function fits(page: Page, where: string) {
   expect(await emptyLabelledCells(page), `${where}: empty labelled cells`).toBe(0)
 }
 
-const sidebar = (page: Page) => page.getByRole('navigation', { name: /Northeast MegaBuck/ })
-
-/** On a phone the tournament menu starts closed; open it, then follow the link. */
-async function goTo(page: Page, name: string) {
-  const toggle = sidebar(page).getByRole('button', { name: 'Tournament menu' })
-  if ((await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click()
-  await sidebar(page).getByRole('link', { name }).click()
-}
-
 test('every public page fits a phone with no sideways scroll (D-73)', async ({ page }) => {
   await page.goto('/')
   await fits(page, 'home')
@@ -57,7 +49,7 @@ test('every public page fits a phone with no sideways scroll (D-73)', async ({ p
   await fits(page, 'overview')
 
   for (const link of ['Divisions', 'Registrations', 'At-large', 'Seeding']) {
-    await goTo(page, link)
+    await menuLink(page, link)
     await fits(page, link)
   }
 
@@ -65,13 +57,13 @@ test('every public page fits a phone with no sideways scroll (D-73)', async ({ p
     ['Squads', ['Lane assignments', 'Scores', 'Results']],
     ['Sweepers', ['Lane assignments', 'Scores', 'Results']],
   ] as const) {
-    await goTo(page, list)
+    await menuLink(page, list)
     await fits(page, list)
     const sessions = page.getByRole('main').getByRole('link', { name: /\d{1,2}:\d{2} [AP]M/ })
     await expect(sessions.first()).toBeVisible()
     const count = await sessions.count()
     for (let index = 0; index < count; index++) {
-      await goTo(page, list)
+      await menuLink(page, list)
       await expect(sessions.first()).toBeVisible()
       await sessions.nth(index).click()
       await fits(page, `${list} ${index}`)
@@ -82,7 +74,7 @@ test('every public page fits a phone with no sideways scroll (D-73)', async ({ p
     }
   }
 
-  await goTo(page, 'Sweepers')
+  await menuLink(page, 'Sweepers')
   await page.getByRole('link', { name: 'Super sweeper results' }).click()
   await fits(page, 'super sweeper')
 })

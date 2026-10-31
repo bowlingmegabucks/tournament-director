@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
+import { menuLink } from './menu'
 
 test('home shows the current tournament and leads to the list and the overview', async ({
   page,
@@ -171,17 +172,6 @@ test('a click outside the popup closes it (REG-28)', async ({ page }) => {
 })
 
 /** Open the squad whose card title has this time: the demo has 9:00 AM (complete), 1:00 PM (open), and a Sunday one. */
-/** On a phone the tournament menu starts closed: open it if it is shut, then follow the link. */
-async function menuLink(page: Page, name: string) {
-  const sidebar = page.getByRole('navigation', { name: /Northeast MegaBuck/ })
-  const toggle = sidebar.getByRole('button', { name: 'Tournament menu' })
-  await expect(sidebar).toBeVisible()
-  if (await toggle.isVisible()) {
-    if ((await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click()
-  }
-  await sidebar.getByRole('link', { name }).click()
-}
-
 async function openSquad(page: Page, time: string) {
   await page.goto('/tournaments')
   await page.getByRole('article').first().getByRole('link').click()

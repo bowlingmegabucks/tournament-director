@@ -12,13 +12,14 @@ const sweeperType = 1
 export interface RegistrationRow {
   id: string
   superSweeper: boolean
+  /** NULL when the row points at no bowler (no foreign key in MyISAM). The mapper rejects it. */
   bowler: {
     id: string
     firstName: string
     lastName: string
     suffix: string
     usbcId: string
-  }
+  } | null
   division: { name: string }
   divisionId: string
   /** The squads and sweepers this registration bowls (`SquadRegistration`). */
@@ -49,13 +50,16 @@ export function toRegistration(row: RegistrationRow, tournamentId: string) {
     ofThisTournament.filter((squad) => squad.squadType === type).map((squad) => squad.id)
   return registrationSchema.safeParse({
     id: row.id,
-    bowler: {
-      id: row.bowler.id,
-      name: displayName(row.bowler),
-      firstName: row.bowler.firstName,
-      lastName: row.bowler.lastName,
-      usbcId: row.bowler.usbcId,
-    },
+    bowler:
+      row.bowler === null
+        ? null
+        : {
+            id: row.bowler.id,
+            name: displayName(row.bowler),
+            firstName: row.bowler.firstName,
+            lastName: row.bowler.lastName,
+            usbcId: row.bowler.usbcId,
+          },
     divisionId: row.divisionId,
     divisionName: row.division.name,
     superSweeper: row.superSweeper,

@@ -205,4 +205,47 @@ describe('Prisma lane repository', () => {
     expect(warnings).toHaveLength(1)
     expect(warnings[0]).toMatchObject({ registrationId: bad, sessionId })
   })
+
+  it('skips a lane entry whose registration row is gone and logs it (D-51)', async () => {
+    const tournamentId = await insertTournament()
+    const divisionId = await insertDivision(tournamentId)
+    const sessionId = await insertSession(tournamentId)
+    const good = await insertEntry(divisionId, sessionId, { first: 'Ann', position: '1A' })
+    const orphan = await insertEntry(divisionId, sessionId)
+    // MyISAM has no foreign keys, so the legacy app could delete a registration and leave this row.
+    await client.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 0')
+      await tx.$executeRawUnsafe('DELETE FROM Registrations WHERE Id = ?', orphan)
+      await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 1')
+    })
+    const { repository, records } = setup()
+
+    const entries = await repository.listEntries(sessionId)
+
+    expect(entries.map((entry) => entry.registrationId)).toEqual([good])
+    expect(records()).toEqual([expect.objectContaining({ registrationId: orphan, sessionId })])
+  })
+
+  it('skips a lane entry whose bowler row is gone and logs it (D-51)', async () => {
+    const tournamentId = await insertTournament()
+    const divisionId = await insertDivision(tournamentId)
+    const sessionId = await insertSession(tournamentId)
+    const good = await insertEntry(divisionId, sessionId, { first: 'Ann', position: '1A' })
+    const orphan = await insertEntry(divisionId, sessionId)
+    // MyISAM has no foreign keys, so the legacy app could delete a bowler and leave the registration.
+    await client.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 0')
+      await tx.$executeRawUnsafe(
+        'DELETE FROM Bowlers WHERE Id = (SELECT BowlerId FROM Registrations WHERE Id = ?)',
+        orphan,
+      )
+      await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 1')
+    })
+    const { repository, records } = setup()
+
+    const entries = await repository.listEntries(sessionId)
+
+    expect(entries.map((entry) => entry.registrationId)).toEqual([good])
+    expect(records()).toEqual([expect.objectContaining({ registrationId: orphan, sessionId })])
+  })
 })

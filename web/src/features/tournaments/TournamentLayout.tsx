@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useParams } from 'react-router'
 import { Loading } from '../../shared/Loading'
 import { Page } from '../../shared/Page'
@@ -21,8 +21,11 @@ export function TournamentLayout() {
   const menuId = useId()
   // Phone only: the menu starts closed so the page is the first thing on screen. CSS ignores it on wider screens.
   const [menuOpen, setMenuOpen] = useState(false)
+  const toggleRef = useRef<HTMLButtonElement>(null)
+  // Closing hides the focused link, so focus goes to the button; otherwise it falls back to the page top.
   const closeMenu = () => {
     setMenuOpen(false)
+    toggleRef.current?.focus()
   }
 
   if (isPending) {
@@ -65,6 +68,7 @@ export function TournamentLayout() {
         </h2>
         <p className={styles.meta}>{formatDateRange(data.startDate, data.endDate)}</p>
         <button
+          ref={toggleRef}
           type="button"
           className={styles.toggle}
           aria-expanded={menuOpen}
@@ -75,7 +79,15 @@ export function TournamentLayout() {
         >
           Tournament menu
         </button>
-        <div id={menuId} className={menuOpen ? styles.menu : `${styles.menu} ${styles.closed}`}>
+        {/* Escape bubbles up from the links, which are the interactive parts; the div only listens. */}
+        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+        <div
+          id={menuId}
+          className={menuOpen ? styles.menu : `${styles.menu} ${styles.closed}`}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' && menuOpen) closeMenu()
+          }}
+        >
           <ul className={styles.items}>
             <li>
               <NavLink onClick={closeMenu} to={`/tournaments/${data.id}/divisions`}>

@@ -150,6 +150,7 @@ Files: `api/src/features/results/superSweeper.test.ts` (the calculation) and `lo
 | SS-7 | Two sweepers with different bonus pins | Each game gets its own sweeper's pins | gap: legacy uses the first sweeper's pins for every game (RES-27 defect) |
 | SS-8 | A bowler who skipped a whole sweeper, or did not finish one, in a complete sweeper | Scores 0 for the missing games, no bonus pins, a tag and a note (D-90); an open sweeper adds nothing | gap (D-90) |
 | SS-9 | Games bowled | Counts every game, zero-filled ones included (D-90), so a bowler with 6 games over 2 sweepers ranks above one with 3 | gap |
+| SS-9a | A no-show in a complete sweeper: Complete stored zeros for every game (D-06) | The same as no rows: 0 for each game, no bonus pins, a "Missed a sweeper" tag. Ranks after everyone who bowled, as its total is 0 (D-90) | `superSweeper.test.ts`, `tournaments.spec.ts` |
 | SS-10 | Cash ratio 0 on an old tournament | A clear message, not a crash (D-17) | gap |
 | SS-11 | Cash ratio 1 | Every bowler cashes | gap |
 | SS-12 | Results reached from the sweeper list (D-23, D-87) | A "Super sweeper results" link above the cards, hidden with no sweepers; the route is public (D-85) | gap |

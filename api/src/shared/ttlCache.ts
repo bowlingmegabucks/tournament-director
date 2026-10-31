@@ -3,6 +3,14 @@ interface Slot<T> {
   value: Promise<T>
 }
 
+/**
+ * How long a public live page keeps its answer: the results, the scores, and the finals pages.
+ * Viewers poll every 15 seconds, so 5 seconds of delay is never seen, and ten viewers cost one pass.
+ * Use it only for routes that are public for good: every viewer gets the same answer. A route that
+ * is signed-in only, or that differs by user, must not share a cache.
+ */
+export const LIVE_CACHE_MS = 5000
+
 /** The most keys a cache holds. Past it the cache starts over, so a long run cannot grow it without limit. */
 export const MAX_CACHED = 500
 

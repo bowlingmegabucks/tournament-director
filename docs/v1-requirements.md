@@ -6,14 +6,14 @@ Feature-level work (ports of legacy rules) lives in [docs/migration/](migration/
 
 ## Release path
 
-| Version | Scope                                                           |
-| ------- | --------------------------------------------------------------- |
-| 0.1.0   | Structure. Done.                                                |
-| 0.2.0   | Read-only views on the existing database. Public routes only.   |
-| 0.3.0   | Authentication and authorization, with a ping route to test it. |
+| Version | Scope                                                                             |
+| ------- | --------------------------------------------------------------------------------- |
+| 0.1.0   | Structure. Done.                                                                  |
+| 0.2.0   | Read-only views on the existing database. Public routes only.                     |
+| 0.3.0   | Authentication and authorization, with a ping route to test it.                   |
 | Next    | Lock down the read routes and pages that are public in 0.2.0. Before any command. |
-| Then    | Commands, one feature area per release (0.4.0+ in the old plan). |
-| 1.0.0   | Every item below is checked.                                    |
+| Then    | Commands, one feature area per release (0.4.0+ in the old plan).                  |
+| 1.0.0   | Every item below is checked.                                                      |
 
 Version numbers follow content, not a countdown. 0.10.0 is fine.
 
@@ -88,4 +88,4 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 
 Add items here as they come up, then move them to a section above.
 
-- [ ] Look into caching in the final 0.2.0 review, before the tag and before 0.3.0 work. Today only the at-large, seeding, and super sweeper routes cache (5 s per tournament, `FINALS_CACHE_MS` in `api/src/features/results/routes.ts`). Check the squad and sweeper results, scores, lanes, and registrations routes, which poll or recompute on each call, and decide what to cache, for how long, and whether the cache must change once routes sit behind auth (a per-user answer must not be shared).
+- [x] Caching reviewed before the 0.2.0 tag. Squad and sweeper results and scores now cache 5 s like the finals routes (`LIVE_CACHE_MS`). Lanes, recap sheets, and registrations do not cache: few viewers, and they go behind auth. See [api-standards.md](api-standards.md#caching). Recheck if a cached route gains sign-in.

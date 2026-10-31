@@ -1,3 +1,4 @@
+import express from 'express'
 import request from 'supertest'
 import { describe, expect, it, vi } from 'vitest'
 import { HttpError } from '../../shared/errors.ts'
@@ -16,6 +17,7 @@ import { createInMemoryScoreRepository } from '../scores/repository.ts'
 import { createInMemorySquadRepository } from '../squads/repository.ts'
 import { createInMemorySweeperRepository } from '../sweepers/repository.ts'
 import { createInMemoryTournamentRepository } from '../tournaments/repository.ts'
+import { createResultsRouter } from './routes.ts'
 import { squadResultsSchema, sweeperResultsSchema } from './types.ts'
 
 function setup(options: { squadOver?: Parameters<typeof createSquad>[0] } = {}) {
@@ -306,5 +308,67 @@ describe('GET /v1/tournaments/:id/sweepers/:sessionId/results', () => {
 
     expect(response.status).toBe(422)
     expect(response.body.message).toMatch(/^This sweeper's cash ratio is 0/)
+  })
+})
+
+describe('results cache', () => {
+  function countingRouter(kind: 'squad' | 'sweeper', cacheMs: number) {
+    const tournament = createTournament()
+    const squad = createSquad({ finalsRatio: 4, cashRatio: 2, games: 3 })
+    const sweeper = createSweeper({ cashRatio: 2, games: 2 })
+    const inner = createInMemoryTournamentRepository([tournament])
+    let calls = 0
+    const tournaments = {
+      ...inner,
+      get: (id: string) => {
+        calls++
+        return inner.get(id)
+      },
+    }
+    const router = createResultsRouter(
+      kind,
+      {
+        tournaments,
+        divisions: createInMemoryDivisionRepository([]),
+        squads: createInMemorySquadRepository([{ tournamentId: tournament.id, squad }]),
+        sweepers: createInMemorySweeperRepository([{ tournamentId: tournament.id, sweeper }]),
+        lanes: createInMemoryLaneRepository([]),
+        scores: createInMemoryScoreRepository([]),
+        logger: createCapturedLogger().logger,
+      },
+      cacheMs,
+    )
+    const app = express().use('/:id/:sessionId', router)
+    const sessionId = kind === 'squad' ? squad.id : sweeper.id
+    return {
+      app,
+      path: `/${tournament.id}/${sessionId}`,
+      other: `/${tournament.id}/${crypto.randomUUID()}`,
+      calls: () => calls,
+    }
+  }
+
+  it.each(['squad', 'sweeper'] as const)(
+    'answers a second %s poll in the window without reading again',
+    async (kind) => {
+      const { app, path, calls } = countingRouter(kind, 60_000)
+      await request(app).get(path).expect(200)
+      await request(app).get(path).expect(200)
+      expect(calls()).toBe(1)
+    },
+  )
+
+  it('reads again when the window is zero', async () => {
+    const { app, path, calls } = countingRouter('squad', 0)
+    await request(app).get(path).expect(200)
+    await request(app).get(path).expect(200)
+    expect(calls()).toBe(2)
+  })
+
+  it('does not keep a 404, so a session that appears later shows up', async () => {
+    const { app, other, calls } = countingRouter('squad', 60_000)
+    await request(app).get(other).expect(404)
+    await request(app).get(other).expect(404)
+    expect(calls()).toBe(2)
   })
 })

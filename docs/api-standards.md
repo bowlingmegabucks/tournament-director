@@ -85,6 +85,14 @@ Metrics ride the same OpenTelemetry pipeline as traces and logs, so Seq and App 
 - Counts live in memory. That is right for one server (the free plan). If the API ever runs on more than one instance, each counts alone, so move the counts to a shared store (Redis).
 - Neba also gives signed-in users their own higher limit. We have no sign-in yet; add that when we do.
 
+## Caching
+
+The live public pages poll every 15 seconds, so each route that serves them keeps its answer for `LIVE_CACHE_MS` (5 seconds, `src/shared/ttlCache.ts`) with `createTtlCache`. Ten open tabs then cost one database pass per window, and the delay is shorter than the poll, so viewers do not see it. It holds for a live squad too, so we do not wait for a squad to be complete.
+
+- Cached today: squad and sweeper results and scores (keyed by tournament and session), and the at-large, seeding, and super sweeper routes (keyed by tournament).
+- Cache only routes that are public for good (D-70, D-74, D-85): every viewer gets the same answer. Do not cache a route that is signed-in only or differs by user, such as the lane pages, recap sheets, and registrations. If a cached route ever needs sign-in, key the cache by user or drop it.
+- A failed call is not kept, so the next poll tries again. The router takes `cacheMs` as a last argument; tests pass `0` to turn it off.
+
 ## Process lifecycle and health
 
 `handleProcessEvents` in `src/shared/processEvents.ts` is called from `server.ts`.

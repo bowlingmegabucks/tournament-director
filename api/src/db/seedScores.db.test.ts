@@ -27,7 +27,7 @@ describe('seedScores', () => {
   })
 
   it('adds the same scores to each sample tournament, in a shape the API reads (SCR-16)', async () => {
-    await expect(seedScores(client)).resolves.toBe(samples.length * 20)
+    await expect(seedScores(client)).resolves.toBe(samples.length * 26)
 
     const { logger, records } = createCapturedLogger()
     const repository = createPrismaScoreRepository(client, logger)
@@ -35,10 +35,12 @@ describe('seedScores', () => {
       const complete = await repository.listScores(sessionId(id, 'a', 1))
       const open = await repository.listScores(sessionId(id, 'a', 2))
       const sweeper = await repository.listScores(sessionId(id, 'b', 1))
+      const completeSweeper = await repository.listScores(sessionId(id, 'b', 2))
       expect(complete).toHaveLength(15)
       expect(complete.filter((row) => row.score === 0)).toHaveLength(3)
       expect(open).toHaveLength(3)
       expect(sweeper).toHaveLength(2)
+      expect(completeSweeper).toHaveLength(6)
     }
     expect(records()).toEqual([])
   })
@@ -47,6 +49,6 @@ describe('seedScores', () => {
     await seedScores(client)
     await seedScores(client)
 
-    expect(await client.squadScore.count()).toBe(samples.length * 20)
+    expect(await client.squadScore.count()).toBe(samples.length * 26)
   })
 })

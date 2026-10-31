@@ -66,6 +66,7 @@ describe('server errors', () => {
       tournaments: {
         list: () => Promise.reject(new Error('db password is hunter2')),
         get: () => Promise.reject(new Error('db password is hunter2')),
+        getRatios: () => Promise.reject(new Error('db password is hunter2')),
       },
     })
 
@@ -137,6 +138,18 @@ describe('route access (D-27)', () => {
     async (kind) => {
       const response = await request(createTestApp()).get(
         `/v1/tournaments/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01/${kind}/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a02/results`,
+      )
+
+      // 404 from the tournament lookup, not from a missing route: the route is mounted.
+      expect(response.body).toEqual({ message: 'Tournament not found' })
+    },
+  )
+
+  it.each(['at-large', 'seeding', 'super-sweeper'])(
+    'serves the %s results as public for good (D-85)',
+    async (kind) => {
+      const response = await request(createTestApp()).get(
+        `/v1/tournaments/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01/${kind}`,
       )
 
       // 404 from the tournament lookup, not from a missing route: the route is mounted.

@@ -172,6 +172,7 @@ describe('when storage fails', () => {
     return {
       list: () => Promise.reject(error),
       get: () => Promise.reject(error),
+      getRatios: () => Promise.reject(error),
     }
   }
 

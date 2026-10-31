@@ -38,5 +38,19 @@ export function createPrismaTournamentRepository(
       }
       return result.data
     },
+
+    async getRatios(id) {
+      const row = await withDatabaseErrors(logger, () =>
+        client.tournament.findUnique({
+          where: { id },
+          select: { finalsRatio: true, superSweeperCashRatio: true },
+        }),
+      )
+      if (!row) return undefined
+      return {
+        finalsRatio: row.finalsRatio.toNumber(),
+        superSweeperCashRatio: row.superSweeperCashRatio.toNumber(),
+      }
+    },
   }
 }

@@ -1,19 +1,14 @@
 import { HttpError } from '../../shared/errors.ts'
-import type { Logger } from '../../shared/logger.ts'
-import { warnOnce } from '../../shared/warnOnce.ts'
 import type { DivisionRepository } from '../divisions/repository.ts'
-import type { Division } from '../divisions/types.ts'
 import type { LaneRepository } from '../lanes/repository.ts'
-import type { LaneEntry } from '../lanes/types.ts'
 import type { ScoreRepository } from '../scores/repository.ts'
-import type { ScoreRow } from '../scores/types.ts'
 import type { SquadRepository } from '../squads/repository.ts'
-import type { Squad } from '../squads/types.ts'
 import type { SweeperRepository } from '../sweepers/repository.ts'
 import type { TournamentRepository } from '../tournaments/repository.ts'
 import { toDivisionResult } from './divisionResult.ts'
-import { buildResultEntries, squadPins, sweeperPins, type ResultEntry } from './entries.ts'
-import { workOutDivision } from './squadResults.ts'
+import { buildResultEntries, sweeperPins, type ResultEntry } from './entries.ts'
+import { compareText, reportSkipped, requireRatios, type Reporting } from './resultHelpers.ts'
+import { workOutSquads } from './squadFlow.ts'
 import { workOutSweeper } from './sweeperResults.ts'
 import { markCashLine, markTies } from './ties.ts'
 import type { SquadResults, SweeperResults } from './types.ts'
@@ -25,77 +20,6 @@ export interface ResultsDeps {
   sweepers: SweeperRepository
   lanes: LaneRepository
   scores: ScoreRepository
-}
-
-/** Where to say that a stored entry was left out, once per process for each `reported` set (D-51). */
-interface Reporting {
-  logger: Logger
-  reported: Set<string>
-}
-
-// Ignores case and accents, as the database collation does (BWL-14).
-const compareText = (a: string, b: string) => a.localeCompare(b, 'en', { sensitivity: 'base' })
-
-/**
- * D-83: a stored ratio of 0 or less cannot work out a result (legacy divides by zero). The save
- * screens refuse one, so only an old row can hold it.
- */
-function requireRatios(subject: string, ratios: Record<string, number>): void {
-  for (const [name, value] of Object.entries(ratios)) {
-    if (value <= 0) {
-      throw new HttpError(
-        422,
-        `${subject} ${name} ratio is ${value}, so results cannot be worked out. Set a ratio of 1 or more.`,
-      )
-    }
-  }
-}
-
-function reportSkipped(
-  { logger, reported }: Reporting,
-  sessionId: string,
-  skipped: readonly string[],
-) {
-  for (const registrationId of skipped) {
-    warnOnce(
-      reported,
-      `${sessionId}:${registrationId}`,
-      logger,
-      { registrationId, sessionId },
-      'Skipped a result entry whose division is not in this tournament',
-    )
-  }
-}
-
-interface SquadRead {
-  squad: Squad
-  entries: readonly LaneEntry[]
-  scores: readonly ScoreRow[]
-}
-
-/** Work out each division of one squad that has an entry. */
-function workOutSquad(
-  { squad, entries, scores }: SquadRead,
-  divisions: readonly Division[],
-  advancedBefore: ReadonlySet<string>,
-) {
-  const built = buildResultEntries(entries, scores, divisions, squadPins)
-  const byDivision = new Map<string, ResultEntry[]>()
-  for (const entry of built.entries) {
-    byDivision.set(entry.divisionId, [...(byDivision.get(entry.divisionId) ?? []), entry])
-  }
-  const outcomes = [...byDivision.entries()].map(([divisionId, list]) => ({
-    divisionId,
-    outcome: workOutDivision({
-      entries: list,
-      advancedBefore,
-      finalsRatio: squad.finalsRatio,
-      cashRatio: squad.cashRatio,
-      games: squad.games,
-      complete: squad.complete,
-    }),
-  }))
-  return { outcomes, skipped: built.skipped }
 }
 
 /**
@@ -114,8 +38,7 @@ export async function loadSquadResults(
   if (!(await deps.tournaments.get(tournamentId))) throw new HttpError(404, 'Tournament not found')
   const all = await deps.squads.listByTournament(tournamentId)
   const index = all.findIndex((squad) => squad.id === sessionId)
-  const squad = all[index]
-  if (!squad) throw new HttpError(404, 'Squad not found')
+  if (index === -1) throw new HttpError(404, 'Squad not found')
 
   const upTo = all.slice(0, index + 1)
   for (const earlier of upTo) {
@@ -125,29 +48,13 @@ export async function loadSquadResults(
     })
   }
 
-  const read = async (item: Squad) => ({
-    squad: item,
-    entries: await deps.lanes.listEntries(item.id),
-    scores: await deps.scores.listScores(item.id),
-  })
-  const [divisions, earlierReads, current] = await Promise.all([
-    deps.divisions.listByTournament(tournamentId),
-    Promise.all(upTo.slice(0, index).map(read)),
-    read(squad),
-  ])
+  const divisions = await deps.divisions.listByTournament(tournamentId)
+  const worked = await workOutSquads(deps, upTo, divisions)
+  const current = worked[index]
+  if (!current) throw new HttpError(404, 'Squad not found')
+  const { squad, outcomes, skipped, advancedBefore } = current
+  // The advancers of every squad before this one decide who is an earlier advancer (RES-06).
   const divisionById = new Map(divisions.map((division) => [division.id, division]))
-
-  // The advancers of every squad before this one, in date order (RES-06). A bowler's division is
-  // that of the current registration, and a bowler is in one division, so one set serves them all.
-  const advancedBefore = new Set<string>()
-  for (const earlier of earlierReads) {
-    const { outcomes } = workOutSquad(earlier, divisions, advancedBefore)
-    for (const { outcome } of outcomes) {
-      for (const advancer of outcome.advancers) advancedBefore.add(advancer.bowlerId)
-    }
-  }
-
-  const { outcomes, skipped } = workOutSquad(current, divisions, advancedBefore)
   reportSkipped(reporting, sessionId, skipped)
   const results = outcomes.flatMap(({ divisionId, outcome }) => {
     const division = divisionById.get(divisionId)

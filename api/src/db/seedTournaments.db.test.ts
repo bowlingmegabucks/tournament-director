@@ -34,6 +34,18 @@ describe('seedTournaments', () => {
     expect(tournaments.every((tournament) => tournament.endDate > tournament.startDate)).toBe(true)
   })
 
+  it('sets a super sweeper cash ratio the results can use (RES-28, D-93)', async () => {
+    await seedTournaments(client, now)
+
+    const repository = createPrismaTournamentRepository(client, createCapturedLogger().logger)
+    for (const tournament of await repository.list()) {
+      await expect(repository.getRatios(tournament.id)).resolves.toEqual({
+        finalsRatio: 7,
+        superSweeperCashRatio: 5,
+      })
+    }
+  })
+
   it('adds nothing new when it runs twice', async () => {
     await seedTournaments(client, now)
     await seedTournaments(client, now)

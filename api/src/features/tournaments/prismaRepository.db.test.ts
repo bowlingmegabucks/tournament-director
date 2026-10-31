@@ -98,6 +98,35 @@ describe('Prisma tournament repository', () => {
     await expect(repository.get(createTournament().id)).resolves.toBeUndefined()
   })
 
+  it('gets the finals ratio and the super sweeper cash ratio, as numbers (RES-12, RES-28)', async () => {
+    const wanted = createTournament()
+    await insert(wanted)
+    await client.$executeRawUnsafe(
+      'UPDATE Tournaments SET FinalsRatio = 7.5, SuperSweperCashRatio = 4.5 WHERE Id = ?',
+      wanted.id,
+    )
+    const { repository } = setup()
+
+    await expect(repository.getRatios(wanted.id)).resolves.toEqual({
+      finalsRatio: 7.5,
+      superSweeperCashRatio: 4.5,
+    })
+  })
+
+  it('keeps a legacy super sweeper cash ratio of 0 (D-17)', async () => {
+    const old = createTournament()
+    await insert(old)
+    const { repository } = setup()
+
+    await expect(repository.getRatios(old.id)).resolves.toMatchObject({ superSweeperCashRatio: 0 })
+  })
+
+  it('gets undefined ratios for an unknown id', async () => {
+    const { repository } = setup()
+
+    await expect(repository.getRatios(createTournament().id)).resolves.toBeUndefined()
+  })
+
   it('throws for a stored row that breaks the vendor shape (D-31)', async () => {
     const bad = createTournament({ bowlingCenter: '', entryFee: 0 })
     await insert(bad)
@@ -120,6 +149,9 @@ describe('Prisma tournament repository', () => {
     try {
       await expect(repository.list()).rejects.toMatchObject({ status: 503 })
       await expect(repository.get(createTournament().id)).rejects.toBeInstanceOf(HttpError)
+      await expect(repository.getRatios(createTournament().id)).rejects.toMatchObject({
+        status: 503,
+      })
     } finally {
       await unreachable.$disconnect()
     }

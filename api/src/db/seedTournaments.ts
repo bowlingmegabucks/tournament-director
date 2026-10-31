@@ -31,11 +31,13 @@ export async function seedTournaments(client: PrismaClient, now = new Date()): P
       // Raw SQL: the Prisma model holds only the columns the app reads, and the table needs the rest.
       return client.$executeRaw`
         INSERT INTO Tournaments
-          (Id, Name, Start, End, EntryFee, Games, FinalsRatio, CashRatio, BowlingCenter, Completed)
-        VALUES (${id}, ${name}, ${start}, ${end}, ${fee}, 6, 7.0, 5.0, ${center}, 0)
+          (Id, Name, Start, End, EntryFee, Games, FinalsRatio, CashRatio, SuperSweperCashRatio,
+           BowlingCenter, Completed)
+        VALUES (${id}, ${name}, ${start}, ${end}, ${fee}, 6, 7.0, 5.0, 5.0, ${center}, 0)
         ON DUPLICATE KEY UPDATE
           Name = VALUES(Name), Start = VALUES(Start), End = VALUES(End),
-          EntryFee = VALUES(EntryFee), BowlingCenter = VALUES(BowlingCenter)`
+          EntryFee = VALUES(EntryFee), SuperSweperCashRatio = VALUES(SuperSweperCashRatio),
+          BowlingCenter = VALUES(BowlingCenter)`
     }),
   )
   return samples.length

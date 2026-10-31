@@ -6,7 +6,8 @@ import { samples as sampleTournaments } from './seedTournaments.ts'
 // `division` is a number from `seedDivisions`; `squads` and `sweepers` are the numbers from
 // `seedSessions`. Squad 1 is complete and squad 3 has no entries, so the summary shows both. Two
 // bowlers share a name and one has no USBC ID, so the list shows a stable order and a blank ID.
-// A super sweeper bowler is in both sweepers (REG-06). No row ever holds an SSN.
+// A super sweeper bowler is in both sweepers (REG-06); three are, so the super sweeper shows a
+// bowler who bowled everything, one who did not finish the complete sweeper, and one who missed it. No row ever holds an SSN.
 // `average` drives handicap (SCR-07); one bowler has none. `lanes` maps a session key (`a1` is
 // squad 1, `b1` is sweeper 1) to the stored position: '' is not assigned (LAN-01, D-58). The open
 // squad 2 has bowlers on one pair and others waiting; the complete squad 1 is all placed but one.
@@ -77,10 +78,10 @@ const samples: Sample[] = [
     gender: null,
     division: 1,
     squads: [2],
-    sweepers: [1],
-    superSweeper: 0,
+    sweepers: [1, 2],
+    superSweeper: 1,
     average: 205,
-    lanes: { a2: '', b1: '' },
+    lanes: { a2: '', b1: '', b2: '' },
   },
   {
     n: 5,

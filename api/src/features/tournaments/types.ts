@@ -28,3 +28,12 @@ export const tournamentDetailSchema = z.object({
     sweepers: z.array(vendorSweeperSchema),
   }),
 })
+
+/**
+ * The tournament-wide ratios the finals results need (RES-12, RES-28). Not part of the vendor shape
+ * (D-09): no route sends them. The super sweeper ratio may hold the legacy 0 (D-17).
+ */
+export interface TournamentRatios {
+  finalsRatio: number
+  superSweeperCashRatio: number
+}

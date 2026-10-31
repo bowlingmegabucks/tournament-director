@@ -1,6 +1,7 @@
 name: Mutation tests
 
-# One definition for pull requests and main. Main also reports to the Stryker Dashboard.
+# One definition for pull requests and main. Main also reports to the Stryker Dashboard and mutates
+# every file. A pull request mutates only the files it changed (see scripts/mutate.ts).
 on:
   workflow_call:
     inputs:
@@ -10,6 +11,11 @@ on:
         type: string
       report:
         description: Send the result to the Stryker Dashboard
+        required: false
+        default: false
+        type: boolean
+      changed-only:
+        description: Mutate only the source files this pull request changed
         required: false
         default: false
         type: boolean
@@ -30,6 +36,9 @@ jobs:
         working-directory: ${{ inputs.folder }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The pull request diff against its base branch needs the history.
+          fetch-depth: ${{ inputs.changed-only && 0 || 1 }}
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -56,10 +65,24 @@ jobs:
           key: stryker-${{ inputs.folder }}-${{ github.run_id }}
           restore-keys: stryker-${{ inputs.folder }}-
 
+      # A pull request mutates only what it changed. `main` runs everything and keeps the score for the
+      # whole project. `none`: no source file changed (only tests or docs), so there is nothing to run.
+      # `full`: a config or lock file changed, which can change every mutant.
+      - name: Pick the files to mutate
+        id: plan
+        if: ${{ inputs.changed-only }}
+        working-directory: .
+        env:
+          FOLDER: ${{ inputs.folder }}
+          BASE: origin/${{ github.base_ref }}
+        run: node scripts/mutateChanged.ts "$FOLDER" "$BASE" | tee -a "$GITHUB_OUTPUT"
+
       # Each folder sets its dashboard module in stryker.config.json (badges take ?module=web and ?module=api).
       # Without the key the dashboard reporter would fail after the full run, so skip it and warn.
       - name: Run mutation tests
+        if: ${{ steps.plan.outputs.mode != 'none' }}
         env:
+          MUTATE: ${{ steps.plan.outputs.mutate }}
           REPORT: ${{ inputs.report }}
           STRYKER_DASHBOARD_API_KEY: ${{ secrets.STRYKER_DASHBOARD_API_KEY }}
         run: |
@@ -71,7 +94,10 @@ jobs:
               echo "::warning::STRYKER_DASHBOARD_API_KEY is not set, so the result is not sent to the Stryker Dashboard."
             fi
           fi
-          npm run test:mutation -- --incremental --reporters "$reporters"
+          args=()
+          if [ -n "$MUTATE" ]; then args=(--mutate "$MUTATE"); fi
+          # The runner has 4 cores; Stryker's default leaves one idle.
+          npm run test:mutation -- --incremental --concurrency "$(nproc)" --reporters "$reporters" "${args[@]}"
 
       - name: Save the incremental mutation result
         if: ${{ always() && hashFiles(format('{0}/reports/stryker-incremental.json', inputs.folder)) != '' }}

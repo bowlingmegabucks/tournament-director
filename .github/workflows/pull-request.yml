@@ -102,6 +102,7 @@ jobs:
     uses: ./.github/workflows/mutation.yml
     with:
       folder: ${{ matrix.folder }}
+      changed-only: true
 
   api-verify:
     name: API lint, test, build

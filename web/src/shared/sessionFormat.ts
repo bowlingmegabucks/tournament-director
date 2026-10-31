@@ -75,3 +75,20 @@ export function formatSheetTime(value: string): string {
   const clock = String(hours % 12 || 12).padStart(2, '0')
   return `${clock}:${minute} ${hours < 12 ? 'AM' : 'PM'}`
 }
+
+/** "Fri 10/9" from "2026-10-23T18:00:00": the weekday and the day, for a column heading. The digits are read as they are. */
+export function formatShortDay(value: string): string {
+  const match = DATE_TIME.exec(value)
+  if (!match) return value
+  const [, year, month, day] = match
+  const weekday = new Date(
+    Date.UTC(Number(year), Number(month) - 1, Number(day)),
+  ).toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' })
+  return `${weekday} ${Number(month)}/${Number(day)}`
+}
+
+/** "10/09 07:00 PM" from "2026-10-23T19:00:00": the squad stamp of at-large and seeding rows (RES-17). */
+export function formatSquadStamp(value: string): string {
+  if (!DATE_TIME.test(value)) return value
+  return `${formatSheetDate(value).slice(0, 5)} ${formatSheetTime(value)}`
+}

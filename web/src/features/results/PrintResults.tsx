@@ -1,37 +1,10 @@
 import { createPortal } from 'react-dom'
-import sponsors from '../../assets/score-sheet-sponsors.png'
-import { formatSheetDate, formatSheetTime } from '../../shared/sessionFormat'
 import { DivisionBody } from './DivisionResults'
+import { PrintHeader } from './PrintHeader'
 import styles from './PrintResults.module.css'
 import tableStyles from './ResultsTable.module.css'
 import { SweeperTable } from './SweeperTable'
 import type { SquadResults, SweeperResults } from './types'
-
-/** RPT-01: the title, the date, the division if there is one, and the sponsor image. RES-36: the unofficial mark. */
-function PrintHeader({
-  title,
-  date,
-  division,
-  unofficial,
-}: Readonly<{ title: string; date: string; division?: string; unofficial: boolean }>) {
-  return (
-    <header className={styles.head}>
-      <div>
-        <h1 className={styles.title}>{title}</h1>
-        <p>
-          Date: {formatSheetDate(date)} - {formatSheetTime(date)}
-        </p>
-        {division !== undefined && <p>Division: {division}</p>}
-        {unofficial && <p className={styles.unofficial}>UNOFFICIAL RESULTS</p>}
-      </div>
-      <img
-        className={styles.sponsors}
-        src={sponsors}
-        alt="Northeast MegaBuck$ Tournament and sponsors"
-      />
-    </header>
-  )
-}
 
 /**
  * The results to print, in a portal on `document.body` (D-78). A squad prints one division on each

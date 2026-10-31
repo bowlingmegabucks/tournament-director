@@ -142,6 +142,46 @@ describe('tournament pages', () => {
     },
   )
 
+  it('links to At-large and Seeding after Registrations, and marks each on its own page (D-87)', async () => {
+    serveTournament()
+    server.use(
+      http.get('/v1/tournaments/:id/at-large', () =>
+        HttpResponse.json({ complete: true, finalsRatio: 8, divisions: [] }),
+      ),
+      http.get('/v1/tournaments/:id/seeding', () =>
+        HttpResponse.json({ complete: true, finalsRatio: 8, divisions: [] }),
+      ),
+    )
+
+    renderApp(`/tournaments/${tournament.id}`)
+    const nav = within(await screen.findByRole('navigation', { name: 'Spring Open' }))
+    expect(nav.getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'Divisions',
+      'Squads',
+      'Sweepers',
+      'Registrations',
+      'At-large',
+      'Seeding',
+      'Change tournament',
+    ])
+    expect(nav.getByRole('link', { name: 'At-large' })).toHaveAttribute(
+      'href',
+      `/tournaments/${tournament.id}/at-large`,
+    )
+    expect(nav.getByRole('link', { name: 'Seeding' })).toHaveAttribute(
+      'href',
+      `/tournaments/${tournament.id}/seeding`,
+    )
+
+    await userEvent.click(nav.getByRole('link', { name: 'Seeding' }))
+
+    expect(await screen.findByRole('heading', { name: 'Finals seeding', level: 1 })).toBeVisible()
+    expect(within(sidebar()).getByRole('link', { name: 'Seeding' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+  })
+
   it('goes back to the list from Change tournament (NAV-02)', async () => {
     serveTournament()
     server.use(http.get('/v1/tournaments', () => HttpResponse.json({ tournaments: [tournament] })))

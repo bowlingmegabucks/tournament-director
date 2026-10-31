@@ -145,6 +145,30 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('at-large, seeding, and super sweeper pages (loaded, on a wide and a narrow screen) have no WCAG 2.2 AA violations', async ({
+      page,
+    }) => {
+      const sidebar = () => page.getByRole('navigation', { name: /Northeast MegaBuck/ })
+      await page.goto('/tournaments')
+      await page.getByRole('article').first().getByRole('link').click()
+
+      await sidebar().getByRole('link', { name: 'At-large' }).click()
+      await expect(page.getByRole('table', { name: /At-large results/ })).toBeVisible()
+      await expectNoViolations(page)
+
+      await sidebar().getByRole('link', { name: 'Seeding' }).click()
+      await expect(page.getByRole('table', { name: /Finals seeding/ })).toBeVisible()
+      await expectNoViolations(page)
+
+      await sidebar().getByRole('link', { name: 'Sweepers' }).click()
+      await page.getByRole('link', { name: 'Super sweeper results' }).click()
+      await expect(page.getByRole('table', { name: 'Super sweeper results' })).toBeVisible()
+      await expectNoViolations(page)
+
+      await page.setViewportSize({ width: 320, height: 800 })
+      await expectNoViolations(page)
+    })
+
     test('lane assignments page (loaded, and with the Assign dialog open) has no WCAG 2.2 AA violations', async ({
       page,
     }) => {

@@ -1,6 +1,9 @@
 import { Route, Routes } from 'react-router'
 import { DivisionsPage } from './features/divisions/DivisionsPage'
 import { LanesPage } from './features/lanes/LanesPage'
+import { AtLargePage } from './features/results/AtLargePage'
+import { SeedingPage } from './features/results/SeedingPage'
+import { SuperSweeperPage } from './features/results/SuperSweeperPage'
 import { SquadResultsPage } from './features/results/SquadResultsPage'
 import { SweeperResultsPage } from './features/results/SweeperResultsPage'
 import { ScoresPage } from './features/scores/ScoresPage'
@@ -39,7 +42,10 @@ export default function App() {
             <Route path="scores" element={<ScoresPage kind="sweeper" />} />
             <Route path="results" element={<SweeperResultsPage />} />
           </Route>
+          <Route path="super-sweeper" element={<SuperSweeperPage />} />
           <Route path="registrations" element={<RegistrationsPage />} />
+          <Route path="at-large" element={<AtLargePage />} />
+          <Route path="seeding" element={<SeedingPage />} />
         </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Route>

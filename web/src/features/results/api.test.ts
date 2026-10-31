@@ -2,14 +2,30 @@ import { describe, expect, it } from 'vitest'
 import { http, HttpResponse, type JsonBodyType } from 'msw'
 import { server } from '../../mocks/server'
 import {
+  createAtLargeDivision,
+  createAtLargeResults,
+  createAtLargeRow,
   createDivisionResult,
+  createSeedingDivision,
+  createSeedingResults,
+  createSeedingRow,
+  createSuperSweeperResults,
+  createSuperSweeperRow,
   createSquadResults,
   createSquadRow,
   createSweeperResults,
   createSweeperRow,
 } from '../../mocks/data'
 import { SessionNotFoundError } from '../../shared/session'
-import { fetchSquadResults, fetchSweeperResults, ResultsUnavailableError } from './api'
+import { TournamentNotFoundError } from '../../shared/tournamentQuery'
+import {
+  fetchAtLarge,
+  fetchSeeding,
+  fetchSquadResults,
+  fetchSuperSweeper,
+  fetchSweeperResults,
+  ResultsUnavailableError,
+} from './api'
 
 const squadPath = '/v1/tournaments/:id/squads/:sessionId/results'
 const sweeperPath = '/v1/tournaments/:id/sweepers/:sessionId/results'
@@ -370,6 +386,254 @@ describe('fetchSweeperResults', () => {
     respondWith(sweeperPath, body)
 
     await expect(fetchSweeperResults('t1', 's1')).rejects.toThrow(
+      'Failed to load results (unexpected response)',
+    )
+  })
+})
+
+const tie = { line: 'cut', outcome: 'won', decidedBy: { kind: 'game', rank: 1 } } as const
+
+describe.each([
+  {
+    name: 'fetchAtLarge',
+    path: '/v1/tournaments/:id/at-large',
+    fetch: fetchAtLarge,
+    valid: createAtLargeResults({
+      divisions: [createAtLargeDivision({ rows: [createAtLargeRow({ ties: [tie] })] })],
+    }),
+    empty: createAtLargeResults(),
+  },
+  {
+    name: 'fetchSeeding',
+    path: '/v1/tournaments/:id/seeding',
+    fetch: fetchSeeding,
+    valid: createSeedingResults({
+      divisions: [createSeedingDivision({ rows: [createSeedingRow({ ties: [tie] })] })],
+    }),
+    empty: createSeedingResults(),
+  },
+  {
+    name: 'fetchSuperSweeper',
+    path: '/v1/tournaments/:id/super-sweeper',
+    fetch: fetchSuperSweeper,
+    valid: createSuperSweeperResults({
+      cutScore: 1200,
+      rows: [
+        createSuperSweeperRow({
+          sweeperTotals: [600, null],
+          ties: [{ line: 'cash', outcome: 'full', decidedBy: null }],
+          flags: [{ kind: 'missed', sweeperId: 's1', gamesBowled: 0 }],
+        }),
+      ],
+    }),
+    empty: createSuperSweeperResults(),
+  },
+])('$name', ({ path, fetch: load, valid, empty }) => {
+  it('reads the results (RES-37)', async () => {
+    respondWith(path, valid)
+
+    await expect(load('t1')).resolves.toEqual(valid)
+  })
+
+  it('accepts results with nobody in them (D-77)', async () => {
+    respondWith(path, empty)
+
+    await expect(load('t1')).resolves.toEqual(empty)
+  })
+
+  it('asks for the tournament it was given', async () => {
+    let asked: unknown
+    server.use(
+      http.get(path, ({ params }) => {
+        asked = params
+        return HttpResponse.json(valid)
+      }),
+    )
+
+    await load('abc-123')
+
+    expect(asked).toEqual({ id: 'abc-123' })
+  })
+
+  it.each([404, 400])('reports a missing tournament for status %i', async (status) => {
+    server.use(http.get(path, () => new HttpResponse(null, { status })))
+
+    const failure = await load('t1').catch((error: unknown) => error)
+
+    expect(failure).toBeInstanceOf(TournamentNotFoundError)
+  })
+
+  it('carries the API message when the ratio cannot work (D-93)', async () => {
+    server.use(
+      http.get(path, () => HttpResponse.json({ message: 'The ratio is 0.' }, { status: 422 })),
+    )
+
+    const failure = await load('t1').catch((error: unknown) => error)
+
+    expect(failure).toBeInstanceOf(ResultsUnavailableError)
+    expect(failure).toHaveProperty('message', 'The ratio is 0.')
+  })
+
+  it('has a plain message when a 422 carries none', async () => {
+    server.use(http.get(path, () => HttpResponse.json({}, { status: 422 })))
+
+    await expect(load('t1')).rejects.toThrow('The results cannot be worked out')
+  })
+
+  it('reports the status for another failure', async () => {
+    server.use(http.get(path, () => new HttpResponse(null, { status: 503 })))
+
+    const failure = await load('t1').catch((error: unknown) => error)
+
+    expect(failure).toEqual(new Error('Failed to load results (503)'))
+    expect(failure).not.toBeInstanceOf(TournamentNotFoundError)
+    expect(failure).not.toBeInstanceOf(ResultsUnavailableError)
+  })
+
+  it('rejects a body that is not JSON', async () => {
+    server.use(http.get(path, () => new HttpResponse('<html></html>')))
+
+    await expect(load('t1')).rejects.toThrow('Failed to load results (response is not JSON)')
+  })
+
+  it('rejects a body of the wrong shape', async () => {
+    respondWith(path, { complete: 'yes' })
+
+    await expect(load('t1')).rejects.toThrow('Failed to load results (unexpected response)')
+  })
+})
+
+describe('the at-large, seeding, and super sweeper shape checks (RES-37)', () => {
+  const atLarge = createAtLargeResults({
+    divisions: [createAtLargeDivision({ rows: [createAtLargeRow()] })],
+  })
+  const atLargeDivision = atLarge.divisions[0]
+  const atLargeRow = atLargeDivision?.rows[0]
+  const seeding = createSeedingResults({
+    divisions: [createSeedingDivision({ rows: [createSeedingRow()] })],
+  })
+  const seedingDivision = seeding.divisions[0]
+  const seedingRow = seedingDivision?.rows[0]
+  const superSweeper = createSuperSweeperResults({
+    rows: [createSuperSweeperRow({ flags: [{ kind: 'missed', sweeperId: 's', gamesBowled: 0 }] })],
+  })
+  const superRow = superSweeper.rows[0]
+  const flag = superRow?.flags[0]
+
+  it.each([
+    ['no complete flag', { ...atLarge, complete: undefined }],
+    ['no finals ratio', { ...atLarge, finalsRatio: 'eight' }],
+    ['divisions that is not an array', { ...atLarge, divisions: {} }],
+    ['a division with no name', { ...atLarge, divisions: [{ ...atLargeDivision, name: 1 }] }],
+    [
+      'a division with no spots',
+      { ...atLarge, divisions: [{ ...atLargeDivision, totalSpots: null }] },
+    ],
+    [
+      'a division with no squad advancers',
+      { ...atLarge, divisions: [{ ...atLargeDivision, squadAdvancers: null }] },
+    ],
+    [
+      'a division with no entries',
+      { ...atLarge, divisions: [{ ...atLargeDivision, entries: '1' }] },
+    ],
+    [
+      'a division with open spots that is text',
+      { ...atLarge, divisions: [{ ...atLargeDivision, atLargeSpots: 'two' }] },
+    ],
+    [
+      'a row with a bad squad date',
+      {
+        ...atLarge,
+        divisions: [{ ...atLargeDivision, rows: [{ ...atLargeRow, squadDate: 'soon' }] }],
+      },
+    ],
+    [
+      'a row with no casher flag',
+      {
+        ...atLarge,
+        divisions: [{ ...atLargeDivision, rows: [{ ...atLargeRow, previousCasher: 1 }] }],
+      },
+    ],
+  ])('at-large rejects %s', async (_label, body) => {
+    respondWith('/v1/tournaments/:id/at-large', body)
+
+    await expect(fetchAtLarge('t1')).rejects.toThrow('Failed to load results (unexpected response)')
+  })
+
+  it.each([
+    ['no complete flag', { ...seeding, complete: undefined }],
+    [
+      'a division with no finalists',
+      { ...seeding, divisions: [{ ...seedingDivision, finalists: null }] },
+    ],
+    [
+      'a division with no at-large count',
+      { ...seeding, divisions: [{ ...seedingDivision, atLarge: 'x' }] },
+    ],
+    [
+      'a division with no handicap flag',
+      { ...seeding, divisions: [{ ...seedingDivision, showHandicap: 0 }] },
+    ],
+    [
+      'a row with an unknown group',
+      {
+        ...seeding,
+        divisions: [{ ...seedingDivision, rows: [{ ...seedingRow, group: 'champ' }] }],
+      },
+    ],
+    [
+      'a row with no seed',
+      { ...seeding, divisions: [{ ...seedingDivision, rows: [{ ...seedingRow, seed: null }] }] },
+    ],
+    [
+      'a row with no handicap',
+      { ...seeding, divisions: [{ ...seedingDivision, rows: [{ ...seedingRow, handicap: '0' }] }] },
+    ],
+    [
+      'a row with a bad squad date',
+      { ...seeding, divisions: [{ ...seedingDivision, rows: [{ ...seedingRow, squadDate: '' }] }] },
+    ],
+  ])('seeding rejects %s', async (_label, body) => {
+    respondWith('/v1/tournaments/:id/seeding', body)
+
+    await expect(fetchSeeding('t1')).rejects.toThrow('Failed to load results (unexpected response)')
+  })
+
+  it.each([
+    ['no cash ratio', { ...superSweeper, cashRatio: undefined }],
+    ['a cut score that is text', { ...superSweeper, cutScore: '1' }],
+    ['no cut score field', { ...superSweeper, cutScore: undefined }],
+    ['no sweeper columns', { ...superSweeper, sweepers: {} }],
+    [
+      'a column with a bad date',
+      { ...superSweeper, sweepers: [{ ...superSweeper.sweepers[0], date: 'x' }] },
+    ],
+    [
+      'a column with no complete flag',
+      { ...superSweeper, sweepers: [{ ...superSweeper.sweepers[0], complete: 1 }] },
+    ],
+    [
+      'a row with an unknown group',
+      { ...superSweeper, rows: [{ ...superRow, group: 'advancer' }] },
+    ],
+    [
+      'a row with no division',
+      { ...superSweeper, rows: [{ ...superRow, divisionName: undefined }] },
+    ],
+    ['a row with text totals', { ...superSweeper, rows: [{ ...superRow, sweeperTotals: ['6'] }] }],
+    [
+      'a row with an unknown flag',
+      { ...superSweeper, rows: [{ ...superRow, flags: [{ ...flag, kind: 'late' }] }] },
+    ],
+    [
+      'a flag with no games',
+      { ...superSweeper, rows: [{ ...superRow, flags: [{ ...flag, gamesBowled: '0' }] }] },
+    ],
+  ])('super sweeper rejects %s', async (_label, body) => {
+    respondWith('/v1/tournaments/:id/super-sweeper', body)
+
+    await expect(fetchSuperSweeper('t1')).rejects.toThrow(
       'Failed to load results (unexpected response)',
     )
   })

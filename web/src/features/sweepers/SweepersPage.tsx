@@ -1,10 +1,11 @@
-import { useOutletContext, useParams } from 'react-router'
+import { Link, useOutletContext, useParams } from 'react-router'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { Fact, SessionCard, SessionList } from '../../shared/SessionCard'
 import { formatFee, formatRatio } from '../../shared/sessionFormat'
 import type { Tournament } from '../tournaments/types'
 import { BonusPinsList } from './BonusPinsList'
+import styles from './SweepersPage.module.css'
 import { useSweepers } from './useSweepers'
 
 /**
@@ -31,6 +32,13 @@ export function SweepersPage() {
         />
       )}
       {data?.length === 0 && <p>No sweepers yet.</p>}
+      {data && data.length > 0 && (
+        <p>
+          <Link to={`/tournaments/${id}/super-sweeper`} className={styles.link}>
+            Super sweeper results
+          </Link>
+        </p>
+      )}
       {data && data.length > 0 && (
         <SessionList>
           {data.map((sweeper) => (

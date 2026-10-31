@@ -1,6 +1,4 @@
-import type { SessionKind } from '../../shared/session'
-
-export type { SessionKind }
+export type { SessionKind } from '../../shared/session'
 
 /**
  * What the Results tab reads (RES-31). The API's `features/results/types.ts` has the same fields:

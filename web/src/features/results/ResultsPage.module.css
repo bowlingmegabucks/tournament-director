@@ -28,6 +28,7 @@
 }
 
 .unofficial {
+  display: block;
   margin-block: var(--space-3);
   padding: var(--space-3);
   border: var(--border-width) solid var(--color-border);

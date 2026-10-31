@@ -6,9 +6,9 @@ import styles from './ResultsPage.module.css'
  */
 export function UnofficialNotice({ kind }: Readonly<{ kind: 'squad' | 'sweeper' }>) {
   return (
-    <p className={styles.unofficial} role="status">
+    <output className={styles.unofficial}>
       <strong>Unofficial results.</strong> This {kind} is not complete, so scores and places can
       still change.
-    </p>
+    </output>
   )
 }

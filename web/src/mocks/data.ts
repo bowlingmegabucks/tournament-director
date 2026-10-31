@@ -775,11 +775,15 @@ type DemoPlayer = [name: string, total: number, highGame: number, handicap?: num
 
 /** Number the players 1 to N and put the first `advance` among the advancers and the next `cash` among the cashers. */
 function demoRows(players: DemoPlayer[], advance: number, cash: number): SquadRow[] {
+  const groupAt = (index: number): SquadRow['group'] => {
+    if (index < advance) return 'advancer'
+    return index < advance + cash ? 'casher' : 'other'
+  }
   return players.map(([name, total, highGame, handicap = 0, games = 3], index) =>
     createSquadRow({
       name,
       place: index + 1,
-      group: index < advance ? 'advancer' : index < advance + cash ? 'casher' : 'other',
+      group: groupAt(index),
       total,
       highGame,
       handicap,

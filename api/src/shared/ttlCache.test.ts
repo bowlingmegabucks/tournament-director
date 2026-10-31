@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createTtlCache, MAX_CACHED } from './ttlCache.ts'
+import { cacheKey, createTtlCache, MAX_CACHED } from './ttlCache.ts'
 
 describe('createTtlCache', () => {
   it('shares one call inside the window and calls again after it', async () => {
@@ -33,5 +33,12 @@ describe('createTtlCache', () => {
     await cached('first-after-cap', load)
     await cached('k0', load)
     expect(load).toHaveBeenCalledTimes(MAX_CACHED + 2)
+  })
+})
+
+describe('cacheKey', () => {
+  it('joins the ids and ignores their case', () => {
+    expect(cacheKey('AB-1', 'Cd-2')).toBe('ab-1/cd-2')
+    expect(cacheKey('AB-1')).toBe('ab-1')
   })
 })

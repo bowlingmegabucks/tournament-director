@@ -27,6 +27,50 @@ function serveTournament() {
 const sidebar = () => screen.getByRole('navigation', { name: 'Spring Open' })
 
 describe('tournament pages', () => {
+  it('has a menu button that shows whether the links are open, and closes after a link is followed (phone menu)', async () => {
+    serveTournament()
+    const user = userEvent.setup()
+    renderApp(`/tournaments/${tournament.id}`)
+
+    const button = await screen.findByRole('button', { name: 'Tournament menu' })
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+
+    await user.click(button)
+    expect(button).toHaveAttribute('aria-expanded', 'true')
+
+    await user.click(within(sidebar()).getByRole('link', { name: 'Divisions' }))
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+    expect(button).toHaveFocus()
+  })
+
+  it('closes the phone menu on Escape and returns focus to the button', async () => {
+    serveTournament()
+    const user = userEvent.setup()
+    renderApp(`/tournaments/${tournament.id}`)
+
+    const button = await screen.findByRole('button', { name: 'Tournament menu' })
+    await user.click(button)
+    await user.click(within(sidebar()).getByRole('link', { name: 'Squads' }))
+    await user.click(button)
+    within(sidebar()).getByRole('link', { name: 'Divisions' }).focus()
+    await user.keyboard('{Escape}')
+
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+    expect(button).toHaveFocus()
+  })
+
+  it('ignores Escape while the phone menu is closed', async () => {
+    serveTournament()
+    const user = userEvent.setup()
+    renderApp(`/tournaments/${tournament.id}`)
+
+    const button = await screen.findByRole('button', { name: 'Tournament menu' })
+    within(sidebar()).getByRole('link', { name: 'Divisions' }).focus()
+    await user.keyboard('{Escape}')
+
+    expect(button).not.toHaveFocus()
+  })
+
   it('shows the tournament overview (TRN-15)', async () => {
     serveTournament()
 

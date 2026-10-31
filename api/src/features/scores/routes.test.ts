@@ -1,3 +1,4 @@
+import express from 'express'
 import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 import { HttpError } from '../../shared/errors.ts'
@@ -11,11 +12,13 @@ import {
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createTestApp } from '../../test/testApp.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
+import { findSquad } from '../lanes/routes.ts'
 import { createInMemoryLaneRepository } from '../lanes/repository.ts'
 import { createInMemorySquadRepository } from '../squads/repository.ts'
 import { createInMemorySweeperRepository } from '../sweepers/repository.ts'
 import { createInMemoryTournamentRepository } from '../tournaments/repository.ts'
 import { createInMemoryScoreRepository } from './repository.ts'
+import { createScoreRouter } from './routes.ts'
 import { scorePageSchema } from './types.ts'
 
 function setup(options: { maxPerPair?: number; complete?: boolean } = {}) {
@@ -239,5 +242,56 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/scores', () => {
     expect(warnings).toHaveLength(1)
     expect(warnings[0]).toMatchObject({ registrationId: lost.registrationId, sessionId: squad.id })
     expect(JSON.stringify(captured.records())).not.toContain('Lost')
+  })
+})
+
+describe('score cache', () => {
+  function countingRouter(cacheMs: number) {
+    const tournament = createTournament()
+    const squad = createSquad({ startingLane: 1, numberOfLanes: 2, games: 3 })
+    const inner = createInMemoryScoreRepository([])
+    let calls = 0
+    const scores = {
+      ...inner,
+      listScores: (sessionId: string) => {
+        calls++
+        return inner.listScores(sessionId)
+      },
+    }
+    const router = createScoreRouter(
+      'squad',
+      findSquad(createInMemorySquadRepository([{ tournamentId: tournament.id, squad }])),
+      {
+        tournaments: createInMemoryTournamentRepository([tournament]),
+        divisions: createInMemoryDivisionRepository([]),
+        lanes: createInMemoryLaneRepository([]),
+        scores,
+        logger: createCapturedLogger().logger,
+      },
+      cacheMs,
+    )
+    const app = express().use('/:id/:sessionId', router)
+    return { app, path: `/${tournament.id}/${squad.id}`, calls: () => calls }
+  }
+
+  it('answers a second poll in the window without reading again', async () => {
+    const { app, path, calls } = countingRouter(60_000)
+    await request(app).get(path).expect(200)
+    await request(app).get(path).expect(200)
+    expect(calls()).toBe(1)
+  })
+
+  it('shares one entry between an upper-case and a lower-case id', async () => {
+    const { app, path, calls } = countingRouter(60_000)
+    await request(app).get(path).expect(200)
+    await request(app).get(path.toUpperCase()).expect(200)
+    expect(calls()).toBe(1)
+  })
+
+  it('reads again when the window is zero', async () => {
+    const { app, path, calls } = countingRouter(0)
+    await request(app).get(path).expect(200)
+    await request(app).get(path).expect(200)
+    expect(calls()).toBe(2)
   })
 })

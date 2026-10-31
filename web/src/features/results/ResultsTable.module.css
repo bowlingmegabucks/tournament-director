@@ -24,7 +24,7 @@
   font-weight: 600;
 }
 
-.who {
+.table .who {
   font-weight: 600;
 }
 
@@ -51,6 +51,10 @@
 
 .totalCell {
   composes: num;
+}
+
+/* The key figure. Under .table so it outranks the plain-weight rule for every cell. */
+.table .totalCell {
   font-weight: 700;
 }
 
@@ -109,11 +113,16 @@
     clip-path: inset(50%);
   }
 
+  /*
+   * One result is a card of three lines: the name, then the squad (a text cell), then the numbers
+   * side by side. The place sits in a narrow first column that spans every row, so the other cells
+   * skip it. Rows have no gap (the empty rows the span adds would show it); cells pad themselves.
+   */
   .table tbody tr {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(3.5rem, 1fr));
-    gap: var(--space-1) var(--space-3);
-    padding: var(--space-2) 0;
+    grid-template-columns: 2.25rem repeat(auto-fill, minmax(4.25rem, 1fr));
+    column-gap: var(--space-3);
+    padding: var(--space-3) 0;
     border-block-end: var(--border-width) solid var(--color-border);
   }
 
@@ -123,10 +132,26 @@
 
   .table tr > .place {
     grid-column: 1;
+    grid-row: 1 / span 4;
+    align-self: start;
+    font-size: var(--font-size-lg);
+    font-weight: 700;
   }
 
   .table tr > .who {
     grid-column: 2 / -1;
+    order: -1;
+  }
+
+  .table tr > .text {
+    grid-column: 2 / -1;
+    padding-block-start: var(--space-1);
+  }
+
+  /* Bottom-align the numbers so values line up when one label wraps to two lines. */
+  .table td.num {
+    align-self: end;
+    padding-block-start: var(--space-2);
   }
 
   .table th,
@@ -148,8 +173,14 @@
     text-align: start;
   }
 
-  .table td.num::before,
-  .table td.text::before {
+  /* A text cell reads on one line, "Squad Fri 11/28 10:30 AM"; a number cell puts its label above. */
+  .table td.text[data-label]::before {
+    content: attr(data-label) ' ';
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+  }
+
+  .table td.num::before {
     content: attr(data-label);
     display: block;
     color: var(--color-text-muted);

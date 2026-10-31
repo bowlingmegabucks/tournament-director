@@ -177,6 +177,6 @@ describe('DivisionsPage', () => {
     open()
 
     await screen.findByRole('table')
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(within(screen.getByRole('main')).queryByRole('button')).not.toBeInTheDocument()
   })
 })

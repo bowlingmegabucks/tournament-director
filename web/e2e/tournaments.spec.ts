@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
+import { menuLink } from './menu'
 
 test('home shows the current tournament and leads to the list and the overview', async ({
   page,
@@ -115,7 +116,7 @@ test('on a narrow screen the card leaves out a blank super sweeper (REG-23, D-47
   await page.setViewportSize({ width: 320, height: 800 })
   await page.goto('/tournaments')
   await page.getByRole('article').first().getByRole('link').click()
-  await page.getByRole('link', { name: 'Registrations' }).click()
+  await menuLink(page, 'Registrations')
   await expect(page.getByRole('heading', { name: 'Registrations', level: 1 })).toBeVisible()
 
   const lastCell = (name: string) =>
@@ -174,10 +175,7 @@ test('a click outside the popup closes it (REG-28)', async ({ page }) => {
 async function openSquad(page: Page, time: string) {
   await page.goto('/tournaments')
   await page.getByRole('article').first().getByRole('link').click()
-  await page
-    .getByRole('navigation', { name: /Northeast MegaBuck/ })
-    .getByRole('link', { name: 'Squads' })
-    .click()
+  await menuLink(page, 'Squads')
   await page
     .getByRole('link', { name: new RegExp(time) })
     .first()
@@ -532,10 +530,7 @@ test('the Results tab does not scroll sideways on a phone (D-73)', async ({ page
 async function openTournamentPage(page: Page, link: string) {
   await page.goto('/tournaments')
   await page.getByRole('article').first().getByRole('link').click()
-  await page
-    .getByRole('navigation', { name: /Northeast MegaBuck/ })
-    .getByRole('link', { name: link })
-    .click()
+  await menuLink(page, link)
 }
 
 test('At-large lists the open spots for a division and marks the results unofficial (RES-12, RES-17, D-84, D-87, D-88)', async ({

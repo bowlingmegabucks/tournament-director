@@ -310,9 +310,11 @@ describe('LanesPage', () => {
     ).toBeVisible()
     expect(screen.getByText('Pat Nguyen')).toBeVisible()
     // Printing recap sheets changes nothing, so it stays (D-63).
-    expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([
-      'Recap sheets',
-    ])
+    expect(
+      within(screen.getByRole('main'))
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['Recap sheets'])
   })
 
   it('names the page, the session, and the tournament in the title', async () => {

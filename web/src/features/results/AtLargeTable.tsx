@@ -62,7 +62,7 @@ export function AtLargeBody({
                 <td className={styles.num} data-label="HG">
                   {row.highGame}
                 </td>
-                <td className={styles.text} data-label="Casher">
+                <td className={styles.text}>
                   {row.previousCasher && (
                     <>
                       <span className={styles.cash} aria-hidden="true">

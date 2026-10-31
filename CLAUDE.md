@@ -24,6 +24,8 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 
 16. At-large, seeding, and super sweeper results. **Done on branch `finalResults`:** the tournament sidebar has At-large and Seeding, and the Sweepers page links to the super sweeper results. The API serves web-only `GET /v1/tournaments/{id}/at-large`, `/seeding`, and `/super-sweeper`. Public for good (D-85). All three say "Unofficial results" until every squad (or sweeper) is complete (D-88) and print one division per page (D-89). A missed sweeper scores zero and is tagged (D-90). See [docs/requirements/finals-results.md](docs/requirements/finals-results.md).
 
+17. Phone layout and live caching. **Done on branch `phoneLayout`:** on a phone the tournament menu sits behind a "Tournament menu" button (closed at first) and results rows are cards. Squad and sweeper results and scores cache for 5 s like the finals routes (`LIVE_CACHE_MS`; see [docs/api-standards.md](docs/api-standards.md#caching)).
+
 Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, TypeScript, testing, composition) and stricter ESLint rules.
 
 **Legacy migration.** We are porting the WinForms Tournament Manager feature by feature. [docs/migration/](docs/migration/README.md) documents every legacy rule with an ID (`REG-04`); use it instead of the old code. Before building a feature, check [decisions-and-questions.md](docs/migration/decisions-and-questions.md) for its open questions. Cite rule IDs in tests and PRs.
@@ -118,6 +120,8 @@ Details in [docs/api-standards.md](docs/api-standards.md).
 - Keep `helmet` and the CORS allow-list. The web `Tournament` shape and the API's must match.
 - Test with Vitest + Supertest through `createApp`. Mutation: Stryker, same thresholds as `web/`.
 - `qs` override in `api/package.json`: same Stryker advisory as `web/`. Remove it in both places together.
+- `minimatch` and `glob` overrides in `api/package.json`: moderate advisories (GHSA-g3hv-75wg-m249, GHSA-3g3m-2fjr-6pw4) through Testcontainers' `archiver`, and Stryker and ESLint. Dev-only. Remove them once those packages ship fixed ranges, then run `npm audit`.
+- `web/` keeps moderate `minimatch` advisories (dev-only). `eslint-plugin-jsx-a11y` needs `minimatch` 3 and breaks on 11, so an override cannot clear them. `npm audit fix --force` would downgrade ESLint to 4.0.0; do not run it. Revisit when the plugin supports ESLint 10.
 
 ## Code standards (summary)
 

@@ -67,7 +67,7 @@ export function SeedingBody({ division }: Readonly<{ division: SeedingDivision }
                     {item.row.handicap}
                   </td>
                 )}
-                <td className={styles.text} data-label="Casher">
+                <td className={styles.text}>
                   {item.row.previousCasher && (
                     <>
                       <span className={styles.cash} aria-hidden="true">

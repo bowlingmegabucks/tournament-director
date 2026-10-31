@@ -72,6 +72,9 @@ export function createApp({
   // After CORS, so a 429 still carries the CORS headers and the browser can read it.
   app.use(createRateLimiter(config.rateLimit, meter))
 
+  // The five results routes (squad, sweeper, at-large, seeding, super sweeper) read the same data.
+  const resultsDeps = { tournaments, divisions, squads, sweepers, lanes, scores, logger }
+
   // Every group declares its access (D-27). Anything not mounted here is a 404.
   mountRoutes(app, [
     { path: '/health', access: 'public', router: createHealthRouter() },
@@ -136,67 +139,27 @@ export function createApp({
     {
       path: '/v1/tournaments/:id/squads/:sessionId/results',
       access: 'public', // D-74: public for good, so bowlers check the standings
-      router: createResultsRouter('squad', {
-        tournaments,
-        divisions,
-        squads,
-        sweepers,
-        lanes,
-        scores,
-        logger,
-      }),
+      router: createResultsRouter('squad', resultsDeps),
     },
     {
       path: '/v1/tournaments/:id/sweepers/:sessionId/results',
       access: 'public', // D-74
-      router: createResultsRouter('sweeper', {
-        tournaments,
-        divisions,
-        squads,
-        sweepers,
-        lanes,
-        scores,
-        logger,
-      }),
+      router: createResultsRouter('sweeper', resultsDeps),
     },
     {
       path: '/v1/tournaments/:id/at-large',
       access: 'public', // D-85: public for good, so bowlers check the finals field
-      router: createFinalsRouter('at-large', {
-        tournaments,
-        divisions,
-        squads,
-        sweepers,
-        lanes,
-        scores,
-        logger,
-      }),
+      router: createFinalsRouter('at-large', resultsDeps),
     },
     {
       path: '/v1/tournaments/:id/seeding',
       access: 'public', // D-85: public for good, so bowlers check the finals field
-      router: createFinalsRouter('seeding', {
-        tournaments,
-        divisions,
-        squads,
-        sweepers,
-        lanes,
-        scores,
-        logger,
-      }),
+      router: createFinalsRouter('seeding', resultsDeps),
     },
     {
       path: '/v1/tournaments/:id/super-sweeper',
       access: 'public', // D-85: public for good, so bowlers check the finals field
-      router: createFinalsRouter('super-sweeper', {
-        tournaments,
-        divisions,
-        squads,
-        sweepers,
-        lanes,
-        scores,
-        logger,
-      }),
+      router: createFinalsRouter('super-sweeper', resultsDeps),
     },
     {
       path: '/v1/tournaments/:id/squads/:sessionId/recap-sheets',

@@ -37,7 +37,7 @@ The screen limits: fee up to 999.99, games up to 99, ratios up to 99.9.
 | TRN-11 | The list shows every tournament. The server applies no filter or sort. **D-20:** the new app groups the list (current and upcoming, then past) and sorts it by date. **D-18, D-19, D-21:** the list is not the landing page; Home is. **D-24 to D-28:** row fields, overview page, routes, and where grouping happens. **D-30 to D-35:** the list reads the legacy database through Prisma; bad rows are skipped (D-31). | Done, differs (D-18, D-20, D-28, D-31, D-32) |
 | TRN-12 | **Effective values for a squad:** fee = squad fee if set, else tournament fee. Finals ratio and cash ratio work the same way. At-large and seeding always use the tournament finals ratio (`RES-12`). **D-43:** the squad list sends the resolved values with override flags (built); results use them later. | Done, differs (D-43) |
 
-The ratio is "1 in N". With `finalsRatio = 8` and 40 entries, `floor(40 / 8) = 5` advance. Calculations always round down. See [results.md](results.md).
+The ratio is "1 in N". With `finalsRatio = 8` and 40 entries, `floor(40 / 8) = 5` advance. Calculations always round down. See [results.md](../requirements/results.md).
 
 ## Screens
 

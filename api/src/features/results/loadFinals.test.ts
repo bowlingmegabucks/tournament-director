@@ -168,6 +168,62 @@ describe('loadAtLarge', () => {
     expect(result.divisions.map((division) => division.name)).toEqual(['Open', 'Women'])
   })
 
+  it('works out each division with the tournament ratio and its own entries: 5 and 6 entries at ratio 5 (AL-5)', async () => {
+    const squad = squadAt(morning)
+    const seat = (divisionId: string, score: number) => ({
+      sessionId: squad.id,
+      entry: bowler({ divisionId }),
+      games: [score, score, score],
+    })
+    const openSeats = [100, 110, 120, 130, 140].map((score) => seat(open.id, score))
+    const womenSeats = [100, 110, 120, 130, 140, 150].map((score) => seat(women.id, score))
+    const { deps, reporting, tournament } = setup({
+      squads: [squad],
+      seats: [...openSeats, ...womenSeats],
+      divisions: [open, women],
+      ratios: { finalsRatio: 5, superSweeperCashRatio: 5 },
+    })
+
+    const result = await loadAtLarge(deps, reporting, tournament.id)
+
+    expect(
+      result.divisions.map((division) => [division.name, division.entries, division.totalSpots]),
+    ).toEqual([
+      ['Open', 5, 1],
+      ['Women', 6, 1],
+    ])
+  })
+
+  it('numbers the places from 1 in each division and flags only the bowler who cashed (AL-4, AL-13)', async () => {
+    const squad = squadAt(morning, { cashRatio: 3 })
+    const seatsFor = (divisionId: string) =>
+      [750, 700, 690, 600, 590, 580].map((total) => ({
+        sessionId: squad.id,
+        entry: bowler({ divisionId }),
+        games: [total / 3, total / 3, total / 3],
+      }))
+    const { deps, reporting, tournament } = setup({
+      squads: [squad],
+      seats: [...seatsFor(open.id), ...seatsFor(women.id)],
+      divisions: [open, women],
+      ratios: { finalsRatio: 2, superSweeperCashRatio: 5 },
+    })
+
+    const result = await loadAtLarge(deps, reporting, tournament.id)
+
+    // Two spots per division: 700 cashed on the squad, 690 did not.
+    expect(result.divisions.map((division) => division.rows.map((row) => row.place))).toEqual([
+      [1, 2],
+      [1, 2],
+    ])
+    expect(
+      result.divisions.map((division) => division.rows.map((row) => row.previousCasher)),
+    ).toEqual([
+      [true, false],
+      [true, false],
+    ])
+  })
+
   it('marks a tie for the last at-large spot with the tie-breaker (AL-11, D-93)', async () => {
     const squad = squadAt(morning)
     const entries = [bowler(), bowler(), bowler(), bowler(), bowler(), bowler()]
@@ -384,6 +440,29 @@ describe('loadSeeding', () => {
     expect(row).toMatchObject({ registrationId: star.registrationId, seed: 1, squadDate: noon })
     expect(result.divisions[0]?.showHandicap).toBe(true)
     expect(row?.handicap).toBeGreaterThan(0)
+  })
+
+  it('numbers the seeds from 1 in each division, finalists first (SD-1)', async () => {
+    const squad = squadAt(morning)
+    const seatsFor = (divisionId: string) =>
+      [750, 700, 690, 600, 590, 580].map((total) => ({
+        sessionId: squad.id,
+        entry: bowler({ divisionId }),
+        games: [total / 3, total / 3, total / 3],
+      }))
+    const { deps, reporting, tournament } = setup({
+      squads: [squad],
+      seats: [...seatsFor(open.id), ...seatsFor(women.id)],
+      divisions: [open, women],
+      ratios: { finalsRatio: 2, superSweeperCashRatio: 5 },
+    })
+
+    const result = await loadSeeding(deps, reporting, tournament.id)
+
+    for (const division of result.divisions) {
+      expect(division.rows.map((row) => row.seed)).toEqual([1, 2, 3, 4, 5, 6])
+      expect(division.rows.map((row) => row.total)).toEqual([750, 700, 690, 600, 590, 580])
+    }
   })
 
   it('carries the complete flag (SD-7, D-88)', async () => {

@@ -16,10 +16,10 @@ Source: `main/ResultReportBase.cs`, `main/*/Results/*Report.cs`, `main/Tournamen
 
 | ID | Report | Title | Date | Division | Columns | Dividers | Detail | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| RPT-04a | Squad results | Squad Results | yes | yes, one PDF per division | Place, Name, Total, HG, HDCP (handicap divisions only) | Cut Line (or No Advancers), Cash Line | [results.md](results.md#squad-results) | Done, differs (D-78) |
-| RPT-04b | Sweeper and super sweeper results | Sweeper Results / Super Sweeper Results | sweeper only | no | Place, Name, Total, HG | Cash Line | [results.md](results.md#sweeper-results) | Done, differs (D-78, D-89) |
-| RPT-04c | At-large | At Large | no | yes, one per division | Place, Squad, Name, Total, HG, Casher ($ icon) | none | [results.md](results.md#at-large) | Done, differs (D-89) |
-| RPT-04d | Finals seeding | Finals Seeding | no | yes, one per division | Seed (`#n`), Name, Total, HG, Casher ($ icon) | Cut Line | [results.md](results.md#finals-seeding) | Done, differs (D-89, D-92) |
+| RPT-04a | Squad results | Squad Results | yes | yes, one PDF per division | Place, Name, Total, HG, HDCP (handicap divisions only) | Cut Line (or No Advancers), Cash Line | [results.md](../requirements/results.md) | Done, differs (D-78) |
+| RPT-04b | Sweeper and super sweeper results | Sweeper Results / Super Sweeper Results | sweeper only | no | Place, Name, Total, HG | Cash Line | [results.md](../requirements/results.md) and [finals-results.md](../requirements/finals-results.md) | Done, differs (D-78, D-89) |
+| RPT-04c | At-large | At Large | no | yes, one per division | Place, Squad, Name, Total, HG, Casher ($ icon) | none | [finals-results.md](../requirements/finals-results.md) | Done, differs (D-89) |
+| RPT-04d | Finals seeding | Finals Seeding | no | yes, one per division | Seed (`#n`), Name, Total, HG, Casher ($ icon) | Cut Line | [finals-results.md](../requirements/finals-results.md) | Done, differs (D-89, D-92) |
 
 ## Recap sheet
 

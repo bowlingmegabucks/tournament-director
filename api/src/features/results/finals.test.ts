@@ -2,7 +2,13 @@ import { faker } from '@faker-js/faker'
 import { describe, expect, it } from 'vitest'
 import { createResultEntry } from '../../test/factories.ts'
 import type { ResultEntry } from './entries.ts'
-import { workOutAtLarge, workOutSeeding, type SquadRun } from './finals.ts'
+import {
+  workOutAtLarge,
+  workOutSeeding,
+  type AtLargeOutcome,
+  type PlacedEntry,
+  type SquadRun,
+} from './finals.ts'
 import type { DivisionOutcome } from './squadResults.ts'
 
 const bowler = (score: number, over: Partial<Parameters<typeof createResultEntry>[0]> = {}) =>
@@ -166,6 +172,78 @@ describe('workOutAtLarge', () => {
     const result = workOutAtLarge([run({})], 8)
 
     expect(result).toMatchObject({ entryCount: 0, totalSpots: 0, atLargeSpots: 0 })
+  })
+})
+
+/**
+ * The legacy seeding tests (`TournamentSeedingCalculatorTests`) hand the calculator a finished
+ * at-large result, so these ports do the same: the at-large advancer is given, not worked out.
+ */
+describe('workOutSeeding with the legacy data (SD-1, SD-2)', () => {
+  const placed = (entry: ResultEntry, run: SquadRun): PlacedEntry => ({
+    entry,
+    squadId: run.squadId,
+    squadDate: run.squadDate,
+  })
+  const atLargeOf = (advancers: PlacedEntry[], previousCashers: string[] = []): AtLargeOutcome => ({
+    entryCount: 0,
+    totalSpots: 0,
+    squadAdvancers: 0,
+    atLargeSpots: advancers.length,
+    advancers,
+    others: [],
+    previousCashers: new Set(previousCashers),
+  })
+
+  it('seeds 299, 297, 250 and numbers the rest 198, 197, 167, 150 across two squads (SD-1)', () => {
+    const atLargeScore = bowler(250)
+    const first = run({
+      advancers: [bowler(297)],
+      others: [bowler(150), bowler(198), atLargeScore],
+    })
+    const second = run({ advancers: [bowler(299)], others: [bowler(197), bowler(167)] })
+
+    const seeding = workOutSeeding([first, second], atLargeOf([placed(atLargeScore, first)]))
+
+    expect(names(seeding.finalists)).toEqual([299, 297, 250])
+    expect(names(seeding.others)).toEqual([198, 197, 167, 150])
+  })
+
+  it('counts a re-entering bowler once, with the better entry, and leaves 198, 197, 150 (SD-2)', () => {
+    const reEntry = { bowlerId: faker.string.uuid() }
+    const atLargeScore = bowler(250)
+    const first = run({
+      advancers: [bowler(297)],
+      others: [bowler(150), bowler(198, reEntry), atLargeScore],
+    })
+    const second = run({
+      advancers: [bowler(299)],
+      others: [bowler(197), bowler(167, reEntry)],
+    })
+
+    const seeding = workOutSeeding([first, second], atLargeOf([placed(atLargeScore, first)]))
+
+    expect(names(seeding.finalists)).toEqual([299, 297, 250])
+    expect(names(seeding.others)).toEqual([198, 197, 150])
+    expect(
+      [...seeding.finalists, ...seeding.others].filter(
+        (item) => item.entry.bowlerId === reEntry.bowlerId,
+      ),
+    ).toHaveLength(1)
+  })
+
+  it('hands on the at-large advancers who cashed, and only those (SD-2, RES-21)', () => {
+    const atLargeScore = bowler(250)
+    const other = bowler(240)
+    const first = run({ advancers: [bowler(297)], others: [atLargeScore, other] })
+    const stranger = faker.string.uuid()
+
+    const seeding = workOutSeeding(
+      [first],
+      atLargeOf([placed(atLargeScore, first)], [atLargeScore.bowlerId, other.bowlerId, stranger]),
+    )
+
+    expect([...seeding.previousCashers]).toEqual([atLargeScore.bowlerId])
   })
 })
 

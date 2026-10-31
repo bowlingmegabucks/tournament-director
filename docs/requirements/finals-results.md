@@ -92,7 +92,7 @@ The routes send no SSN, gender, birth date, address, email, phone, average, or p
 
 ## Test cases
 
-Each case is one test. The Source column says where it came from: `legacy Name` (a WinForms unit test, ported), `gap` (legacy has no test; we added one), or `doc` (a worked example in the migration docs). Cases AL-5 and AL-6 test legacy plumbing (a calculator call, an error flow) that has no twin in the new app; the route and loader tests cover the same ground (an unknown tournament is a 404, the pure functions take the runs directly). SS-1 and SS-2 are covered the same way.
+Each case is one test. The Source column says where it came from: `legacy Name` (a WinForms unit test, ported), `gap` (legacy has no test; we added one), or `doc` (a worked example in the migration docs). Cases AL-6, SD-6, and SS-2 test legacy error flows (a mock returns an error); the new app has no twin, and the route and loader tests cover the same ground (an unknown tournament is a 404, a ratio of 0 or less is a 422, the database being down is a 503). AL-5 and SS-1 are legacy checks that a mock was called; `loadFinals.test.ts` checks the real result instead (AL-5b above). Every legacy test of the at-large and seeding calculators and business logic has a port or a replacement: AL-1 to AL-4, AL-5b, SD-1b, SD-2b, SD-8.
 
 ### At-large (RES-12 to RES-17)
 
@@ -113,7 +113,9 @@ Files: `api/src/features/results/finals.test.ts` (the calculation) and `loadFina
 | AL-11 | A tie for the last at-large spot | The same tie marks as squads (D-14) | gap |
 | AL-12 | Two divisions | Each is worked out alone | gap |
 | AL-14 | Some squad of the tournament is not complete | The at-large list is marked unofficial; it is official only when every squad is complete (D-84) | gap |
+| AL-5b | Two divisions with 5 and 6 entries at tournament ratio 5 | Each division reports its own entries (5 and 6) and its own spots (1 and 1) | legacy `TournamentResultsBOTests` (`Entries` of 5 and 6; ratio 5 passed to each division) |
 | AL-13 | The display | Columns Place, Squad (`MM/dd hh:mm tt`), Name, Total, HG, Casher | doc (RES-17) |
+| AL-13b | Two divisions with at-large advancers, one of whom cashed on a squad | Places run from 1 in each division; only the bowler who cashed is flagged | legacy `TournamentResultsAdapterTests` (places 1, 2 in each division; one previous casher) |
 
 ### Finals seeding (RES-18 to RES-21a)
 
@@ -122,6 +124,10 @@ Files: `api/src/features/results/finals.test.ts` and `loadFinals.test.ts`.
 | ID | Case | Expected | Source |
 | --- | --- | --- | --- |
 | SD-1 | Squad advancers 297 and 299, an at-large 250, other scores 150, 198, 197, 167, no re-entries | Seeds 299, 297, 250. Non-finalists 198, 197, 167, 150, numbering on | legacy `Execute_NoReEntries_CorrectSeedingReturned` |
+| SD-1b | The exact legacy data across two squads: advancers 297 (squad 1) and 299 (squad 2), the at-large 250 in squad 1, others 150, 198, 197, 167 | Finalists 299, 297, 250; others 198, 197, 167, 150 | legacy `Execute_NoReEntries_CorrectSeedingReturned`, ported with the at-large result given |
+| SD-2b | The exact legacy data with the re-entering bowler (198 in squad 1, 167 in squad 2) | One entry for the bowler, the better one; others 198, 197, 150 | legacy `Execute_ReEntries_CorrectSeedingReturned`, ported |
+| SD-2c | The at-large result lists bowlers who cashed (some not in the seeding at all) | Only the at-large finalists who cashed are flagged. Legacy passed the whole list on; the new app lists only those who are finalists | legacy `Execute_ReEntries_CorrectSeedingReturned` (the `AtLargeCashers` assert) |
+| SD-8 | Two divisions of six bowlers | Seeds run 1 to 6 in each division, finalists first | legacy `TournamentSeedingAdapterTests` (seeds 1 to 5 in each division) |
 | SD-2 | One bowler appears twice (198 and 167) | Counts once, with the best entry (198). Non-finalists 198, 197, 150. The at-large casher flags carry over | legacy `Execute_ReEntries_CorrectSeedingReturned` |
 | SD-3 | A finalist who advanced from squad 1 but scored higher in squad 2 | Seeded on the squad 2 score (RES-19) | gap |
 | SD-4 | Ranking uses SCR-11 with handicap | As squads | gap (legacy issue #122 asks for handicap on the report) |

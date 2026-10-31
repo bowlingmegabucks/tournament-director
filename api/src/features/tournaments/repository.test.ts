@@ -45,4 +45,26 @@ describe('in-memory tournament repository', () => {
 
     expect((await repository.get(tournament.id))?.name).toBe('Original')
   })
+  it('gets the ratios of a known tournament, from the seed or the default (RES-12, RES-28)', async () => {
+    const withRatios = createTournament()
+    const withDefaults = createTournament()
+    const repository = createInMemoryTournamentRepository([withRatios, withDefaults], {
+      [withRatios.id]: { finalsRatio: 7, superSweeperCashRatio: 4.5 },
+    })
+
+    expect(await repository.getRatios(withRatios.id)).toEqual({
+      finalsRatio: 7,
+      superSweeperCashRatio: 4.5,
+    })
+    expect(await repository.getRatios(withDefaults.id)).toEqual({
+      finalsRatio: 8,
+      superSweeperCashRatio: 8,
+    })
+  })
+
+  it('gets undefined ratios for an unknown tournament', async () => {
+    const repository = createInMemoryTournamentRepository([createTournament()])
+
+    expect(await repository.getRatios('7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01')).toBeUndefined()
+  })
 })

@@ -792,6 +792,44 @@ describe('SquadResultsPage printing (RES-33, D-78)', () => {
     expect(document.body).toHaveAttribute('data-results-printing', '')
   })
 
+  it('Print this division prints only the division on screen (RES-39, D-89)', async () => {
+    const results = two()
+    serve(results)
+    open(results)
+    let copied: string[] = []
+    print.mockImplementation(() => {
+      copied = Array.from(copySections()).map((section) => section.getAttribute('aria-label') ?? '')
+    })
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Print this division' }, { timeout: 3000 }),
+    )
+
+    await waitFor(() => {
+      expect(print).toHaveBeenCalledTimes(1)
+    })
+    expect(copied).toEqual(['Open division'])
+  })
+
+  it('Print this division follows the division chosen in the list (RES-39, D-80)', async () => {
+    const results = two()
+    serve(results)
+    open(results, '?division=' + (results.divisions[1]?.id ?? ''))
+    let copied: string[] = []
+    print.mockImplementation(() => {
+      copied = Array.from(copySections()).map((section) => section.getAttribute('aria-label') ?? '')
+    })
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Print this division' }, { timeout: 3000 }),
+    )
+
+    await waitFor(() => {
+      expect(print).toHaveBeenCalledTimes(1)
+    })
+    expect(copied).toEqual(['Women division'])
+  })
+
   it('removes the print copy once the browser says printing is over', async () => {
     const results = two()
     serve(results)

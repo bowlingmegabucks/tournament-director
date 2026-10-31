@@ -11,6 +11,7 @@
     "!src/test/**",
     "!src/vite-env.d.ts"
   ],
+  "incremental": true,
   "reporters": ["clear-text", "html"],
   "dashboard": { "module": "web" },
   "thresholds": { "high": 80, "low": 60, "break": 50 }

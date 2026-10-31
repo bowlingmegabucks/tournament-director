@@ -100,3 +100,100 @@ export interface SweeperResults {
   cutScore: number | null
   rows: SweeperRow[]
 }
+
+/**
+ * What the At-large, Finals seeding, and Super sweeper pages read (RES-37). The API's
+ * `features/results/types.ts` has the same fields: change both together. `complete` is true only
+ * when the tournament has squads (or sweepers) and every one is complete (D-88).
+ */
+
+/** RES-17: a bowler who took an at-large spot. */
+export interface AtLargeRow {
+  registrationId: string
+  name: string
+  place: number
+  /** The squad of the bowler's best entry (RES-14). A local date and time, `YYYY-MM-DDTHH:mm:ss`. */
+  squadDate: string
+  total: number
+  highGame: number
+  /** The bowler cashed in a squad (RES-16, D-07). */
+  previousCasher: boolean
+  ties: Tie[]
+}
+
+export interface AtLargeDivision {
+  id: string
+  number: number
+  name: string
+  /** `E`, `S`, `Q`, and the open spots (RES-12, RES-13). */
+  entries: number
+  totalSpots: number
+  squadAdvancers: number
+  atLargeSpots: number
+  rows: AtLargeRow[]
+}
+
+export interface AtLargeResults {
+  complete: boolean
+  finalsRatio: number
+  divisions: AtLargeDivision[]
+}
+
+/** RES-20: a finalist, or after the cut line any other bowler. */
+export interface SeedingRow {
+  registrationId: string
+  name: string
+  seed: number
+  group: 'finalist' | 'other'
+  squadDate: string
+  total: number
+  highGame: number
+  handicap: number
+  previousCasher: boolean
+  ties: Tie[]
+}
+
+export interface SeedingDivision {
+  id: string
+  number: number
+  name: string
+  entries: number
+  finalists: number
+  atLarge: number
+  showHandicap: boolean
+  rows: SeedingRow[]
+}
+
+export interface SeedingResults {
+  complete: boolean
+  finalsRatio: number
+  divisions: SeedingDivision[]
+}
+
+/** D-90: why a super sweeper row carries a tag. */
+export interface SweeperFlag {
+  kind: 'missed' | 'unfinished'
+  sweeperId: string
+  gamesBowled: number
+}
+
+export interface SuperSweeperRow extends RankedRow {
+  group: 'casher' | 'other'
+  divisionName: string
+  /** One total per entry of `sweepers`, in that order. `null`: still open, no score yet (D-90). */
+  sweeperTotals: (number | null)[]
+  flags: SweeperFlag[]
+}
+
+export interface SuperSweeperResults {
+  complete: boolean
+  cashRatio: number
+  entries: number
+  cashers: number
+  cutScore: number | null
+  /** In date order: one column each. */
+  sweepers: { id: string; date: string; games: number; complete: boolean }[]
+  rows: SuperSweeperRow[]
+}
+
+export type FinalsKind = 'at-large' | 'seeding' | 'super-sweeper'

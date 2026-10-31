@@ -527,3 +527,144 @@ test('the Results tab does not scroll sideways on a phone (D-73)', async ({ page
   )
   expect(overflow).toBeLessThanOrEqual(0)
 })
+
+/** Open the first tournament and one of its sidebar pages. */
+async function openTournamentPage(page: Page, link: string) {
+  await page.goto('/tournaments')
+  await page.getByRole('article').first().getByRole('link').click()
+  await page
+    .getByRole('navigation', { name: /Northeast MegaBuck/ })
+    .getByRole('link', { name: link })
+    .click()
+}
+
+test('At-large lists the open spots for a division and marks the results unofficial (RES-12, RES-17, D-84, D-87, D-88)', async ({
+  page,
+}) => {
+  await openTournamentPage(page, 'At-large')
+
+  await expect(page.getByRole('heading', { level: 1, name: 'At-large' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'At-large' })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByText(/Unofficial results\. Not every squad is complete/)).toBeVisible()
+  const open = page.getByRole('table', { name: 'At-large results for the Open division' })
+  await expect(open.getByRole('row', { name: /Dave Kowalski/ })).toContainText('Cashed on a squad')
+  await expect(open.getByText(/Won the spot on high game/)).toBeVisible()
+
+  await page
+    .getByRole('combobox', { name: 'Division' })
+    .selectOption({ label: 'Women/Senior (32 entries)' })
+  await expect(page.getByText('No at-large spots in this division.')).toBeVisible()
+  await expect(page).toHaveURL(/at-large\?division=/)
+})
+
+test('Seeding lists the finalists, a cut line, and the squad of each seed (RES-18 to RES-21a, D-92)', async ({
+  page,
+}) => {
+  await openTournamentPage(page, 'Seeding')
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Finals seeding' })).toBeVisible()
+  const seeds = page.getByRole('table', { name: 'Finals seeding for the Open division' })
+  await expect(seeds.getByRole('columnheader', { name: 'HDCP' })).toBeVisible()
+  await expect(seeds.getByRole('row', { name: 'Cut Line' })).toBeVisible()
+  await expect(seeds.getByRole('row', { name: /#1 .*Dana Whitfield/ })).toBeVisible()
+})
+
+test('Super sweeper results open from the Sweepers page, with a column for each sweeper (RES-29a, D-87, D-90)', async ({
+  page,
+}) => {
+  await openTournamentPage(page, 'Sweepers')
+
+  await page.getByRole('link', { name: 'Super sweeper results' }).click()
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Super sweeper results' })).toBeVisible()
+  const list = page.getByRole('table', { name: 'Super sweeper results' })
+  await expect(list.getByRole('row', { name: 'Cash Line' })).toBeVisible()
+  await expect(list.getByText('Did not finish a sweeper')).toBeVisible()
+  // A bowler who did not finish and one who missed a sweeper rank by total; a no-show is last (D-90).
+  const names = list.getByRole('rowheader')
+  await expect(names).toHaveText([
+    /Dana Whitfield/,
+    /Dave Kowalski/,
+    /Lee Park/,
+    /Sam Ortiz/,
+    /Pat Romano/,
+  ])
+  await expect(names.last().getByText('Missed a sweeper')).toHaveCount(2)
+  await expect(page.getByText(/Unofficial results\. Not every sweeper is complete/)).toBeVisible()
+})
+
+test('Print all divisions prints each at-large division on its own letter page (D-89)', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    window.print = () => undefined
+  })
+  await openTournamentPage(page, 'At-large')
+  await expect(page.getByRole('heading', { level: 2, name: 'Open' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Print all divisions' }).click()
+  await expect(page.locator('body')).toHaveAttribute('data-results-printing', '')
+  await page.emulateMedia({ media: 'print' })
+  const all = (await page.pdf({ preferCSSPageSize: true, printBackground: true })).toString(
+    'latin1',
+  )
+  expect(all.match(/\/MediaBox \[0 0 612 792\]/g)).toHaveLength(2)
+})
+
+test('Print this division prints only the chosen seeding division on one letter page (D-89)', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    window.print = () => undefined
+  })
+  await openTournamentPage(page, 'Seeding')
+  await expect(page.getByRole('heading', { level: 2, name: 'Open' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Print this division' }).click()
+  await expect(page.locator('body')).toHaveAttribute('data-results-printing', '')
+  await page.emulateMedia({ media: 'print' })
+  const pdf = (await page.pdf({ preferCSSPageSize: true, printBackground: true })).toString(
+    'latin1',
+  )
+
+  expect(pdf.match(/\/MediaBox \[0 0 612 792\]/g)).toHaveLength(1)
+})
+
+test('Print results prints the super sweeper on one letter page (D-89)', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.print = () => undefined
+  })
+  await openTournamentPage(page, 'Sweepers')
+  await page.getByRole('link', { name: 'Super sweeper results' }).click()
+  await expect(page.getByRole('table', { name: 'Super sweeper results' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Print results' }).click()
+  await expect(page.locator('body')).toHaveAttribute('data-results-printing', '')
+  await page.emulateMedia({ media: 'print' })
+  const pdf = (await page.pdf({ preferCSSPageSize: true, printBackground: true })).toString(
+    'latin1',
+  )
+
+  expect(pdf.match(/\/MediaBox \[0 0 612 792\]/g)).toHaveLength(1)
+})
+
+test('the at-large, seeding, and super sweeper pages do not scroll sideways on a phone (D-73)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 })
+  const overflow = () =>
+    page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+
+  await openTournamentPage(page, 'At-large')
+  await expect(page.getByRole('heading', { level: 2, name: 'Open' })).toBeVisible()
+  expect(await overflow()).toBeLessThanOrEqual(0)
+
+  await openTournamentPage(page, 'Seeding')
+  await expect(page.getByRole('heading', { level: 2, name: 'Open' })).toBeVisible()
+  expect(await overflow()).toBeLessThanOrEqual(0)
+
+  await openTournamentPage(page, 'Sweepers')
+  await page.getByRole('link', { name: 'Super sweeper results' }).click()
+  await expect(page.getByRole('table', { name: 'Super sweeper results' })).toBeVisible()
+  expect(await overflow()).toBeLessThanOrEqual(0)
+})

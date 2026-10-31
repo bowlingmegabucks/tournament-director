@@ -37,7 +37,6 @@ The legacy code lives in the `tournament-manager` repo under `legacy/source/`. E
 | [squads-and-sweepers.md](squads-and-sweepers.md) | Squad and sweeper setup and completion |
 | [lane-assignments.md](lane-assignments.md) | Lane positions, moving bowlers, recap-sheet lane rotation |
 | [scores.md](scores.md) | Score entry, handicap, sweeper bonus pins, ranking and tie-breaks |
-| [results.md](results.md) | Squad results, at-large, finals seeding, sweeper and super sweeper results |
 | [payments.md](payments.md) | Payment records |
 
 ### Shared

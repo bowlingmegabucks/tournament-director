@@ -26,7 +26,7 @@ Version numbers follow content, not a countdown. 0.10.0 is fine.
 ## Data and cutover
 
 - [ ] The API reads and writes the existing database; the schema matches [database.md](migration/database.md).
-- [ ] Compare app output with WinForms output on real tournament data (results, rankings, reports). Still open: squad and sweeper results are built but not yet compared on real data.
+- [ ] Compare app output with WinForms output on real tournament data (results, rankings, reports). Still open: squad, sweeper, at-large, seeding, and super sweeper results are built but not yet compared on real data.
 - [ ] Legacy sunset date set and a freeze date for the old app.
 - [ ] Rollback plan written.
 - [ ] Rename the misspelled `SuperSweeperCashRatio` column (legacy issue #101) after WinForms is off, and remove the mapping workaround in the API.
@@ -39,8 +39,8 @@ Version numbers follow content, not a countdown. 0.10.0 is fine.
 Review each open issue in [bowlingmegabucks/tournament-manager](https://github.com/bowlingmegabucks/tournament-manager/issues). For each, decide: bring it over (open an issue here or record a decision in [decisions-and-questions.md](migration/decisions-and-questions.md)), already handled by the rewrite, or drop. Open issues as of 2026-10-21:
 
 - [ ] #130 Refactor presenter construction (service locator). WinForms only; likely moot.
-- [ ] #124 Seeding Score (question)
-- [ ] #122 Handicap on Seeding Report
+- [x] #124 Seeding Score (question). Answered: each finalist seeds on their best single squad entry (RES-19, built in finals results)
+- [x] #122 Handicap on Seeding Report. Built as an HDCP column that shows when someone in the division has a handicap (D-92)
 - [ ] #113 Lane Assignment Sorting Options
 - [ ] #112 Registration Timestamp (database change; likely 1.x)
 - [ ] #101 Fix SuperSweeperCashRatio spelling on Tournament entity (bug; database change). **Rename the column right before the 1.0.0 release, once WinForms is sunset** (it needs the bad name). Until then the API maps the misspelled column to the correct name in code. The release checklist must include the rename.
@@ -88,4 +88,4 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 
 Add items here as they come up, then move them to a section above.
 
--
+- [ ] Look into caching in the final 0.2.0 review, before the tag and before 0.3.0 work. Today only the at-large, seeding, and super sweeper routes cache (5 s per tournament, `FINALS_CACHE_MS` in `api/src/features/results/routes.ts`). Check the squad and sweeper results, scores, lanes, and registrations routes, which poll or recompute on each call, and decide what to cache, for how long, and whether the cache must change once routes sit behind auth (a per-user answer must not be shared).

@@ -24,6 +24,7 @@
     "!src/db/seedRegistrations.ts",
     "!src/db/seedScores.ts"
   ],
+  "incremental": true,
   "reporters": ["clear-text", "html"],
   "dashboard": {
     "module": "api"

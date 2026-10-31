@@ -23,6 +23,8 @@ model Tournament {
   /// 1 in N advance. A squad may override it; the squad list needs the default (TRN-12).
   finalsRatio   Decimal  @map("FinalsRatio") @db.Decimal(3, 1)
   cashRatio     Decimal  @map("CashRatio") @db.Decimal(3, 1)
+  /// 1 in N super sweeper bowlers cash (TRN-09). Column name has a typo: "Sweper". May hold the legacy 0 (D-17).
+  superSweeperCashRatio Decimal @map("SuperSweperCashRatio") @db.Decimal(3, 1)
   bowlingCenter String   @map("BowlingCenter") @db.LongText
   squads        Squad[]
 

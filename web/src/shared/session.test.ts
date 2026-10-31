@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { LaneSetupError, retryUnlessFinal, SessionNotFoundError } from './session'
+import { TournamentNotFoundError } from './tournamentQuery'
 
 describe('SessionNotFoundError', () => {
   it('names a squad or a sweeper', () => {
@@ -16,6 +17,10 @@ describe('retryUnlessFinal', () => {
 
   it('does not retry a missing session', () => {
     expect(retryUnlessFinal(0, new SessionNotFoundError('squad'))).toBe(false)
+  })
+
+  it('does not retry a missing tournament', () => {
+    expect(retryUnlessFinal(0, new TournamentNotFoundError())).toBe(false)
   })
 
   it('does not retry a session that cannot take lanes', () => {

@@ -1,8 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { retryUnlessFinal } from '../../shared/session'
 import { tournamentKeys } from '../../shared/tournamentQuery'
-import { fetchSquadResults, fetchSweeperResults, ResultsUnavailableError } from './api'
-import type { SessionKind } from './types'
+import {
+  fetchAtLarge,
+  fetchSeeding,
+  fetchSquadResults,
+  fetchSuperSweeper,
+  fetchSweeperResults,
+  ResultsUnavailableError,
+} from './api'
+import type { FinalsKind, SessionKind } from './types'
 
 /**
  * How often the Results tab asks again, until a push channel exists (D-79, Q-33). TanStack Query
@@ -14,10 +21,15 @@ export const RESULTS_REFRESH_MS = 15_000
 export const resultKeys = {
   page: (kind: SessionKind, tournamentId: string, sessionId: string) =>
     [...tournamentKeys.detail(tournamentId), `${kind}s`, sessionId, 'results'] as const,
+  finals: (kind: FinalsKind, tournamentId: string) =>
+    [...tournamentKeys.detail(tournamentId), kind, 'results'] as const,
 }
 
-/** Retry once, but not a missing session or a ratio the results cannot use: a second try answers the same. */
-function retryUnlessFinalResults(failureCount: number, error: Error): boolean {
+/**
+ * The one retry rule of every results query: once, but not for a missing tournament or session or a
+ * ratio the results cannot use (a second try answers the same).
+ */
+export function retryUnlessFinalResults(failureCount: number, error: Error): boolean {
   return !(error instanceof ResultsUnavailableError) && retryUnlessFinal(failureCount, error)
 }
 
@@ -37,5 +49,37 @@ export function useSweeperResults(tournamentId: string, sessionId: string) {
     queryFn: () => fetchSweeperResults(tournamentId, sessionId),
     retry: retryUnlessFinalResults,
     refetchInterval: (query) => (query.state.data?.session.complete ? false : RESULTS_REFRESH_MS),
+  })
+}
+
+// A tournament part that is not complete can still change (D-88), so it asks again every 15
+// seconds; once every squad (or sweeper) is complete it stops. A failed refresh keeps the last results.
+const stopWhenComplete = (query: { state: { data?: { complete: boolean } } }) =>
+  query.state.data?.complete ? false : RESULTS_REFRESH_MS
+
+export function useAtLarge(tournamentId: string) {
+  return useQuery({
+    queryKey: resultKeys.finals('at-large', tournamentId),
+    queryFn: () => fetchAtLarge(tournamentId),
+    retry: retryUnlessFinalResults,
+    refetchInterval: stopWhenComplete,
+  })
+}
+
+export function useSeeding(tournamentId: string) {
+  return useQuery({
+    queryKey: resultKeys.finals('seeding', tournamentId),
+    queryFn: () => fetchSeeding(tournamentId),
+    retry: retryUnlessFinalResults,
+    refetchInterval: stopWhenComplete,
+  })
+}
+
+export function useSuperSweeper(tournamentId: string) {
+  return useQuery({
+    queryKey: resultKeys.finals('super-sweeper', tournamentId),
+    queryFn: () => fetchSuperSweeper(tournamentId),
+    retry: retryUnlessFinalResults,
+    refetchInterval: stopWhenComplete,
   })
 }

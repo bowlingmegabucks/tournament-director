@@ -5,7 +5,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import { createSquadResults, createSweeperResults } from '../../mocks/data'
-import { RESULTS_REFRESH_MS, resultKeys, useSquadResults, useSweeperResults } from './useResults'
+import { TournamentNotFoundError } from '../../shared/tournamentQuery'
+import { ResultsUnavailableError } from './api'
+import {
+  RESULTS_REFRESH_MS,
+  resultKeys,
+  retryUnlessFinalResults,
+  useSquadResults,
+  useSweeperResults,
+} from './useResults'
 
 afterEach(() => {
   vi.useRealTimers()
@@ -122,5 +130,18 @@ describe.each([
 
     await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 5000 })
     expect(calls.count).toBe(2)
+  })
+})
+
+describe('retryUnlessFinalResults (D-88, D-93)', () => {
+  it('retries one failure once, then stops', () => {
+    expect(retryUnlessFinalResults(0, new Error('boom'))).toBe(true)
+    expect(retryUnlessFinalResults(1, new Error('boom'))).toBe(false)
+    expect(retryUnlessFinalResults(2, new Error('boom'))).toBe(false)
+  })
+
+  it('never retries a ratio the results cannot use, or a missing tournament', () => {
+    expect(retryUnlessFinalResults(0, new ResultsUnavailableError('ratio is 0'))).toBe(false)
+    expect(retryUnlessFinalResults(0, new TournamentNotFoundError())).toBe(false)
   })
 })

@@ -95,6 +95,10 @@ jobs:
 
   mutation:
     name: Mutation tests
+    # The called workflow asks for pull-requests: write (the pull request comment).
+    permissions:
+      contents: read
+      pull-requests: write
     strategy:
       fail-fast: false
       matrix:
@@ -102,6 +106,7 @@ jobs:
     uses: ./.github/workflows/mutation.yml
     with:
       folder: ${{ matrix.folder }}
+      changed-only: true
 
   api-verify:
     name: API lint, test, build

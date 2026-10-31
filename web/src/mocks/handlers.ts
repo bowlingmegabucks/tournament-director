@@ -1,11 +1,14 @@
 import { http, HttpResponse } from 'msw'
 import {
+  createDemoAtLarge,
   createDemoDivisions,
   createDemoLanePage,
   createDemoRecapSheets,
   createDemoRegistrationList,
   createDemoScorePage,
+  createDemoSeeding,
   createDemoSquadResults,
+  createDemoSuperSweeper,
   createDemoSweeperResults,
   createDemoSquads,
   createDemoSweepers,
@@ -86,6 +89,21 @@ export const handlers = [
       ? HttpResponse.json(createDemoSweeperResults(sweeper))
       : HttpResponse.json({ message: 'Sweeper not found' }, { status: 404 })
   }),
+  http.get('/v1/tournaments/:id/at-large', ({ params }) =>
+    tournaments.some((candidate) => candidate.id === params.id)
+      ? HttpResponse.json(createDemoAtLarge())
+      : notFound(),
+  ),
+  http.get('/v1/tournaments/:id/seeding', ({ params }) =>
+    tournaments.some((candidate) => candidate.id === params.id)
+      ? HttpResponse.json(createDemoSeeding())
+      : notFound(),
+  ),
+  http.get('/v1/tournaments/:id/super-sweeper', ({ params }) =>
+    tournaments.some((candidate) => candidate.id === params.id)
+      ? HttpResponse.json(createDemoSuperSweeper(sweepers))
+      : notFound(),
+  ),
   http.get('/v1/tournaments/:id/squads/:sessionId/recap-sheets', ({ params }) => {
     if (!tournaments.some((candidate) => candidate.id === params.id)) return notFound()
     const squad = squads.find((candidate) => candidate.id === params.sessionId)

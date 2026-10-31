@@ -1,0 +1,12 @@
+/* The link to the super sweeper results: an outline button above the cards (D-87). */
+.link {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-block-size: var(--target-min);
+  padding-inline: var(--space-4);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius);
+  color: var(--color-accent);
+  text-decoration: none;
+}

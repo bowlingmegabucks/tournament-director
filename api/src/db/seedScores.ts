@@ -7,7 +7,9 @@ import { samples as sampleTournaments } from './seedTournaments.ts'
 // `b1` (sweeper 1), as in its `lanes`. Squad 1 is complete: everyone who bowled has every game, and
 // bowler 2 is a no-show with the zeros Complete writes (SQD-15). Squad 2 is open, so its first pair
 // is part scored: one bowler has two games, one has one, and one has none. Sweeper 1 is open with
-// two of its three games in for one bowler. Scratch pins only (D-68).
+// two of its three games in for one bowler. Sweeper 2 is complete (four games): the bowlers 1 and 3 are
+// super sweeper bowlers, 1 with every game and 3 with two, and bowler 4 is a super sweeper bowler who
+// missed it, so the super sweeper shows both tags (D-90). Scratch pins only (D-68).
 const samples = [
   { session: 'a1', bowler: 1, games: [212, 198, 231] },
   { session: 'a1', bowler: 2, games: [0, 0, 0] },
@@ -17,6 +19,8 @@ const samples = [
   { session: 'a2', bowler: 1, games: [210, 198] },
   { session: 'a2', bowler: 5, games: [245] },
   { session: 'b1', bowler: 1, games: [222, 201] },
+  { session: 'b2', bowler: 1, games: [205, 198, 214, 220] },
+  { session: 'b2', bowler: 3, games: [180, 175] },
 ]
 
 /**

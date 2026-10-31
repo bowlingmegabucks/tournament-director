@@ -51,5 +51,6 @@ What the user sees and can do.
 | Recap sheets (preview, print, the cross) | [recap-sheets.md](recap-sheets.md)              |
 | Scores (view)                           | [scores.md](scores.md)                           |
 | Results (squad and sweeper)             | [results.md](results.md)                         |
+| Results (at-large, seeding, super sweeper) | [finals-results.md](finals-results.md)        |
 | Navigation and layout                   | [navigation.md](navigation.md)                   |
 | API route access                        | [api-access.md](api-access.md)                   |

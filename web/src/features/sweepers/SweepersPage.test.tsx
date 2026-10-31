@@ -193,4 +193,25 @@ describe('SweepersPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Tournament not found')
     expect(calls).toBe(1)
   })
+
+  it('links to the super sweeper results above the cards (D-87)', async () => {
+    serve([createSweeper()])
+
+    open()
+
+    await titles()
+    expect(screen.getByRole('link', { name: 'Super sweeper results' })).toHaveAttribute(
+      'href',
+      `/tournaments/${tournament.id}/super-sweeper`,
+    )
+  })
+
+  it('hides the super sweeper link when there are no sweepers (D-87)', async () => {
+    serve([])
+
+    open()
+
+    expect(await screen.findByText('No sweepers yet.', {}, { timeout: 3000 })).toBeVisible()
+    expect(screen.queryByRole('link', { name: 'Super sweeper results' })).not.toBeInTheDocument()
+  })
 })

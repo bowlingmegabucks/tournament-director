@@ -1,4 +1,5 @@
 import type { ResultEntry } from './entries.ts'
+import { compareText } from './resultHelpers.ts'
 
 /**
  * What separated two entries after the total: the number of games, or the Nth best game.
@@ -52,11 +53,6 @@ export function compareEntries(a: ResultEntry, b: ResultEntry): number {
 export function decidedBy(a: ResultEntry, b: ResultEntry): Decider | undefined {
   const difference = firstDifference(a, b)
   return difference && difference.criterion !== 'total' ? difference.criterion : undefined
-}
-
-// Ignores case and accents, as the database collation does (BWL-14).
-function compareText(a: string, b: string): number {
-  return a.localeCompare(b, 'en', { sensitivity: 'base' })
 }
 
 /**

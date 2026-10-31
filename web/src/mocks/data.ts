@@ -5,9 +5,17 @@ import type { SessionKind } from '../shared/session'
 import type { RecapSheet, RecapSheets } from '../features/recapSheets/types'
 import type { Registration, RegistrationList } from '../features/registrations/types'
 import type {
+  AtLargeDivision,
+  AtLargeResults,
+  AtLargeRow,
   DivisionResult,
+  SeedingDivision,
+  SeedingResults,
+  SeedingRow,
   SquadResults,
   SquadRow,
+  SuperSweeperResults,
+  SuperSweeperRow,
   SweeperResults,
   SweeperRow,
 } from '../features/results/types'
@@ -949,6 +957,254 @@ export function createDemoSweeperResults(session: {
         place: index + 1,
         group: index < 2 ? 'casher' : 'other',
         games: session.games,
+      }),
+    ),
+  })
+}
+
+/** A bowler who took an at-large spot (RES-17). */
+export function createAtLargeRow(overrides: Partial<AtLargeRow> = {}): AtLargeRow {
+  return {
+    registrationId: faker.string.uuid(),
+    name: `${faker.person.firstName()} ${faker.person.lastName()}`,
+    place: 1,
+    squadDate: '2026-10-24T09:00:00',
+    total: 1400,
+    highGame: 240,
+    previousCasher: false,
+    ties: [],
+    ...overrides,
+  }
+}
+
+/** One division of at-large results. Override the rows and spots a test cares about. */
+export function createAtLargeDivision(overrides: Partial<AtLargeDivision> = {}): AtLargeDivision {
+  return {
+    id: faker.string.uuid(),
+    number: 1,
+    name: 'Open',
+    entries: 0,
+    totalSpots: 0,
+    squadAdvancers: 0,
+    atLargeSpots: 0,
+    rows: [],
+    ...overrides,
+  }
+}
+
+export function createAtLargeResults(overrides: Partial<AtLargeResults> = {}): AtLargeResults {
+  return { complete: false, finalsRatio: 8, divisions: [], ...overrides }
+}
+
+/** A finalist (or, with `group: 'other'`, a bowler after the cut line) in a seeding (RES-20). */
+export function createSeedingRow(overrides: Partial<SeedingRow> = {}): SeedingRow {
+  return {
+    registrationId: faker.string.uuid(),
+    name: `${faker.person.firstName()} ${faker.person.lastName()}`,
+    seed: 1,
+    group: 'finalist',
+    squadDate: '2026-10-24T09:00:00',
+    total: 1400,
+    highGame: 240,
+    handicap: 0,
+    previousCasher: false,
+    ties: [],
+    ...overrides,
+  }
+}
+
+export function createSeedingDivision(overrides: Partial<SeedingDivision> = {}): SeedingDivision {
+  return {
+    id: faker.string.uuid(),
+    number: 1,
+    name: 'Open',
+    entries: 0,
+    finalists: 0,
+    atLarge: 0,
+    showHandicap: false,
+    rows: [],
+    ...overrides,
+  }
+}
+
+export function createSeedingResults(overrides: Partial<SeedingResults> = {}): SeedingResults {
+  return { complete: false, finalsRatio: 8, divisions: [], ...overrides }
+}
+
+/** A placed bowler of the super sweeper (RES-29a). Totals are one per sweeper column. */
+export function createSuperSweeperRow(overrides: Partial<SuperSweeperRow> = {}): SuperSweeperRow {
+  return {
+    registrationId: faker.string.uuid(),
+    name: `${faker.person.firstName()} ${faker.person.lastName()}`,
+    place: 1,
+    group: 'other',
+    total: 1200,
+    highGame: 220,
+    games: 6,
+    ties: [],
+    divisionName: 'Open',
+    sweeperTotals: [600, 600],
+    flags: [],
+    ...overrides,
+  }
+}
+
+/** Super sweeper results with two complete sweepers and no one in them. */
+export function createSuperSweeperResults(
+  overrides: Partial<SuperSweeperResults> = {},
+): SuperSweeperResults {
+  return {
+    complete: false,
+    cashRatio: 4,
+    entries: 0,
+    cashers: 0,
+    cutScore: null,
+    sweepers: [
+      { id: faker.string.uuid(), date: '2026-10-23T18:00:00', games: 3, complete: true },
+      { id: faker.string.uuid(), date: '2026-10-24T18:00:00', games: 3, complete: true },
+    ],
+    rows: [],
+    ...overrides,
+  }
+}
+
+type DemoFinalist = [name: string, total: number, highGame: number, squad: number, cashed?: boolean]
+
+const demoSquadDates = ['2026-10-23T09:00:00', '2026-10-23T13:00:00', '2026-10-24T09:00:00']
+
+/** For the mock server: the at-large spots of a demo tournament, two divisions and a tie at the last spot. */
+export function createDemoAtLarge(): AtLargeResults {
+  const open: DemoFinalist[] = [
+    ['Dave Kowalski', 1402, 248, 0, true],
+    ['Marcus Reyes', 1398, 256, 1],
+  ]
+  return createAtLargeResults({
+    complete: false,
+    finalsRatio: 8,
+    divisions: [
+      createAtLargeDivision({
+        number: 1,
+        name: 'Open',
+        entries: 80,
+        totalSpots: 10,
+        squadAdvancers: 8,
+        atLargeSpots: 2,
+        rows: open.map(([name, total, highGame, squad, cashed = false], index) =>
+          createAtLargeRow({
+            name,
+            total,
+            highGame,
+            place: index + 1,
+            squadDate: demoSquadDates[squad],
+            previousCasher: cashed,
+            ties:
+              index === 1
+                ? [{ line: 'cut', outcome: 'won', decidedBy: { kind: 'game', rank: 1 } }]
+                : [],
+          }),
+        ),
+      }),
+      createAtLargeDivision({
+        number: 2,
+        name: 'Women/Senior',
+        entries: 32,
+        totalSpots: 4,
+        squadAdvancers: 4,
+        atLargeSpots: 0,
+      }),
+    ],
+  })
+}
+
+/** For the mock server: the seeding of a demo tournament, finalists then a cut line. */
+export function createDemoSeeding(): SeedingResults {
+  const players: DemoFinalist[] = [
+    ['Dana Whitfield', 1512, 279, 2],
+    ['Dave Kowalski', 1498, 255, 0, true],
+    ['Marcus Reyes', 1498, 250, 1],
+    ['Tom Brandt', 1210, 220, 0],
+    ['Jim Albright', 1190, 215, 1],
+  ]
+  return createSeedingResults({
+    finalsRatio: 8,
+    divisions: [
+      createSeedingDivision({
+        number: 1,
+        name: 'Open',
+        entries: 80,
+        finalists: 3,
+        atLarge: 1,
+        showHandicap: true,
+        rows: players.map(([name, total, highGame, squad, cashed = false], index) =>
+          createSeedingRow({
+            name,
+            total,
+            highGame,
+            seed: index + 1,
+            group: index < 3 ? 'finalist' : 'other',
+            squadDate: demoSquadDates[squad],
+            handicap: index === 0 ? 12 : 0,
+            previousCasher: cashed,
+          }),
+        ),
+      }),
+    ],
+  })
+}
+
+/** For the mock server: the super sweeper over the demo sweepers, with an unfinished sweeper, a missed one, and a no-show last. */
+export function createDemoSuperSweeper(
+  sweepers: readonly { id: string; date: string; games: number; complete: boolean }[],
+): SuperSweeperResults {
+  const columns = sweepers.map(({ id, date, games, complete }) => ({ id, date, games, complete }))
+  const [first, second] = columns
+  const players: [string, string, (number | null)[], number, number, SuperSweeperRow['flags']][] = [
+    ['Dana Whitfield', 'Women/Senior', [712, 698], 1410, 262, []],
+    ['Dave Kowalski', 'Open', [690, 681], 1371, 248, []],
+    [
+      'Lee Park',
+      'Women/Senior',
+      [390, 380],
+      770,
+      231,
+      first ? [{ kind: 'unfinished', sweeperId: first.id, gamesBowled: 2 }] : [],
+    ],
+    [
+      'Sam Ortiz',
+      'Open',
+      [605, 0],
+      605,
+      220,
+      second ? [{ kind: 'missed', sweeperId: second.id, gamesBowled: 0 }] : [],
+    ],
+    // A no-show holds zero rows (D-06), so every sweeper is missed and the total is 0: last (D-90).
+    [
+      'Pat Romano',
+      'Open',
+      [0, 0],
+      0,
+      0,
+      columns.map((column) => ({ kind: 'missed' as const, sweeperId: column.id, gamesBowled: 0 })),
+    ],
+  ]
+  return createSuperSweeperResults({
+    complete: false,
+    cashRatio: 2,
+    entries: players.length,
+    cashers: 2,
+    cutScore: 1371,
+    sweepers: columns,
+    rows: players.map(([name, divisionName, sweeperTotals, total, highGame, flags], index) =>
+      createSuperSweeperRow({
+        name,
+        divisionName,
+        sweeperTotals: sweeperTotals.slice(0, columns.length),
+        total,
+        highGame,
+        flags,
+        place: index + 1,
+        group: index < 2 ? 'casher' : 'other',
+        games: columns.reduce((sum, column) => sum + column.games, 0),
       }),
     ),
   })

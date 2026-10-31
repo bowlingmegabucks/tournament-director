@@ -114,3 +114,120 @@ export const sweeperResultsSchema = z.object({
 })
 
 export type SweeperResults = z.infer<typeof sweeperResultsSchema>
+
+/**
+ * The tournament-wide results (D-85): at-large, finals seeding, and the super sweeper. `complete` is
+ * true only when the tournament has squads (or sweepers) and every one is complete; until then the
+ * page says "Unofficial results" (D-84, D-88). Web only, never vendor-visible (D-09).
+ */
+
+/** RES-17: a bowler who took an at-large spot. */
+export const atLargeRowSchema = z.object({
+  registrationId: z.uuid(),
+  name: z.string().min(1),
+  place: z.number().int().min(1),
+  /** The squad of the bowler's best entry (RES-14). */
+  squadDate: localDateTimeSchema,
+  total: z.number().int(),
+  highGame: z.number().int(),
+  /** The bowler cashed in a squad (RES-16, D-07). */
+  previousCasher: z.boolean(),
+  ties: z.array(tieSchema),
+})
+
+export const atLargeDivisionSchema = z.object({
+  id: z.uuid(),
+  number: z.number().int(),
+  name: z.string(),
+  /** `E`, `S`, `Q` and the open spots (RES-12, RES-13). */
+  entries: z.number().int().nonnegative(),
+  totalSpots: z.number().int().nonnegative(),
+  squadAdvancers: z.number().int().nonnegative(),
+  atLargeSpots: z.number().int().nonnegative(),
+  rows: z.array(atLargeRowSchema),
+})
+
+export const atLargeResultsSchema = z.object({
+  complete: z.boolean(),
+  /** The tournament's finals ratio (RES-12, D-86). */
+  finalsRatio: z.number(),
+  /** By name. A division with no entries is left out. */
+  divisions: z.array(atLargeDivisionSchema),
+})
+
+export type AtLargeResults = z.infer<typeof atLargeResultsSchema>
+
+/** RES-20: a finalist or, after the cut line, any other bowler. */
+export const seedingRowSchema = z.object({
+  registrationId: z.uuid(),
+  name: z.string().min(1),
+  seed: z.number().int().min(1),
+  group: z.enum(['finalist', 'other']),
+  /** The squad of the bowler's best entry (RES-19, D-92). */
+  squadDate: localDateTimeSchema,
+  total: z.number().int(),
+  highGame: z.number().int(),
+  /** The handicap per game of that entry (D-92). */
+  handicap: z.number().int(),
+  previousCasher: z.boolean(),
+  ties: z.array(tieSchema),
+})
+
+export const seedingDivisionSchema = z.object({
+  id: z.uuid(),
+  number: z.number().int(),
+  name: z.string(),
+  entries: z.number().int().nonnegative(),
+  finalists: z.number().int().nonnegative(),
+  /** How many of the finalists took at-large spots. */
+  atLarge: z.number().int().nonnegative(),
+  /** RES-11a: someone in the division has a handicap above 0. */
+  showHandicap: z.boolean(),
+  rows: z.array(seedingRowSchema),
+})
+
+export const seedingResultsSchema = z.object({
+  complete: z.boolean(),
+  finalsRatio: z.number(),
+  divisions: z.array(seedingDivisionSchema),
+})
+
+export type SeedingResults = z.infer<typeof seedingResultsSchema>
+
+/** D-90: why a super sweeper row carries a tag. */
+export const sweeperFlagSchema = z.object({
+  kind: z.enum(['missed', 'unfinished']),
+  sweeperId: z.uuid(),
+  gamesBowled: z.number().int().nonnegative(),
+})
+
+export const superSweeperRowSchema = z.object({
+  ...rowFields,
+  group: z.enum(['casher', 'other']),
+  divisionName: z.string(),
+  /** One total per entry of `sweepers`, in that order. `null`: still open, no score yet (D-90). */
+  sweeperTotals: z.array(z.number().int().nullable()),
+  flags: z.array(sweeperFlagSchema),
+})
+
+export type SuperSweeperRow = z.infer<typeof superSweeperRowSchema>
+
+export const superSweeperResultsSchema = z.object({
+  complete: z.boolean(),
+  cashRatio: z.number(),
+  entries: z.number().int().nonnegative(),
+  cashers: z.number().int().nonnegative(),
+  cutScore: z.number().int().nullable(),
+  /** In date order: one column each (D-90). */
+  sweepers: z.array(
+    z.object({
+      id: z.uuid(),
+      date: localDateTimeSchema,
+      games: z.number().int(),
+      complete: z.boolean(),
+    }),
+  ),
+  rows: z.array(superSweeperRowSchema),
+})
+
+export type SuperSweeperResults = z.infer<typeof superSweeperResultsSchema>

@@ -45,6 +45,19 @@ function markLine(
   }
 }
 
+/**
+ * D-14, D-93: the tie marks at a cut that is not a squad's own: the last at-large spot, and the
+ * line between finalists and the rest of a seeding. `above` and `below` are in rank order.
+ */
+export function markCutLine(
+  above: readonly ResultEntry[],
+  below: readonly ResultEntry[],
+): Map<string, Tie[]> {
+  const marks = new Map<string, Tie[]>()
+  markLine(marks, 'cut', above, below)
+  return marks
+}
+
 /** D-14: the tie marks at a sweeper's cash line, by registration id. */
 export function markCashLine(
   cashers: readonly ResultEntry[],

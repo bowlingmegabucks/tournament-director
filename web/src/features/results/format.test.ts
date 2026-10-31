@@ -1,11 +1,26 @@
 import { describe, expect, it } from 'vitest'
-import { createDivisionResult, createSquadRow, createSweeperRow } from '../../mocks/data'
 import {
+  createAtLargeDivision,
+  createDivisionResult,
+  createSeedingDivision,
+  createSeedingRow,
+  createSquadRow,
+  createSuperSweeperRow,
+  createSweeperRow,
+} from '../../mocks/data'
+import {
+  formatAtLargeSummary,
   formatDecider,
+  formatFlagNote,
+  formatFlagTag,
   formatGamesOf,
+  formatSeedingSummary,
   formatSummary,
+  formatSweeperColumn,
+  formatSweeperTotal,
   formatTie,
   ordinal,
+  seedingItems,
   squadItems,
   sweeperItems,
 } from './format'
@@ -181,5 +196,145 @@ describe('summaries', () => {
 
   it('writes games as "2 of 3"', () => {
     expect(formatGamesOf(2, 3)).toBe('2 of 3')
+  })
+})
+
+describe('formatTie on the at-large page (D-93)', () => {
+  it('calls the cut line the last at-large spot, and leaves the cash line alone', () => {
+    const won = { line: 'cut', outcome: 'won', decidedBy: { kind: 'game', rank: 1 } } as const
+    expect(formatTie(won, 'last at-large spot')).toBe(
+      'Tied on total at the last at-large spot. Won the spot on high game.',
+    )
+    expect(formatTie({ ...won, line: 'cash' }, 'last at-large spot')).toBe(
+      'Tied on total at the cash line. Won the spot on high game.',
+    )
+    expect(formatTie({ line: 'cut', outcome: 'full', decidedBy: null }, 'last at-large spot')).toBe(
+      'Full tie at the last at-large spot. The director decides.',
+    )
+  })
+})
+
+describe('seedingItems (RES-20)', () => {
+  const seed = (group: 'finalist' | 'other') => createSeedingRow({ group })
+
+  it('puts a Cut Line after the last finalist', () => {
+    const items = seedingItems([seed('finalist'), seed('finalist'), seed('other')])
+
+    expect(items.map((item) => (item.kind === 'line' ? item.label : item.row.group))).toEqual([
+      'finalist',
+      'finalist',
+      'Cut Line',
+      'other',
+    ])
+  })
+
+  it('puts the line last when everyone is a finalist, and omits it with no finalist', () => {
+    expect(seedingItems([seed('finalist')]).map((item) => item.kind)).toEqual(['row', 'line'])
+    expect(seedingItems([seed('other')]).map((item) => item.kind)).toEqual(['row'])
+    expect(seedingItems([])).toEqual([])
+  })
+})
+
+describe('at-large and seeding summaries (RES-12, RES-18)', () => {
+  it('writes the entries, spots, and advancers', () => {
+    const division = createAtLargeDivision({
+      entries: 80,
+      totalSpots: 10,
+      squadAdvancers: 8,
+      atLargeSpots: 2,
+    })
+
+    expect(formatAtLargeSummary(division, 8)).toBe(
+      '80 entries · 10 finals spots (ratio 8) · 8 advanced from squads · 2 at-large spots',
+    )
+  })
+
+  it('uses the singular for one of each', () => {
+    const division = createAtLargeDivision({
+      entries: 1,
+      totalSpots: 1,
+      squadAdvancers: 1,
+      atLargeSpots: 1,
+    })
+
+    expect(formatAtLargeSummary(division, 1)).toBe(
+      '1 entry · 1 finals spot (ratio 1) · 1 advanced from squads · 1 at-large spot',
+    )
+  })
+
+  it('counts the finalists, how they got in, and the others', () => {
+    const division = createSeedingDivision({
+      finalists: 10,
+      atLarge: 2,
+      rows: Array.from({ length: 80 }, () => createSeedingRow()),
+    })
+
+    expect(formatSeedingSummary(division)).toBe(
+      '10 finalists (8 from squads, 2 at-large) · 70 others',
+    )
+    expect(
+      formatSeedingSummary(
+        createSeedingDivision({
+          finalists: 1,
+          atLarge: 0,
+          rows: [createSeedingRow(), createSeedingRow()],
+        }),
+      ),
+    ).toBe('1 finalist (1 from squads, 0 at-large) · 1 other')
+  })
+})
+
+describe('super sweeper formats (D-90)', () => {
+  const sweepers = [
+    { id: 's1', date: '2026-10-09T19:00:00', games: 3, complete: true },
+    { id: 's2', date: '2026-10-10T19:00:00', games: 1, complete: true },
+  ]
+
+  it('heads a column with the weekday and the day', () => {
+    expect(formatSweeperColumn(sweepers[0] as (typeof sweepers)[number])).toBe('Fri 10/9')
+  })
+
+  it('tags a missed and an unfinished sweeper', () => {
+    expect(formatFlagTag({ kind: 'missed', sweeperId: 's1', gamesBowled: 0 })).toBe(
+      'Missed a sweeper',
+    )
+    expect(formatFlagTag({ kind: 'unfinished', sweeperId: 's1', gamesBowled: 2 })).toBe(
+      'Did not finish a sweeper',
+    )
+  })
+
+  it('names the sweeper behind a tag', () => {
+    expect(formatFlagNote({ kind: 'missed', sweeperId: 's1', gamesBowled: 0 }, sweepers)).toBe(
+      'Missed the Fri 10/9 sweeper. Scored 0 for 3 games.',
+    )
+    expect(formatFlagNote({ kind: 'missed', sweeperId: 's2', gamesBowled: 0 }, sweepers)).toBe(
+      'Missed the Sat 10/10 sweeper. Scored 0 for 1 game.',
+    )
+    expect(formatFlagNote({ kind: 'unfinished', sweeperId: 's1', gamesBowled: 2 }, sweepers)).toBe(
+      'Fri 10/9 sweeper: 2 of 3 games. Scored 0 for the rest.',
+    )
+  })
+
+  it('gives no note for a sweeper that is not in the list', () => {
+    expect(formatFlagNote({ kind: 'missed', sweeperId: 'gone', gamesBowled: 0 }, sweepers)).toBe('')
+  })
+
+  it('writes a total, or a dash while the sweeper is open', () => {
+    expect(formatSweeperTotal(712)).toBe('712')
+    expect(formatSweeperTotal(0)).toBe('0')
+    expect(formatSweeperTotal(null)).toBe('\u2013')
+  })
+
+  it('puts the cash line after the last casher, as a sweeper does', () => {
+    const rows = [
+      createSuperSweeperRow({ group: 'casher' }),
+      createSuperSweeperRow({ group: 'other' }),
+    ]
+
+    expect(sweeperItems(rows).map((item) => (item.kind === 'line' ? item.label : 'row'))).toEqual([
+      'row',
+      'Cash Line',
+      'row',
+    ])
   })
 })

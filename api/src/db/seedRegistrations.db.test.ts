@@ -66,9 +66,9 @@ describe('seedRegistrations', () => {
     )
 
     expect(summary.registrations).toBe(7)
-    expect(summary.superSweepers).toBe(2)
+    expect(summary.superSweepers).toBe(3)
     expect(summary.squads.map((squad) => squad.entries)).toEqual([5, 5, 0])
-    expect(summary.sweepers.map((sweeper) => sweeper.entries)).toEqual([3, 3])
+    expect(summary.sweepers.map((sweeper) => sweeper.entries)).toEqual([3, 4])
   })
 
   it('puts sample bowlers on lanes and leaves others waiting, in a page the API builds (LAN-01, LAN-10)', async () => {

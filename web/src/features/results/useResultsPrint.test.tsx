@@ -48,6 +48,20 @@ describe('useResultsPrint (RES-33, D-78)', () => {
     expect(document.body).not.toHaveAttribute('data-results-printing')
   })
 
+  it('prints every division unless one is named (RES-39, D-89)', async () => {
+    const { result } = renderHook(() => useResultsPrint())
+    expect(result.current.only).toBeUndefined()
+
+    await act(() => result.current.print('division-1'))
+    expect(result.current.only).toBe('division-1')
+
+    act(() => {
+      window.dispatchEvent(new Event('afterprint'))
+    })
+    await act(() => result.current.print())
+    expect(result.current.only).toBeUndefined()
+  })
+
   it('ignores a second press while the first print is open', async () => {
     const { result } = renderHook(() => useResultsPrint())
     await act(() => result.current.print())

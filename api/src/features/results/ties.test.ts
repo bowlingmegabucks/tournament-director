@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { createResultEntry } from '../../test/factories.ts'
 import type { ResultEntry } from './entries.ts'
 import { workOutDivision, type DivisionInput } from './squadResults.ts'
-import { markTies, type Tie } from './ties.ts'
+import { markCutLine, markTies, type Tie } from './ties.ts'
 
 const flat = (score: number) => createResultEntry({ games: [score, score, score] })
 const bowler = (games: number[]) => createResultEntry({ games })
@@ -233,5 +233,37 @@ describe('markTies elsewhere', () => {
 
     expect(found.get(quit.registrationId)).toBeUndefined()
     expect(found.get(absent.registrationId)).toBeUndefined()
+  })
+})
+
+describe('markCutLine (D-93)', () => {
+  it('marks a tie across the line with the deciding tie-breaker (AL-11)', () => {
+    const winner = bowler([35, 36, 38])
+    const loser = bowler([36, 36, 37])
+    const clear = bowler([10, 10, 10])
+
+    const found = markCutLine([flat(200), winner], [loser, clear])
+
+    expect(found.get(winner.registrationId)).toEqual([cut('won', highGame)])
+    expect(found.get(loser.registrationId)).toEqual([cut('lost', highGame)])
+    expect(found.size).toBe(2)
+  })
+
+  it('marks nothing when the totals differ across the line', () => {
+    expect(markCutLine([flat(200)], [flat(150)]).size).toBe(0)
+  })
+
+  it('marks nothing when there is nobody above the line', () => {
+    expect(markCutLine([], [flat(150)]).size).toBe(0)
+  })
+
+  it('marks a full tie on both sides, for the director to settle (D-16)', () => {
+    const a = flat(200)
+    const b = flat(200)
+
+    const found = markCutLine([a], [b])
+
+    expect(found.get(a.registrationId)).toEqual([cut('full', null)])
+    expect(found.get(b.registrationId)).toEqual([cut('full', null)])
   })
 })

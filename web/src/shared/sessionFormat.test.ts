@@ -8,6 +8,8 @@ import {
   formatSessionDate,
   formatSheetDate,
   formatSheetTime,
+  formatShortDay,
+  formatSquadStamp,
   isSessionDate,
   withOverride,
 } from './sessionFormat'
@@ -127,5 +129,33 @@ describe('formatSheetTime (RPT-05)', () => {
 
   it('leaves text that is not a session date as it is', () => {
     expect(formatSheetTime('soon')).toBe('soon')
+  })
+})
+
+describe('formatShortDay (D-90)', () => {
+  it.each([
+    ['2026-10-09T19:00:00', 'Fri 10/9'],
+    ['2026-10-10T07:00:00', 'Sat 10/10'],
+    ['2026-01-01T00:00:00', 'Thu 1/1'],
+  ])('writes %s as %s', (value, expected) => {
+    expect(formatShortDay(value)).toBe(expected)
+  })
+
+  it('returns text that is not a session date as it is', () => {
+    expect(formatShortDay('Friday')).toBe('Friday')
+  })
+})
+
+describe('formatSquadStamp (RES-17)', () => {
+  it.each([
+    ['2026-10-09T19:00:00', '10/09 07:00 PM'],
+    ['2026-10-10T00:05:00', '10/10 12:05 AM'],
+    ['2026-10-10T12:00:00', '10/10 12:00 PM'],
+  ])('writes %s as %s', (value, expected) => {
+    expect(formatSquadStamp(value)).toBe(expected)
+  })
+
+  it('returns text that is not a session date as it is', () => {
+    expect(formatSquadStamp('soon')).toBe('soon')
   })
 })

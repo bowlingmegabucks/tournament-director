@@ -55,6 +55,14 @@ describe('PrintResults (RES-33, RPT-01, D-78)', () => {
     expect(within(sections[1] as HTMLElement).getByText('Division: Women')).toBeInTheDocument()
   })
 
+  it('prints only the named division (RES-39, D-89)', () => {
+    render(<PrintResults results={squad} only={squad.divisions[1]?.id} />)
+
+    const sections = screen.getAllByRole('region', { hidden: true })
+    expect(sections).toHaveLength(1)
+    expect(within(sections[0] as HTMLElement).getByText('Division: Women')).toBeInTheDocument()
+  })
+
   it('shows the division table, with its sections, under the header', () => {
     render(<PrintResults results={squad} />)
 

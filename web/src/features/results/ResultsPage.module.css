@@ -36,3 +36,9 @@
   border-radius: var(--radius);
   background: var(--color-surface);
 }
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

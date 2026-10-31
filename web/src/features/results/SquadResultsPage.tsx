@@ -1,12 +1,14 @@
-import { useId } from 'react'
-import { useOutletContext, useParams, useSearchParams } from 'react-router'
+import { useOutletContext, useParams } from 'react-router'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { formatRatio, formatSessionDate } from '../../shared/sessionFormat'
 import type { Tournament } from '../tournaments/types'
+import { DivisionChooser } from './DivisionChooser'
 import { DivisionResults } from './DivisionResults'
+import { PrintButtons } from './PrintButtons'
 import { PrintResults } from './PrintResults'
 import styles from './ResultsPage.module.css'
+import { useChosenDivision } from './useChosenDivision'
 import { useSquadResults } from './useResults'
 import { UnofficialNotice } from './UnofficialNotice'
 import { useResultsPrint } from './useResultsPrint'
@@ -21,9 +23,8 @@ export function SquadResultsPage() {
   const { id = '', sessionId = '' } = useParams()
   const tournament = useOutletContext<Tournament>()
   const { data, error, refetch } = useSquadResults(id, sessionId)
-  const [search, setSearch] = useSearchParams()
-  const selectId = useId()
-  const { printing, print } = useResultsPrint()
+  const { printing, only, print } = useResultsPrint()
+  const chosen = useChosenDivision(data?.divisions ?? [])
 
   if (!data) {
     if (error) {
@@ -40,8 +41,6 @@ export function SquadResultsPage() {
   }
 
   const { session, divisions } = data
-  const chosen =
-    divisions.find((division) => division.id === search.get('division')) ?? divisions[0]
 
   return (
     <>
@@ -49,48 +48,22 @@ export function SquadResultsPage() {
       {chosen ? (
         <>
           <div className={styles.toolbar}>
-            {divisions.length > 1 && (
-              <div className={styles.field}>
-                <label htmlFor={selectId}>Division</label>
-                <select
-                  id={selectId}
-                  value={chosen.id}
-                  onChange={(event) => {
-                    setSearch(
-                      (previous) => {
-                        const next = new URLSearchParams(previous)
-                        next.set('division', event.target.value)
-                        return next
-                      },
-                      // Stryker disable next-line ObjectLiteral,BooleanLiteral: the history is the browser's; e2e checks the Back button.
-                      { replace: true },
-                    )
-                  }}
-                >
-                  {divisions.map((division) => (
-                    <option key={division.id} value={division.id}>
-                      {division.name} ({division.entries}{' '}
-                      {division.entries === 1 ? 'entry' : 'entries'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={() => {
+            <DivisionChooser divisions={divisions} chosenId={chosen.id} />
+            <PrintButtons
+              onPrintThis={() => {
+                void print(chosen.id)
+              }}
+              onPrintAll={() => {
                 void print()
               }}
-            >
-              Print all divisions
-            </button>
+            />
           </div>
           {!session.complete && <UnofficialNotice kind="squad" />}
           <p className={styles.note}>
             Finals ratio {formatRatio(data.finalsRatio)} · cash ratio {formatRatio(data.cashRatio)}
           </p>
           <DivisionResults division={chosen} games={session.games} />
-          {printing && <PrintResults results={data} />}
+          {printing && <PrintResults results={data} only={only} />}
         </>
       ) : (
         <p>No scores entered yet.</p>

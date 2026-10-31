@@ -3,7 +3,15 @@ import { field } from '../../shared/field'
 import { readJson } from '../../shared/readJson'
 import { isSessionDate } from '../../shared/sessionFormat'
 import { SessionNotFoundError, type SessionKind } from '../../shared/session'
-import type { SquadResults, SweeperResults } from './types'
+import { TournamentNotFoundError } from '../../shared/tournamentQuery'
+import type {
+  AtLargeResults,
+  FinalsKind,
+  SeedingResults,
+  SquadResults,
+  SuperSweeperResults,
+  SweeperResults,
+} from './types'
 
 /** The results cannot be worked out as the session is set up, such as a ratio of 0 (422, D-83). */
 export class ResultsUnavailableError extends Error {}
@@ -162,5 +170,154 @@ export async function fetchSweeperResults(
 ): Promise<SweeperResults> {
   const body = await fetchResultsBody('sweeper', tournamentId, sessionId)
   if (!isSweeperResults(body)) throw new Error('Failed to load results (unexpected response)')
+  return body
+}
+
+function isAtLargeRow(value: unknown): boolean {
+  return (
+    isText(field(value, 'registrationId')) &&
+    isText(field(value, 'name')) &&
+    isNumber(field(value, 'place')) &&
+    isSessionDate(field(value, 'squadDate')) &&
+    isNumber(field(value, 'total')) &&
+    isNumber(field(value, 'highGame')) &&
+    isBoolean(field(value, 'previousCasher')) &&
+    isEvery(field(value, 'ties'), isTie)
+  )
+}
+
+function isAtLargeDivision(value: unknown): boolean {
+  return (
+    isText(field(value, 'id')) &&
+    isNumber(field(value, 'number')) &&
+    isText(field(value, 'name')) &&
+    isNumber(field(value, 'entries')) &&
+    isNumber(field(value, 'totalSpots')) &&
+    isNumber(field(value, 'squadAdvancers')) &&
+    isNumber(field(value, 'atLargeSpots')) &&
+    isEvery(field(value, 'rows'), isAtLargeRow)
+  )
+}
+
+function isAtLargeResults(value: unknown): value is AtLargeResults {
+  return (
+    isBoolean(field(value, 'complete')) &&
+    isNumber(field(value, 'finalsRatio')) &&
+    isEvery(field(value, 'divisions'), isAtLargeDivision)
+  )
+}
+
+function isSeedingRow(value: unknown): boolean {
+  const group = field(value, 'group')
+  return (
+    isText(field(value, 'registrationId')) &&
+    isText(field(value, 'name')) &&
+    isNumber(field(value, 'seed')) &&
+    (group === 'finalist' || group === 'other') &&
+    isSessionDate(field(value, 'squadDate')) &&
+    isNumber(field(value, 'total')) &&
+    isNumber(field(value, 'highGame')) &&
+    isNumber(field(value, 'handicap')) &&
+    isBoolean(field(value, 'previousCasher')) &&
+    isEvery(field(value, 'ties'), isTie)
+  )
+}
+
+function isSeedingDivision(value: unknown): boolean {
+  return (
+    isText(field(value, 'id')) &&
+    isNumber(field(value, 'number')) &&
+    isText(field(value, 'name')) &&
+    isNumber(field(value, 'entries')) &&
+    isNumber(field(value, 'finalists')) &&
+    isNumber(field(value, 'atLarge')) &&
+    isBoolean(field(value, 'showHandicap')) &&
+    isEvery(field(value, 'rows'), isSeedingRow)
+  )
+}
+
+function isSeedingResults(value: unknown): value is SeedingResults {
+  return (
+    isBoolean(field(value, 'complete')) &&
+    isNumber(field(value, 'finalsRatio')) &&
+    isEvery(field(value, 'divisions'), isSeedingDivision)
+  )
+}
+
+function isFlag(value: unknown): boolean {
+  const kind = field(value, 'kind')
+  return (
+    (kind === 'missed' || kind === 'unfinished') &&
+    isText(field(value, 'sweeperId')) &&
+    isNumber(field(value, 'gamesBowled'))
+  )
+}
+
+function isSweeperColumn(value: unknown): boolean {
+  return (
+    isText(field(value, 'id')) &&
+    isSessionDate(field(value, 'date')) &&
+    isNumber(field(value, 'games')) &&
+    isBoolean(field(value, 'complete'))
+  )
+}
+
+function isSuperSweeperRow(value: unknown): boolean {
+  const group = field(value, 'group')
+  return (
+    isRankedRow(value) &&
+    (group === 'casher' || group === 'other') &&
+    isText(field(value, 'divisionName')) &&
+    isEvery(field(value, 'sweeperTotals'), (total) => total === null || isNumber(total)) &&
+    isEvery(field(value, 'flags'), isFlag)
+  )
+}
+
+function isSuperSweeperResults(value: unknown): value is SuperSweeperResults {
+  const cutScore = field(value, 'cutScore')
+  return (
+    isBoolean(field(value, 'complete')) &&
+    isNumber(field(value, 'cashRatio')) &&
+    isNumber(field(value, 'entries')) &&
+    isNumber(field(value, 'cashers')) &&
+    (cutScore === null || isNumber(cutScore)) &&
+    isEvery(field(value, 'sweepers'), isSweeperColumn) &&
+    isEvery(field(value, 'rows'), isSuperSweeperRow)
+  )
+}
+
+async function fetchFinalsBody(kind: FinalsKind, tournamentId: string): Promise<unknown> {
+  const response = await fetch(
+    apiUrl(`/v1/tournaments/${encodeURIComponent(tournamentId)}/${kind}`),
+  )
+  if (response.status === 404 || response.status === 400) throw new TournamentNotFoundError()
+  if (response.status === 422) {
+    const message = field(await readJson(response, 'Failed to load results'), 'message')
+    throw new ResultsUnavailableError(
+      isText(message) ? String(message) : 'The results cannot be worked out',
+    )
+  }
+  if (!response.ok) throw new Error(`Failed to load results (${response.status})`)
+  return readJson(response, 'Failed to load results')
+}
+
+/** The at-large advancers of every division (RES-37). */
+export async function fetchAtLarge(tournamentId: string): Promise<AtLargeResults> {
+  const body = await fetchFinalsBody('at-large', tournamentId)
+  if (!isAtLargeResults(body)) throw new Error('Failed to load results (unexpected response)')
+  return body
+}
+
+/** The finals seeding of every division (RES-37). */
+export async function fetchSeeding(tournamentId: string): Promise<SeedingResults> {
+  const body = await fetchFinalsBody('seeding', tournamentId)
+  if (!isSeedingResults(body)) throw new Error('Failed to load results (unexpected response)')
+  return body
+}
+
+/** The super sweeper results (RES-37). */
+export async function fetchSuperSweeper(tournamentId: string): Promise<SuperSweeperResults> {
+  const body = await fetchFinalsBody('super-sweeper', tournamentId)
+  if (!isSuperSweeperResults(body)) throw new Error('Failed to load results (unexpected response)')
   return body
 }

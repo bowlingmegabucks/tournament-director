@@ -1,0 +1,21 @@
+# Sign-in (web)
+
+Built on branch `authWeb`. The API half is in [api-access.md](api-access.md) (`API-16` to `API-21`). This is a platform rule with no legacy twin (`SEC-01`). Mockups: [auth-stage-2-mockups](../plans/auth-stage-2-mockups/index.html).
+
+## Rules
+
+| ID     | Requirement | Differs from legacy | Tests |
+| ------ | ----------- | ------------------- | ----- |
+| WEB-01 | New. `useMe()` (`['me']`, `GET /v1/me`) is the one source of who is signed in and what they may do. A 200 with `user: null` is signed out. Any failure (503, other status, bad body, network) is an error, never signed out. Refetches on window focus; stale after 60 s. The web app keeps no list of what a role may do (D-96); an unknown permission string is valid. The session lives only in the `httpOnly` cookie: nothing about it goes to `localStorage`, `sessionStorage`, or a cookie of ours. | New (D-102) | `web/src/features/auth/api.test.ts`, `AuthMenu.test.tsx` |
+| WEB-02 | New. Every API call goes through `apiFetch`, which sends `credentials: 'include'`, so the cookie goes along once the API sits on its own subdomain (0.4.0). ESLint bans a bare `fetch` outside `apiFetch.ts`. | New | `web/src/shared/apiFetch.test.ts`, `web/eslint.config.js` |
+| WEB-03 | New. `<Can permission="x.y">` shows its children only to a signed-in user who holds the permission. Hidden, not disabled. It shows nothing while loading, on error, and when signed out. `useCan` is the same test as a hook. | New (D-102) | `web/src/features/auth/Can.test.tsx` |
+| WEB-04 | New. `<RequirePermission permission="x.y">` wraps a page. Loading: `Loading`. Failed check: the error with a retry (not the signed-out view). Signed out: redirect to `/login`, remembering the page in `location.state.from`. Signed in without the permission: "You do not have permission to view this page." No shipped page uses it yet; the lock-down release does. | New (D-102) | `web/src/features/auth/RequirePermission.test.tsx` |
+| WEB-05 | New. `/login` has Email and Password (`autocomplete` `username` and `current-password`), a Sign in button that reads "Signing in…" and is disabled while it runs, and one error line: 401 "Email or password is wrong."; 403 `BANNED_USER` "This account is disabled. Ask an admin."; 403 `INVALID_ORIGIN` "Sign-in is not set up for this address."; 429 "Too many attempts. Wait N minutes and try again." (from `Retry-After`, rounded up); anything else "Could not reach the sign-in service. Try again." After sign-in the page asks `/v1/me` and moves to the page the user came from (a path on this site only), else Home. A user already signed in who opens `/login` moves on the same way. | New (D-98, D-102) | `web/src/features/auth/LoginPage.test.tsx`, `api.test.ts`, `web/e2e/signIn.spec.ts` |
+| WEB-06 | New. The top bar shows "Sign in" when signed out, the user's name with "Sign out" when signed in, "Loading…" while it checks, and the error with "Try again" when the check fails. Sign-out clears `['me']` to signed out. A failed sign-out shows an error and stays signed in. | New (D-102) | `web/src/features/auth/AuthMenu.test.tsx`, `web/e2e/signIn.spec.ts` |
+| WEB-07 | New. In a production build, the Sign in link, the `/login` route, and the `/v1/me` call are off unless `VITE_SHOW_SIGN_IN=true`. They are always on in development and tests. Turn the flag on at 0.4.0, when the API moves to `api.bowlingmegabucks.com` and the cookie works in Safari (D-99). | New (D-99) | `web/src/features/auth/signInEnabled.test.ts`, `AuthMenu.test.tsx` |
+| WEB-08 | New. Local only: `/login` shows "Log in as admin", "Log in as tournament director", and "Log in as score keeper" when `import.meta.env.DEV` is true. The production build holds neither the buttons nor the seeded passwords; `npm run check:dist` (also run by the pull request and deploy workflows after a production build) fails if it finds them. | New (D-104) | `web/src/features/auth/LoginPage.test.tsx`, `scripts/distScan.test.ts` |
+
+## Notes
+
+- The mocks (`web/src/mocks/authHandlers.ts`) keep a signed-in user in memory, so a sign-in changes what `/v1/me` returns. The mocks build holds the seeded passwords by design; only a production build is checked.
+- A page that needs sign-in uses `RequirePermission`; its link or button uses `<Can>`. Hiding a link never replaces the API check (D-19).

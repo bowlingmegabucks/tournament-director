@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign-in mockups</title>
+<link rel="stylesheet" href="../../../web/src/styles/tokens.css">
+<style>
+  body { margin: 0; background: var(--color-bg); color: var(--color-text); font: var(--font-size-base)/var(--line-height) var(--font-body); }
+  main { max-inline-size: var(--layout-width); margin: 0 auto; padding: var(--space-4); }
+  h1 { font-size: var(--font-size-xl); }
+  h2 { font-size: var(--font-size-lg); margin-block-start: var(--space-8); }
+  .frame { border: var(--border-width) dashed var(--color-border); border-radius: var(--radius); margin-block: var(--space-4); overflow: hidden; }
+  .frame > p.cap { margin: 0; padding: var(--space-2) var(--space-4); background: var(--color-surface); color: var(--color-text-muted); font-size: var(--font-size-sm); }
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: 0 var(--space-4); border-block-end: var(--border-width) solid var(--color-border); flex-wrap: wrap; }
+  .bar ul { display: flex; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+  .bar a, .bar .item { display: flex; align-items: center; min-block-size: var(--target-min); padding-inline: var(--space-4); color: var(--color-text); text-decoration: none; }
+  .bar a.current { border-block-end: 3px solid var(--color-accent); font-weight: 600; }
+  .who { display: flex; align-items: center; gap: var(--space-2); }
+  button, .btn { min-block-size: var(--target-min); padding-inline: var(--space-4); border-radius: var(--radius); border: var(--border-width) solid var(--color-border); background: var(--color-surface); color: var(--color-text); font: inherit; cursor: pointer; }
+  button.primary { background: var(--color-accent); color: var(--color-accent-text); border-color: var(--color-accent); font-weight: 600; }
+  button:disabled { opacity: .7; cursor: progress; }
+  .page { padding: var(--space-6) var(--space-4); }
+  form { max-inline-size: 24rem; display: grid; gap: var(--space-4); }
+  label { display: grid; gap: var(--space-1); font-weight: 600; }
+  input { min-block-size: var(--target-min); padding-inline: var(--space-3); border-radius: var(--radius); border: var(--border-width) solid var(--color-border); background: var(--color-bg); color: var(--color-text); font: inherit; }
+  .err { margin: 0; padding: var(--space-3); border: var(--border-width) solid var(--color-danger); border-radius: var(--radius); color: var(--color-danger); }
+  .muted { color: var(--color-text-muted); }
+  .dev { border-block-start: var(--border-width) solid var(--color-border); padding-block-start: var(--space-4); display: grid; gap: var(--space-2); }
+  .dev small { color: var(--color-text-muted); }
+  .grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); }
+  :focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+<h1>Sign-in mockups (auth Part B)</h1>
+<p class="muted">Uses the real <code>tokens.css</code>. Switch your system between light and dark to check both. Nothing here is wired.</p>
+
+<h2>1. Top bar (right side of the main menu)</h2>
+
+<div class="frame"><p class="cap">Signed out</p>
+  <nav class="bar" aria-label="Main"><ul><li><a class="current" href="#">Home</a></li><li><a href="#">Tournaments</a></li></ul>
+  <a href="#">Sign in</a></nav></div>
+
+<div class="frame"><p class="cap">Signed in</p>
+  <nav class="bar" aria-label="Main"><ul><li><a class="current" href="#">Home</a></li><li><a href="#">Tournaments</a></li></ul>
+  <div class="who"><span>Dana Director</span><button>Sign out</button></div></nav></div>
+
+<div class="frame"><p class="cap">Checking who is signed in (the Loading dots, small)</p>
+  <nav class="bar" aria-label="Main"><ul><li><a class="current" href="#">Home</a></li><li><a href="#">Tournaments</a></li></ul>
+  <span class="item muted" role="status">Loading…</span></nav></div>
+
+<div class="frame"><p class="cap">Could not check (503 or network). Not the signed-out view.</p>
+  <nav class="bar" aria-label="Main"><ul><li><a class="current" href="#">Home</a></li><li><a href="#">Tournaments</a></li></ul>
+  <div class="who"><span class="muted">Sign-in could not be checked.</span><button>Try again</button></div></nav></div>
+
+<div class="frame"><p class="cap">Production until 0.4.0 (VITE_SHOW_SIGN_IN off): no sign-in link at all</p>
+  <nav class="bar" aria-label="Main"><ul><li><a class="current" href="#">Home</a></li><li><a href="#">Tournaments</a></li></ul></nav></div>
+
+<h2>2. Sign-in page <code>/login</code></h2>
+<div class="grid">
+
+<div class="frame"><p class="cap">Empty</p><div class="page">
+  <h3>Sign in</h3>
+  <form onsubmit="return false">
+    <label>Email <input type="email" autocomplete="username"></label>
+    <label>Password <input type="password" autocomplete="current-password"></label>
+    <button class="primary">Sign in</button>
+  </form></div></div>
+
+<div class="frame"><p class="cap">Signing in</p><div class="page">
+  <h3>Sign in</h3>
+  <form onsubmit="return false">
+    <label>Email <input type="email" value="director@example.com"></label>
+    <label>Password <input type="password" value="xxxxxxxx"></label>
+    <button class="primary" disabled>Signing in…</button>
+  </form></div></div>
+
+<div class="frame"><p class="cap">Wrong email or password (401)</p><div class="page">
+  <h3>Sign in</h3>
+  <form onsubmit="return false">
+    <p class="err" role="alert">Email or password is wrong.</p>
+    <label>Email <input type="email" value="director@example.com"></label>
+    <label>Password <input type="password"></label>
+    <button class="primary">Sign in</button>
+  </form></div></div>
+
+<div class="frame"><p class="cap">Too many attempts (429, Retry-After 900)</p><div class="page">
+  <h3>Sign in</h3>
+  <form onsubmit="return false">
+    <p class="err" role="alert">Too many attempts. Wait 15 minutes and try again.</p>
+    <label>Email <input type="email" value="director@example.com"></label>
+    <label>Password <input type="password"></label>
+    <button class="primary">Sign in</button>
+  </form></div></div>
+
+<div class="frame"><p class="cap">Disabled account (403 BANNED_USER)</p><div class="page">
+  <h3>Sign in</h3>
+  <form onsubmit="return false">
+    <p class="err" role="alert">This account is disabled. Ask an admin.</p>
+    <label>Email <input type="email" value="old@example.com"></label>
+    <label>Password <input type="password"></label>
+    <button class="primary">Sign in</button>
+  </form></div></div>
+
+<div class="frame"><p class="cap">Service down (5xx, network). Also: 403 INVALID_ORIGIN says "Sign-in is not set up for this address."</p><div class="page">
+  <h3>Sign in</h3>
+  <form onsubmit="return false">
+    <p class="err" role="alert">Could not reach the sign-in service. Try again.</p>
+    <label>Email <input type="email" value="director@example.com"></label>
+    <label>Password <input type="password"></label>
+    <button class="primary">Sign in</button>
+  </form></div></div>
+
+<div class="frame"><p class="cap">Local dev only (<code>import.meta.env.DEV</code>): quick-login buttons (D-104)</p><div class="page">
+  <h3>Sign in</h3>
+  <form onsubmit="return false">
+    <label>Email <input type="email"></label>
+    <label>Password <input type="password"></label>
+    <button class="primary">Sign in</button>
+    <div class="dev">
+      <small>Development only. Needs <code>npm run db:seed</code>.</small>
+      <button type="button">Log in as admin</button>
+      <button type="button">Log in as tournament director</button>
+      <button type="button">Log in as score keeper</button>
+    </div>
+  </form></div></div>
+
+</div>
+
+<h2>3. Page that needs a permission (RequirePermission)</h2>
+<div class="grid">
+<div class="frame"><p class="cap">Signed in without the permission</p><div class="page">
+  <h3>No access</h3><p>You do not have permission to view this page.</p><a href="#">Back to Home</a></div></div>
+<div class="frame"><p class="cap">Signed out: redirects to /login, then returns to the page. No screen of its own.</p><div class="page"><p class="muted">Loading shows the shared Loading indicator; a failed check shows the shared error with a retry.</p></div></div>
+</div>
+</main>
+</body>
+</html>

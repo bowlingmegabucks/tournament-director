@@ -32,13 +32,13 @@ The `permissions` array is the complete list. The web app never keeps its own li
 
 | Status | Body | Show |
 | --- | --- | --- |
-| 200 | `{ "redirect": false, "token": "…", "user": {…} }` plus a `Set-Cookie` | Signed in. **Ignore the body** (`token` is only the unsigned half of the cookie value and is useless without the API's secret; `user` lacks the permissions); refetch `/v1/me` |
+| 200 | `{ "redirect": false, "user": {…} }` plus a `Set-Cookie` | Signed in. **Ignore the body** (`user` lacks the permissions); refetch `/v1/me` |
 | 401 | `{ "message": "Invalid email or password", "code": "INVALID_EMAIL_OR_PASSWORD" }` | "Email or password is wrong." One line, no hint which one |
 | 400 | `{ "code": "INVALID_EMAIL", "message": "Invalid email" }` | The form sent a malformed email. Catch it with client-side validation first; if it still arrives, show the message |
 | 403 | `{ "code": "BANNED_USER", "message": "You have been banned…" }` | The account is disabled: "This account is disabled. Ask an admin." |
 | 403 | `{ "code": "INVALID_ORIGIN", "message": "Invalid origin" }` | The page's origin is not in the API's `CORS_ORIGIN`. A setup fault: "Sign-in is not set up for this address." Switch on `code`, and fall back to `message` for any code you do not know |
 | 429 | `{ "message": "Too many sign-in attempts. Try again later." }` and a `Retry-After` header (seconds) | "Too many attempts. Wait N minutes and try again." (10 failures per address per 15 minutes) |
-| any 5xx, network error | none, or `{ "message": … }` | "Could not reach the sign-in service. Try again." Sign-in answers **500** (empty body) today when the database is down; treat every 5xx the same |
+| 503 `{ "message": "Database unavailable" }`, any other 5xx, network error | `{ "message": … }` or none | "Could not reach the sign-in service. Try again." Treat every 5xx the same |
 
 **`POST /v1/auth/sign-out`**: body `{}` (JSON), `credentials: 'include'`. 200 `{ "success": true }` clears the cookie. Then refetch `/v1/me` (or set it to the signed-out answer) and send the user home. A browser always sends `Origin`, which the API checks: a sign-out from an untrusted page is a 403.
 
@@ -69,7 +69,7 @@ Put it in `web/src/features/auth/` (shared code goes to `src/shared/` only if a 
 | Log in as tournament director | `director@example.com` | `directorP4sswordLocal` |
 | Log in as score keeper | `scorekeeper@example.com` | `scoreKeeperP4sswordLocal` |
 
-These exist only in a database that has run `npm run db:seed` (it adds them to a local database only). The same list is in `api/src/db/seedUsers.ts` and [api-standards.md](../api-standards.md#database).
+These exist only in a database that has run `npm run db:seed` (it adds them to a local database only, and skips them when the table already holds another user; `npm run db:seed -- --force-users` overrides that if you made your own user locally). The same list is in `api/src/db/seedUsers.ts` and [api-standards.md](../api-standards.md#database).
 
 ### Mocks and tests
 

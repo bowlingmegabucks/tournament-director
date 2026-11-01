@@ -21,7 +21,14 @@ try {
   console.log(`Seeded ${await seedScores(client)} scores.`)
   // Known passwords: only ever on this machine.
   if (isLocalDatabase(databaseUrl)) {
-    console.log(`Seeded ${await seedUsers(client, createScriptAuth(client))} sign-in users.`)
+    const { added, skippedReason } = await seedUsers(client, createScriptAuth(client), {
+      force: process.argv.includes('--force-users'),
+    })
+    console.log(
+      skippedReason === undefined
+        ? `Seeded ${added} sign-in users.`
+        : `Skipped sign-in users: ${skippedReason}`,
+    )
   } else {
     console.log('Skipped sign-in users: the database is not on this machine.')
   }

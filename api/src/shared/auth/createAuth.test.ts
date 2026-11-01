@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createTestAuth, createTestUser, signInCookie, testPassword } from '../../test/testAuth.ts'
-import { sessionSeconds } from './createAuth.ts'
+import { sessionSeconds, withoutToken } from './createAuth.ts'
 import { permissionsOf, rolesOf } from './roles.ts'
 
 describe('createAuth', () => {
@@ -241,5 +241,30 @@ describe('createAuth', () => {
     const session = await auth.api.getSession({ headers: new Headers({ cookie }) })
 
     expect(session?.user.role).toBe('scoreKeeper')
+  })
+})
+
+describe('withoutToken', () => {
+  it('returns a copy of the answer without its token and with everything else', () => {
+    const answer = { redirect: false, token: 'abc', user: { id: '1' } }
+
+    expect(withoutToken(answer)).toEqual({ redirect: false, user: { id: '1' } })
+    expect(answer.token).toBe('abc')
+  })
+
+  it('removes a token that is empty or null', () => {
+    expect(withoutToken({ token: '', a: 1 })).toEqual({ a: 1 })
+    expect(withoutToken({ token: null, a: 1 })).toEqual({ a: 1 })
+  })
+
+  it.each([
+    ['an answer without a token', { user: { id: '1' } }],
+    ['an error', new Error('nope')],
+    ['null', null],
+    ['undefined', undefined],
+    ['a string', 'token'],
+    ['a number', 7],
+  ])('has nothing to remove from %s', (_name, answer) => {
+    expect(withoutToken(answer)).toBeUndefined()
   })
 })

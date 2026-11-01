@@ -189,4 +189,27 @@ describe('sign-in on MariaDB', () => {
     expect(me.body.user.permissions).not.toContain('users.manage')
     expect((await request(app).get('/v1/me')).body).toEqual({ apiKey: false, user: null })
   })
+
+  it('answers sign-in with 503 Database unavailable when Prisma cannot connect (D-32)', async () => {
+    const unreachable = createDatabaseClient('mariadb://nobody:nothing@127.0.0.1:1/none')
+    try {
+      const app = createTestApp({
+        auth: createAuth({
+          config: createConfig().auth,
+          database: prismaAdapter(unreachable, { provider: 'mysql' }),
+          trustedOrigins: [],
+          logger: createCapturedLogger().logger,
+        }),
+      })
+
+      const response = await request(app)
+        .post('/v1/auth/sign-in/email')
+        .send({ email: 'ada@example.com', password: testPassword })
+
+      expect(response.status).toBe(503)
+      expect(response.body).toEqual({ message: 'Database unavailable' })
+    } finally {
+      await unreachable.$disconnect()
+    }
+  })
 })

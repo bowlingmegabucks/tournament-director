@@ -14,8 +14,8 @@ Better Auth (D-98) brings 45 HTTP endpoints and one server-only call. We open **
 
 | Method and path | What it does |
 | --- | --- |
-| `POST /sign-in/email` | Email and password in, session cookie out. A wrong password and an unknown email answer alike. Throttled to 10 failures per address per 15 minutes. |
-| `POST /sign-out` | Ends the session and clears the cookie. |
+| `POST /sign-in/email` | Email and password in, session cookie out. A wrong password and an unknown email answer alike. Throttled to 10 refused sign-ins per address per 15 minutes (a failure of ours, a 5xx, does not count). The answer is `{ redirect, user }`: a hook drops `token`, which Better Auth would also send. A database that cannot be reached answers 503 `Database unavailable`. |
+| `POST /sign-out` | Ends the session and clears the cookie. **Known limit:** if the database cannot be reached, Better Auth logs the failure, clears the cookie anyway, and reports success, so the session row lives until it expires (12 hours at most). It never answers 503 here. |
 
 ## Closed: sessions
 
@@ -48,7 +48,7 @@ All three need the API to send email, which is Q-34 (stage 3).
 | Method and path | What it does | Identity twin | When we might open it |
 | --- | --- | --- | --- |
 | `POST /request-password-reset` | Emails the user a one-time link. | `GeneratePasswordResetTokenAsync` | "Forgot password" and the invite (D-101): an admin creates a user, and the same link lets them set a first password. Needs a `sendResetPassword` function that sends the mail. Rate limit it, and answer the same whether or not the email exists. |
-| `GET /reset-password/:token` | Where the emailed link lands; Better Auth checks the token and redirects to a web page with it. | none | With the one above. The web page is ours. **The token is in the URL path, and the request log records the path (`requestLogging.ts`): redact that segment when opening this route, or tokens will sit in the logs.** |
+| `GET /reset-password/:token` | Where the emailed link lands; Better Auth checks the token and redirects to a web page with it. | none | With the one above. The web page is ours. **The token is in the URL path.** The request log already replaces it with `[redacted]` (`redactSecrets` in `requestLogging.ts`, tested). Still to do when opening this route: OpenTelemetry's HTTP spans record the URL too, so redact the path there (a `requestHook` on the HTTP instrumentation in `telemetry.ts`) and test it, or tokens reach Seq and Application Insights. |
 | `POST /reset-password` | The new password plus the token. Enforces the minimum length. | `ResetPasswordAsync` | With the two above. |
 | `POST /send-verification-email`, `GET /verify-email` | Proves the user owns the address. | `GenerateEmailConfirmationTokenAsync` | Probably never. An admin creates each account, and finishing the invite already proves the address. |
 | `setPassword` (server-only, no HTTP path) | Sets a password on an account that has none. | `AddPasswordAsync` | Only if we add social sign-in. |

@@ -10,7 +10,7 @@ export const signInAttempts = 10
 export const signInWindowMinutes = 15
 
 /**
- * Slow down password guessing. Only a failed sign-in counts, so a desk full of people behind one
+ * Slow down password guessing. Only a refused sign-in (a 4xx) counts, so a desk full of people behind one
  * address can still sign in. A fixed window per client IP, in memory: right for one server (see
  * `createRateLimiter`). The address comes from Express (`TRUST_PROXY`), not from a header the
  * caller can set. Over the limit answers 429 through the error handler.
@@ -23,6 +23,8 @@ export function createSignInLimiter(meter: Meter): RequestHandler {
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     skipSuccessfulRequests: true,
+    // A 5xx is our fault, not a wrong password, so it does not use up anyone's attempts.
+    requestWasSuccessful: (_req, res) => res.statusCode < 400 || res.statusCode >= 500,
     // Stryker disable next-line StringLiteral: unreachable, a live socket always has an address.
     keyGenerator: (req) => clientKey(req.ip ?? req.socket.remoteAddress ?? 'unknown'),
     validate: { keyGeneratorIpFallback: false },

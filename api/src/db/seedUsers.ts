@@ -33,11 +33,40 @@ export const localUsers: readonly {
   },
 ]
 
+export interface SeedUsersResult {
+  /** How many users it added. */
+  added: number
+  /** Why it did nothing, when it refused. */
+  skippedReason?: string
+}
+
 /**
  * Add the local users that are missing. Safe to run again: a user who exists is left alone, so a
- * password you changed stays changed. Returns how many it added.
+ * password you changed stays changed.
+ *
+ * It refuses when the table holds a user who is not one of these three. Their passwords are public,
+ * so they must never reach a real database, and the host check in `isLocalDatabase` is fooled by a
+ * tunnel to production (the host is then `localhost`). A real database always holds someone real,
+ * such as the first admin. `force` skips the refusal, for a local database where you made your own
+ * user too.
  */
-export async function seedUsers(client: PrismaClient, auth: Auth): Promise<number> {
+export async function seedUsers(
+  client: PrismaClient,
+  auth: Auth,
+  { force = false }: { force?: boolean } = {},
+): Promise<SeedUsersResult> {
+  if (!force) {
+    const others = await client.user.count({
+      where: { email: { notIn: localUsers.map(({ email }) => email) } },
+    })
+    if (others > 0) {
+      return {
+        added: 0,
+        skippedReason:
+          'the database has users that are not the sample ones, so it may not be a local one. Add --force-users to add them anyway.',
+      }
+    }
+  }
   let added = 0
   for (const { email, name, role, password } of localUsers) {
     if ((await client.user.count({ where: { email } })) > 0) continue
@@ -45,5 +74,5 @@ export async function seedUsers(client: PrismaClient, auth: Auth): Promise<numbe
     await auth.api.createUser({ body: { email, name, password, role } }) // NOSONAR: one at a time
     added++
   }
-  return added
+  return { added }
 }

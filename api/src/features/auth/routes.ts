@@ -1,10 +1,11 @@
 import type { Meter } from '@opentelemetry/api'
 import { toNodeHandler } from 'better-auth/node'
-import { Router } from 'express'
+import { Router, type RequestHandler } from 'express'
 import type { Auth } from '../../shared/auth/createAuth.ts'
 import { createAuthFailureCounter } from '../../shared/auth/authMetrics.ts'
 import { createSignInLimiter } from '../../shared/auth/signInLimit.ts'
 import type { Logger } from '../../shared/logger.ts'
+import { withDatabaseErrors } from '../../shared/database.ts'
 import { requestLogger } from '../../shared/requestLogging.ts'
 
 /**
@@ -18,11 +19,17 @@ import { requestLogger } from '../../shared/requestLogging.ts'
  *   message, so a caller cannot tell which emails exist.
  * - `POST /v1/auth/sign-out`: ends the session and clears the cookie.
  *
+ * If the database cannot be reached, either path answers 503 `{ message: "Database unavailable" }`.
+ *
  * Mount this before any `express.json()`: Better Auth reads the request body itself.
  */
 export function createAuthRouter(auth: Auth, meter: Meter, logger: Logger): Router {
   const router = Router()
-  const handle = toNodeHandler(auth)
+  const betterAuth = toNodeHandler(auth)
+  // A database that cannot be reached becomes the same 503 `Database unavailable` every route
+  // gives (D-32). Any other unexpected failure is a generic 500 from the error handler.
+  const handle: RequestHandler = (req, res) =>
+    withDatabaseErrors(requestLogger(res, logger), () => betterAuth(req, res))
   const failures = createAuthFailureCounter(meter)
 
   router.post(
@@ -31,7 +38,8 @@ export function createAuthRouter(auth: Auth, meter: Meter, logger: Logger): Rout
     (_req, res, next) => {
       // After the response, so the status is known. The line names no email and no password.
       res.on('finish', () => {
-        if (res.statusCode < 400) return
+        // Only a refused sign-in counts. A 5xx is our fault, and the request line already logs it.
+        if (res.statusCode < 400 || res.statusCode >= 500) return
         failures.add(1, { reason: 'bad_sign_in' })
         requestLogger(res, logger).warn({ status: res.statusCode }, 'Sign-in failed')
       })

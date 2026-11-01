@@ -9,6 +9,42 @@ import { createCapturedLogger } from './logger.ts'
 export const testPassword = 'correct horse battery staple'
 
 type Table = Record<string, unknown>[]
+
+/** Make every database call fail, to see how the API behaves when the database is down. */
+export interface Outage {
+  /** Fail every call with this error (default: the Prisma "cannot connect" error, `P2039`). */
+  start: (error?: Error) => void
+  end: () => void
+  wrap: <T extends (options: never) => object>(adapter: T) => T
+}
+
+/** The error Prisma raises when the pool cannot connect (`isDatabaseUnavailable` knows it). */
+export const databaseUnavailableError = (): Error =>
+  Object.assign(new Error('pool failed to retrieve a connection from pool'), { code: 'P2039' })
+
+function createOutage(): Outage {
+  let failure: Error | undefined
+  return {
+    start: (error = databaseUnavailableError()) => {
+      failure = error
+    },
+    end: () => {
+      failure = undefined
+    },
+    wrap: (adapter) =>
+      ((options: never) => {
+        const real = adapter(options)
+        return new Proxy(real, {
+          get(target, key, receiver) {
+            const value: unknown = Reflect.get(target, key, receiver)
+            if (typeof value !== 'function' || failure === undefined) return value
+            const error = failure
+            return () => Promise.reject(error)
+          },
+        })
+      }) as typeof adapter,
+  }
+}
 // A Record, not an interface: Better Auth's memory adapter wants an index signature.
 export type TestAuthDatabase = Record<'user' | 'session' | 'account' | 'verification', Table>
 
@@ -28,16 +64,18 @@ export interface TestAuthOptions {
 export function createTestAuth(options: TestAuthOptions = {}): {
   auth: Auth
   database: TestAuthDatabase
+  outage: Outage
 } {
   const database: TestAuthDatabase = { user: [], session: [], account: [], verification: [] }
   const config = createConfig().auth
+  const outage = createOutage()
   const auth = createAuth({
     config: { ...config, baseUrl: options.baseUrl ?? config.baseUrl },
-    database: memoryAdapter(database),
+    database: outage.wrap(memoryAdapter(database)),
     trustedOrigins: options.trustedOrigins ?? [],
     logger: options.logger ?? createCapturedLogger().logger,
   })
-  return { auth, database }
+  return { auth, database, outage }
 }
 
 /** Add a user who can sign in, the way the first-admin script does (no session needed). */

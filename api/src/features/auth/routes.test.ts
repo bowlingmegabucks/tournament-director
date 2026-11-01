@@ -5,7 +5,7 @@ import {
   PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics'
 import request from 'supertest'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { sessionSeconds } from '../../shared/auth/createAuth.ts'
 import { signInAttempts } from '../../shared/auth/signInLimit.ts'
 import { createConfig } from '../../test/factories.ts'
@@ -24,12 +24,12 @@ const signInPath = '/v1/auth/sign-in/email'
 
 async function setup(options: TestAuthOptions = {}) {
   const captured = createCapturedLogger()
-  const { auth, database } = createTestAuth({ ...options, logger: captured.logger })
+  const { auth, database, outage } = createTestAuth({ ...options, logger: captured.logger })
   const user = await createTestUser(auth)
   const app = createTestApp({ auth, logger: captured.logger })
   const signIn = (password = testPassword, email = user.email) =>
     request(app).post(signInPath).send({ email, password })
-  return { app, auth, database, user, signIn, records: captured.records }
+  return { app, auth, database, outage, user, signIn, records: captured.records }
 }
 
 describe('POST /v1/auth/sign-in/email', () => {
@@ -45,6 +45,18 @@ describe('POST /v1/auth/sign-in/email', () => {
     expect(cookie).toMatch(/SameSite=Lax/i)
     expect(cookie).toMatch(/Path=\//i)
     expect(cookie).toContain(`Max-Age=${sessionSeconds}`)
+  })
+
+  it('does not send the session token in the answer, only in the cookie', async () => {
+    const { signIn, database } = await setup()
+
+    const response = await signIn()
+
+    const stored = String(database.session[0]?.['token'])
+    expect(response.body).not.toHaveProperty('token')
+    expect(Object.keys(response.body).sort()).toEqual(['redirect', 'user'])
+    expect(response.text).not.toContain(stored)
+    expect(cookieOf(response)).toContain(stored)
   })
 
   it('never sends a password or its hash back', async () => {
@@ -170,6 +182,17 @@ describe('sign-in throttle', () => {
     expect((await signIn()).status).toBe(429)
   })
 
+  it('counts a sign-in refused as a bad request (a 400) like any other refusal', async () => {
+    const { app } = await setup()
+    const badRequest = () =>
+      request(app).post(signInPath).send({ email: 'not-an-email', password: 'whatever password' })
+    for (let attempt = 0; attempt < signInAttempts; attempt++) {
+      expect((await badRequest()).status).toBe(400)
+    }
+
+    expect((await badRequest()).status).toBe(429)
+  })
+
   it('counts only failures, so a desk behind one address can all sign in', async () => {
     const { signIn } = await setup()
     for (let attempt = 0; attempt < signInAttempts + 5; attempt++) {
@@ -289,6 +312,133 @@ describe('sign-in logging and metrics', () => {
       await signIn('wrong password here')
 
     expect(await count('sign_in_throttled')).toBe(2)
+  })
+})
+
+describe('when the database cannot be reached', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('answers sign-in with 503 Database unavailable, like every other route (D-32)', async () => {
+    const { signIn, outage } = await setup()
+    outage.start()
+
+    const response = await signIn()
+
+    expect(response.status).toBe(503)
+    expect(response.body).toEqual({ message: 'Database unavailable' })
+    expect(setCookies(response)).toEqual([])
+  })
+
+  it('logs the cause through our logger, with the request id, and not to the console', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const { signIn, outage, records } = await setup()
+    outage.start()
+
+    const response = await signIn()
+
+    expect(records()).toContainEqual(
+      expect.objectContaining({
+        level: 50,
+        msg: 'Database unavailable',
+        requestId: response.headers['x-request-id'],
+        err: expect.objectContaining({ code: 'P2039' }),
+      }),
+    )
+    expect(consoleError).not.toHaveBeenCalled()
+  })
+
+  // Better Auth's own choice: it cannot reach the session row, so it logs the read failure, clears
+  // the cookie anyway, and says success. The session then lives until it expires (12 hours at most).
+  it('signs out of the browser during an outage but cannot end the session, and logs the failure', async () => {
+    const { app, signIn, outage, database, records } = await setup({
+      trustedOrigins: ['https://app.example'],
+    })
+    const cookie = cookieOf(await signIn())
+    outage.start()
+
+    const response = await request(app)
+      .post('/v1/auth/sign-out')
+      .set('Cookie', cookie)
+      .set('Origin', 'https://app.example')
+      .send({})
+
+    expect(response.status).toBe(200)
+    expect(setCookies(response).join(' | ')).toMatch(/Max-Age=0/i)
+    expect(database.session).toHaveLength(1)
+    expect(records()).toContainEqual(
+      expect.objectContaining({
+        level: 50,
+        source: 'better-auth',
+        detail: 'Failed to read session from database',
+      }),
+    )
+  })
+
+  it('answers any other unexpected failure with a generic 500 that leaks nothing, and logs it', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const { signIn, outage, records } = await setup()
+    outage.start(new Error('secret internal detail'))
+
+    const response = await signIn()
+
+    expect(response.status).toBe(500)
+    expect(response.body).toEqual({ message: 'Internal server error' })
+    expect(response.text).not.toContain('secret internal detail')
+    expect(records()).toContainEqual(expect.objectContaining({ level: 50, msg: 'Unhandled error' }))
+    expect(consoleError).not.toHaveBeenCalled()
+  })
+
+  it('does not count a failure of ours as a wrong password, in the log or the count', async () => {
+    const { signIn, outage, records } = await setup()
+    outage.start()
+
+    await signIn()
+
+    expect(JSON.stringify(records())).not.toContain('Sign-in failed')
+  })
+
+  it('does not log or count a plain 500 as a wrong password either', async () => {
+    const { signIn, outage, records } = await setup()
+    outage.start(new Error('something odd'))
+
+    const response = await signIn()
+
+    expect(response.status).toBe(500)
+    expect(JSON.stringify(records())).not.toContain('Sign-in failed')
+  })
+
+  it('does not use up anyone’s sign-in attempts on a plain 500 either', async () => {
+    const { signIn, outage } = await setup()
+    outage.start(new Error('something odd'))
+    for (let attempt = 0; attempt < signInAttempts + 3; attempt++) {
+      expect((await signIn()).status).toBe(500)
+    }
+    outage.end()
+
+    expect((await signIn()).status).toBe(200)
+  })
+
+  it('does not use up anyone’s sign-in attempts, so people are not locked out after an outage', async () => {
+    const { signIn, outage } = await setup()
+    outage.start()
+    for (let attempt = 0; attempt < signInAttempts + 3; attempt++) {
+      expect((await signIn()).status).toBe(503)
+    }
+    outage.end()
+
+    expect((await signIn()).status).toBe(200)
+  })
+
+  it('works again as soon as the database does', async () => {
+    const { signIn, outage } = await setup()
+    outage.start()
+    await signIn()
+
+    outage.end()
+
+    expect((await signIn()).status).toBe(200)
   })
 })
 

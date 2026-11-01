@@ -1,6 +1,7 @@
 {
   "name": "tournament-director",
   "private": true,
+  "type": "module",
   "description": "Convenience scripts only. web/ and api/ keep their own package.json; this is not an npm workspace.",
   "scripts": {
     "setup": "npm ci && npm --prefix api ci && npm --prefix web ci",

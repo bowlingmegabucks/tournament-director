@@ -1,4 +1,5 @@
 import { betterAuth, type BetterAuthOptions } from 'better-auth'
+import { createAuthMiddleware } from 'better-auth/api'
 import { admin } from 'better-auth/plugins'
 import { createAccessControl } from 'better-auth/plugins/access'
 import { adminAc, defaultStatements } from 'better-auth/plugins/admin/access'
@@ -65,9 +66,22 @@ export function createAuth({ config, database, trustedOrigins, logger }: AuthDep
     // Every way we make users names a role. A user made with none gets `none`, which is not a role,
     // so they hold no permissions (roles.ts drops names it does not know).
     plugins: [admin({ ac: accessControl, roles, defaultRole: 'none' })],
+    hooks: {
+      // An answer that carries `token` (the sign-in answer does) is sent without it. The token is
+      // the session token without its signature. The cookie is what signs a user in, and the web
+      // app never reads the body.
+      after: createAuthMiddleware(async (ctx) => {
+        const answer = withoutToken(ctx.context.returned)
+        if (answer) return ctx.json(answer)
+      }),
+    },
     // Better Auth skips its origin and CSRF checks when NODE_ENV is `test`. Say "on" in every
     // environment, so a stray variable cannot switch them off.
     advanced: { disableOriginCheck: false, disableCSRFCheck: false },
+    // Rethrow what Better Auth does not expect (a database failure), so it reaches our error
+    // handler and our logger. Without this it prints its own stack dump to the console and answers
+    // an empty 500. Errors it expects (a wrong password, a bad origin) are unchanged.
+    onAPIError: { throw: true },
     rateLimit: { enabled: false },
     telemetry: { enabled: false },
     logger: {
@@ -82,6 +96,15 @@ export function createAuth({ config, database, trustedOrigins, logger }: AuthDep
       },
     },
   })
+}
+
+/**
+ * A copy of an endpoint's answer without its `token`, or `undefined` when there is nothing to
+ * remove (not an object, an error, or no `token`). Exported for its test.
+ */
+export function withoutToken(answer: unknown): Record<string, unknown> | undefined {
+  if (typeof answer !== 'object' || answer === null || !('token' in answer)) return undefined
+  return Object.fromEntries(Object.entries(answer).filter(([key]) => key !== 'token'))
 }
 
 export type Auth = ReturnType<typeof createAuth>

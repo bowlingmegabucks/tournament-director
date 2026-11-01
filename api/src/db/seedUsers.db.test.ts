@@ -26,7 +26,7 @@ describe('seedUsers', () => {
   })
 
   it('adds one user per role', async () => {
-    await expect(seedUsers(client, createScriptAuth(client))).resolves.toBe(3)
+    await expect(seedUsers(client, createScriptAuth(client))).resolves.toEqual({ added: 3 })
 
     const users = await client.user.findMany({ orderBy: { email: 'asc' } })
     expect(users.map((user) => [user.email, user.role])).toEqual([
@@ -41,7 +41,7 @@ describe('seedUsers', () => {
     await seedUsers(client, auth)
     await client.user.update({ where: { email: 'admin@example.com' }, data: { name: 'Renamed' } })
 
-    await expect(seedUsers(client, auth)).resolves.toBe(0)
+    await expect(seedUsers(client, auth)).resolves.toEqual({ added: 0 })
 
     expect(await client.user.count()).toBe(3)
     expect(
@@ -54,7 +54,7 @@ describe('seedUsers', () => {
     await seedUsers(client, auth)
     await client.user.delete({ where: { email: 'director@example.com' } })
 
-    await expect(seedUsers(client, auth)).resolves.toBe(1)
+    await expect(seedUsers(client, auth)).resolves.toEqual({ added: 1 })
 
     expect(await client.user.count()).toBe(3)
   })
@@ -78,6 +78,61 @@ describe('seedUsers', () => {
       expect(me.body.user).toMatchObject({ email, roles: [role] })
       expect(me.body.user.permissions).toEqual(permissionsOf(role))
     }
+  })
+
+  describe('on a database that may be a real one', () => {
+    async function withRealAdmin() {
+      const auth = createScriptAuth(client)
+      await auth.api.createUser({
+        body: {
+          email: 'owner@bowlingmegabucks.com',
+          name: 'Owner',
+          password: 'a real password 123',
+          role: 'admin',
+        },
+      })
+      return auth
+    }
+
+    it('refuses to add the known-password users when someone else is already there', async () => {
+      const auth = await withRealAdmin()
+
+      const result = await seedUsers(client, auth)
+
+      expect(result.added).toBe(0)
+      expect(result.skippedReason).toContain('--force-users')
+      expect(await client.user.count()).toBe(1)
+    })
+
+    it('refuses even when some of the sample users are there too', async () => {
+      const auth = createScriptAuth(client)
+      await seedUsers(client, auth)
+      await client.user.delete({ where: { email: 'director@example.com' } })
+      await withRealAdmin()
+
+      const result = await seedUsers(client, auth)
+
+      expect(result.added).toBe(0)
+      expect(await client.user.count({ where: { email: 'director@example.com' } })).toBe(0)
+    })
+
+    it('adds them when told to force it', async () => {
+      const auth = await withRealAdmin()
+
+      const result = await seedUsers(client, auth, { force: true })
+
+      expect(result).toEqual({ added: 3 })
+      expect(await client.user.count()).toBe(4)
+    })
+
+    it('does not refuse on a database that holds only the sample users', async () => {
+      const auth = createScriptAuth(client)
+      await seedUsers(client, auth)
+
+      const result = await seedUsers(client, auth)
+
+      expect(result.skippedReason).toBeUndefined()
+    })
   })
 
   it('lists passwords that meet the minimum length', () => {

@@ -12,6 +12,15 @@ export const requestIdHeader = 'x-request-id'
 // Reuse an id from a caller or proxy only if it is short and plain. It goes into logs and headers.
 const safeRequestId = /^[\w.-]{1,64}$/
 
+// A path that carries a one-time secret. The emailed password-reset link puts its token in the path
+// (stage 3, `GET /v1/auth/reset-password/:token`). Anyone who reads the log must not be able to use it.
+const secretPathSegments = /^(\/v1\/auth\/reset-password\/)[^/?]+/
+
+/** A URL as it is safe to log: a token in the path is replaced by `[redacted]`. */
+export function redactSecrets(path: string): string {
+  return path.replace(secretPathSegments, '$1[redacted]')
+}
+
 /** Health probes run every few seconds, so their lines only show at debug level. */
 const quietPath = '/health'
 
@@ -36,7 +45,7 @@ export function requestLogging(logger: Logger): RequestHandler {
     res.on('close', () => {
       const status = res.statusCode
       // Path only. A query string can hold personal data.
-      const path = req.originalUrl.split('?')[0]
+      const path = redactSecrets(req.originalUrl).split('?')[0]
       requestLogger(res, logger)[levelFor(status, path)](
         {
           method: req.method,

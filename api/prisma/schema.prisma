@@ -90,24 +90,40 @@ model SweeperDivision {
   @@map("SweeperDivision")
 }
 
-/// A person. Read only, to support the registration list (D-47). The table also holds the
-/// encrypted `SocialSecurityNumber`, gender, birth date, address, email, and phone; they are left
-/// out on purpose so no query can select them (BWL-17).
+/// A person. The registration list reads a few columns (D-47); registration create reads and
+/// writes the rest (D-05). `socialSecurityNumber` is encrypted and only legacy writes it: the client
+/// omits it from every read (see `createDatabaseClient`), create sends `''`, and no update names it
+/// (BWL-17).
 model Bowler {
-  id            String         @id @map("Id") @db.Char(36)
-  firstName     String         @map("FirstName") @db.LongText
-  lastName      String         @map("LastName") @db.LongText
+  id                   String         @id @map("Id") @db.Char(36)
+  firstName            String         @map("FirstName") @db.LongText
   /// '' when none.
-  suffix        String         @map("Suffix") @db.LongText
+  middleInitial        String         @map("MiddleInitial") @db.Char(1)
+  lastName             String         @map("LastName") @db.LongText
   /// '' when none.
-  usbcId        String         @map("USBCId") @db.LongText
-  registrations Registration[]
+  suffix               String         @map("Suffix") @db.LongText
+  /// '' when none.
+  street               String         @map("StreetAddress") @db.LongText
+  city                 String         @map("CityAddress") @db.LongText
+  state                String         @map("StateAddress") @db.Char(2)
+  /// 5 or 9 digits, no dash.
+  zipCode              String         @map("ZipCode") @db.Char(9)
+  email                String         @map("EmailAddress") @db.LongText
+  /// 10 digits, or ''.
+  phoneNumber          String         @map("PhoneNumber") @db.Char(10)
+  /// '' when none.
+  usbcId               String         @map("USBCId") @db.LongText
+  dateOfBirth          DateTime?      @map("DateOfBirth") @db.DateTime(6)
+  /// 0 = Male, 1 = Female, NULL = unknown.
+  gender               Int?           @map("Gender")
+  socialSecurityNumber String         @default("") @map("SocialSecurityNumber") @db.LongText
+  registrations        Registration[]
 
   @@map("Bowlers")
 }
 
 /// One bowler in one division (REG-01). The tournament comes from the division: the table has no
-/// TournamentId column (Q-26). Payments are not read yet.
+/// TournamentId column (Q-26).
 model Registration {
   id           String              @id @map("Id") @db.Char(36)
   bowlerId     String              @map("BowlerId") @db.Char(36)
@@ -118,8 +134,23 @@ model Registration {
   bowler       Bowler              @relation(fields: [bowlerId], references: [id])
   division     Division            @relation(fields: [divisionId], references: [id])
   squads       SquadRegistration[]
+  payments     Payment[]
 
   @@map("Registrations")
+}
+
+/// Money the registration site took, sent with a registration (PAY-02). Deleted with its
+/// registration. `confirmationCode` is `<processingSystem>_<code>` and unique (PAY-03).
+model Payment {
+  id               String       @id @map("Id") @db.Char(36)
+  createdAtUtc     DateTime     @map("CreatedAtUtc") @db.DateTime(6)
+  registrationId   String       @map("RegistrationId") @db.Char(36)
+  confirmationCode String       @unique(map: "IX_Payments_ConfirmationCode") @map("ConfirmationCode") @db.VarChar(43)
+  amount           Decimal      @map("Amount") @db.Decimal(5, 2)
+  registration     Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  @@index([registrationId], map: "IX_Payments_RegistrationId")
+  @@map("Payments")
 }
 
 /// A registration bowling one squad or sweeper (REG-24). `laneAssignment` is the position, such as

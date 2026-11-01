@@ -64,7 +64,7 @@ export function createAuth({ config, database, trustedOrigins, logger }: AuthDep
     session: { expiresIn: sessionSeconds, updateAge: sessionRenewSeconds },
     // Every way we make users names a role. A user made with none gets `none`, which is not a role,
     // so they hold no permissions (roles.ts drops names it does not know).
-    plugins: [admin({ ac: accessControl, roles, adminRoles: ['admin'], defaultRole: 'none' })],
+    plugins: [admin({ ac: accessControl, roles, defaultRole: 'none' })],
     // Better Auth skips its origin and CSRF checks when NODE_ENV is `test`. Say "on" in every
     // environment, so a stray variable cannot switch them off.
     advanced: { disableOriginCheck: false, disableCSRFCheck: false },

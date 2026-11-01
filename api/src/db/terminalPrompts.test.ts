@@ -256,6 +256,16 @@ describe('createTerminalPrompts', () => {
 
       expect(output()).toContain('Go on? (y/N) ')
     })
+
+    it('shows what is typed', async () => {
+      const { input, prompts, output } = setup()
+
+      const answer = prompts.confirm('Go on?')
+      input.emit('data', 'yes\r')
+      await answer
+
+      expect(output()).toBe('Go on? (y/N) yes\n')
+    })
   })
 
   it('prints a line with a line break', () => {

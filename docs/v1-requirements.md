@@ -57,10 +57,11 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 
 ## Security
 
-- [ ] Auth approach built (0.3.0). Decided: Better Auth, database sessions in a cookie (D-98 to D-101).
+- [x] Auth approach decided and the API built (0.3.0): Better Auth, database sessions in a cookie, roles and permissions, `GET /v1/me` (D-98 to D-103, `API-16` to `API-21`).
+- [ ] Web sign-in: `/login`, `useMe`, `<Can>`, the top bar, and the dev-only quick-login buttons with the production-build check (D-102, D-104).
 - [ ] User management: admin-only create-user page, email invites, roles, disable, forgot password (stage 3, D-101, Q-34).
 - [x] API key for the registration site: `API_KEY` in `x-api-key`, permission-based access labels, and `GET /v1/me` (stage 1, D-94 to D-97, `API-16`, `API-17`).
-- [x] Every route declares its access; undeclared routes deny (`API-15`, D-27). Only `public` exists until sign-in (0.3.0); recheck then.
+- [x] Every route declares its access; undeclared routes deny (`API-15`, D-27). Permission labels now work for users and the API key (`API-16`); no mounted route needs one until the lock-down release.
 - [ ] Roles and permissions reviewed against [security.md](migration/security.md).
 - [ ] Personal data (bowler records) is behind auth. The scores view is the one exception: it shows names and scratch scores to everyone on purpose (D-70).
 - [ ] Lock-down release done before any command route (D-52): every public read route and page reviewed, and those that should not be public put behind auth.

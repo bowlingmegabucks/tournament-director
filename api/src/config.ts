@@ -28,7 +28,6 @@ const envSchema = z.object({
   // `Secure`. Required: a missing value would let it guess from the request.
   AUTH_BASE_URL: z
     .string()
-    .trim()
     .refine(isOriginUrl, 'must be an http(s) address with no path, such as https://api.example.com')
     .transform((value) => new URL(value).origin),
   // Comma-separated list. Empty means same-origin only.

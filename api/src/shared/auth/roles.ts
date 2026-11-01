@@ -32,7 +32,8 @@ const rolePermissions: Record<RoleName, readonly Permission[]> = {
  * with no role) is dropped, so it grants nothing. Names are case-sensitive.
  */
 export function rolesOf(stored: string | null | undefined): RoleName[] {
-  const names = (stored ?? '').split(',').map((name) => name.trim())
+  if (stored == null) return []
+  const names = stored.split(',').map((name) => name.trim())
   return [...new Set(names)].filter(isRoleName)
 }
 

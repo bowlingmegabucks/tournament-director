@@ -28,6 +28,8 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 
 18. Security, stage 1: the API key. **Done on branch `apiKey`:** `API_KEY` (required) in the `x-api-key` header, access labels `public`, `{ permission }`, and `{ permission, apiKey: true }` (a valid key skips the permission check only where the route accepts it), and public `GET /v1/me`. Routes check permissions, never roles (D-96); the roles score keeper, director, and admin come with sign-in in stage 2 (D-94, D-97). See [docs/requirements/api-access.md](docs/requirements/api-access.md).
 
+19. Security, stage 2: sign-in. **API done on branch `authSetup`; web next:** Better Auth inside `api/` (email and password, no public sign-up, database sessions in an `httpOnly` cookie for 12 hours), the `user`, `session`, `account`, and `verification` tables (`api/prisma/auth-tables.sql`), roles `scoreKeeper`, `director`, and `admin` mapped to permissions in `roles.ts`, `GET /v1/me` returning the user and permissions, `npm run users:create-admin`, and seeded local users. Only `POST /v1/auth/sign-in/email` and `/sign-out` are open. The web part (`/login`, `useMe`, `<Can>`, quick-login buttons) is next; stage 3 is user management. See [docs/requirements/api-access.md](docs/requirements/api-access.md) and [docs/plans/auth-stage-2.md](docs/plans/auth-stage-2.md).
+
 Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, TypeScript, testing, composition) and stricter ESLint rules.
 
 **Legacy migration.** We are porting the WinForms Tournament Manager feature by feature. [docs/migration/](docs/migration/README.md) documents every legacy rule with an ID (`REG-04`); use it instead of the old code. Before building a feature, check [decisions-and-questions.md](docs/migration/decisions-and-questions.md) for its open questions. Cite rule IDs in tests and PRs.
@@ -61,6 +63,7 @@ Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, 
 | Tests         | Vitest, Testing Library, MSW, Playwright, Stryker (web); Vitest, Supertest, Stryker (api) |
 | API libraries | Zod (validation), helmet (headers), cors                                                  |
 | Database      | Legacy MariaDB 11.4.7 through Prisma 7 (hand-written schema, no `prisma migrate`)         |
+| Sign-in       | Better Auth in `api/` (email and password, cookie sessions in the database)               |
 
 ## Root commands
 
@@ -118,7 +121,7 @@ Details in [docs/api-standards.md](docs/api-standards.md).
 - Log with the injected pino `logger`, never `console`. Fields first, then a constant message. In a handler use `requestLogger(res, logger)` so the line has the request id. `requestLogging` is the first middleware and sets the `x-request-id` header.
 - Metrics: HTTP and Node runtime metrics are automatic. Custom ones are named `tournament_director.<area>.<thing>`; see the Metrics section of `docs/api-standards.md`.
 - Throw a Zod error from a route and it becomes a 400. A crash or SIGTERM goes through `handleProcessEvents` (logs, flushes telemetry, exits).
-- Access: every route group in `mountRoutes` declares `public` or `{ permission }`, plus `apiKey: true` where the registration site may call it. Routes ask for a permission, never a role (D-96). `API_KEY` is required; see [docs/api-standards.md](docs/api-standards.md#access-and-the-api-key).
+- Access: every route group in `mountRoutes` declares `public` or `{ permission }`, plus `apiKey: true` where the registration site may call it. Routes ask for a permission, never a role (D-96). Sign-in is Better Auth (`shared/auth/createAuth.ts`), built in `server.ts` and passed to `createApp`; only sign-in and sign-out are open ([docs/better-auth-routes.md](docs/better-auth-routes.md) lists the rest). `identifyCaller` sets `callerOf(res)` (`apiKey`, `user`); roles turn into permissions in `roles.ts`. `AUTH_SECRET` and `AUTH_BASE_URL` are required. `API_KEY` is required; see [docs/api-standards.md](docs/api-standards.md#access-and-the-api-key).
 - Rate limiting is per client IP (`RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_SECONDS`). Set `TRUST_PROXY=1` on Azure or every caller shares one bucket.
 - Telemetry is OpenTelemetry, loaded by `src/instrumentation.ts` before the app. Seq locally (`npm run services:up`), Application Insights in production; each turns on only when its env var is set.
 - Database: Prisma over the legacy MariaDB (see [docs/api-standards.md](docs/api-standards.md#database)). `DATABASE_URL` is required. Run `npm run db:generate` in `api/` after `npm ci` (CI and deploy do). Wrap repository calls in `withDatabaseErrors`. Never run `prisma migrate`: WinForms owns the schema. Tests named `*.db.test.ts` need Docker (Testcontainers).

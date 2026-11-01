@@ -22,7 +22,8 @@ const maxNameLength = 255
 async function askEmail(prompts: Prompts): Promise<string> {
   for (let attempt = 0; attempt < attempts; attempt++) {
     const parsed = z.email().safeParse((await prompts.ask('Email:')).trim())
-    if (parsed.success) return parsed.data.toLowerCase()
+    // Better Auth lowercases the email itself.
+    if (parsed.success) return parsed.data
     prompts.print('That is not an email address.')
   }
   throw new Error(tooManyTries)

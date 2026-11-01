@@ -24,6 +24,7 @@ import { permissions } from './permissions.ts'
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.useRealTimers()
 })
 
 /** An app that only reports who the caller is. */
@@ -272,6 +273,19 @@ describe('identifyCaller: the session cookie', () => {
       const { body } = await request(app).get('/who').set('Cookie', cookie)
 
       expect(body.caller.type).toBe('anonymous')
+    })
+
+    it('is let back in at the very moment the ban ends', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      const { app, cookie, database } = await bannedApp(true, null)
+      const endsAt = new Date(Date.now() + 60_000)
+      const row = database.user[0]
+      if (row) row['banExpires'] = endsAt
+      vi.setSystemTime(endsAt)
+
+      const { body } = await request(app).get('/who').set('Cookie', cookie)
+
+      expect(body.caller.type).toBe('user')
     })
 
     it('is let back in when the ban has ended', async () => {

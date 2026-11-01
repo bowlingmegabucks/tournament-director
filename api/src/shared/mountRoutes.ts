@@ -65,7 +65,7 @@ export function mountRoutes(app: Express, groups: RouteGroup[], meter: Meter): v
       }
       // Not enough to let them in. If we could not look up their session, say so rather than
       // call them signed out: a 503 tells the web app to retry, a 401 would send it to sign in.
-      if (caller.user === null && sessionCheckFailed(res)) {
+      if (sessionCheckFailed(res)) {
         throw new HttpError(503, 'Sign-in could not be checked. Try again.')
       }
       if (caller.user === null && !caller.apiKey) {

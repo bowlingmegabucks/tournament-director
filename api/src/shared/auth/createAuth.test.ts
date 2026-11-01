@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { createCapturedLogger } from '../../test/logger.ts'
 import { createTestAuth, createTestUser, signInCookie, testPassword } from '../../test/testAuth.ts'
 import { sessionSeconds } from './createAuth.ts'
 import { permissionsOf, rolesOf } from './roles.ts'
@@ -116,6 +117,118 @@ describe('createAuth', () => {
     await auth.api.getSession({ headers: new Headers({ cookie }) })
 
     expect(String(database.session[0]?.['expiresAt'])).toBe(before)
+  })
+
+  it('leaves a session used 30 minutes after sign-in as it is, so renewing is hourly and not constant', async () => {
+    const { auth, database } = createTestAuth()
+    await createTestUser(auth)
+    const cookie = await signInCookie(auth)
+    const thirtyMinutesOld = new Date(Date.now() + (sessionSeconds - 30 * 60) * 1000)
+    const session = database.session[0]
+    if (session) session['expiresAt'] = thirtyMinutesOld
+
+    await auth.api.getSession({ headers: new Headers({ cookie }) })
+
+    expect(database.session[0]?.['expiresAt']).toEqual(thirtyMinutesOld)
+  })
+
+  it('renews a session that is more than an hour old', async () => {
+    const { auth, database } = createTestAuth()
+    await createTestUser(auth)
+    const cookie = await signInCookie(auth)
+    const session = database.session[0]
+    if (session) session['expiresAt'] = new Date(Date.now() + (sessionSeconds - 2 * 3600) * 1000)
+
+    await auth.api.getSession({ headers: new Headers({ cookie }) })
+
+    const left = Date.parse(String(database.session[0]?.['expiresAt'])) - Date.now()
+    expect(left).toBeGreaterThan((sessionSeconds - 5) * 1000)
+  })
+
+  it('turns off Better Auth’s own rate limit and telemetry, which we replace or refuse', () => {
+    const { auth } = createTestAuth()
+
+    expect(auth.options.rateLimit?.enabled).toBe(false)
+    expect(auth.options.telemetry?.enabled).toBe(false)
+  })
+
+  it('keeps its origin and CSRF checks on whatever NODE_ENV says', () => {
+    const { auth } = createTestAuth()
+
+    expect(auth.options.advanced?.disableOriginCheck).toBe(false)
+    expect(auth.options.advanced?.disableCSRFCheck).toBe(false)
+  })
+
+  it('lets only an admin use its admin calls', async () => {
+    const { auth } = createTestAuth()
+    const target = await createTestUser(auth, { email: 'target@example.com', role: 'scoreKeeper' })
+    await createTestUser(auth, { email: 'dee@example.com', role: 'director' })
+    await createTestUser(auth, { email: 'ada@example.com', role: 'admin' })
+    const directorCookie = await signInCookie(auth, 'dee@example.com')
+    const adminCookie = await signInCookie(auth, 'ada@example.com')
+
+    await expect(
+      auth.api.banUser({
+        body: { userId: target.id },
+        headers: new Headers({ cookie: directorCookie }),
+      }),
+    ).rejects.toThrow()
+    await expect(
+      auth.api.banUser({
+        body: { userId: target.id },
+        headers: new Headers({ cookie: adminCookie }),
+      }),
+    ).resolves.toBeDefined()
+  })
+
+  describe('its messages in our log', () => {
+    function logging() {
+      const captured = createCapturedLogger('debug')
+      const { auth } = createTestAuth({ logger: captured.logger })
+      const log = (level: 'error' | 'warn' | 'info' | 'debug', ...details: unknown[]) =>
+        auth.options.logger?.log?.(level, 'something happened', ...details)
+      return { log, records: captured.records }
+    }
+
+    it.each([
+      ['error', 50],
+      ['warn', 40],
+      ['info', 20],
+      ['debug', 20],
+    ] as const)(
+      'writes a %s message at our level %i, marked with its source',
+      (level, pinoLevel) => {
+        const { log, records } = logging()
+
+        log(level)
+
+        expect(records()).toEqual([
+          expect.objectContaining({
+            level: pinoLevel,
+            source: 'better-auth',
+            detail: 'something happened',
+            msg: 'Auth library message',
+          }),
+        ])
+      },
+    )
+
+    it('carries an Error among its details as the error, and ignores the other details', () => {
+      const { log, records } = logging()
+
+      log('error', 'extra text', { token: 'secret-token' }, new Error('boom'))
+
+      expect(records()[0]).toMatchObject({ err: { message: 'boom' } })
+      expect(JSON.stringify(records())).not.toContain('secret-token')
+    })
+
+    it('has no error when none is among the details', () => {
+      const { log, records } = logging()
+
+      log('warn', 'extra text')
+
+      expect(records()[0]).not.toHaveProperty('err')
+    })
   })
 
   it('sees a role change on the next request, so a demotion applies at once (D-96)', async () => {

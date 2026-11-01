@@ -100,8 +100,8 @@ Two parts, API first (owner decision, 2026-11-01). The API part ends with the AP
 6. **Done.** `identifyCaller` reads the session cookie (no cookie, no lookup) and passes on the fresh cookie when Better Auth renews or clears it; `mountRoutes` lets a user in when their roles hold the permission. A failed session lookup answers 503 on a protected route, not 401. A banned user counts as signed out at once, even if edited in SQL.
 7. **Done.** `GET /v1/me` returns `{ apiKey, user }`, where `user` is `{ id, email, name, roles, permissions }` or `null`; a wrong key is 401, a failed session lookup is 503, and every answer is `no-store`. This is the contract Part B builds on.
 8. **Done.** `npm run users:create-admin` in `api/` asks for email, name, and password (hidden, typed twice, 12 to 128 characters); it needs only `DATABASE_URL`, shows which database it will write to, and asks before adding to a database that has users. `db:seed` adds one local user per role (`admin@example.com`, `director@example.com`, `scorekeeper@example.com`) to a local database only, listed in `api-standards.md`.
-9. Docs: rules API-18 to API-21 in `api-access.md`; settings in `deployment.md` and `api-standards.md`; Better Auth and Identity in `dotnet-to-node.md`; CLAUDE.md status.
-10. `npm run check` and Stryker on the changed files in `api/`.
+9. **Done.** Docs: rules API-16 to API-21 in `api-access.md`; settings in `deployment.md` and `api-standards.md`; Better Auth and Identity in `dotnet-to-node.md`; CLAUDE.md status.
+10. **Done.** `npm run check` passes for the repo, and Stryker on `api/` scores 99.6% (the five survivors are in `ttlCache.ts`, `registrations/repository.ts`, and one stale incremental result for a constant that a fresh run kills).
 
 ### Part B: Web (next, after Part A is merged)
 

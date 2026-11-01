@@ -153,6 +153,16 @@ describe('sign-in throttle', () => {
     expect(blocked.headers['retry-after']).toBeDefined()
   })
 
+  it('sends the standard RateLimit header and not the old X-RateLimit ones', async () => {
+    const { signIn } = await setup()
+
+    const response = await signIn('wrong password here')
+
+    expect(response.headers['ratelimit']).toBeDefined()
+    expect(response.headers['x-ratelimit-limit']).toBeUndefined()
+    expect(response.headers['x-ratelimit-remaining']).toBeUndefined()
+  })
+
   it('also stops a correct password once the address is over the limit', async () => {
     const { signIn } = await setup()
     for (let attempt = 0; attempt < signInAttempts; attempt++) await signIn('wrong password here')
@@ -185,11 +195,14 @@ describe('sign-in throttle', () => {
 })
 
 describe('sign-in logging and metrics', () => {
-  it('logs a failed sign-in without the email or the password', async () => {
+  it('logs a failed sign-in with its status, but without the email or the password', async () => {
     const { signIn, records } = await setup()
 
     await signIn('hunter2-hunter2-hunter2', 'secret.person@example.com')
 
+    expect(records()).toContainEqual(
+      expect.objectContaining({ msg: 'Sign-in failed', status: 401, level: 40 }),
+    )
     const text = JSON.stringify(records())
     expect(text).toContain('Sign-in failed')
     expect(text).not.toContain('hunter2')
@@ -203,6 +216,19 @@ describe('sign-in logging and metrics', () => {
 
     expect(records()).toContainEqual(
       expect.objectContaining({ source: 'better-auth', msg: 'Auth library message' }),
+    )
+  })
+
+  it('also logs a sign-in that Better Auth turns away as a bad request', async () => {
+    const { app, records } = await setup()
+
+    const response = await request(app)
+      .post(signInPath)
+      .send({ email: 'not-an-email', password: 'whatever password here' })
+
+    expect(response.status).toBe(400)
+    expect(records()).toContainEqual(
+      expect.objectContaining({ msg: 'Sign-in failed', status: 400 }),
     )
   })
 
@@ -238,6 +264,14 @@ describe('sign-in logging and metrics', () => {
     }
     return { signIn, count }
   }
+
+  it('counts a sign-in turned away as a bad request too', async () => {
+    const { signIn, count } = await metricSetup()
+
+    await signIn('')
+
+    expect(await count('bad_sign_in')).toBe(1)
+  })
 
   it('counts each failed sign-in as bad_sign_in', async () => {
     const { signIn, count } = await metricSetup()

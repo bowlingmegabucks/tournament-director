@@ -1,3 +1,4 @@
+import { APIError } from 'better-auth/api'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { maxPasswordLength, minPasswordLength } from '../shared/auth/createAuth.ts'
 import { permissionsOf } from '../shared/auth/roles.ts'
@@ -171,13 +172,17 @@ describe('createAdminUser', () => {
 
     it('stops after three wrong answers and creates nothing', async () => {
       const { auth, database, countUsers } = world()
-      const { prompts, printed } = scripted({ visible: ['a', 'b@', 'c.com', 'ada@example.com'] })
+      const { prompts, printed, asked } = scripted({
+        visible: ['a', 'b@', 'c.com', 'ada@example.com'],
+      })
 
       await expect(createAdminUser({ auth, countUsers, prompts })).rejects.toThrow(
         'Too many wrong answers. Nothing was created.',
       )
       expect(database.user).toHaveLength(0)
       expect(printed.filter((line) => line === 'That is not an email address.')).toHaveLength(3)
+      // Exactly three tries: it never reads the fourth answer, and never goes on to the name.
+      expect(asked).toEqual(['Email:', 'Email:', 'Email:'])
     })
   })
 
@@ -213,12 +218,17 @@ describe('createAdminUser', () => {
 
     it('stops after three wrong answers', async () => {
       const { auth, database, countUsers } = world()
-      const { prompts } = scripted({ visible: ['ada@example.com', '', ' ', ''] })
+      const { prompts, asked, hiddenAsked } = scripted({
+        visible: ['ada@example.com', '', ' ', '', 'Ada'],
+      })
 
       await expect(createAdminUser({ auth, countUsers, prompts })).rejects.toThrow(
         'Too many wrong answers',
       )
       expect(database.user).toHaveLength(0)
+      // Exactly three tries at the name, and no password is asked after.
+      expect(asked).toEqual(['Email:', 'Name:', 'Name:', 'Name:'])
+      expect(hiddenAsked).toEqual([])
     })
   })
 
@@ -282,7 +292,7 @@ describe('createAdminUser', () => {
 
     it('stops after three failed tries and creates nothing', async () => {
       const { auth, database, countUsers } = world()
-      const { prompts } = scripted({
+      const { prompts, printed, hiddenAsked } = scripted({
         visible: good.visible,
         hidden: ['short', testPassword, 'different password', 'x', testPassword, 'other password!'],
       })
@@ -291,6 +301,13 @@ describe('createAdminUser', () => {
         'Too many wrong answers',
       )
       expect(database.user).toHaveLength(0)
+      // Exactly three tries: a short one, a mismatch, and another short one.
+      expect(printed).toEqual([
+        `The password needs ${minPasswordLength} to ${maxPasswordLength} characters.`,
+        'The two passwords differ.',
+        `The password needs ${minPasswordLength} to ${maxPasswordLength} characters.`,
+      ])
+      expect(hiddenAsked).toHaveLength(4)
     })
   })
 
@@ -307,6 +324,21 @@ describe('createAdminUser', () => {
       )
       await expect(attempt).rejects.toHaveProperty('cause')
       expect(w.database.user).toHaveLength(1)
+    })
+
+    it('does not call another Better Auth refusal an email that is taken', async () => {
+      const { auth, countUsers } = world()
+      vi.spyOn(auth.api, 'createUser').mockRejectedValue(
+        new APIError('BAD_REQUEST', {
+          message: 'Password is too short',
+          code: 'PASSWORD_TOO_SHORT',
+        }),
+      )
+      const { prompts } = scripted(good)
+
+      await expect(createAdminUser({ auth, countUsers, prompts })).rejects.toThrow(
+        'Password is too short',
+      )
     })
 
     it('passes any other failure on unchanged', async () => {

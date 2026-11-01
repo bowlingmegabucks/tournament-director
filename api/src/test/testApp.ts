@@ -44,10 +44,16 @@ export function createSignedInTestApp(
   const cookie = createTestUser(auth, { role }).then(({ email }) => signInCookie(auth, email))
   // supertest takes any request handler, so wrap the app instead of changing each request.
   const handler = (req: Request, res: Response) => {
-    void cookie.then((value) => {
-      req.headers.cookie = value
-      app(req, res)
-    })
+    cookie
+      .then((value) => {
+        // A cookie the test set itself wins, so a test can still act as another user.
+        req.headers.cookie ??= value
+        app(req, res)
+      })
+      .catch((error: unknown) => {
+        res.statusCode = 500
+        res.end(error instanceof Error ? error.message : 'Test sign-in failed')
+      })
   }
   return handler as unknown as Express
 }

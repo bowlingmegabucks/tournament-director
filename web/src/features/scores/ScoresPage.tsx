@@ -93,8 +93,9 @@ export function ScoresPage({ kind }: Readonly<{ kind: SessionKind }>) {
       )}
       {data.noLane > 0 && (
         <p className={styles.note}>
-          {formatNoLane(data.noLane)}{' '}
+          {formatNoLane(data.noLane)}
           <Can permission="lanes.read">
+            {' '}
             <Link to={lanesPath}>Assign lanes</Link>
           </Can>
         </p>

@@ -38,6 +38,7 @@ function SessionPortalView({
   const { sessionId = '' } = useParams()
   const label = kind === 'squad' ? 'Squad' : 'Sweeper'
   const listPath = `/tournaments/${tournament.id}/${kind}s`
+  const { isPending: meIsPending } = useMe()
 
   if (isPending) return <Loading label={`Loading ${kind}…`} />
   if (error) return <QueryError error={error} onRetry={onRetry} />
@@ -74,7 +75,8 @@ function SessionPortalView({
         <span className={styles.status}>{session.complete ? 'Complete' : 'Open'}</span>
       </h1>
       <nav aria-label={`${label} pages`}>
-        <ul className={styles.tabs}>
+        {/* Wait for /v1/me, so the tabs appear once and do not shift under the pointer. */}
+        <ul className={styles.tabs} hidden={meIsPending}>
           <Can permission="lanes.read">
             <li>
               <NavLink to="lanes">Lane assignments</NavLink>

@@ -24,6 +24,23 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('sign-in page has no WCAG 2.2 AA violations', async ({ page }) => {
+      await page.goto('/login')
+      await expect(page.getByRole('heading', { name: 'Sign in', level: 1 })).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
+    test('sign-in page with an error has no WCAG 2.2 AA violations', async ({ page }) => {
+      await page.goto('/login')
+      await page.getByLabel('Email').fill('director@example.com')
+      await page.getByLabel('Password').fill('wrong')
+      await page.getByRole('button', { name: 'Sign in' }).click()
+      await expect(page.getByRole('alert')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
     test('tournaments page (loaded) has no WCAG 2.2 AA violations', async ({ page }) => {
       await page.goto('/tournaments')
       await expect(page.getByRole('heading', { name: 'Past' })).toBeVisible()
@@ -284,7 +301,7 @@ test.describe('other states', () => {
       await page.route('**/v1/tournaments', (route) => route.fulfill({ status: 500, body: '' }))
       await page.emulateMedia({ colorScheme })
       await page.goto('/tournaments')
-      await expect(page.getByRole('alert')).toBeVisible()
+      await expect(page.getByRole('main').getByRole('alert')).toBeVisible()
 
       await expectNoViolations(page)
     })
@@ -340,7 +357,7 @@ test.describe('other states', () => {
       )
       await page.emulateMedia({ colorScheme })
       await page.goto(`/tournaments/${id}/divisions`)
-      await expect(page.getByRole('alert')).toBeVisible({ timeout: 5000 })
+      await expect(page.getByRole('main').getByRole('alert')).toBeVisible({ timeout: 5000 })
 
       await expectNoViolations(page)
     })

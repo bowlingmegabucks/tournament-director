@@ -57,6 +57,7 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 ## Security
 
 - [ ] Auth approach decided and built (0.3.0).
+- [x] API key for the registration site: `API_KEY` in `x-api-key`, permission-based access labels, and `GET /v1/me` (stage 1, D-94 to D-97, `API-16`, `API-17`).
 - [x] Every route declares its access; undeclared routes deny (`API-15`, D-27). Only `public` exists until sign-in (0.3.0); recheck then.
 - [ ] Roles and permissions reviewed against [security.md](migration/security.md).
 - [ ] Personal data (bowler records) is behind auth. The scores view is the one exception: it shows names and scratch scores to everyone on purpose (D-70).

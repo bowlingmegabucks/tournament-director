@@ -4,8 +4,8 @@ Ideas from the old `rewrite/REWRITE_SPEC.md` and from this review. **None of the
 
 | Feature | From | Notes |
 | --- | --- | --- |
-| User login and roles (director, staff, viewer) | rewrite spec §3 | Legacy has no users (`SEC-01`). Proposed: director does setup and sees SSNs; staff registers, assigns lanes, enters scores; viewer reads results |
-| JWT sessions, 8-hour expiry | rewrite spec §10 | Depends on the login decision |
+| User login and roles | rewrite spec §3 | **Approved, changed (D-94, D-96, D-97).** Roles are score keeper, director, and admin, each a set of permissions. SSN checks are admin only. Legacy has no users (`SEC-01`) |
+| JWT sessions, 8-hour expiry | rewrite spec §10 | **Approved for stage 2 (D-94).** Expiry settled with the token issuer |
 | Edit tournaments, divisions, squads, sweepers | rewrite spec §6, `plan/01-tournaments.md` | **Approved (D-12).** Field rules per feature |
 | Delete tournaments, divisions, squads, sweepers | rewrite spec §6 | **Approved (D-15).** Rules per feature, discussed with editing |
 | Tie-breaker marks on standings | review | **Built (D-14, D-16)** on squad and sweeper results; see [results.md](../requirements/results.md) |

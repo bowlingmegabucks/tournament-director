@@ -1,4 +1,4 @@
-import { loadConfig } from '../config.ts'
+import { loadDatabaseUrl } from '../config.ts'
 import { createDatabaseClient } from '../shared/database.ts'
 import { seedDivisions } from './seedDivisions.ts'
 import { seedRegistrations } from './seedRegistrations.ts'
@@ -7,7 +7,7 @@ import { seedSessions } from './seedSessions.ts'
 import { seedTournaments } from './seedTournaments.ts'
 
 // Run with `npm run db:seed`. It reads DATABASE_URL from .env. Local databases only.
-const client = createDatabaseClient(loadConfig().databaseUrl)
+const client = createDatabaseClient(loadDatabaseUrl())
 try {
   const count = await seedTournaments(client)
   console.log(`Seeded ${count} tournaments.`)

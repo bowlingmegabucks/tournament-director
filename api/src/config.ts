@@ -12,6 +12,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   // mariadb://USER:PASSWORD@HOST:3306/DATABASE. Required: there is no demo-data fallback (D-33).
   DATABASE_URL: z.string().regex(/^(mariadb|mysql):\/\//, 'must start with mariadb:// or mysql://'),
+  // The one key the registration site sends in x-api-key (D-95). Required: no key, no start.
+  API_KEY: z.string().trim().min(32, 'must be at least 32 characters'),
   // Comma-separated list. Empty means same-origin only.
   CORS_ORIGIN: z.string().default(''),
   NODE_ENV: z.string().default('development'),
@@ -53,6 +55,8 @@ export interface Config {
   port: number
   /** Connection string for the legacy MariaDB database. Holds the password: never log it. */
   databaseUrl: string
+  /** The key callers send in `x-api-key` (D-95). A secret: never log it. */
+  apiKey: string
   logLevel: LogLevel
   rateLimit: RateLimitConfig
   trustProxy: number
@@ -60,16 +64,26 @@ export interface Config {
   telemetry: TelemetryConfig
 }
 
-/** Read and validate the environment once, at startup. Throws with every problem listed. */
-export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
-  const result = envSchema.safeParse(env)
+function parseEnv<T>(schema: z.ZodType<T>, env: NodeJS.ProcessEnv): T {
+  const result = schema.safeParse(env)
   if (!result.success) {
     throw new Error(`Invalid environment: ${z.prettifyError(result.error)}`)
   }
-  const data = result.data
+  return result.data
+}
+
+/** Only the database URL, for scripts such as `db:seed` that do not serve requests. */
+export function loadDatabaseUrl(env: NodeJS.ProcessEnv = process.env): string {
+  return parseEnv(envSchema.pick({ DATABASE_URL: true }), env).DATABASE_URL
+}
+
+/** Read and validate the environment once, at startup. Throws with every problem listed. */
+export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
+  const data = parseEnv(envSchema, env)
   return {
     port: data.PORT,
     databaseUrl: data.DATABASE_URL,
+    apiKey: data.API_KEY,
     logLevel: data.LOG_LEVEL,
     rateLimit: { max: data.RATE_LIMIT_MAX, windowSeconds: data.RATE_LIMIT_WINDOW_SECONDS },
     trustProxy: data.TRUST_PROXY,

@@ -114,7 +114,18 @@ The legacy MariaDB database, read through Prisma (D-30). The .NET twin: `PrismaC
 - Local: `npm run services:up` starts MariaDB 11.4.7 (host port 15306). You create the tables from `docs/migration/database.md`; `npm run db:seed` (root or `api/`) adds sample tournaments, divisions, squads, sweepers, registrations with their bowlers, and scores.
 - Tests: files named `*.db.test.ts` run in the `db` Vitest project against a real MariaDB that Testcontainers starts once per run (needs Docker). `resetDatabase` empties every table before each test; files run one at a time because they share the database. Everything else runs in the `unit` project with the in-memory repository. Stryker runs `unit` only (`vitest.stryker.config.ts`), and `prismaRepository.ts`, `seedTournaments.ts`, and `seedDivisions.ts` are outside its `mutate` list.
 
+## Access and the API key
+
+Every route group declares who may call it (D-27, D-96). The .NET twin: `identifyCaller` is an authentication handler, and the access label is `[AllowAnonymous]` or `[Authorize(Policy = "...")]`, where the policy can also accept the API key scheme.
+
+- `API_KEY` is required, 32 characters or more (D-95). The registration site sends it in `x-api-key`. It is a secret: never log it. Without it the API does not start. Local runs use `api_localKey_thisIsForTestingOnly` (`.env.example`); never use that value anywhere else.
+- `identifyCaller` runs before the routes and works out the caller once per request: `apiKey` for a matching key, `anonymous` otherwise. It compares HMAC-SHA-256 digests (random per-process key) in constant time. Read the caller in a handler with `callerOf(res)`.
+- Labels in `mountRoutes`: `public` (anyone), `{ permission }` (a signed-in user who holds it), or `{ permission, apiKey: true }` (the same, plus a valid API key with no permission check). Add `apiKey: true` only to routes the registration site needs. A protected group answers 401 `Missing or invalid credentials.` with no caller, and 403 to the key on a route that does not accept it or to a user without the permission. A wrong key on a public route is ignored.
+- Routes ask for a permission, never a role. Permissions live in `src/shared/auth/permissions.ts`. The API key holds none; routes opt in to it. Roles arrive with sign-in (stage 2, D-94).
+- The request line carries `callerType`, and the trace span `caller.type`. `tournament_director.auth.failures` counts 401s and 403s by `reason` (`missing_credentials`, `invalid_key`, `forbidden`).
+- `GET /v1/me` is public and tests a key: 200 `{ apiKey: true, user: null }` for a valid key, 200 `{ apiKey: false, user: null }` with none, and 401 `Invalid API key.` for a wrong one, with `Cache-Control: no-store`. It is the one public route that does not ignore a wrong key. `user` fills in with sign-in (stage 2).
+
 ## Not built yet
 
-- Authentication
+- Sign-in (JWT) and roles (stage 2, D-94)
 - Write routes (POST, PUT, DELETE) and `express.json()`

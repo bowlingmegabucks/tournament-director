@@ -40,7 +40,9 @@ describe('parseCreateRequest', () => {
   })
 
   it('needs an address, one code however many parts are missing (API-09c)', () => {
-    const { address: _address, ...rest } = sampleRequest().registration.bowler
+    const rest = Object.fromEntries(
+      Object.entries(sampleRequest().registration.bowler).filter(([key]) => key !== 'address'),
+    )
     expect(codesOf(sampleRequest({ bowler: rest }))).toEqual(['Registration.BowlerAddressRequired'])
     const partial = { ...rest, address: { street: 'x' } }
     expect(codesOf(sampleRequest({ bowler: partial }))).toEqual([

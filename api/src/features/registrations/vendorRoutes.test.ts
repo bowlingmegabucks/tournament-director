@@ -2,6 +2,7 @@ import { faker } from '@faker-js/faker'
 import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 import { apiKeyHeader } from '../../shared/auth/caller.ts'
+import { HttpError } from '../../shared/errors.ts'
 import {
   createDivision,
   createSquad,
@@ -239,6 +240,57 @@ describe('POST /v1/registrations (API-05)', () => {
         .send(body())
       expect(response.status).toBe(401)
     })
+  })
+})
+
+describe('unexpected errors (API-13)', () => {
+  function crashing() {
+    const captured = createCapturedLogger()
+    const context = setup({ logger: captured.logger })
+    context.deps.registrationWriter.findRegistrationIdByPaymentCode = () =>
+      Promise.reject(new Error('secret database detail'))
+    context.deps.registrationWriter.getDetail = () =>
+      Promise.reject(new Error('secret database detail'))
+    return { ...context, captured, app: createTestApp(context.deps) }
+  }
+
+  it('answers a crash on create with the legacy text and a trace id, and logs the cause', async () => {
+    const { app, body, captured } = crashing()
+    const payment = { processingSystem: 'Stripe', confirmationCode: 'ch_1', amount: 75 }
+
+    const response = await asVendor(request(app).post('/v1/registrations')).send(body({ payment }))
+
+    expect(response.status).toBe(500)
+    expect(response.headers['content-type']).toMatch(/application\/problem\+json/)
+    expect(response.body).toMatchObject({
+      status: 500,
+      detail: 'An unexpected error occurred while processing your request.',
+      traceId: response.headers['x-request-id'],
+    })
+    expect(JSON.stringify(response.body)).not.toContain('secret')
+    expect(captured.records().some((r) => r['msg'] === 'Unhandled error')).toBe(true)
+  })
+
+  it('answers a crash on get the same way', async () => {
+    const { app } = crashing()
+
+    const response = await asVendor(request(app).get(`/v1/registrations/${faker.string.uuid()}`))
+
+    expect(response.status).toBe(500)
+    expect(response.body.detail).toBe('An unexpected error occurred while processing your request.')
+  })
+
+  it('leaves an error we meant to send, such as a database outage, to the app', async () => {
+    const context = setup()
+    context.deps.registrationWriter.getDetail = () =>
+      Promise.reject(new HttpError(503, 'Database unavailable'))
+
+    const response = await asVendor(
+      request(createTestApp(context.deps)).get(`/v1/registrations/${faker.string.uuid()}`),
+    )
+
+    expect(response.status).toBe(503)
+    expect(response.body).toEqual({ message: 'Database unavailable' })
   })
 })
 

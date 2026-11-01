@@ -1,5 +1,6 @@
 import express, { Router, type ErrorRequestHandler, type Response } from 'express'
-import { z } from 'zod'
+import { z, ZodError } from 'zod'
+import { HttpError } from '../../shared/errors.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { requestIdHeader, requestLogger } from '../../shared/requestLogging.ts'
 import type { DivisionRepository } from '../divisions/repository.ts'
@@ -9,7 +10,7 @@ import { toVendorSquad } from '../squads/types.ts'
 import type { SweeperRepository } from '../sweepers/repository.ts'
 import { toVendorSweeper } from '../sweepers/types.ts'
 import type { TournamentRepository } from '../tournaments/repository.ts'
-import { notFoundProblem, toProblem, type Failure } from './problem.ts'
+import { notFoundProblem, toProblem, validation } from './problem.ts'
 import { register } from './register.ts'
 import { parseCreateRequest } from './request.ts'
 import type { RegistrationDetailResponse } from './vendorTypes.ts'
@@ -32,24 +33,41 @@ function traceIdOf(res: Response): string {
   return typeof header === 'string' ? header : ''
 }
 
-// A body that is not JSON, or too large, is the caller's mistake: 400 with the problem body.
-const badBody: ErrorRequestHandler = (err: unknown, _req, res, next) => {
-  const type = typeof err === 'object' && err !== null && 'type' in err ? err.type : undefined
-  if (type !== 'entity.parse.failed') {
-    next(err)
-    return
+// Errors on these routes. A body that is not JSON is the caller's mistake: 400 with the problem
+// body. An error we meant to send (`HttpError`, such as a database outage) or a bad id (`ZodError`)
+// goes on to the app's handler. Anything else is a crash: log it and answer with the legacy text
+// (API-13). The cause never reaches the caller.
+function routeErrors(logger: Logger): ErrorRequestHandler {
+  return (err: unknown, _req, res, next) => {
+    if (res.headersSent) {
+      next(err)
+      return
+    }
+    const type = typeof err === 'object' && err !== null && 'type' in err ? err.type : undefined
+    if (type === 'entity.parse.failed') {
+      const failures = [validation('Registration.Required', 'The request body is not valid JSON.')]
+      const detail = 'An error occurred while creating the registration.'
+      res
+        .status(400)
+        .type('application/problem+json')
+        .json(toProblem(failures, detail, traceIdOf(res)))
+      return
+    }
+    if (err instanceof HttpError || err instanceof ZodError) {
+      next(err)
+      return
+    }
+    requestLogger(res, logger).error({ err }, 'Unhandled error')
+    res
+      .status(500)
+      .type('application/problem+json')
+      .json({
+        status: 500,
+        detail: 'An unexpected error occurred while processing your request.',
+        traceId: traceIdOf(res),
+        message: 'Internal server error',
+      })
   }
-  const failures: Failure[] = [
-    {
-      kind: 'validation',
-      code: 'Registration.Required',
-      description: 'The request body is not valid JSON.',
-    },
-  ]
-  res
-    .status(400)
-    .type('application/problem+json')
-    .json(toProblem(failures, 'An error occurred while creating the registration.', traceIdOf(res)))
 }
 
 /**
@@ -159,6 +177,6 @@ export function createVendorRegistrationRouter(deps: VendorRegistrationDependenc
     res.json(body)
   })
 
-  router.use(badBody)
+  router.use(routeErrors(logger))
   return router
 }

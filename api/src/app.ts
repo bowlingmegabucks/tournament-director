@@ -26,6 +26,7 @@ import type { TournamentRepository } from './features/tournaments/repository.ts'
 import { createErrorHandler, notFound } from './shared/middleware.ts'
 import { createHealthRouter } from './shared/healthRoutes.ts'
 import { createReadyRouter } from './shared/readyRoutes.ts'
+import { createRootRouter } from './shared/rootRoutes.ts'
 import { createAuthRouter } from './features/auth/routes.ts'
 import type { Auth } from './shared/auth/createAuth.ts'
 import { identifyCaller } from './shared/auth/caller.ts'
@@ -91,6 +92,7 @@ export function createApp({
   mountRoutes(
     app,
     [
+      { path: '/', access: 'public', router: createRootRouter() },
       { path: '/health', access: 'public', router: createHealthRouter() },
       { path: '/ready', access: 'public', router: createReadyRouter(checkDatabase) },
       // Public: a caller with no key learns it is anonymous (D-95).

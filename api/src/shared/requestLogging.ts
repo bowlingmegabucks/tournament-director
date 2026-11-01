@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { trace } from '@opentelemetry/api'
 import type { RequestHandler, Response } from 'express'
+import { callerOf } from './auth/caller.ts'
 import type { Logger } from './logger.ts'
 
 export const requestIdHeader = 'x-request-id'
@@ -39,6 +40,8 @@ export function requestLogging(logger: Logger): RequestHandler {
           path,
           status,
           durationMs: Math.round(performance.now() - start),
+          // Who called: the type only, never the key (D-95).
+          callerType: callerOf(res).type,
           // The caller hung up before we finished.
           aborted: !res.writableFinished,
         },

@@ -78,13 +78,17 @@ describe('createTerminalPrompts', () => {
       await expect(answer).resolves.toBe('Ada')
     })
 
-    it('ignores anything typed after the Enter in the same chunk', async () => {
+    it.each([
+      ['ignores anything typed after the Enter in the same chunk', 'Ada\rleftover', 'Ada'],
+      ['accepts a space and any printable character', 'Ada O’Neil ~\r', 'Ada O’Neil ~'],
+      ['returns an empty line when only Enter is pressed', '\r', ''],
+    ])('%s', async (_name, typed, expected) => {
       const { input, prompts } = setup()
 
       const answer = prompts.ask('Name:')
-      input.emit('data', 'Ada\rleftover')
+      input.emit('data', typed)
 
-      await expect(answer).resolves.toBe('Ada')
+      await expect(answer).resolves.toBe(expected)
     })
 
     it.each([
@@ -113,24 +117,6 @@ describe('createTerminalPrompts', () => {
       input.emit('data', '\tb\r')
 
       await expect(answer).resolves.toBe('ab')
-    })
-
-    it('accepts a space and any printable character', async () => {
-      const { input, prompts } = setup()
-
-      const answer = prompts.ask('Name:')
-      input.emit('data', 'Ada O’Neil ~\r')
-
-      await expect(answer).resolves.toBe('Ada O’Neil ~')
-    })
-
-    it('returns an empty line when only Enter is pressed', async () => {
-      const { input, prompts } = setup()
-
-      const answer = prompts.ask('Name:')
-      input.emit('data', '\r')
-
-      await expect(answer).resolves.toBe('')
     })
   })
 

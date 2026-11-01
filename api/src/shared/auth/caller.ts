@@ -89,8 +89,7 @@ async function readSession(
   logger: Logger,
 ): Promise<SessionResult> {
   const cookie = req.headers.cookie
-  if (cookie === undefined || !cookie.includes(sessionCookieMark))
-    return { user: null, failed: false }
+  if (!cookie?.includes(sessionCookieMark)) return { user: null, failed: false }
   try {
     const { headers, response } = await auth.api.getSession({
       headers: fromNodeHeaders(req.headers),

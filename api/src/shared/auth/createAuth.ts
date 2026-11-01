@@ -90,7 +90,7 @@ export function createAuth({ config, database, trustedOrigins, logger }: AuthDep
       log: (level, message, ...details) => {
         const error = details.find((detail): detail is Error => detail instanceof Error)
         const logLevel: 'error' | 'warn' | 'debug' =
-          level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'debug'
+          level === 'error' || level === 'warn' ? level : 'debug'
         logger[logLevel](
           { source: 'better-auth', detail: message, err: error },
           'Auth library message',

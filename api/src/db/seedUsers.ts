@@ -74,12 +74,15 @@ export async function seedUsers(
       }
     }
   }
-  let added = 0
-  for (const user of localUsers) {
-    if ((await client.user.count({ where: { email: user.email } })) > 0) continue
+  const existing = await client.user.findMany({
+    where: { email: { in: localUsers.map(({ email }) => email) } },
+    select: { email: true },
+  })
+  const have = new Set(existing.map(({ email }) => email))
+  const missing = localUsers.filter(({ email }) => !have.has(email))
+  for (const user of missing) {
     // One at a time: each hashes a password, and the order is the order above.
-    await auth.api.createUser({ body: user })
-    added++
+    await auth.api.createUser({ body: user }) // NOSONAR
   }
-  return { added }
+  return { added: missing.length }
 }

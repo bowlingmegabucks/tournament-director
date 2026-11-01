@@ -32,6 +32,7 @@ Stage 2 of D-94. No legacy twin: legacy has no user accounts (`SEC-01`).
 - D-101: first admin from a script; invites wait for stage 3.
 - D-102: what the UI shows when signed in or out.
 - D-103: a user holds one or more roles; none by default. Permissions are the union.
+- D-104: local-only quick-login buttons on `/login` (admin, tournament director, score keeper).
 
 ## API
 
@@ -98,14 +99,14 @@ Two parts, API first (owner decision, 2026-11-01). The API part ends with the AP
 5. **Done.** Role table (`shared/auth/roles.ts`) from D-97, with `rolesOf` and `permissionsOf` for a stored value that may list several roles (D-103).
 6. **Done.** `identifyCaller` reads the session cookie (no cookie, no lookup) and passes on the fresh cookie when Better Auth renews or clears it; `mountRoutes` lets a user in when their roles hold the permission. A failed session lookup answers 503 on a protected route, not 401. A banned user counts as signed out at once, even if edited in SQL.
 7. **Done.** `GET /v1/me` returns `{ apiKey, user }`, where `user` is `{ id, email, name, roles, permissions }` or `null`; a wrong key is 401, a failed session lookup is 503, and every answer is `no-store`. This is the contract Part B builds on.
-8. `npm run users:create-admin` in `api/` (asks for email, name, and password; the password does not echo). `db:seed` adds one local user per role with a known local-only password, listed in `api-standards.md`.
+8. **Done.** `npm run users:create-admin` in `api/` asks for email, name, and password (hidden, typed twice, 12 to 128 characters); it needs only `DATABASE_URL`, shows which database it will write to, and asks before adding to a database that has users. `db:seed` adds one local user per role (`admin@example.com`, `director@example.com`, `scorekeeper@example.com`) to a local database only, listed in `api-standards.md`.
 9. Docs: rules API-18 to API-21 in `api-access.md`; settings in `deployment.md` and `api-standards.md`; Better Auth and Identity in `dotnet-to-node.md`; CLAUDE.md status.
 10. `npm run check` and Stryker on the changed files in `api/`.
 
 ### Part B: Web (next, after Part A is merged)
 
-11. Mockups in `docs/plans/auth-stage-2-mockups/` for the `/login` page (all states) and the top bar, signed in and out; the owner approves them.
-12. `useMe`, `<Can>`, `RequirePermission`, `credentials: 'include'` on every `fetch`, the `/login` page, the top bar, MSW handlers and factories for `/v1/me`.
+11. Mockups in `docs/plans/auth-stage-2-mockups/` for the `/login` page (all states, and the three dev-only quick-login buttons, D-104) and the top bar, signed in and out; the owner approves them.
+12. `useMe`, `<Can>`, `RequirePermission`, `credentials: 'include'` on every `fetch`, the `/login` page, the top bar, MSW handlers and factories for `/v1/me`. Add the quick-login buttons (D-104), shown only when `import.meta.env.DEV` is true and using the users and passwords from `api/src/db/seedUsers.ts`. Add a check that the production build contains neither the buttons nor the seeded passwords (search `dist/` after `npm run build`).
 13. `npm run check`, e2e (sign in, see your name, sign out), and Stryker on the changed files in `web/`.
 
 ## Not doing

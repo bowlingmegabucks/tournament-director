@@ -112,6 +112,17 @@ The legacy MariaDB database, read through Prisma (D-30). The .NET twin: `PrismaC
 - A repository wraps each call in `withDatabaseErrors(logger, ...)`. An unreachable database becomes a 503 `Database unavailable` with the cause in the log; any other database error is a 500 (a missing table is a setup fault, not an outage).
 - A row that breaks the API shape is skipped and logged on a list; a single-row read of it answers 500 (D-31). `toTournament` in `tournamentRow.ts` does the mapping and is a pure function.
 - Local: `npm run services:up` starts MariaDB 11.4.7 (host port 15306). You create the tables from `docs/migration/database.md`; `npm run db:seed` (root or `api/`) adds sample tournaments, divisions, squads, sweepers, registrations with their bowlers, and scores.
+- **Users from the command line (D-101).** `npm run users:create-admin` (root or `api/`) asks for an email, a name, and a password (hidden, typed twice, 12 to 128 characters) and makes an `admin`. It needs a real terminal (it refuses piped input) and only `DATABASE_URL`: the script's secret is its own, and a user it makes signs in to the real API as usual. It prints `Database: host:port/name` first, so check that line before you answer. If users exist it says how many and asks before adding another. Never prints the password.
+  - **Production, once:** run it on your machine against the production database without leaving the URL in shell history: `read -s DATABASE_URL; export DATABASE_URL; npm run users:create-admin; unset DATABASE_URL` (paste the `mariadb://…?ssl=true` URL at the silent prompt). A `DATABASE_URL` already in the environment wins over `api/.env`.
+  - **Local test users.** `npm run db:seed` also adds one user per role, to a local database only (it skips them when `DATABASE_URL` is not `localhost`, `127.0.0.1`, or `[::1]`), because their passwords are in the repo. A user that exists is left alone.
+
+    | Email | Password | Role |
+    | --- | --- | --- |
+    | `admin@example.com` | `adminP4sswordLocal` | admin |
+    | `director@example.com` | `directorP4sswordLocal` | director |
+    | `scorekeeper@example.com` | `scoreKeeperP4sswordLocal` | scoreKeeper |
+
+    The local `/login` page will have a one-click button for each (D-104).
 - **Auth tables (D-100).** `api/prisma/auth-tables.sql` creates the four sign-in tables Better Auth uses (`user`, `session`, `account`, `verification`). They are the only tables we add to the legacy database. Run the file once on each database with any MariaDB client; running it again is safe. Locally: `docker exec -i tournament-director-db mariadb -uroot -p<password> <database> < api/prisma/auth-tables.sql`. The Prisma models for them sit at the end of `schema.prisma`; never edit their names or columns by hand, because Better Auth expects these. Tests run the same file, so a broken script fails there first.
 - Tests: files named `*.db.test.ts` run in the `db` Vitest project against a real MariaDB that Testcontainers starts once per run (needs Docker). `resetDatabase` empties every table before each test; files run one at a time because they share the database. Everything else runs in the `unit` project with the in-memory repository. Stryker runs `unit` only (`vitest.stryker.config.ts`), and `prismaRepository.ts`, `seedTournaments.ts`, and `seedDivisions.ts` are outside its `mutate` list.
 

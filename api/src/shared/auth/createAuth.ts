@@ -12,6 +12,8 @@ export const sessionSeconds = 12 * 60 * 60
 const sessionRenewSeconds = 60 * 60
 
 export const minPasswordLength = 12
+/** Better Auth's own ceiling. A longer one is refused at sign-in, so we refuse it up front. */
+export const maxPasswordLength = 128
 
 // Better Auth's own rules for who may call its admin paths (create user, ban, set role). Only the
 // admin role may. Director and score keeper get none; their permissions are ours (D-96). Declaring
@@ -57,6 +59,7 @@ export function createAuth({ config, database, trustedOrigins, logger }: AuthDep
       enabled: true,
       disableSignUp: true,
       minPasswordLength,
+      maxPasswordLength,
     },
     session: { expiresIn: sessionSeconds, updateAge: sessionRenewSeconds },
     // Every way we make users names a role. A user made with none gets `none`, which is not a role,

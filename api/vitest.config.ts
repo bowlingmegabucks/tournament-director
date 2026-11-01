@@ -33,6 +33,7 @@ export default defineConfig({
         'src/server.ts',
         'src/instrumentation.ts',
         'src/db/seed.ts',
+        'src/db/createAdmin.ts',
         'src/test/**',
         'src/**/*.test.ts',
       ],

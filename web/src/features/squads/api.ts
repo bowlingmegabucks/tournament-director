@@ -1,4 +1,5 @@
 import { apiUrl } from '../../shared/apiUrl'
+import { apiFetch } from '../../shared/apiFetch'
 import { field } from '../../shared/field'
 import { readJson } from '../../shared/readJson'
 import { isSessionDate } from '../../shared/sessionFormat'
@@ -32,7 +33,9 @@ function isSquad(value: unknown): value is Squad {
 
 /** The squads of one tournament, in the order the API sends them (SQD-20, SQD-21). */
 export async function fetchSquads(tournamentId: string): Promise<Squad[]> {
-  const response = await fetch(apiUrl(`/v1/tournaments/${encodeURIComponent(tournamentId)}/squads`))
+  const response = await apiFetch(
+    apiUrl(`/v1/tournaments/${encodeURIComponent(tournamentId)}/squads`),
+  )
   if (response.status === 404 || response.status === 400) throw new TournamentNotFoundError()
   if (!response.ok) {
     throw new Error(`Failed to load squads (${response.status})`)

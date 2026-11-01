@@ -1,4 +1,5 @@
 import { apiUrl } from '../../shared/apiUrl'
+import { apiFetch } from '../../shared/apiFetch'
 import { field } from '../../shared/field'
 import { readJson } from '../../shared/readJson'
 import { isSessionDate } from '../../shared/sessionFormat'
@@ -62,7 +63,7 @@ function isRegistrationList(value: unknown): value is RegistrationList {
 
 /** The registrations of one tournament, in the order the API sends them (REG-23), with counts. */
 export async function fetchRegistrations(tournamentId: string): Promise<RegistrationList> {
-  const response = await fetch(
+  const response = await apiFetch(
     apiUrl(`/v1/tournaments/${encodeURIComponent(tournamentId)}/registrations`),
   )
   if (response.status === 404 || response.status === 400) throw new TournamentNotFoundError()

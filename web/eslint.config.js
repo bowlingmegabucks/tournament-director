@@ -23,12 +23,12 @@ export default defineConfig(
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'error',
       '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
-      // Components and hooks go through api.ts. Only api.ts calls fetch.
+      // Components and hooks go through api.ts, and api.ts calls apiFetch (it sends the cookie).
       'no-restricted-globals': [
         'error',
-        { name: 'fetch', message: 'Call fetch only from a feature api.ts file.' },
+        { name: 'fetch', message: 'Call apiFetch from a feature api.ts file.' },
       ],
     },
   },
-  { files: ['**/api.ts'], rules: { 'no-restricted-globals': 'off' } },
+  { files: ['src/shared/apiFetch.ts'], rules: { 'no-restricted-globals': 'off' } },
 )

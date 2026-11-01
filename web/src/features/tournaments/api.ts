@@ -1,4 +1,5 @@
 import { apiUrl } from '../../shared/apiUrl'
+import { apiFetch } from '../../shared/apiFetch'
 import { field } from '../../shared/field'
 import { readJson } from '../../shared/readJson'
 import { TournamentNotFoundError } from '../../shared/tournamentQuery'
@@ -16,7 +17,7 @@ function isTournament(value: unknown): value is Tournament {
 }
 
 export async function fetchTournaments(): Promise<Tournament[]> {
-  const response = await fetch(apiUrl('/v1/tournaments'))
+  const response = await apiFetch(apiUrl('/v1/tournaments'))
   if (!response.ok) {
     throw new Error(`Failed to load tournaments (${response.status})`)
   }
@@ -28,7 +29,7 @@ export async function fetchTournaments(): Promise<Tournament[]> {
 }
 
 export async function fetchTournament(id: string): Promise<Tournament> {
-  const response = await fetch(apiUrl(`/v1/tournaments/${encodeURIComponent(id)}`))
+  const response = await apiFetch(apiUrl(`/v1/tournaments/${encodeURIComponent(id)}`))
   if (response.status === 404 || response.status === 400) throw new TournamentNotFoundError()
   if (!response.ok) {
     throw new Error(`Failed to load tournament (${response.status})`)

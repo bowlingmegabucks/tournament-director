@@ -1,4 +1,5 @@
 import { apiUrl } from '../../shared/apiUrl'
+import { apiFetch } from '../../shared/apiFetch'
 import { field } from '../../shared/field'
 import { readJson } from '../../shared/readJson'
 import { TournamentNotFoundError } from '../../shared/tournamentQuery'
@@ -28,7 +29,7 @@ function isDivision(value: unknown): value is Division {
 
 /** The divisions of one tournament, in the order the API sends them (DIV-13). */
 export async function fetchDivisions(tournamentId: string): Promise<Division[]> {
-  const response = await fetch(
+  const response = await apiFetch(
     apiUrl(`/v1/tournaments/${encodeURIComponent(tournamentId)}/divisions`),
   )
   if (response.status === 404 || response.status === 400) throw new TournamentNotFoundError()

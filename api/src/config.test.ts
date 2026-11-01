@@ -3,8 +3,16 @@ import { loadConfig, loadDatabaseUrl } from './config.ts'
 
 const databaseUrl = 'mariadb://megabucks:bowling4money@localhost:15306/bowling_megabucks'
 const apiKey = 'api_localKey_thisIsForTestingOnly'
-// The smallest valid environment. DATABASE_URL (D-33) and API_KEY (D-95) have no default.
-const baseEnv = { DATABASE_URL: databaseUrl, API_KEY: apiKey }
+const authSecret = 'auth_localSecret_thisIsForTestingOnly'
+const authBaseUrl = 'http://localhost:3000'
+// The smallest valid environment. These have no default: DATABASE_URL (D-33), API_KEY (D-95), and
+// the two sign-in settings (D-98, D-99).
+const baseEnv = {
+  DATABASE_URL: databaseUrl,
+  API_KEY: apiKey,
+  AUTH_SECRET: authSecret,
+  AUTH_BASE_URL: authBaseUrl,
+}
 
 describe('loadConfig', () => {
   it('uses defaults for an empty environment', () => {
@@ -12,6 +20,7 @@ describe('loadConfig', () => {
       port: 3000,
       databaseUrl,
       apiKey,
+      auth: { secret: authSecret, baseUrl: authBaseUrl },
       logLevel: 'info',
       rateLimit: { max: 100, windowSeconds: 60 },
       trustProxy: 0,
@@ -27,11 +36,13 @@ describe('loadConfig', () => {
   })
 
   it('fails without DATABASE_URL (D-33)', () => {
-    expect(() => loadConfig({ API_KEY: apiKey })).toThrow(/Invalid environment: .*DATABASE_URL/s)
+    expect(() => loadConfig({ ...baseEnv, DATABASE_URL: undefined })).toThrow(
+      /Invalid environment: .*DATABASE_URL/s,
+    )
   })
 
   it('fails without API_KEY (D-95)', () => {
-    expect(() => loadConfig({ DATABASE_URL: databaseUrl })).toThrow(
+    expect(() => loadConfig({ ...baseEnv, API_KEY: undefined })).toThrow(
       /Invalid environment: .*API_KEY/s,
     )
   })
@@ -53,6 +64,59 @@ describe('loadConfig', () => {
     const rejected = () => loadConfig({ ...baseEnv, API_KEY: 'short-secret' })
     expect(rejected).toThrow(/Invalid environment/)
     expect(rejected).not.toThrow(/short-secret/)
+  })
+
+  it('fails without AUTH_SECRET (D-98)', () => {
+    expect(() => loadConfig({ ...baseEnv, AUTH_SECRET: undefined })).toThrow(
+      /Invalid environment: .*AUTH_SECRET/s,
+    )
+  })
+
+  it.each(['', ' '.repeat(40), 'a'.repeat(31), `  ${'a'.repeat(31)}  `])(
+    'rejects AUTH_SECRET=%j, under 32 characters once trimmed (D-98)',
+    (secret) => {
+      expect(() => loadConfig({ ...baseEnv, AUTH_SECRET: secret })).toThrow(
+        /must be at least 32 characters.*AUTH_SECRET/s,
+      )
+    },
+  )
+
+  it('accepts a 32-character AUTH_SECRET and trims it', () => {
+    const secret = ` ${'b'.repeat(32)} `
+    expect(loadConfig({ ...baseEnv, AUTH_SECRET: secret }).auth.secret).toBe('b'.repeat(32))
+  })
+
+  it('does not print the auth secret when it rejects one', () => {
+    const rejected = () => loadConfig({ ...baseEnv, AUTH_SECRET: 'short-auth-secret' })
+    expect(rejected).toThrow(/Invalid environment/)
+    expect(rejected).not.toThrow(/short-auth-secret/)
+  })
+
+  it('fails without AUTH_BASE_URL (D-98)', () => {
+    expect(() => loadConfig({ ...baseEnv, AUTH_BASE_URL: undefined })).toThrow(
+      /Invalid environment: .*AUTH_BASE_URL/s,
+    )
+  })
+
+  it.each([
+    'api.example.com',
+    'ftp://api.example.com',
+    'https://api.example.com/v1',
+    'https://api.example.com/?a=1',
+    'https://api.example.com/#top',
+    '',
+  ])('rejects AUTH_BASE_URL=%j: it must be an http(s) address with no path', (url) => {
+    expect(() => loadConfig({ ...baseEnv, AUTH_BASE_URL: url })).toThrow(
+      /must be an http\(s\) address with no path.*AUTH_BASE_URL/s,
+    )
+  })
+
+  it.each([
+    ['https://api.bowlingmegabucks.com', 'https://api.bowlingmegabucks.com'],
+    ['  https://api.bowlingmegabucks.com/  ', 'https://api.bowlingmegabucks.com'],
+    ['http://localhost:3000', 'http://localhost:3000'],
+  ])('reads AUTH_BASE_URL=%j as the origin %j', (url, origin) => {
+    expect(loadConfig({ ...baseEnv, AUTH_BASE_URL: url }).auth.baseUrl).toBe(origin)
   })
 
   it('reads only the database URL for scripts, with no API_KEY needed', () => {

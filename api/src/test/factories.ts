@@ -145,6 +145,10 @@ export function createConfig(overrides: Partial<Config> = {}): Config {
     port: 0,
     databaseUrl: 'mariadb://user:password@localhost:3306/test',
     apiKey: testApiKey,
+    auth: {
+      secret: 'test-auth-secret-at-least-32-characters-long',
+      baseUrl: 'http://localhost:3000',
+    },
     logLevel: 'silent',
     // High enough that no test hits it by accident. Tests of the limit set their own.
     rateLimit: { max: 1000, windowSeconds: 60 },

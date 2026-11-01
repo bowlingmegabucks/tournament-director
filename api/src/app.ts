@@ -69,7 +69,10 @@ export function createApp({
   // helmet also removes x-powered-by.
   app.use(helmet())
   // An empty list allows no cross-origin caller.
-  app.use(cors({ origin: config.corsOrigins, exposedHeaders: [requestIdHeader] }))
+  // `credentials` lets the browser send the sign-in cookie to an allowed origin (D-99).
+  app.use(
+    cors({ origin: config.corsOrigins, credentials: true, exposedHeaders: [requestIdHeader] }),
+  )
 
   // After CORS, so a 429 still carries the CORS headers and the browser can read it.
   app.use(createRateLimiter(config.rateLimit, meter))

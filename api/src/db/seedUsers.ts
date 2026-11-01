@@ -75,10 +75,10 @@ export async function seedUsers(
     }
   }
   let added = 0
-  for (const { email, name, role, password } of localUsers) {
-    if ((await client.user.count({ where: { email } })) > 0) continue
+  for (const user of localUsers) {
+    if ((await client.user.count({ where: { email: user.email } })) > 0) continue
     // One at a time: each hashes a password, and the order is the order above.
-    await auth.api.createUser({ body: { email, name, password, role } }) // NOSONAR: one at a time
+    await auth.api.createUser({ body: user })
     added++
   }
   return { added }

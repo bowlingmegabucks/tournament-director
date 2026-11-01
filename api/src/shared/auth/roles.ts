@@ -16,12 +16,12 @@ export function isRoleName(value: unknown): value is RoleName {
 
 // Director holds everything except these two (D-97), so a permission added later reaches the
 // director without an edit here. When you add a permission only an admin should hold, list it here.
-const withheldFromDirector: readonly Permission[] = ['users.manage', 'bowlers.ssn']
+const withheldFromDirector = new Set<Permission>(['users.manage', 'bowlers.ssn'])
 
 const rolePermissions: Record<RoleName, readonly Permission[]> = {
   // What collecting scores needs: enter them, and see who is bowling and where (D-97).
   scoreKeeper: ['scores.write', 'registrations.read', 'lanes.read'],
-  director: permissions.filter((permission) => !withheldFromDirector.includes(permission)),
+  director: permissions.filter((permission) => !withheldFromDirector.has(permission)),
   // Every permission, by rule and not by list, so a new one reaches the admin at once.
   admin: permissions,
 }

@@ -34,8 +34,11 @@ export interface Caller {
 }
 
 function describeCaller(apiKey: boolean, user: SignedInUser | null): Caller {
-  const type: CallerType =
-    apiKey && user ? 'apiKeyAndUser' : apiKey ? 'apiKey' : user ? 'user' : 'anonymous'
+  let type: CallerType
+  if (apiKey && user) type = 'apiKeyAndUser'
+  else if (apiKey) type = 'apiKey'
+  else if (user) type = 'user'
+  else type = 'anonymous'
   return { type, apiKey, user }
 }
 
@@ -137,11 +140,10 @@ export function identifyCaller({
     const sent = req.get(apiKeyHeader)
     const keyMatches = sent !== undefined && timingSafeEqual(digest(sent), expected)
     const session = await readSession(auth, req, res, logger)
-    const caller = session.user
-      ? describeCaller(keyMatches, session.user)
-      : keyMatches
-        ? apiKeyCaller
-        : anonymous
+    let caller: Caller
+    if (session.user) caller = describeCaller(keyMatches, session.user)
+    else if (keyMatches) caller = apiKeyCaller
+    else caller = anonymous
     states.set(res, {
       caller,
       rejectedKey: sent !== undefined && !keyMatches,

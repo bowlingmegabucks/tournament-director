@@ -7,10 +7,8 @@ import { readFileSync } from 'node:fs'
  */
 export function authSchemaSql(): string[] {
   const text = readFileSync(new URL('../../prisma/auth-tables.sql', import.meta.url), 'utf8')
-  return text
-    .split('\n')
-    .map((line) => line.replace(/--.*$/, ''))
-    .join('\n')
+  const withoutComments = text.replace(/--[^\n]*/g, '')
+  return withoutComments
     .split(';')
     .map((statement) => statement.trim())
     .filter((statement) => statement !== '')

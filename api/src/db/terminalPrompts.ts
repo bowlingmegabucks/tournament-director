@@ -54,18 +54,24 @@ export function createTerminalPrompts(input: TerminalInput, output: TerminalOutp
         output.write('\n')
         done()
       }
+      const processKey = (key: string): boolean => {
+        if (enter.has(key)) return (finish(() => resolve(value.join(''))), false)
+        if (key === interrupt) return (finish(() => reject(new Error('Cancelled.'))), false)
+        if (backspace.has(key)) {
+          if (value.length > 0 && echo) output.write('\b \b')
+          value = value.slice(0, -1)
+          return true
+        }
+        if (key >= ' ') {
+          value.push(key)
+          if (echo) output.write(key)
+        }
+        return true
+      }
       const onData = (chunk: string): void => {
         if (chunk.startsWith(escape)) return
         for (const key of chunk) {
-          if (enter.has(key)) return finish(() => resolve(value.join('')))
-          if (key === interrupt) return finish(() => reject(new Error('Cancelled.')))
-          if (backspace.has(key)) {
-            if (value.length > 0 && echo) output.write('\b \b')
-            value = value.slice(0, -1)
-          } else if (key >= ' ') {
-            value.push(key)
-            if (echo) output.write(key)
-          }
+          if (!processKey(key)) return
         }
       }
       input.on('data', onData)

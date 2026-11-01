@@ -87,42 +87,21 @@ describe('createTerminalPrompts', () => {
       await expect(answer).resolves.toBe('Ada')
     })
 
-    it('lets Backspace remove the last character and rubs it out on screen', async () => {
-      const { input, prompts, output } = setup()
+    it.each([
+      ['abc\u007fd\r', 'abd', 'Name: abc\b \bd\n'],
+      ['abc\b\r', 'ab', undefined],
+      ['\u007f\u007fa\r', 'a', 'Name: a\n'],
+      ['a😀\u007f\r', 'a', undefined],
+    ])('handles Backspace: input %j', async (input, expected, expectedOutput) => {
+      const { input: fakeInput, prompts, output } = setup()
 
       const answer = prompts.ask('Name:')
-      input.emit('data', 'abc\u007fd\r')
+      fakeInput.emit('data', input)
 
-      await expect(answer).resolves.toBe('abd')
-      expect(output()).toBe('Name: abc\b \bd\n')
-    })
-
-    it('treats the other Backspace code the same', async () => {
-      const { input, prompts } = setup()
-
-      const answer = prompts.ask('Name:')
-      input.emit('data', 'abc\b\r')
-
-      await expect(answer).resolves.toBe('ab')
-    })
-
-    it('does nothing for Backspace on an empty line', async () => {
-      const { input, prompts, output } = setup()
-
-      const answer = prompts.ask('Name:')
-      input.emit('data', '\u007f\u007fa\r')
-
-      await expect(answer).resolves.toBe('a')
-      expect(output()).toBe('Name: a\n')
-    })
-
-    it('removes a whole character, not half of one', async () => {
-      const { input, prompts } = setup()
-
-      const answer = prompts.ask('Name:')
-      input.emit('data', 'a😀\u007f\r')
-
-      await expect(answer).resolves.toBe('a')
+      await expect(answer).resolves.toBe(expected)
+      if (expectedOutput !== undefined) {
+        expect(output()).toBe(expectedOutput)
+      }
     })
 
     it('ignores arrow keys and other control characters', async () => {

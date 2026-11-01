@@ -7,8 +7,8 @@ const params = z.object({ id: z.uuid(), sessionId: z.uuid() })
 
 /**
  * Mounted at `/v1/tournaments/:id/squads/:sessionId/recap-sheets` and `/sweepers/:sessionId/recap-sheets`
- * (RPT-08). Web only, not part of the vendor contract (D-09). Public for 0.2.0; it moves behind
- * auth right after 0.3.0 (D-66, D-52). It reads the saved positions only (D-65). The lane route
+ * (RPT-08). Web only, not part of the vendor contract (D-09). Needs `lanes.read`; the API key
+ * cannot reach it (D-66, D-52, D-105). It reads the saved positions only (D-65). The lane route
  * logs the odd positions and skipped entries it finds, so this one adds no warning of its own.
  */
 export function createRecapSheetRouter(

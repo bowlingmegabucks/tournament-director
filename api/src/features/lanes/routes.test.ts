@@ -9,7 +9,7 @@ import {
   createTournament,
 } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
-import { createTestApp } from '../../test/testApp.ts'
+import { createSignedInTestApp } from '../../test/testApp.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
 import { createInMemorySquadRepository } from '../squads/repository.ts'
 import { createInMemorySweeperRepository } from '../sweepers/repository.ts'
@@ -37,7 +37,7 @@ function setup(options: { maxPerPair?: number } = {}) {
   const waiting = createLaneEntry({ divisionId: scratch.id, position: '', lastName: 'Baker' })
   const sweeperEntry = createLaneEntry({ divisionId: scratch.id, position: '11A' })
   const captured = createCapturedLogger()
-  const app = createTestApp({
+  const app = createSignedInTestApp({
     logger: captured.logger,
     tournaments: createInMemoryTournamentRepository([tournament, other]),
     divisions: createInMemoryDivisionRepository([
@@ -95,7 +95,7 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/lanes', () => {
       maximumHandicapPerGame: 50,
     })
     const squad = createSquad()
-    const app = createTestApp({
+    const app = createSignedInTestApp({
       tournaments: createInMemoryTournamentRepository([tournament]),
       divisions: createInMemoryDivisionRepository([
         { tournamentId: tournament.id, division: handicapped },
@@ -119,7 +119,7 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/lanes', () => {
   it('returns an empty page for a squad nobody entered (LAN-10)', async () => {
     const tournament = createTournament()
     const squad = createSquad({ numberOfLanes: 2 })
-    const app = createTestApp({
+    const app = createSignedInTestApp({
       tournaments: createInMemoryTournamentRepository([tournament]),
       squads: createInMemorySquadRepository([{ tournamentId: tournament.id, squad }]),
     })
@@ -136,7 +136,7 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/lanes', () => {
   it('marks a complete squad (LAN-13)', async () => {
     const tournament = createTournament()
     const squad = createSquad({ complete: true })
-    const app = createTestApp({
+    const app = createSignedInTestApp({
       tournaments: createInMemoryTournamentRepository([tournament]),
       squads: createInMemorySquadRepository([{ tournamentId: tournament.id, squad }]),
     })
@@ -151,7 +151,7 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/lanes', () => {
   it('returns 404 for an unknown tournament (LAN-10)', async () => {
     const { squad } = setup()
 
-    const response = await request(createTestApp()).get(
+    const response = await request(createSignedInTestApp()).get(
       `/v1/tournaments/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01/squads/${squad.id}/lanes`,
     )
 
@@ -186,7 +186,7 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/lanes', () => {
     ['/v1/tournaments/not-a-uuid/squads/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01/lanes'],
     ['/v1/tournaments/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01/squads/not-a-uuid/lanes'],
   ])('returns 400 when an id is not a UUID: %s (LAN-10)', async (path) => {
-    const response = await request(createTestApp()).get(path)
+    const response = await request(createSignedInTestApp()).get(path)
 
     expect(response.status).toBe(400)
     expect(response.body.message).toMatch(/^Invalid request\./)
@@ -218,7 +218,7 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/lanes', () => {
 
   it('answers 503 when the database is down (D-32)', async () => {
     const { tournament, squad } = setup()
-    const app = createTestApp({
+    const app = createSignedInTestApp({
       tournaments: createInMemoryTournamentRepository([tournament]),
       squads: createInMemorySquadRepository([{ tournamentId: tournament.id, squad }]),
       lanes: { listEntries: () => Promise.reject(new HttpError(503, 'Database unavailable')) },
@@ -233,7 +233,7 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/lanes', () => {
   })
 
   it('answers 500 when the tournament row breaks its shape', async () => {
-    const app = createTestApp({
+    const app = createSignedInTestApp({
       tournaments: {
         list: () => Promise.resolve([]),
         get: () => Promise.reject(new Error('Stored tournament x breaks the vendor shape')),
@@ -260,7 +260,7 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/lanes', () => {
     })
     const alsoLost = createLaneEntry({ divisionId: division.id, position: 'xyz' })
     const captured = createCapturedLogger('warn')
-    const app = createTestApp({
+    const app = createSignedInTestApp({
       logger: captured.logger,
       tournaments: createInMemoryTournamentRepository([tournament]),
       divisions: createInMemoryDivisionRepository([{ tournamentId: tournament.id, division }]),
@@ -292,7 +292,7 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/lanes', () => {
     const stray = createLaneEntry({ position: '1A' })
     const alsoStray = createLaneEntry({ position: '2C' })
     const captured = createCapturedLogger('warn')
-    const app = createTestApp({
+    const app = createSignedInTestApp({
       logger: captured.logger,
       tournaments: createInMemoryTournamentRepository([tournament]),
       squads: createInMemorySquadRepository([{ tournamentId: tournament.id, squad }]),
@@ -350,7 +350,7 @@ describe('GET /v1/tournaments/:id/sweepers/:sessionId/lanes', () => {
   })
 
   it('returns 404 for an unknown tournament (LAN-10)', async () => {
-    const response = await request(createTestApp()).get(
+    const response = await request(createSignedInTestApp()).get(
       '/v1/tournaments/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01/sweepers/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a02/lanes',
     )
 

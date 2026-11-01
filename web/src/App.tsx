@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router'
 import { LoginPage } from './features/auth/LoginPage'
+import { RequirePermission } from './features/auth/RequirePermission'
 import { signInEnabled } from './features/auth/signInEnabled'
 import { DivisionsPage } from './features/divisions/DivisionsPage'
 import { LanesPage } from './features/lanes/LanesPage'
@@ -33,19 +34,40 @@ export default function App() {
           <Route path="squads" element={<SquadsPage />} />
           <Route path="squads/:sessionId" element={<SquadPortal />}>
             <Route index element={<OpenLanes />} />
-            <Route path="lanes" element={<LanesPage kind="squad" />} />
+            <Route
+              path="lanes"
+              element={
+                <RequirePermission permission="lanes.read">
+                  <LanesPage kind="squad" />
+                </RequirePermission>
+              }
+            />
             <Route path="scores" element={<ScoresPage kind="squad" />} />
             <Route path="results" element={<SquadResultsPage />} />
           </Route>
           <Route path="sweepers" element={<SweepersPage />} />
           <Route path="sweepers/:sessionId" element={<SweeperPortal />}>
             <Route index element={<OpenLanes />} />
-            <Route path="lanes" element={<LanesPage kind="sweeper" />} />
+            <Route
+              path="lanes"
+              element={
+                <RequirePermission permission="lanes.read">
+                  <LanesPage kind="sweeper" />
+                </RequirePermission>
+              }
+            />
             <Route path="scores" element={<ScoresPage kind="sweeper" />} />
             <Route path="results" element={<SweeperResultsPage />} />
           </Route>
           <Route path="super-sweeper" element={<SuperSweeperPage />} />
-          <Route path="registrations" element={<RegistrationsPage />} />
+          <Route
+            path="registrations"
+            element={
+              <RequirePermission permission="registrations.read">
+                <RegistrationsPage />
+              </RequirePermission>
+            }
+          />
           <Route path="at-large" element={<AtLargePage />} />
           <Route path="seeding" element={<SeedingPage />} />
         </Route>

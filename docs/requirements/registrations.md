@@ -2,7 +2,7 @@
 
 Built on branch `registration-list`. Migration source: [docs/migration/registrations.md](../migration/registrations.md) and [docs/migration/bowlers.md](../migration/bowlers.md).
 
-This slice is read-only and **public for 0.2.0 only**. It shows bowler names, USBC IDs, and which sessions each bowler entered, which the public does not need to see. The release right after 0.3.0 puts this route and page behind auth (D-46, D-52; tracked in [docs/v1-requirements.md](../v1-requirements.md)). The API reads the legacy `Registrations`, `SquadRegistration`, and `Bowlers` tables through Prisma (D-30). The `Bowler` model exists only to support this list: it has no SSN column, and there is no bowler route (D-47). Create, change, delete, and every other bowler field wait for sign-in (0.3.0) and commands (0.4.0 and up).
+This slice is read-only. It was **public in 0.2.0 only** and is signed-in only since the lock-down (D-105). It shows bowler names, USBC IDs, and which sessions each bowler entered, which the public does not need to see. The release right after 0.3.0 puts this route and page behind auth (D-46, D-52; tracked in [docs/v1-requirements.md](../v1-requirements.md)). The API reads the legacy `Registrations`, `SquadRegistration`, and `Bowlers` tables through Prisma (D-30). The `Bowler` model exists only to support this list: it has no SSN column, and there is no bowler route (D-47). Create, change, delete, and every other bowler field wait for sign-in (0.3.0) and commands (0.4.0 and up).
 
 ## Fields
 
@@ -49,7 +49,7 @@ A stored registration is read when it has a UUID `id` and a bowler with a non-em
 | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | -------------- |
 | `GET /v1/tournaments/{id}/registrations` | `200 { registrations: [{ id, bowler: { id, name, firstName, lastName, usbcId }, divisionId, divisionName, squadIds, sweeperIds, superSweeper }], summary: { registrations, superSweepers, divisions: [{ id, number, name, entries }], squads: [{ id, date, complete, entries }], sweepers: [{ id, date, complete, entries }] } }` | `400` not a UUID; `404` unknown tournament; `500` bad tournament row; `503` database down | No. Web only   |
 
-Public today (D-27); it gets a signed-in label in the lock-down release (D-46, D-52). The API's `types.ts` and the web app's `types.ts` carry the same fields; change both together. The tournament comes from the division, since `Registrations` has no `TournamentId` column (Q-26).
+Needs `registrations.read` since the lock-down (D-46, D-52, D-105, `API-22`): 401 with no sign-in, 403 for the API key or a user without the permission. The API's `types.ts` and the web app's `types.ts` carry the same fields; change both together. The tournament comes from the division, since `Registrations` has no `TournamentId` column (Q-26).
 
 ## Screens
 

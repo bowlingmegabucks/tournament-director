@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import { Link, useOutletContext, useParams } from 'react-router'
+import { Can } from '../auth/Can'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { formatSessionDate } from '../../shared/sessionFormat'
@@ -92,7 +93,11 @@ export function ScoresPage({ kind }: Readonly<{ kind: SessionKind }>) {
       )}
       {data.noLane > 0 && (
         <p className={styles.note}>
-          {formatNoLane(data.noLane)} <Link to={lanesPath}>Assign lanes</Link>
+          {formatNoLane(data.noLane)}
+          <Can permission="lanes.read">
+            {' '}
+            <Link to={lanesPath}>Assign lanes</Link>
+          </Can>
         </p>
       )}
       {body}

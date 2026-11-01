@@ -8,7 +8,7 @@ import {
   createSweeper,
   createTournament,
 } from '../../test/factories.ts'
-import { createTestApp } from '../../test/testApp.ts'
+import { createSignedInTestApp } from '../../test/testApp.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
 import { createInMemorySquadRepository } from '../squads/repository.ts'
 import { createInMemorySweeperRepository } from '../sweepers/repository.ts'
@@ -43,7 +43,7 @@ function setup() {
       },
     }),
   ]
-  const app = createTestApp({
+  const app = createSignedInTestApp({
     tournaments: createInMemoryTournamentRepository([tournament, createTournament()]),
     divisions: createInMemoryDivisionRepository([{ tournamentId: tournament.id, division }]),
     squads: createInMemorySquadRepository(
@@ -115,7 +115,7 @@ describe('GET /v1/tournaments/:id/registrations', () => {
 
   it('returns empty lists for a tournament with no registrations (REG-26)', async () => {
     const tournament = createTournament()
-    const app = createTestApp({
+    const app = createSignedInTestApp({
       tournaments: createInMemoryTournamentRepository([tournament]),
     })
 
@@ -129,7 +129,7 @@ describe('GET /v1/tournaments/:id/registrations', () => {
   })
 
   it('returns 404 for an unknown tournament (REG-26)', async () => {
-    const response = await request(createTestApp()).get(
+    const response = await request(createSignedInTestApp()).get(
       '/v1/tournaments/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01/registrations',
     )
 
@@ -139,7 +139,7 @@ describe('GET /v1/tournaments/:id/registrations', () => {
 
   it('does not read anything else for an unknown tournament (REG-26)', async () => {
     const rejects = () => Promise.reject(new HttpError(503, 'Database unavailable'))
-    const app = createTestApp({
+    const app = createSignedInTestApp({
       registrations: { listByTournament: rejects },
       divisions: { listByTournament: rejects },
       squads: { listByTournament: rejects },
@@ -155,7 +155,9 @@ describe('GET /v1/tournaments/:id/registrations', () => {
   })
 
   it('returns 400 when the id is not a UUID (REG-26)', async () => {
-    const response = await request(createTestApp()).get('/v1/tournaments/not-a-uuid/registrations')
+    const response = await request(createSignedInTestApp()).get(
+      '/v1/tournaments/not-a-uuid/registrations',
+    )
 
     expect(response.status).toBe(400)
     expect(response.body.message).toMatch(/^Invalid request\. id:/)
@@ -163,7 +165,7 @@ describe('GET /v1/tournaments/:id/registrations', () => {
 
   it('answers 503 when the database is down (REG-26, D-32)', async () => {
     const { tournament } = setup()
-    const app = createTestApp({
+    const app = createSignedInTestApp({
       tournaments: createInMemoryTournamentRepository([tournament]),
       registrations: {
         listByTournament: () => Promise.reject(new HttpError(503, 'Database unavailable')),
@@ -177,7 +179,7 @@ describe('GET /v1/tournaments/:id/registrations', () => {
   })
 
   it('answers 500 when the tournament row breaks its shape (REG-26)', async () => {
-    const app = createTestApp({
+    const app = createSignedInTestApp({
       tournaments: {
         list: () => Promise.resolve([]),
         get: () => Promise.reject(new Error('Stored tournament x breaks the vendor shape')),

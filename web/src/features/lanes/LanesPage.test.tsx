@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
+import { setMockUser } from '../../mocks/authHandlers'
 import {
   createLaneBowler,
   createLanePage,
@@ -12,6 +13,7 @@ import {
   createSquad,
   createSweeper,
   createTournament,
+  createSignedInUser,
 } from '../../mocks/data'
 import { renderApp } from '../../test/renderApp'
 import type { LanePage } from './types'
@@ -79,6 +81,11 @@ async function pairCard(name: RegExp): Promise<HTMLElement> {
   if (!card) throw new Error('No card')
   return card
 }
+
+// These pages need a permission (D-52), so the tests start signed in.
+beforeEach(() => {
+  setMockUser(createSignedInUser({ roles: ['director'] }))
+})
 
 describe('LanesPage', () => {
   it('shows the bowlers who need a lane and one zone per pair (LAN-10, LAN-03)', async () => {

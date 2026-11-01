@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { http, HttpResponse } from 'msw'
+import { delay, http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
+import { setMockUser } from '../../mocks/authHandlers'
 import {
   createLanePage,
   createScorePage,
@@ -11,6 +12,7 @@ import {
   createSweeper,
   createSweeperResults,
   createTournament,
+  createSignedInUser,
 } from '../../mocks/data'
 import { renderApp } from '../../test/renderApp'
 
@@ -44,6 +46,11 @@ const lists = {
   sweepers: { id: sweeper.id, words: 'Loading sweeper…', body: { sweepers: [sweeper] } },
 } as const
 const kinds = ['squads', 'sweepers'] as const
+
+// These pages need a permission (D-52), so the tests start signed in.
+beforeEach(() => {
+  setMockUser(createSignedInUser({ roles: ['director'] }))
+})
 
 describe('SessionPortal', () => {
   it('shows the squad date, its status, a breadcrumb, and the Lane assignments tab (D-22, D-60)', async () => {
@@ -293,5 +300,94 @@ describe('SessionPortal', () => {
     expect(
       await screen.findByRole('navigation', { name: 'Squad pages' }, { timeout: 3000 }),
     ).toBeVisible()
+  })
+
+  describe('lane assignments need sign-in (D-59, D-52)', () => {
+    it('keeps the tabs hidden until /v1/me answers, so they do not shift', async () => {
+      serve()
+      server.use(
+        http.get('/v1/me', async () => {
+          await delay(300)
+          return HttpResponse.json({ user: createSignedInUser({ roles: ['director'] }) })
+        }),
+      )
+
+      renderApp(`${base}/squads/${squad.id}/scores`)
+
+      await screen.findByRole('heading', { level: 1 }, { timeout: 3000 })
+      expect(screen.queryByRole('link', { name: 'Scores' })).not.toBeInTheDocument()
+      const tabs = await screen.findByRole('navigation', { name: 'Squad pages' })
+      const links = await within(tabs).findAllByRole('link')
+      expect(links.map((link) => link.textContent)).toEqual([
+        'Lane assignments',
+        'Scores',
+        'Results',
+      ])
+    })
+
+    it('opens the Scores tab at the portal root for a visitor who is signed out, and hides the lanes tab', async () => {
+      setMockUser(null)
+      serve()
+
+      renderApp(`${base}/squads/${squad.id}`)
+
+      const tabs = await screen.findByRole('navigation', { name: 'Squad pages' }, { timeout: 3000 })
+      await waitFor(() => {
+        expect(within(tabs).getByRole('link', { name: 'Scores' })).toHaveAttribute(
+          'aria-current',
+          'page',
+        )
+      })
+      expect(within(tabs).queryByRole('link', { name: 'Lane assignments' })).not.toBeInTheDocument()
+      expect(
+        within(tabs)
+          .getAllByRole('link')
+          .map((link) => link.textContent),
+      ).toEqual(['Scores', 'Results'])
+    })
+
+    it.each(['squads', 'sweepers'] as const)(
+      'sends a signed-out visitor from the %s lanes address to sign-in',
+      async (kind) => {
+        setMockUser(null)
+        serve()
+
+        renderApp(`${base}/${kind}/${lists[kind].id}/lanes`)
+
+        expect(
+          await screen.findByRole('heading', { name: 'Sign in', level: 1 }, { timeout: 3000 }),
+        ).toBeVisible()
+      },
+    )
+
+    it('opens the lanes tab at the portal root for a score keeper', async () => {
+      setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+      serve()
+
+      renderApp(`${base}/squads/${squad.id}`)
+
+      const tabs = await screen.findByRole('navigation', { name: 'Squad pages' }, { timeout: 3000 })
+      await waitFor(() => {
+        expect(within(tabs).getByRole('link', { name: 'Lane assignments' })).toHaveAttribute(
+          'aria-current',
+          'page',
+        )
+      })
+    })
+
+    it('tells a signed-in user with no role that the lanes page is off limits', async () => {
+      setMockUser(createSignedInUser({ roles: [] }))
+      serve()
+
+      renderApp(`${base}/squads/${squad.id}/lanes`)
+
+      expect(
+        await screen.findByText(
+          'You do not have permission to view this page.',
+          {},
+          { timeout: 3000 },
+        ),
+      ).toBeVisible()
+    })
   })
 })

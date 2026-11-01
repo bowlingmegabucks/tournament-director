@@ -1,6 +1,6 @@
 # API route access
 
-Built on branch `landingPage`; the API key and permission labels on branch `apiKey`; sign-in and permission checks (API-18 to API-21) on branch `authSetup`. This is a platform rule with no legacy twin (D-27). The 0.2.0 release rule is "every route declares its access; undeclared routes deny".
+Built on branch `landingPage`; the API key and permission labels on branch `apiKey`; sign-in and permission checks (API-18 to API-21) on branch `authSetup`; the lock-down of the read routes (`API-22`) on branch `routeLockdown`. This is a platform rule with no legacy twin (D-27). The 0.2.0 release rule is "every route declares its access; undeclared routes deny".
 
 ## Rules
 
@@ -14,16 +14,37 @@ Built on branch `landingPage`; the API key and permission labels on branch `apiK
 | API-19 | New. Roles map to permissions in one table in `api/src/shared/auth/roles.ts` (D-96, D-97). **Score keeper:** `scores.write`, `registrations.read`, `lanes.read`. **Director:** every permission except `users.manage` and `bowlers.ssn`. **Admin:** every permission, by rule, so a new one reaches the admin at once. A user holds one or more roles, stored as `director,scoreKeeper`, and holds the union of what they grant (D-103). A name that is not a role (a typo, other capitals, `none`) grants nothing. A role change applies on the user's next request. | New (D-96, D-97, D-103) | `api/src/shared/auth/roles.test.ts`, `api/src/shared/auth/caller.test.ts` |
 | API-20 | New. Who is calling is worked out once per request, before any route (`identifyCaller`): the API key, the session cookie, both, or neither. A request with no session cookie costs no database read. A user with `banned` set counts as signed out on the next request, even if only the column changed. If the session lookup fails, the caller is not called signed out: protected routes answer 503 (API-16) and `GET /v1/me` answers 503 (API-17); public routes work as usual. | New (D-95, D-96) | `api/src/shared/auth/caller.test.ts`, `api/src/shared/mountRoutes.test.ts` |
 | API-21 | New. The first admin comes from `npm run users:create-admin`: a real terminal only, email, name, and a password typed twice and never shown (12 to 128 characters). It needs only `DATABASE_URL`, names the database before it asks anything, and asks before adding to a database that has users. `npm run db:seed` adds one user per role (`admin@example.com`, `director@example.com`, `scorekeeper@example.com`) to a local database only, and refuses when the table holds anyone else or the database holds a tournament that is not a sample (a tunnel to production looks local); `--force-users` overrides that. The sign-in tables come from `api/prisma/auth-tables.sql` (D-100). | New (D-101, D-104) | `api/src/db/createAdminUser.test.ts`, `api/src/db/createAdminUser.db.test.ts`, `api/src/db/terminalPrompts.test.ts`, `api/src/db/seedUsers.db.test.ts`, `api/src/db/localDatabase.test.ts` |
+| API-22 | New. **Lock-down (D-52, D-105).** Five web-only read route groups need a permission, with no `apiKey`: `/v1/tournaments/:id/registrations` needs `registrations.read`; `/v1/tournaments/:id/squads/:sessionId/lanes`, `/sweepers/:sessionId/lanes`, `/squads/:sessionId/recap-sheets`, and `/sweepers/:sessionId/recap-sheets` need `lanes.read`. Anonymous: 401. API key alone: 403. Signed in without the permission: 403. Score keeper, director, and admin: through. The vendor routes `GET /v1/tournaments` and `GET /v1/tournaments/:id` stay public (D-09), and a wrong key sent to them is ignored (D-95). Divisions, squads, sweepers, scores, results, at-large, seeding, and super sweeper stay public. | New (D-52, D-105) | `api/src/app.test.ts` ("locked-down read routes", "routes that stay public"), each feature's `routes.test.ts` (signed in as a director) |
+
+## Route access
+
+Every mounted route group and who may call it (`app.ts`). "Key" is a valid `x-api-key`. "Permission" is held through a role (D-97): score keeper holds `registrations.read` and `lanes.read`; director and admin hold every permission that applies today.
+
+| Route group | Access | Key accepted | Why |
+| --- | --- | --- | --- |
+| `GET /health`, `GET /ready` | public | n/a | Probes |
+| `GET /v1/me` | public | n/a | Tells a caller who it is (`API-17`) |
+| `POST /v1/auth/sign-in/email`, `/sign-out` | public | n/a | How a user proves who they are (`API-18`) |
+| `GET /v1/tournaments`, `GET /v1/tournaments/{id}` | public | ignored | **Vendor routes, public in legacy (D-09, `API-03`, `API-04`)** |
+| `GET /v1/tournaments/{id}/divisions`, `/squads`, `/sweepers` | public | ignored | The same data is public in the tournament detail (D-41, D-105) |
+| `GET .../squads/{sessionId}/scores`, `/sweepers/{sessionId}/scores` | public | ignored | A live scoreboard (D-70) |
+| `GET .../squads/{sessionId}/results`, `/sweepers/{sessionId}/results` | public | ignored | Bowlers check standings (D-74) |
+| `GET .../at-large`, `/seeding`, `/super-sweeper` | public | ignored | Bowlers check the finals field (D-85) |
+| `GET .../registrations` | `registrations.read` | no | Names and USBC IDs (D-46) |
+| `GET .../squads/{sessionId}/lanes`, `/sweepers/{sessionId}/lanes` | `lanes.read` | no | Names and averages (D-59) |
+| `GET .../squads/{sessionId}/recap-sheets`, `/sweepers/{sessionId}/recap-sheets` | `lanes.read` | no | Names and handicaps (D-66) |
+| `POST /v1/registrations`, `GET`/`PATCH`/`DELETE /v1/registrations/{id}` (**not built**) | `registrations.write` (create, change, delete), `registrations.read` (get), each with `apiKey: true` | **yes** | **Key-protected in legacy (`API-05` to `API-08`, D-09).** The registration site gets in with the key; staff need the permission. Built with 0.4.0 part 2. |
+
+The legacy API had two kinds of caller: the public (the tournament routes) and the key holder (the registration routes). That is why the key opens only the second group, and only once those routes exist. The key holds no permissions (D-96), so it opens no route that is not labeled `apiKey: true`.
+
+In production, sign-in stays hidden until the API moves to its own subdomain (`WEB-07`, 0.4.0 part 3). Until then the locked routes answer 401 to a browser and the web pages say "Sign in needed".
 
 ## Notes
 
-- Mounted today, all `public`: `/health`, `/ready`, `/v1/me`, `/v1/auth` (sign-in and sign-out only), `/v1/tournaments`, and the web-only routes under `/v1/tournaments/:id/` for divisions, squads, sweepers, registrations, the lane pages (`squads/:sessionId/lanes` and `sweepers/:sessionId/lanes`), and the recap sheets (`squads/:sessionId/recap-sheets` and `sweepers/:sessionId/recap-sheets`), the scores (`squads/:sessionId/scores` and `sweepers/:sessionId/scores`), and the results (`squads/:sessionId/results` and `sweepers/:sessionId/results`).
-- `/v1/tournaments/:id/registrations` shows bowler names and entries. It ships public only because 0.2.0 has no auth. The lock-down release right after 0.3.0 puts it, and any other public read route that should not be public, behind auth (D-46, D-52).
-- The recap sheets show bowler names and handicaps, so they ship public for the same reason, and the lock-down release puts them behind auth (D-66, D-52).
-- The lane pages show bowler names and averages, so they ship public only for the same reason, and the lock-down release puts them behind auth too (D-59, D-52).
-- The scores are public for good, so viewers who are not signed in watch scores come in. The lock-down release leaves them alone; only entry will need sign-in (D-70).
-- The results are public for good, like the scores: viewers who are not signed in watch standings. The lock-down release leaves them alone (D-74). The at-large, seeding, and super sweeper routes (`/v1/tournaments/:id/at-large`, `/seeding`, `/super-sweeper`) are public for good too (D-85).
+- The web app hides what a user cannot use (D-19, D-102): the Registrations sidebar link, the Lane assignments tab (and the Assign lanes link on the Scores tab) need a permission, and a deep link to the registrations or lane page asks for sign-in. A squad or sweeper address with no tab opens Scores for a visitor who is signed out and Lane assignments for a user who holds `lanes.read`.
+- The recap sheets button lives on the lane page, so it needs the same permission as the lane page.
+- Scores, results, and the finals pages stay public for good (D-70, D-74, D-85). Only entry will need sign-in.
 - The API enforces access; the web app only hides what a user cannot use (D-19).
 - Do not call `app.use` with a router in `app.ts`. See `docs/api-standards.md`.
-- No mounted route needs a permission yet. The lock-down release (D-52) labels the registrations, lanes, and recap sheet routes, and the first command features add the rest. The permission check is tested with test route groups in `mountRoutes.test.ts`.
+- The permission check is also tested with test route groups in `mountRoutes.test.ts`; `app.test.ts` checks the real labels.
 - Stage 3 (user screens, invites, forgot password) is not built: see D-101, D-103, and Q-34.

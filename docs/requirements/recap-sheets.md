@@ -46,7 +46,7 @@ Never sent (`BWL-17`): SSN, gender, date of birth, address, email, phone, paymen
 | `GET /v1/tournaments/{id}/squads/{sessionId}/recap-sheets` | `200 { session, sheets, withoutLane }` (Fields above) | `400` not a UUID; `404` unknown tournament or squad; `422` bowlers per pair not 2 to 5; `500` bad tournament row; `503` database down | No. Web only |
 | `GET /v1/tournaments/{id}/sweepers/{sessionId}/recap-sheets` | Same, with `kind: "sweeper"` and the bonus pins in `handicap` | Same, `404` for a sweeper | No. Web only |
 
-Public today (D-27); both get a signed-in label in the lock-down release (D-66, D-52). The API's `features/recapSheets/types.ts` and the web app's `features/recapSheets/types.ts` carry the same fields; change both together. The web squad shape (`GET /v1/tournaments/{id}/squads`) gained `games` (the tournament's, `TRN-04`) so the route can read it; the Squads page does not show it.
+Both need `lanes.read` since the lock-down (D-66, D-52, D-105, `API-22`): 401 with no sign-in, 403 for the API key or a user without the permission. The API's `features/recapSheets/types.ts` and the web app's `features/recapSheets/types.ts` carry the same fields; change both together. The web squad shape (`GET /v1/tournaments/{id}/squads`) gained `games` (the tournament's, `TRN-04`) so the route can read it; the Squads page does not show it.
 
 ## Screens
 

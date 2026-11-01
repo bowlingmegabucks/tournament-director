@@ -23,12 +23,12 @@ Source: `api/` (FastEndpoints). Production host: `api.bowlingmegabucks.com` (Azu
 
 | ID | Method and path | Auth | Purpose | Status |
 | --- | --- | --- | --- | --- |
-| API-01 | `GET /` | none | `{ name: "Northeast Megabuck Tournament API", version: "v1", status: "OK", documentation: "/openapi/v1.json" }`. **D-111:** the new app returns the text `Northeast Megabucks API` |  |
-| API-02 | `GET /health` | none | Health check (database, Key Vault, App Insights) |  |
+| API-01 | `GET /` | none | `{ name: "Northeast Megabuck Tournament API", version: "v1", status: "OK", documentation: "/openapi/v1.json" }`. **D-111:** the new app returns the text `Northeast Megabucks API` | Done, differs (D-111) |
+| API-02 | `GET /health` | none | Health check (database, Key Vault, App Insights) | Done, differs (D-111) |
 | API-03 | `GET /v1/tournaments` | none | List of tournament summaries | Done |
 | API-04 | `GET /v1/tournaments/{id}` | none | Tournament detail with divisions, squads, sweepers. 404 if not found | Done, differs (D-25); `divisions` done (D-37), `squads` and `sweepers` done (D-41) |
-| API-05 | `POST /v1/registrations` | key | Create, or append when the bowler is already registered |  |
-| API-06 | `GET /v1/registrations/{id}` | key | Registration detail. 404 if not found |  |
+| API-05 | `POST /v1/registrations` | key | Create, or append when the bowler is already registered | Done, differs (D-05, D-107 to D-109, D-113); slice 1 |
+| API-06 | `GET /v1/registrations/{id}` | key | Registration detail. 404 if not found | Done; slice 1 |
 | API-07 | `PATCH /v1/registrations/{id}` | key | Change squads, sweepers, super sweeper, division, average; add a payment |  |
 | API-08 | `DELETE /v1/registrations/{id}` | key | Delete. 204, 404, or 400 if scores exist |  |
 
@@ -80,22 +80,22 @@ Source: `api/` (FastEndpoints). Production host: `api.bowlingmegabucks.com` (Azu
 
 Request checks, before the business rules:
 
-| ID | Rule | Code |
-| --- | --- | --- |
-| API-09 | Registration body present | `Registration.Required` |
-| API-09a | Tournament and division ids are UUIDs | `Registration.TournamentIdInvalid`, `Registration.DivisionIdInvalid` |
-| API-09b | First and last name present | `Registration.BowlerFirstNameRequired`, `...LastNameRequired` |
-| API-09c | Address object present (its fields are required by type) | `Registration.BowlerAddressRequired` |
-| API-09d | Valid email | `Registration.BowlerEmailInvalid` |
-| API-09e | USBC ID present | `Registration.BowlerUsbcIdRequired` |
-| API-09f | At least one squad | `Registration.SquadsRequired` |
+| ID | Rule | Code | Status |
+| --- | --- | --- | --- |
+| API-09 | Registration body present | `Registration.Required` | Done |
+| API-09a | Tournament and division ids are UUIDs | `Registration.TournamentIdInvalid`, `Registration.DivisionIdInvalid` | Done |
+| API-09b | First and last name present | `Registration.BowlerFirstNameRequired`, `...LastNameRequired` | Done |
+| API-09c | Address object present (its fields are required by type) | `Registration.BowlerAddressRequired` | Done |
+| API-09d | Valid email | `Registration.BowlerEmailInvalid` | Done |
+| API-09e | USBC ID present | `Registration.BowlerUsbcIdRequired` | Done |
+| API-09f | At least one squad | `Registration.SquadsRequired` | Done |
 
 Then the create rules in [registrations.md](registrations.md) run. If the bowler is already registered for the tournament (`REG-01`), the endpoint runs **append** (`REG-10` to `REG-14`) with the same body.
 
-| ID | Rule |
-| --- | --- |
-| API-10 | **Gender mapping:** `"M"` becomes Male; **anything else, including missing, becomes Female.** **Defect.** Missing gender should stay unknown (`VC-03`). For a returning bowler, D-05 keeps the stored gender when none is sent. **D-113:** the new app maps `"F"` to Female and everything else, including missing, to Male. |
-| API-11 | Success: `201 Created`, body `{ "registrationId": "uuid" }`, `Location` pointing at `GET /v1/registrations/{id}`. Append also returns 201 with the existing id. |
+| ID | Rule | Status |
+| --- | --- | --- |
+| API-10 | **Gender mapping:** `"M"` becomes Male; **anything else, including missing, becomes Female.** **Defect.** Missing gender should stay unknown (`VC-03`). For a returning bowler, D-05 keeps the stored gender when none is sent. **D-113:** the new app maps `"F"` to Female and everything else, including missing, to Male. | Done, differs (D-113) |
+| API-11 | Success: `201 Created`, body `{ "registrationId": "uuid" }`, `Location` pointing at `GET /v1/registrations/{id}`. Append also returns 201 with the existing id. | Done |
 
 ### Registration detail (`API-06`)
 
@@ -136,11 +136,11 @@ Payments are not included (`PAY-06`). SSN is never returned.
   "traceId": "..." }
 ```
 
-| ID | Rule |
-| --- | --- |
-| API-12 | If **any** error is a validation error: 400. Otherwise: **500**, even for "not found" or conflict errors raised inside create, append, and update. Only GET by id and DELETE map "not found" to 404. **Defect, but kept (D-09)** until the vendor agrees to change it (`VC-01`). |
-| API-13 | Unhandled exceptions: 500 with "An unexpected error occurred while processing your request." and a `traceId`. |
-| API-14 | **Rate limiting runs before authentication**, so every caller is treated as anonymous: 20 requests per 60 seconds per IP. The 50-per-minute authenticated limit never applies. **Defect.** Fixing it changes what the vendor sees (`VC-02`). |
+| ID | Rule | Status |
+| --- | --- | --- |
+| API-12 | If **any** error is a validation error: 400. Otherwise: **500**, even for "not found" or conflict errors raised inside create, append, and update. Only GET by id and DELETE map "not found" to 404. **Defect, but kept (D-09)** until the vendor agrees to change it (`VC-01`). | Done |
+| API-13 | Unhandled exceptions: 500 with "An unexpected error occurred while processing your request." and a `traceId`. | Done |
+| API-14 | **Rate limiting runs before authentication**, so every caller is treated as anonymous: 20 requests per 60 seconds per IP. The 50-per-minute authenticated limit never applies. **Defect.** Fixing it changes what the vendor sees (`VC-02`). |  |
 
 ## Candidate vendor changes
 

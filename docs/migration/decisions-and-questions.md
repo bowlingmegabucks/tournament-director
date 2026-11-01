@@ -145,9 +145,9 @@ Legacy behavior to fix, not copy (D-02).
 
 | Rule | Defect |
 | --- | --- |
-| `REG-07`, `API-10` | API re-registration erases the bowler's SSN, clears date of birth, and turns a missing gender into Female |
-| `REG-01` | Empty USBC ID matches every bowler with no USBC ID: false "already registered", or a lookup failure |
-| create (`REG-02` to `REG-08`) | No check that division and squads belong to the tournament or that squads are open |
+| `REG-07`, `API-10` | API re-registration erases the bowler's SSN, clears date of birth, and turns a missing gender into Female. **Fixed** (D-05; D-113 makes a missing gender Male) |
+| `REG-01` | Empty USBC ID matches every bowler with no USBC ID: false "already registered", or a lookup failure. **Fixed** for the API, which requires an ID (`API-09e`) |
+| create (`REG-02` to `REG-08`) | No check that division and squads belong to the tournament or that squads are open. **Fixed** (D-108) |
 | `REG-38` | API ignores an average sent without a division |
 | `REG-37` | API allows a division change after scores; the desk does not |
 | `SCR-05`, `SCR-06` | A bowler who fails score validation has their saved scores deleted |

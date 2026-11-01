@@ -66,6 +66,11 @@ describe('checkBowler', () => {
     ['919.555.1212 ext. 12', true],
     ['9195551', false],
     ['919-555-1212 x1234567', false],
+    ['919-555-1212x45', true],
+    ['919-555-1212 EXTENSION 45', true],
+    ['x919-555-1212', false],
+    [' 919 555 1212 ', true],
+    ['919-555-1212 ext', false],
   ])('accepts the legacy phone pattern for %j: %s (BWL-07)', (raw, expected) => {
     expect(isValidPhone(raw)).toBe(expected)
   })
@@ -87,5 +92,34 @@ describe('checkBowler', () => {
   it('marks every failure as a validation error', () => {
     const failures = checkBowler(createCommonBowler({ firstName: '' }), { today, rawPhone: null })
     expect(failures.every((failure) => failure.kind === 'validation')).toBe(true)
+  })
+})
+
+describe('codes', () => {
+  const codes = (overrides: Parameters<typeof createCommonBowler>[0], rawPhone?: string) =>
+    checkBowler(createCommonBowler(overrides), { today, rawPhone }).map((f) => f.code)
+
+  it.each([
+    ['Bowler.FirstNameRequired', { firstName: '' }],
+    ['Bowler.MiddleInitialTooLong', { middleInitial: 'Jo' }],
+    ['Bowler.LastNameRequired', { lastName: '' }],
+    ['Bowler.CityRequired', { city: '' }],
+    ['Bowler.StateInvalid', { state: 'N' }],
+    ['Bowler.StateRequired', { state: '' }],
+    ['Bowler.ZipCodeInvalid', { zipCode: '' }],
+    ['Bowler.EmailInvalid', { email: 'nope' }],
+    ['Bowler.DateOfBirthInvalid', { dateOfBirth: '2030-01-01' }],
+    ['Bowler.UsbcIdInvalid', { usbcId: 'abc' }],
+  ])('reports %s', (code, overrides) => {
+    expect(codes(overrides)).toContain(code)
+  })
+
+  it('reports Bowler.PhoneInvalid and the city-without-street state rule', () => {
+    expect(codes({}, '12')).toContain('Bowler.PhoneInvalid')
+    expect(codes({ street: '', state: '' })).toEqual(['Bowler.StateRequired'])
+  })
+
+  it('does not ask for a state when there is neither a street nor a city', () => {
+    expect(codes({ street: '', city: '', state: '', zipCode: '' })).toEqual([])
   })
 })

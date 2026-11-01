@@ -25,6 +25,12 @@ describe('normalizePhone (BWL-07a)', () => {
     ['919-555-1212 ext 45', '9195551212'],
     ['919-555-1212 x45', '9195551212'],
     ['555-1212', ''],
+    ['919-555-1212x45', '9195551212'],
+    ['919-555-1212 extension 45  ', '9195551212'],
+    ['x45 919-555-1212', ''],
+    ['1955512123', '1955512123'],
+    ['29195551212', ''],
+    ['19195551212', '9195551212'],
     ['', ''],
   ])('turns %j into %j', (raw, expected) => {
     expect(normalizePhone(raw)).toBe(expected)
@@ -48,6 +54,8 @@ describe('genderOf (API-10, D-113)', () => {
     ['f', 'Female'],
     ['M', 'Male'],
     ['x', 'Male'],
+    [' f ', 'Female'],
+    ['', 'Male'],
   ])('maps %j to %s', (raw, expected) => {
     expect(genderOf(raw)).toBe(expected)
   })
@@ -83,6 +91,35 @@ describe('a new bowler', () => {
 
   it('has no birth date when none comes', () => {
     expect(toNewBowler(bowlerInput({ dateOfBirth: null })).dateOfBirth).toBeNull()
+  })
+})
+
+describe('a new bowler with only the required fields', () => {
+  it('has empty text for the rest, an unknown birth date, and Male (D-113)', () => {
+    const base = bowlerInput()
+    const bowler = toNewBowler({
+      firstName: base.firstName,
+      lastName: base.lastName,
+      address: { street: '', city: '', state: '', zipCode: '' },
+      email: base.email,
+      usbcId: base.usbcId,
+    })
+
+    expect(bowler).toEqual({
+      firstName: 'Joe',
+      middleInitial: '',
+      lastName: 'Fontaine',
+      suffix: '',
+      street: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      email: 'joe@example.com',
+      phoneNumber: '',
+      usbcId: '1234-56789',
+      dateOfBirth: null,
+      gender: 'Male',
+    })
   })
 })
 
@@ -126,6 +163,13 @@ describe('a returning bowler (REG-07, REG-14, BWL-16a, D-05)', () => {
     expect(merged.email).toBe('new@example.com')
     expect(merged.gender).toBe('Female')
     expect(merged.phoneNumber).toBe('9195550000')
+  })
+
+  it('treats text of only spaces as not sent', () => {
+    const patch = toBowlerPatch(bowlerInput({ suffix: '   ', gender: '  ', dateOfBirth: ' ' }))
+    expect(patch).not.toHaveProperty('suffix')
+    expect(patch).not.toHaveProperty('gender')
+    expect(patch).not.toHaveProperty('dateOfBirth')
   })
 
   it('trims the text it stores', () => {

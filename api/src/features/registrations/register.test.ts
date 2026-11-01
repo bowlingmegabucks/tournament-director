@@ -157,7 +157,13 @@ describe('creating a registration (REG-01, REG-08, API-05)', () => {
 
     const failures = await failuresOf(register(deps, input()))
 
-    expect(failures.map((f) => [f.kind, f.code])).toEqual([['other', 'Bowler.Duplicate']])
+    expect(failures).toEqual([
+      {
+        kind: 'other',
+        code: 'Bowler.Duplicate',
+        description: 'More than one bowler record has this USBC ID.',
+      },
+    ])
   })
 })
 
@@ -165,13 +171,25 @@ describe('request lookups', () => {
   it('fails with a non-validation error for an unknown tournament (API-12)', async () => {
     const { deps, input } = setup()
     const failures = await failuresOf(register(deps, input({ tournamentId: faker.string.uuid() })))
-    expect(failures.map((f) => [f.kind, f.code])).toEqual([['other', 'Tournament.NotFound']])
+    expect(failures).toEqual([
+      {
+        kind: 'other',
+        code: 'Tournament.NotFound',
+        description: 'The specified tournament does not exist.',
+      },
+    ])
   })
 
   it('fails with a non-validation error for an unknown division (API-12)', async () => {
     const { deps, input } = setup()
     const failures = await failuresOf(register(deps, input({ divisionId: faker.string.uuid() })))
-    expect(failures.map((f) => [f.kind, f.code])).toEqual([['other', 'Division.NotFound']])
+    expect(failures).toEqual([
+      {
+        kind: 'other',
+        code: 'Division.NotFound',
+        description: 'The specified division does not exist.',
+      },
+    ])
   })
 
   it('refuses a division of another tournament (D-108)', async () => {
@@ -183,8 +201,12 @@ describe('request lookups', () => {
 
     const failures = await failuresOf(register(deps, input({ divisionId: elsewhere.id })))
 
-    expect(failures.map((f) => [f.kind, f.code])).toEqual([
-      ['validation', 'Registration.DivisionNotInTournament'],
+    expect(failures).toEqual([
+      {
+        kind: 'validation',
+        code: 'Registration.DivisionNotInTournament',
+        description: 'Division ID is not valid for the tournament.',
+      },
     ])
   })
 })
@@ -196,7 +218,11 @@ describe('squads and sweepers (D-108, REG-03, REG-06)', () => {
 
     const failures = await failuresOf(register(deps, input({ squads: [stranger.id] })))
 
-    expect(failures.map((f) => f.code)).toContain('Registration.InvalidSquadIds')
+    expect(failures).toContainEqual({
+      kind: 'validation',
+      code: 'Registration.InvalidSquadIds',
+      description: 'Invalid squad IDs',
+    })
     const unknown = await failuresOf(register(deps, input({ squads: [faker.string.uuid()] })))
     expect(unknown.map((f) => f.code)).toContain('Registration.InvalidSquadIds')
   })
@@ -208,7 +234,12 @@ describe('squads and sweepers (D-108, REG-03, REG-06)', () => {
     const asSweeper = await failuresOf(register(deps, input({ sweepers: [squads[1]?.id] })))
 
     expect(asSquad.map((f) => f.code)).toContain('Registration.InvalidSquadIds')
-    expect(asSweeper.map((f) => f.code)).toContain('Registration.InvalidSweeperIds')
+    expect(asSweeper).toContainEqual({
+      kind: 'validation',
+      code: 'Registration.InvalidSweeperIds',
+      description: 'Invalid sweeper IDs',
+    })
+    expect(asSquad.map((f) => f.code)).toContain('Registration.SquadsRequired')
   })
 
   it('refuses a squad or sweeper that is complete (D-108)', async () => {
@@ -231,10 +262,18 @@ describe('squads and sweepers (D-108, REG-03, REG-06)', () => {
       register(deps, input({ squads: [doneSquad.id], sweepers: [doneSweeper.id] })),
     )
 
-    expect(failures.map((f) => f.description)).toEqual(
+    expect(failures).toEqual(
       expect.arrayContaining([
-        'Cannot add squad(s) that are already complete.',
-        'Cannot add sweeper(s) that are already complete.',
+        {
+          kind: 'validation',
+          code: 'Registration.SquadComplete',
+          description: 'Cannot add squad(s) that are already complete.',
+        },
+        {
+          kind: 'validation',
+          code: 'Registration.SweeperComplete',
+          description: 'Cannot add sweeper(s) that are already complete.',
+        },
       ]),
     )
   })
@@ -251,8 +290,12 @@ describe('squads and sweepers (D-108, REG-03, REG-06)', () => {
     const failures = await failuresOf(
       register(some.deps, some.input({ superSweeper: true, sweepers: [some.sweepers[0]?.id] })),
     )
-    expect(failures.map((f) => f.description)).toEqual([
-      'Must enter all sweepers to enter Super Sweeper',
+    expect(failures).toEqual([
+      {
+        kind: 'validation',
+        code: 'Registration.SuperSweeperNeedsAllSweepers',
+        description: 'Must enter all sweepers to enter Super Sweeper',
+      },
     ])
   })
 })
@@ -292,7 +335,7 @@ describe('eligibility and bowler rules are a 400 (D-107, REG-04, REG-05)', () =>
 })
 
 describe('appending to an existing registration (REG-10 to REG-14)', () => {
-  function withRegistration(options: Options = {}) {
+  function withRegistration(options: Options & { alsoOnSweeper?: boolean } = {}) {
     const base = setup(options)
     const bowler = createCommonBowler({ usbcId: '1234-56789' })
     const registration = {
@@ -301,7 +344,10 @@ describe('appending to an existing registration (REG-10 to REG-14)', () => {
       divisionId: base.division.id,
       average: 170,
       superSweeper: false,
-      sessionIds: [base.squads[0]?.id ?? ''],
+      sessionIds: [
+        base.squads[0]?.id ?? '',
+        ...(options.alsoOnSweeper ? [base.sweepers[0]?.id ?? ''] : []),
+      ],
     }
     const { writer, state } = createInMemoryRegistrationWriter({
       divisions: [{ id: base.division.id, tournamentId: base.tournament.id }],
@@ -407,13 +453,30 @@ describe('appending to an existing registration (REG-10 to REG-14)', () => {
     expect(state.payments).toHaveLength(1)
   })
 
-  it('does not count the squads already entered against the one-squad rule (REG-13)', async () => {
+  it('counts the sweepers already on the registration toward a super sweeper (REG-13)', async () => {
+    const { deps, input, squads } = withRegistration({ alsoOnSweeper: true })
+
+    const result = await register(deps, input({ superSweeper: true, squads: [squads[1]?.id] }))
+
+    expect(result).toMatchObject({ ok: true, mode: 'append' })
+  })
+
+  it('refuses a super sweeper whose combined sweepers fall short (REG-13)', async () => {
+    const { deps, input, squads } = withRegistration()
+
+    const failures = await failuresOf(
+      register(deps, input({ superSweeper: true, squads: [squads[1]?.id] })),
+    )
+
+    expect(failures.map((f) => f.code)).toEqual(['Registration.SuperSweeperNeedsAllSweepers'])
+  })
+
+  it('counts the squads already entered toward the one-squad rule (REG-03, REG-13)', async () => {
     const { deps, input, sweepers } = withRegistration()
-    const body = input({ squads: [sweepers[0]?.id] })
 
-    const failures = await failuresOf(register(deps, body))
+    const failures = await failuresOf(register(deps, input({ squads: [sweepers[0]?.id] })))
 
-    expect(failures.map((f) => f.code)).toContain('Registration.InvalidSquadIds')
+    expect(failures.map((f) => f.code)).toEqual(['Registration.InvalidSquadIds'])
   })
 })
 

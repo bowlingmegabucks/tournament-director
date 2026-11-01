@@ -67,6 +67,10 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 - [x] Lane assignments page and its route are signed-in only (D-59, D-105): `lanes.read`, link and tab hidden when signed out.
 - [x] Recap sheet routes (`.../squads/{sessionId}/recap-sheets` and the sweeper twin) and the "Recap sheets" button are signed-in only (D-66, D-105): `lanes.read`; the button sits on the lane page.
 - [x] Registrations list (`GET /v1/tournaments/{id}/registrations` and its page) is signed-in only (D-46, D-105): `registrations.read`, sidebar link hidden when signed out.
+- [x] Registration site routes, slice 1: `GET /`, `POST /v1/registrations` (create and append), `GET /v1/registrations/{id}`, and the OpenAPI document at `/openapi/v1.json` (`API-01`, `API-05`, `API-06`, D-105 to D-114). See [registration-api.md](requirements/registration-api.md).
+- [ ] Registration site routes, slice 2: `PATCH /v1/registrations/{id}` (`API-07`, D-04, D-10, D-110).
+- [ ] Registration site routes, slice 3: `DELETE /v1/registrations/{id}` (`API-08`).
+- [ ] Send the registration site the change note: a missing gender is stored as Male (D-113), division or squad ids from another tournament and complete squads are a 400 (D-108), a repeated payment code returns 201 (D-109). Wording is in [registration-api.md](requirements/registration-api.md#vendor-notes-to-send).
 - [ ] `npm audit` clean; pinned-version overrides in CLAUDE.md reviewed.
 
 ## Production readiness

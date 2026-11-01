@@ -140,3 +140,51 @@ it('marks every failure as a validation error, a 400 for everyone (D-107)', () =
   expect(failures).not.toHaveLength(0)
   expect(failures.every((failure) => failure.kind === 'validation')).toBe(true)
 })
+
+describe('codes (D-107)', () => {
+  const codes = (overrides: Parameters<typeof check>[0]) =>
+    checkEligibility({
+      division: createDivision(overrides.division),
+      average: overrides.average === undefined ? 180 : overrides.average,
+      bowler: {
+        dateOfBirth: '1980-06-15',
+        gender: 'Male',
+        usbcId: '1234-56789',
+        ...overrides.bowler,
+      },
+      tournamentStart: '2026-10-23',
+    }).map((failure) => failure.code)
+
+  it.each([
+    ['Registration.AverageRequired', { division: { minimumAverage: 100 }, average: null }],
+    ['Registration.AverageTooLow', { division: { minimumAverage: 200 } }],
+    ['Registration.AverageTooHigh', { division: { maximumAverage: 100 } }],
+    [
+      'Registration.DateOfBirthRequired',
+      { division: { minimumAge: 1 }, bowler: { dateOfBirth: null } },
+    ],
+    ['Registration.BowlerTooYoung', { division: { minimumAge: 60 } }],
+    ['Registration.BowlerTooOld', { division: { maximumAge: 20 } }],
+    ['Registration.GenderInvalid', { division: { gender: 'Female' as const } }],
+    [
+      'Registration.UsbcIdRequired',
+      { division: { handicapPercentage: 90 }, bowler: { usbcId: '' } },
+    ],
+  ])('reports %s', (code, overrides) => {
+    expect(codes(overrides)).toContain(code)
+  })
+
+  it('reports Registration.GenderRequired for a division gender and an unknown bowler gender', () => {
+    expect(codes({ division: { gender: 'Female' }, bowler: { gender: null } })).toContain(
+      'Registration.GenderRequired',
+    )
+  })
+
+  it('applies the age test to a bowler of another gender, and to a division with no gender', () => {
+    expect(codes({ division: { minimumAge: 60, gender: 'Female' } })).toContain(
+      'Registration.BowlerTooYoung',
+    )
+    expect(codes({ division: { minimumAge: 60 } })).toContain('Registration.BowlerTooYoung')
+    expect(codes({ division: { minimumAge: 60, gender: 'Male' } })).toEqual([])
+  })
+})

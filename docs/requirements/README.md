@@ -47,6 +47,7 @@ What the user sees and can do.
 | Divisions (list)                        | [divisions.md](divisions.md)                     |
 | Squads and sweepers (lists)             | [squads-and-sweepers.md](squads-and-sweepers.md) |
 | Registrations (list)                    | [registrations.md](registrations.md)             |
+| Registration API (create, append, get, OpenAPI) | [registration-api.md](registration-api.md) |
 | Lane assignments (page, drag, portal)   | [lane-assignments.md](lane-assignments.md)       |
 | Recap sheets (preview, print, the cross) | [recap-sheets.md](recap-sheets.md)              |
 | Scores (view)                           | [scores.md](scores.md)                           |

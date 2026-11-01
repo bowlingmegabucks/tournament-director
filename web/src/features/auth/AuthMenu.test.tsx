@@ -91,3 +91,26 @@ describe('AuthMenu (top bar)', () => {
     expect(screen.getByRole('heading', { name: 'Page not found' })).toBeVisible()
   })
 })
+
+describe('AuthMenu sign-out and cached data', () => {
+  it('refetches the page data after sign-out, so nothing seen while signed in stays cached', async () => {
+    setMockUser(createSignedInUser({ name: 'Dana Director' }))
+    let requests = 0
+    server.use(
+      http.get('/v1/tournaments', () => {
+        requests += 1
+        return HttpResponse.json({ tournaments: [] })
+      }),
+    )
+    renderApp('/tournaments')
+    await screen.findByText('No tournaments yet.')
+    expect(requests).toBe(1)
+
+    await userEvent.click(await within(mainMenu()).findByRole('button', { name: 'Sign out' }))
+
+    await within(mainMenu()).findByRole('link', { name: 'Sign in' })
+    await vi.waitFor(() => {
+      expect(requests).toBe(2)
+    })
+  })
+})

@@ -24,9 +24,7 @@ export function AppShell() {
               <NavLink to="/tournaments">Tournaments</NavLink>
             </li>
           </ul>
-          <div className={styles.auth}>
-            <AuthMenu />
-          </div>
+          <AuthMenu />
         </div>
       </nav>
       <Outlet />

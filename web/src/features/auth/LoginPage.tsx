@@ -40,7 +40,7 @@ export function LoginPage() {
       {me.isPending && <Loading label="Checking sign-in…" />}
       <form className={styles.form} onSubmit={submit}>
         {signIn.error && (
-          <p role="alert" className={styles.error}>
+          <p id="login-error" role="alert" className={styles.error}>
             {signIn.error.message}
           </p>
         )}
@@ -48,6 +48,7 @@ export function LoginPage() {
           <label htmlFor="login-email">Email</label>
           <input
             id="login-email"
+            aria-describedby={signIn.error ? 'login-error' : undefined}
             name="email"
             type="email"
             autoComplete="username"
@@ -62,6 +63,7 @@ export function LoginPage() {
           <label htmlFor="login-password">Password</label>
           <input
             id="login-password"
+            aria-describedby={signIn.error ? 'login-error' : undefined}
             name="password"
             type="password"
             autoComplete="current-password"

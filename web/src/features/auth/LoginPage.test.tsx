@@ -85,6 +85,18 @@ describe('LoginPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Email or password is wrong.')
     expect(screen.getByLabelText('Email')).toHaveValue('director@example.com')
+    expect(screen.getByLabelText('Email')).toHaveAccessibleDescription(
+      'Email or password is wrong.',
+    )
+    expect(screen.getByLabelText('Password')).toHaveAccessibleDescription(
+      'Email or password is wrong.',
+    )
+  })
+
+  it('has no description on the fields before an error', () => {
+    renderLogin()
+
+    expect(screen.getByLabelText('Email')).not.toHaveAccessibleDescription()
   })
 
   it('tells how long to wait after too many attempts', async () => {

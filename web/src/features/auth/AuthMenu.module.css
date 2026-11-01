@@ -7,3 +7,15 @@
 .muted {
   color: var(--color-text-muted);
 }
+
+.link {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--target-min);
+  padding-inline: var(--space-4);
+  color: var(--color-text);
+}
+
+.error {
+  color: var(--color-danger);
+}

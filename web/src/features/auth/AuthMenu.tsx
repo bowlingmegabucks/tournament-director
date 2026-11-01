@@ -32,7 +32,12 @@ function AuthMenuContent() {
       </div>
     )
   }
-  if (data.user === null) return <Link to="/login">Sign in</Link>
+  if (data.user === null)
+    return (
+      <Link to="/login" className={styles.link}>
+        Sign in
+      </Link>
+    )
   return (
     <div className={styles.who}>
       <span>{data.user.name}</span>
@@ -45,7 +50,11 @@ function AuthMenuContent() {
       >
         Sign out
       </button>
-      {signOut.error && <span role="alert">{signOut.error.message}</span>}
+      {signOut.error && (
+        <span role="alert" className={styles.error}>
+          {signOut.error.message}
+        </span>
+      )}
     </div>
   )
 }

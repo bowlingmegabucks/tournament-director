@@ -25,6 +25,10 @@ export function useSignOut() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: signOut,
-    onSuccess: () => queryClient.setQueryData<Me>(meKeys.all, { user: null }),
+    onSuccess: async () => {
+      queryClient.setQueryData<Me>(meKeys.all, { user: null })
+      // Drop what the user could see, so a signed-out browser keeps none of it. Pages on screen refetch.
+      await queryClient.resetQueries({ predicate: (query) => query.queryKey[0] !== meKeys.all[0] })
+    },
   })
 }

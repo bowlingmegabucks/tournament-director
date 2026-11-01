@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from 'node:crypto'
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { trace } from '@opentelemetry/api'
 import type { RequestHandler, Response } from 'express'
 import type { Permission } from './permissions.ts'
@@ -26,9 +26,12 @@ interface CallerState {
 // Keyed by the response, like HttpContext.Items in ASP.NET Core. Gone when the response is.
 const states = new WeakMap<Response, CallerState>()
 
-// Hash both sides first: timingSafeEqual needs equal lengths, and a hash hides the key's length.
+// A fresh random key per process. This is not password storage: the MAC only gives timingSafeEqual
+// two buffers of equal length, and it hides the key's length. The key never leaves memory.
+const macKey = randomBytes(32)
+
 function digest(value: string): Buffer {
-  return createHash('sha256').update(value).digest()
+  return createHmac('sha256', macKey).update(value).digest()
 }
 
 /**

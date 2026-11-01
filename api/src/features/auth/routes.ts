@@ -25,6 +25,11 @@ import { requestLogger } from '../../shared/requestLogging.ts'
  */
 export function createAuthRouter(auth: Auth, meter: Meter, logger: Logger): Router {
   const router = Router()
+  // Both answers can carry a session cookie or the user, so no cache may keep them.
+  router.use((_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store')
+    next()
+  })
   const betterAuth = toNodeHandler(auth)
   // A database that cannot be reached becomes the same 503 `Database unavailable` every route
   // gives (D-32). Any other unexpected failure is a generic 500 from the error handler.

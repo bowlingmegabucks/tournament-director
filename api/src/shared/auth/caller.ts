@@ -93,9 +93,11 @@ async function readSession(
       headers: fromNodeHeaders(req.headers),
       returnHeaders: true,
     })
-    for (const cookie of headers.getSetCookie()) res.append('Set-Cookie', cookie)
     const found = response?.user
-    if (!found || isBanned(found)) return { user: null, failed: false }
+    // A banned user gets no renewed cookie. A cleared one (no session found) still goes out.
+    if (found && isBanned(found)) return { user: null, failed: false }
+    for (const cookie of headers.getSetCookie()) res.append('Set-Cookie', cookie)
+    if (!found) return { user: null, failed: false }
     return {
       user: {
         id: found.id,

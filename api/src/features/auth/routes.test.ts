@@ -32,6 +32,19 @@ async function setup(options: TestAuthOptions = {}) {
   return { app, auth, database, outage, user, signIn, records: captured.records }
 }
 
+describe('auth answers', () => {
+  it('are never cached: sign-in, a refused sign-in, and sign-out', async () => {
+    const { app, signIn } = await setup()
+
+    const ok = await signIn()
+    const refused = await signIn('wrong password 123')
+    const out = await request(app).post('/v1/auth/sign-out')
+
+    for (const response of [ok, refused, out])
+      expect(response.headers['cache-control']).toBe('no-store')
+  })
+})
+
 describe('POST /v1/auth/sign-in/email', () => {
   it('signs in and sets a session cookie that page scripts cannot read (D-99)', async () => {
     const { signIn, user } = await setup()

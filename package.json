@@ -8,7 +8,7 @@
     "dev": "concurrently --kill-others --names api,web --prefix-colors blue,green \"npm --prefix api run dev\" \"npm --prefix web run dev\"",
     "services:up": "docker compose up -d --wait",
     "services:down": "docker compose down",
-    "db:seed": "npm --prefix api run db:seed",
+    "db:seed": "npm --prefix api run db:seed --",
     "users:create-admin": "npm --prefix api run users:create-admin",
     "dev:mocks": "npm --prefix web run dev:mocks",
     "check:version": "node scripts/checkVersion.ts",

@@ -14,7 +14,8 @@ const safeRequestId = /^[\w.-]{1,64}$/
 
 // A path that carries a one-time secret. The emailed password-reset link puts its token in the path
 // (stage 3, `GET /v1/auth/reset-password/:token`). Anyone who reads the log must not be able to use it.
-const secretPathSegments = /^(\/v1\/auth\/reset-password\/)[^/?]+/
+// Express matches paths without regard to case and lets extra slashes through, so this does too.
+const secretPathSegments = /^(\/+v1\/+auth\/+reset-password\/+)[^/?]+/i
 
 /** A URL as it is safe to log: a token in the path is replaced by `[redacted]`. */
 export function redactSecrets(path: string): string {

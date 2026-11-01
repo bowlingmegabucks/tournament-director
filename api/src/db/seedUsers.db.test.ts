@@ -11,6 +11,7 @@ import { createTestApp } from '../test/testApp.ts'
 import { cookieOf } from '../test/testAuth.ts'
 import { createScriptAuth } from './scriptAuth.ts'
 import { localUsers, seedUsers } from './seedUsers.ts'
+import { seedTournaments } from './seedTournaments.ts'
 
 describe('seedUsers', () => {
   let client: PrismaClient
@@ -114,6 +115,22 @@ describe('seedUsers', () => {
 
       expect(result.added).toBe(0)
       expect(await client.user.count({ where: { email: 'director@example.com' } })).toBe(0)
+    })
+
+    it('refuses on an empty user table when the database holds a real tournament', async () => {
+      await seedTournaments(client)
+      await client.$executeRaw`
+        INSERT INTO Tournaments
+          (Id, Name, Start, End, EntryFee, Games, FinalsRatio, CashRatio, SuperSweperCashRatio,
+           BowlingCenter, Completed)
+        VALUES ('11111111-2222-4333-8444-555555555555', 'Real', NOW(), NOW(), 50, 6, 7.0, 5.0, 5.0,
+                'Real Lanes', 0)`
+
+      const result = await seedUsers(client, createScriptAuth(client))
+
+      expect(result.added).toBe(0)
+      expect(result.skippedReason).toContain('--force-users')
+      expect(await client.user.count()).toBe(0)
     })
 
     it('adds them when told to force it', async () => {

@@ -275,6 +275,16 @@ describe('identifyCaller: the session cookie', () => {
       expect(body.caller.type).toBe('anonymous')
     })
 
+    it('gets no renewed cookie', async () => {
+      const { app, cookie, database } = await bannedApp(true, null)
+      const session = database.session[0]
+      if (session) session['expiresAt'] = new Date(Date.now() + 10 * 3600 * 1000)
+
+      const response = await request(app).get('/who').set('Cookie', cookie)
+
+      expect(setCookies(response)).toEqual([])
+    })
+
     it('is let back in at the very moment the ban ends', async () => {
       vi.useFakeTimers({ toFake: ['Date'] })
       const { app, cookie, database } = await bannedApp(true, null)

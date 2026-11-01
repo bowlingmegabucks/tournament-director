@@ -1,4 +1,5 @@
 import { faker } from '@faker-js/faker'
+import type { SignedInUser } from '../features/auth/types'
 import type { Division } from '../features/divisions/types'
 import type { LaneBowler, LanePage, LanePair } from '../features/lanes/types'
 import type { SessionKind } from '../shared/session'
@@ -1208,4 +1209,37 @@ export function createDemoSuperSweeper(
       }),
     ),
   })
+}
+
+const allPermissions = [
+  'registrations.read',
+  'registrations.write',
+  'lanes.read',
+  'lanes.assign',
+  'scores.write',
+  'sessions.complete',
+  'tournaments.write',
+  'bowlers.ssn',
+  'users.manage',
+]
+
+/** The mock twin of the API's role table (D-97), only so the mocks can answer `GET /v1/me`. */
+const permissionsByRole: Record<string, string[]> = {
+  admin: allPermissions,
+  director: allPermissions.filter(
+    (permission) => permission !== 'users.manage' && permission !== 'bowlers.ssn',
+  ),
+  scoreKeeper: ['scores.write', 'registrations.read', 'lanes.read'],
+}
+
+export function createSignedInUser(overrides: Partial<SignedInUser> = {}): SignedInUser {
+  const roles = overrides.roles ?? ['director']
+  return {
+    id: faker.string.uuid(),
+    email: faker.internet.email(),
+    name: faker.person.fullName(),
+    roles,
+    permissions: roles.flatMap((role) => permissionsByRole[role] ?? []),
+    ...overrides,
+  }
 }

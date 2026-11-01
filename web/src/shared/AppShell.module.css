@@ -5,7 +5,7 @@
 }
 
 .inner,
-.menu {
+.bar {
   max-inline-size: var(--layout-width);
   margin-inline: auto;
 }
@@ -19,6 +19,22 @@
 .nav {
   padding-inline: var(--space-4);
   border-block-end: var(--border-width) solid var(--color-border);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+
+.auth a {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--target-min);
+  padding-inline: var(--space-4);
+  color: var(--color-text);
 }
 
 .menu {

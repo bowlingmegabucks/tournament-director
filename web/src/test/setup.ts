@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest'
 import { afterAll, afterEach, beforeAll } from 'vitest'
 import { cleanup } from '@testing-library/react'
+import { setMockUser } from '../mocks/authHandlers'
 import { server } from '../mocks/server'
 
 // jsdom has no <dialog>.showModal or close. This stand-in opens and closes it and fires "close",
@@ -17,6 +18,7 @@ HTMLDialogElement.prototype.close = function close() {
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))
 afterEach(() => {
   cleanup()
+  setMockUser(null)
   server.resetHandlers()
 })
 afterAll(() => server.close())

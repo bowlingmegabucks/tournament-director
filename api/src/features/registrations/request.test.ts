@@ -99,3 +99,93 @@ describe('parseCreateRequest', () => {
     expect(!result.success && result.failures.every((f) => f.kind === 'validation')).toBe(true)
   })
 })
+
+describe('failure wording (API-09)', () => {
+  const failuresOf = (body: unknown) => {
+    const result = parseCreateRequest(body)
+    return result.success ? [] : result.failures
+  }
+  const base = () => sampleRequest().registration
+  const withBowler = (changes: Record<string, unknown>) =>
+    sampleRequest({ bowler: { ...base().bowler, ...changes } })
+
+  it.each([
+    [{ registration: {} }, 'Registration.TournamentIdInvalid', 'Invalid Tournament ID'],
+    [sampleRequest({ divisionId: 'x' }), 'Registration.DivisionIdInvalid', 'Invalid Division ID'],
+    [
+      withBowler({ firstName: '' }),
+      'Registration.BowlerFirstNameRequired',
+      "Bowler's first name is required.",
+    ],
+    [
+      withBowler({ lastName: '' }),
+      'Registration.BowlerLastNameRequired',
+      "Bowler's last name is required.",
+    ],
+    [
+      withBowler({ address: null }),
+      'Registration.BowlerAddressRequired',
+      "Bowler's address is required.",
+    ],
+    [
+      withBowler({ email: 'x' }),
+      'Registration.BowlerEmailInvalid',
+      'A valid email address is required for the bowler.',
+    ],
+    [
+      withBowler({ usbcId: '' }),
+      'Registration.BowlerUsbcIdRequired',
+      'USBC ID is required for the bowler.',
+    ],
+    [
+      sampleRequest({ squads: [] }),
+      'Registration.SquadsRequired',
+      'At least one squad must be entered.',
+    ],
+  ])('words %#', (body, code, description) => {
+    expect(failuresOf(body)).toContainEqual({ kind: 'validation', code, description })
+  })
+
+  it('words a missing registration object', () => {
+    expect(failuresOf({})).toEqual([
+      {
+        kind: 'validation',
+        code: 'Registration.Required',
+        description: 'Registration details are required.',
+      },
+    ])
+  })
+
+  it('names the field for a check without its own code', () => {
+    const [failure] = failuresOf(sampleRequest({ superSweeper: 'yes' }))
+    expect(failure?.code).toBe('Registration.Invalid')
+    expect(failure?.description).toMatch(/^superSweeper: /)
+    const [nested] = failuresOf(withBowler({ middleInitial: 5 }))
+    expect(nested?.description).toMatch(/^bowler\.middleInitial: /)
+  })
+
+  it('treats a registration that is not an object as missing', () => {
+    expect(failuresOf({ registration: 'text' }).map((f) => f.code)).toEqual([
+      'Registration.Required',
+    ])
+  })
+
+  it('accepts a payment code of exactly 43 characters with its prefix, and refuses 44 (PAY-02)', () => {
+    const payment = (length: number) => ({
+      processingSystem: 'Stripe',
+      confirmationCode: 'x'.repeat(length - 'Stripe_'.length),
+      amount: 5,
+    })
+    expect(parseCreateRequest(sampleRequest({ payment: payment(43) })).success).toBe(true)
+    expect(failuresOf(sampleRequest({ payment: payment(44) }))).toEqual([
+      { kind: 'validation', code: 'Payment.Invalid', description: 'The payment is not valid.' },
+    ])
+  })
+
+  it('accepts the amount limits of the column (PAY-02)', () => {
+    const payment = (amount: number) => ({ processingSystem: 'S', confirmationCode: 'c', amount })
+    expect(parseCreateRequest(sampleRequest({ payment: payment(0) })).success).toBe(true)
+    expect(parseCreateRequest(sampleRequest({ payment: payment(999.99) })).success).toBe(true)
+    expect(failuresOf(sampleRequest({ payment: payment(-1) }))).toHaveLength(1)
+  })
+})

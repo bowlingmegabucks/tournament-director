@@ -157,7 +157,53 @@ describe('POST /v1/registrations (API-05)', () => {
       .send('{ not json')
 
     expect(response.status).toBe(400)
-    expect(problemSchema.parse(response.body).status).toBe(400)
+    expect(problemSchema.parse(response.body)).toMatchObject({
+      status: 400,
+      detail: 'An error occurred while creating the registration.',
+      errors: [
+        { code: 'Registration.Required', description: 'The request body is not valid JSON.' },
+      ],
+      traceId: response.headers['x-request-id'],
+    })
+  })
+
+  it('answers a body over 100 KB with a 413 problem body', async () => {
+    const { app } = setup()
+
+    const response = await asVendor(request(app).post('/v1/registrations'))
+      .set('Content-Type', 'application/json')
+      .send(JSON.stringify({ registration: { padding: 'x'.repeat(200_000) } }))
+
+    expect(response.status).toBe(413)
+    expect(problemSchema.parse(response.body).status).toBe(413)
+  })
+
+  it('logs the codes of a refusal and the id of a save, never the bowler (SEC-13)', async () => {
+    const captured = createCapturedLogger()
+    const { app, body } = setup({ division: { minimumAverage: 250 }, logger: captured.logger })
+
+    await asVendor(request(app).post('/v1/registrations')).send(body())
+
+    const refused = captured.records().find((r) => r['msg'] === 'Registration refused')
+    expect(refused?.['codes']).toEqual(['Registration.AverageTooLow'])
+  })
+
+  it('logs the id and mode of a save', async () => {
+    const captured = createCapturedLogger()
+    const { app, body } = setup({ logger: captured.logger })
+
+    const response = await asVendor(request(app).post('/v1/registrations')).send(body())
+
+    const saved = captured.records().find((r) => r['msg'] === 'Registration saved')
+    expect(saved).toMatchObject({ registrationId: response.body.registrationId, mode: 'create' })
+  })
+
+  it('names creating, not appending, when a first registration fails a rule', async () => {
+    const { app, body } = setup({ division: { minimumAverage: 250 } })
+
+    const response = await asVendor(request(app).post('/v1/registrations')).send(body())
+
+    expect(response.body.detail).toBe('An error occurred while creating the registration.')
   })
 
   it('answers an eligibility failure with 400 (REG-04, D-107)', async () => {
@@ -267,8 +313,10 @@ describe('unexpected errors (API-13)', () => {
       detail: 'An unexpected error occurred while processing your request.',
       traceId: response.headers['x-request-id'],
     })
+    expect(response.body.message).toBe('Internal server error')
     expect(JSON.stringify(response.body)).not.toContain('secret')
-    expect(captured.records().some((r) => r['msg'] === 'Unhandled error')).toBe(true)
+    const logged = captured.records().find((r) => r['msg'] === 'Unhandled error')
+    expect(JSON.stringify(logged)).toContain('secret database detail')
   })
 
   it('answers a crash on get the same way', async () => {
@@ -327,6 +375,30 @@ describe('GET /v1/registrations/{id} (API-06)', () => {
       },
     })
     expect(JSON.stringify(response.body)).not.toMatch(/social|ssn|payment/i)
+  })
+
+  it('picks its own division, squads, and sweepers from the tournament', async () => {
+    const context = setup()
+    const other = createDivision({ number: 99 })
+    const { deps, tournament, secondSquad } = context
+    deps.divisions = createInMemoryDivisionRepository([
+      { tournamentId: tournament.id, division: other },
+      { tournamentId: tournament.id, division: context.division },
+    ])
+    const created = await asVendor(request(createTestApp(deps)).post('/v1/registrations')).send(
+      context.body({ squads: [context.squad.id], sweepers: [] }),
+    )
+
+    const response = await asVendor(
+      request(createTestApp(deps)).get(`/v1/registrations/${created.body.registrationId}`),
+    )
+
+    expect(response.body.registration.division.id).toBe(context.division.id)
+    expect(response.body.registration.squads.map((s: { id: string }) => s.id)).toEqual([
+      context.squad.id,
+    ])
+    expect(secondSquad.id).not.toBe(context.squad.id)
+    expect(response.body.registration.sweepers).toEqual([])
   })
 
   it('answers 404 with a problem body for an unknown id', async () => {

@@ -87,6 +87,7 @@ describe('checkBowler', () => {
     expect(descriptions({ usbcId: '123456789' })).toEqual(['Invalid USBC Id'])
     expect(descriptions({ usbcId: '12-3-4' })).toEqual(['Invalid USBC Id'])
     expect(descriptions({ usbcId: '12-34' })).toEqual([])
+    expect(descriptions({ usbcId: '' })).toEqual([])
   })
 
   it('marks every failure as a validation error', () => {

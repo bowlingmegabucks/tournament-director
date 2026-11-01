@@ -51,6 +51,7 @@ const emptyBowler: BowlerData = {
  * is dropped with the rest of the non-digits only when it follows `ext`, `x`, or `extension`.
  */
 export function normalizePhone(raw: string): string {
+  // Stryker disable next-line StringLiteral: any text without digits drops the extension the same way.
   const withoutExtension = raw.replace(/\s*(ext|x|extension)\.?\s*\d{1,6}\s*$/i, '')
   const digits = withoutExtension.replace(/\D/g, '')
   const national = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits
@@ -91,6 +92,7 @@ export function toBowlerPatch(input: BowlerInput): BowlerPatch {
   text('usbcId', input.usbcId)
   const zipCode = normalizeZip(input.address.zipCode)
   if (zipCode !== '') patch.zipCode = zipCode
+  // Stryker disable next-line StringLiteral: any text without digits normalizes to ''.
   const phoneNumber = normalizePhone(input.phoneNumber ?? '')
   if (phoneNumber !== '') patch.phoneNumber = phoneNumber
   if (present(input.dateOfBirth)) patch.dateOfBirth = input.dateOfBirth

@@ -53,6 +53,17 @@ function routeErrors(logger: Logger): ErrorRequestHandler {
         .json(toProblem(failures, detail, traceIdOf(res)))
       return
     }
+    if (type === 'entity.too.large') {
+      const failures = [validation('Registration.Required', 'The request body is too large.')]
+      res
+        .status(413)
+        .type('application/problem+json')
+        .json({
+          ...toProblem(failures, 'The request body is too large.', traceIdOf(res)),
+          status: 413,
+        })
+      return
+    }
     if (err instanceof HttpError || err instanceof ZodError) {
       next(err)
       return

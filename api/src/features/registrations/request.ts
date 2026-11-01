@@ -99,7 +99,7 @@ function describeIssue(issue: z.core.$ZodIssue): { code: string; description: st
   if (known) return known
   return {
     code: 'Registration.Invalid',
-    description: `${keys.join('.') || 'registration'}: ${issue.message}`,
+    description: `${keys.join('.')}: ${issue.message}`,
   }
 }
 

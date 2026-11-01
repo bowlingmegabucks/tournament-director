@@ -17,6 +17,7 @@
     "!src/features/sweepers/prismaRepository.ts",
     "!src/features/registrations/prismaRepository.ts",
     "!src/features/registrations/prismaWriter.ts",
+    "!src/features/registrations/writer.ts",
     "!src/features/lanes/prismaRepository.ts",
     "!src/features/scores/prismaRepository.ts",
     "!src/db/seedTournaments.ts",

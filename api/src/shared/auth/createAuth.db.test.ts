@@ -162,4 +162,31 @@ describe('sign-in on MariaDB', () => {
     expect(row.expiresAt.getTime() - Date.now()).toBeGreaterThan((sessionSeconds - 5) * 1000)
     expect(setCookies(response).join(' | ')).toContain(`Max-Age=${sessionSeconds}`)
   })
+
+  it('shows who is signed in on GET /v1/me, with their roles and permissions', async () => {
+    const { auth, app } = build()
+    await auth.api.createUser({
+      body: {
+        email: 'dee@example.com',
+        password: testPassword,
+        name: 'Dee',
+        role: ['scoreKeeper', 'director'],
+      },
+    })
+    const signedIn = await request(app)
+      .post('/v1/auth/sign-in/email')
+      .send({ email: 'dee@example.com', password: testPassword })
+
+    const me = await request(app).get('/v1/me').set('Cookie', cookieOf(signedIn))
+
+    expect(me.status).toBe(200)
+    expect(me.body.user).toMatchObject({
+      email: 'dee@example.com',
+      name: 'Dee',
+      roles: ['scoreKeeper', 'director'],
+    })
+    expect(me.body.user.permissions).toContain('tournaments.write')
+    expect(me.body.user.permissions).not.toContain('users.manage')
+    expect((await request(app).get('/v1/me')).body).toEqual({ apiKey: false, user: null })
+  })
 })

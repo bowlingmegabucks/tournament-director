@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
+import { openTournamentsSignedIn } from './menu'
 
 const wcagAA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 const colorSchemes = ['dark', 'light'] as const
@@ -90,7 +91,7 @@ for (const colorScheme of colorSchemes) {
     test('registrations page (loaded and filtered) has no WCAG 2.2 AA violations', async ({
       page,
     }) => {
-      await page.goto('/tournaments')
+      await openTournamentsSignedIn(page)
       await page.getByRole('article').first().getByRole('link').click()
       await page
         .getByRole('navigation', { name: /Northeast MegaBuck/ })
@@ -189,7 +190,7 @@ for (const colorScheme of colorSchemes) {
     test('lane assignments page (loaded, and with the Assign dialog open) has no WCAG 2.2 AA violations', async ({
       page,
     }) => {
-      await page.goto('/tournaments')
+      await openTournamentsSignedIn(page)
       await page.getByRole('article').first().getByRole('link').click()
       await page
         .getByRole('navigation', { name: /Northeast MegaBuck/ })
@@ -210,7 +211,7 @@ for (const colorScheme of colorSchemes) {
     })
 
     test('recap sheets dialog has no WCAG 2.2 AA violations', async ({ page }) => {
-      await page.goto('/tournaments')
+      await openTournamentsSignedIn(page)
       await page.getByRole('article').first().getByRole('link').click()
       await page
         .getByRole('navigation', { name: /Northeast MegaBuck/ })
@@ -234,7 +235,7 @@ for (const colorScheme of colorSchemes) {
     test('lane assignments page of a complete squad has no WCAG 2.2 AA violations', async ({
       page,
     }) => {
-      await page.goto('/tournaments')
+      await openTournamentsSignedIn(page)
       await page.getByRole('article').first().getByRole('link').click()
       await page
         .getByRole('navigation', { name: /Northeast MegaBuck/ })
@@ -250,7 +251,7 @@ for (const colorScheme of colorSchemes) {
     })
 
     test('registrations squad popup (open) has no WCAG 2.2 AA violations', async ({ page }) => {
-      await page.goto('/tournaments')
+      await openTournamentsSignedIn(page)
       await page.getByRole('article').first().getByRole('link').click()
       await page.getByRole('link', { name: 'Registrations' }).click()
       await page

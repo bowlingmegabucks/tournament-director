@@ -1,8 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
-import { menuLink, sidebar } from './menu'
+import { menuLink, sidebar, signInAsDirector } from './menu'
 
 /**
- * Every public page fits a 320 px phone with no sideways scroll, on the page or inside a table or
+ * Every page fits a 320 px phone with no sideways scroll, on the page or inside a table or
  * wrapper (D-73). A wide table reflows into stacked rows instead. The mock server forgets its
  * tournaments on a full page load, so the test moves by links, as a visitor does.
  */
@@ -39,8 +39,11 @@ async function fits(page: Page, where: string) {
   expect(await emptyLabelledCells(page), `${where}: empty labelled cells`).toBe(0)
 }
 
-test('every public page fits a phone with no sideways scroll (D-73)', async ({ page }) => {
-  await page.goto('/')
+test('every page fits a phone with no sideways scroll, signed in as a director (D-73)', async ({
+  page,
+}) => {
+  // The registrations and lane pages need sign-in (D-52). Signing in ends on the home page.
+  await signInAsDirector(page)
   await fits(page, 'home')
   await page.getByRole('link', { name: 'All tournaments' }).click()
   await fits(page, 'tournaments')

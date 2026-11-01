@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
+import { setMockUser } from '../../mocks/authHandlers'
 import {
   createScoreBowler,
+  createSignedInUser,
   createScorePage,
   createScorePair,
   createSquad,
@@ -227,7 +229,8 @@ describe('ScoresPage', () => {
     ).toBeVisible()
   })
 
-  it('notes the bowlers with no lane, with a link to assign them (D-71)', async () => {
+  it('notes the bowlers with no lane, with a link to assign them for a user who may see lanes (D-71, D-52)', async () => {
+    setMockUser(createSignedInUser({ roles: ['director'] }))
     const page = filled({ noLane: 3 })
     serve(page)
 
@@ -238,6 +241,17 @@ describe('ScoresPage', () => {
       'href',
       `/tournaments/${tournament.id}/squads/${page.session.id}/lanes`,
     )
+  })
+
+  it('notes the bowlers with no lane but offers no link to a visitor who is signed out (D-52)', async () => {
+    const page = filled({ noLane: 3 })
+    serve(page)
+
+    open(page)
+
+    expect(await screen.findByText(/3 bowlers have no lane\./, {}, { timeout: 3000 })).toBeVisible()
+    // The lane page needs sign-in, so the link would lead to a sign-in page.
+    expect(screen.queryByRole('link', { name: 'Assign lanes' })).not.toBeInTheDocument()
   })
 
   it('says one bowler in the singular and shows no note for none (D-71)', async () => {

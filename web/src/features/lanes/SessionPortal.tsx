@@ -1,4 +1,6 @@
 import { Link, NavLink, Navigate, Outlet, useOutletContext, useParams } from 'react-router'
+import { Can } from '../auth/Can'
+import { useMe } from '../auth/useMe'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { formatSessionDate } from '../../shared/sessionFormat'
@@ -73,9 +75,11 @@ function SessionPortalView({
       </h1>
       <nav aria-label={`${label} pages`}>
         <ul className={styles.tabs}>
-          <li>
-            <NavLink to="lanes">Lane assignments</NavLink>
-          </li>
+          <Can permission="lanes.read">
+            <li>
+              <NavLink to="lanes">Lane assignments</NavLink>
+            </li>
+          </Can>
           <li>
             <NavLink to="scores">Scores</NavLink>
           </li>
@@ -129,7 +133,14 @@ export function SweeperPortal() {
   )
 }
 
-/** The portal root has no page of its own: it opens the lanes tab (D-60). */
+/**
+ * The portal root has no page of its own. It opens the lanes tab (D-60) for a user who may see
+ * lanes, and the scores tab for everyone else, since lanes need sign-in (D-59, D-52).
+ */
 export function OpenLanes() {
-  return <Navigate to="lanes" replace />
+  const { data, isPending, error } = useMe()
+  if (isPending) return <Loading label="Checking sign-in…" />
+  // A failed check opens the public tab; the lanes tab would show its own error.
+  const canSeeLanes = !error && data.user?.permissions.includes('lanes.read') === true
+  return <Navigate to={canSeeLanes ? 'lanes' : 'scores'} replace />
 }

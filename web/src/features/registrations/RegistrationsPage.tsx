@@ -40,8 +40,8 @@ function SessionCount({
 
 /**
  * The registrations of the tournament in the URL, as a table with a summary and one filter box
- * (REG-23, REG-24, REG-26, D-47, D-49, D-50). Read only. Public for 0.2.0; it moves behind auth
- * right after 0.3.0 (D-46, D-52).
+ * (REG-23, REG-24, REG-26, D-47, D-49, D-50). Read only. Needs
+ * `registrations.read` (D-46, D-52, D-105).
  */
 export function RegistrationsPage() {
   // Stryker disable next-line StringLiteral: the route always has an :id; this only satisfies the type.

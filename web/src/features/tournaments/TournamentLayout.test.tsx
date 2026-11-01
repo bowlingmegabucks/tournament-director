@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
-import { createTournament } from '../../mocks/data'
+import { setMockUser } from '../../mocks/authHandlers'
+import { createTournament, createSignedInUser } from '../../mocks/data'
 import { renderApp } from '../../test/renderApp'
 
 const tournament = createTournament({
@@ -24,7 +25,13 @@ function serveTournament() {
   )
 }
 
+const findSidebar = () => screen.findByRole('navigation', { name: 'Spring Open' })
 const sidebar = () => screen.getByRole('navigation', { name: 'Spring Open' })
+
+// These pages need a permission (D-52), so the tests start signed in.
+beforeEach(() => {
+  setMockUser(createSignedInUser({ roles: ['director'] }))
+})
 
 describe('tournament pages', () => {
   it('has a menu button that shows whether the links are open, and closes after a link is followed (phone menu)', async () => {
@@ -284,5 +291,36 @@ describe('tournament pages', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent('Loading tournament')
     expect(await screen.findByRole('heading', { name: 'Spring Open', level: 1 })).toBeVisible()
+  })
+
+  describe('Registrations link (D-46, D-52)', () => {
+    it('shows to a user who holds registrations.read', async () => {
+      serveTournament()
+      renderApp(`/tournaments/${tournament.id}`)
+
+      expect(
+        await within(await findSidebar()).findByRole('link', { name: 'Registrations' }),
+      ).toBeVisible()
+    })
+
+    it('hides from a visitor who is signed out, and leaves the public links', async () => {
+      setMockUser(null)
+      serveTournament()
+      renderApp(`/tournaments/${tournament.id}`)
+
+      // The Sign in link shows once the sign-in check ends, so the link is hidden, not still loading.
+      await screen.findByRole('link', { name: 'Sign in' })
+      const links = within(await findSidebar())
+        .getAllByRole('link')
+        .map((link) => link.textContent)
+      expect(links).toEqual([
+        'Divisions',
+        'Squads',
+        'Sweepers',
+        'At-large',
+        'Seeding',
+        'Change tournament',
+      ])
+    })
   })
 })

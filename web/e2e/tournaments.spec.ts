@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { menuLink } from './menu'
+import { menuLink, openTournamentsSignedIn, sidebar } from './menu'
 
 test('home shows the current tournament and leads to the list and the overview', async ({
   page,
@@ -82,7 +82,7 @@ test('a tournament sidebar leads to its squads and sweepers (SQD-21, SQD-22)', a
 test('a tournament sidebar leads to its registrations, which a filter narrows (REG-23, REG-24)', async ({
   page,
 }) => {
-  await page.goto('/tournaments')
+  await openTournamentsSignedIn(page)
   await page.getByRole('article').first().getByRole('link').click()
 
   await page
@@ -110,11 +110,29 @@ test('a tournament sidebar leads to its registrations, which a filter narrows (R
   await expect(page.getByRole('term').filter({ hasText: 'Bowlers registered' })).toBeVisible()
 })
 
+test('a visitor who is signed out sees no Registrations link, and a deep link asks for sign-in (D-46, D-52)', async ({
+  page,
+}) => {
+  await page.goto('/tournaments')
+  await page.getByRole('article').first().getByRole('link').click()
+
+  await expect(sidebar(page).getByRole('link', { name: 'Divisions' })).toBeVisible()
+  await expect(sidebar(page).getByRole('link', { name: 'Registrations' })).toHaveCount(0)
+
+  // Move by a link, not goto: a full page load makes the mock server forget the tournaments.
+  await page.evaluate(() => {
+    window.history.pushState({}, '', window.location.pathname + '/registrations')
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  })
+
+  await expect(page.getByRole('heading', { name: 'Sign in', level: 1 })).toBeVisible()
+})
+
 test('on a narrow screen the card leaves out a blank super sweeper (REG-23, D-47)', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 800 })
-  await page.goto('/tournaments')
+  await openTournamentsSignedIn(page)
   await page.getByRole('article').first().getByRole('link').click()
   await menuLink(page, 'Registrations')
   await expect(page.getByRole('heading', { name: 'Registrations', level: 1 })).toBeVisible()
@@ -129,7 +147,7 @@ test('on a narrow screen the card leaves out a blank super sweeper (REG-23, D-47
 test('a squad count opens a popup that lists the squads, and Escape closes it (REG-28)', async ({
   page,
 }) => {
-  await page.goto('/tournaments')
+  await openTournamentsSignedIn(page)
   await page.getByRole('article').first().getByRole('link').click()
   await page.getByRole('link', { name: 'Registrations' }).click()
   const count = page
@@ -156,7 +174,7 @@ test('a squad count opens a popup that lists the squads, and Escape closes it (R
 })
 
 test('a click outside the popup closes it (REG-28)', async ({ page }) => {
-  await page.goto('/tournaments')
+  await openTournamentsSignedIn(page)
   await page.getByRole('article').first().getByRole('link').click()
   await page.getByRole('link', { name: 'Registrations' }).click()
   await page
@@ -173,7 +191,7 @@ test('a click outside the popup closes it (REG-28)', async ({ page }) => {
 
 /** Open the squad whose card title has this time: the demo has 9:00 AM (complete), 1:00 PM (open), and a Sunday one. */
 async function openSquad(page: Page, time: string) {
-  await page.goto('/tournaments')
+  await openTournamentsSignedIn(page)
   await page.getByRole('article').first().getByRole('link').click()
   await menuLink(page, 'Squads')
   await page
@@ -352,7 +370,7 @@ test('Print all lays out one half sheet per page, 8.5 by 5.5 inches (RPT-05b, D-
 })
 
 test('a sweeper card opens its lane page with bonus pins (LAN-11, D-60)', async ({ page }) => {
-  await page.goto('/tournaments')
+  await openTournamentsSignedIn(page)
   await page.getByRole('article').first().getByRole('link').click()
   await page
     .getByRole('navigation', { name: /Northeast MegaBuck/ })
@@ -379,7 +397,7 @@ test('the Scores tab shows a part-scored squad by lane pair, and notes bowlers w
   await expect(first.getByRole('row').nth(1).getByRole('cell').last()).not.toHaveText('0')
   await expect(page.getByText('4 bowlers have no lane.')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Assign lanes' })).toBeVisible()
-  await expect(page.getByRole('button')).toHaveCount(0)
+  await expect(page.getByRole('main').getByRole('button')).toHaveCount(0)
 })
 
 test('the Scores tab of a complete squad says it cannot change and shows a no-show as 0 (SCR-14, D-69)', async ({

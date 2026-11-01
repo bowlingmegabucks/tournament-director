@@ -1,5 +1,6 @@
 import { useId, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useParams } from 'react-router'
+import { Can } from '../auth/Can'
 import { Loading } from '../../shared/Loading'
 import { Page } from '../../shared/Page'
 import { QueryError } from '../../shared/QueryError'
@@ -104,11 +105,13 @@ export function TournamentLayout() {
                 Sweepers
               </NavLink>
             </li>
-            <li>
-              <NavLink onClick={closeMenu} to={`/tournaments/${data.id}/registrations`}>
-                Registrations
-              </NavLink>
-            </li>
+            <Can permission="registrations.read">
+              <li>
+                <NavLink onClick={closeMenu} to={`/tournaments/${data.id}/registrations`}>
+                  Registrations
+                </NavLink>
+              </li>
+            </Can>
             <li>
               <NavLink onClick={closeMenu} to={`/tournaments/${data.id}/at-large`}>
                 At-large

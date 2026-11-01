@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
-import { createRegistration, createTournament } from '../../mocks/data'
+import { setMockUser } from '../../mocks/authHandlers'
+import { createRegistration, createTournament, createSignedInUser } from '../../mocks/data'
 import { renderApp } from '../../test/renderApp'
 import type { Registration, RegistrationList, Summary } from './types'
 
@@ -65,6 +66,11 @@ function never(): never {
 }
 
 const filterBox = () => screen.findByRole('searchbox', { name: 'Filter by name or USBC ID' })
+
+// These pages need a permission (D-52), so the tests start signed in.
+beforeEach(() => {
+  setMockUser(createSignedInUser({ roles: ['director'] }))
+})
 
 describe('RegistrationsPage', () => {
   it('lists the registrations in the order the API sends, one row each (REG-23)', async () => {
@@ -574,5 +580,36 @@ describe('RegistrationsPage', () => {
       screen.queryByRole('button', { name: /add|edit|delete|remove/i }),
     ).not.toBeInTheDocument()
     expect(within(screen.getByRole('table')).queryByRole('link')).not.toBeInTheDocument()
+  })
+
+  describe('needs sign-in (D-46, D-52)', () => {
+    it('sends a signed-out visitor to sign-in and shows no bowler', async () => {
+      setMockUser(null)
+      serve([named('Dana', 'Abbott')])
+
+      open()
+
+      expect(await screen.findByRole('heading', { name: 'Sign in', level: 1 })).toBeVisible()
+      expect(screen.queryByText('Dana Abbott')).not.toBeInTheDocument()
+    })
+
+    it('lets a score keeper in', async () => {
+      setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+      serve([named('Dana', 'Abbott')])
+
+      open()
+
+      expect(await screen.findByText('Dana Abbott')).toBeVisible()
+    })
+
+    it('tells a signed-in user with no role that the page is off limits', async () => {
+      setMockUser(createSignedInUser({ roles: [] }))
+      serve([named('Dana', 'Abbott')])
+
+      open()
+
+      expect(await screen.findByText('You do not have permission to view this page.')).toBeVisible()
+      expect(screen.queryByText('Dana Abbott')).not.toBeInTheDocument()
+    })
   })
 })

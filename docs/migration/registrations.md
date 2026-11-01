@@ -26,10 +26,10 @@ Two ways in: the **desk** (WinForms) and the **registration site** (API). Both r
 | REG-01 | **One registration per bowler per tournament.** Create looks for a bowler with the same USBC ID already registered in the tournament. If found, create fails with a conflict ("Bowler is already registered for this tournament."). The API then switches to **append** (`REG-10`). The scoring code assumes this rule (it reads "the" registration for a bowler). **D-03:** keep it; one division per bowler. |
 | REG-02 | The bowler passes every bowler rule (`BWL-01` to `BWL-12`). |
 | REG-03 | At least one qualifying squad. "Bowler must enter at least one squad". A sweeper-only entry is not possible. **D-04:** keep it, and apply it on update too (`REG-31`). |
-| REG-04 | Eligibility (average, age, gender) as below. Legacy blocks; **D-01: the new app warns.** |
-| REG-05 | A handicap division (percentage set) needs a USBC ID. "USBC Id is required for Handicap Divisions". See Q-05. |
+| REG-04 | Eligibility (average, age, gender) as below. Legacy blocks. D-01 said warn; **D-107: create and append keep the 400.** |
+| REG-05 | A handicap division (percentage set) needs a USBC ID. "USBC Id is required for Handicap Divisions". **D-107:** blocks (Q-05). |
 | REG-06 | **Super sweeper needs every sweeper.** If `superSweeper` is true, the number of sweepers entered must equal the number of sweepers in the tournament. "Must enter all sweepers to enter Super Sweeper". |
-| REG-07 | **Existing bowler.** If a bowler with the same USBC ID exists (in any tournament), the registration uses that record and overwrites **every** field with the submitted ones. Otherwise a new bowler is created. |
+| REG-07 | **Existing bowler.** If a bowler with the same USBC ID exists (in any tournament), the registration uses that record and overwrites **every** field with the submitted ones. Otherwise a new bowler is created. **D-05:** the new app overwrites only the fields the request sends. |
 
 **Defect in REG-07 via the API:** the API body has no SSN, and missing gender becomes Female (`API-10`). So when the registration site enters a returning bowler, legacy **erases their stored SSN**, clears their date of birth if none was sent, and may flip their gender.
 
@@ -75,7 +75,7 @@ Runs when create hits `REG-01`. It adds to the bowler's existing registration.
 | REG-11 | Squads and sweepers in the request must not already be on the registration ("The specified squads are already registered." / "...sweepers..."). They are added. Completion is not checked. |
 | REG-12 | If the request's division differs, the registration moves to it. Average and super sweeper take the request's value, or keep the old one if the request leaves them out. |
 | REG-13 | The combined registration passes the full create validation (`REG-02` to `REG-06`). |
-| REG-14 | Bowler details are overwritten (name, address, email, phone, USBC ID). Date of birth and gender change only if the request has them. A payment in the request is added. **D-05:** patch only the fields sent. |
+| REG-14 | Bowler details are overwritten (name, address, email, phone, USBC ID). Date of birth and gender change only if the request has them. A payment in the request is added. **D-05:** patch only the fields sent, for every bowler field. |
 
 ## Update (API `PATCH /v1/registrations/{id}`)
 

@@ -38,7 +38,7 @@ The `permissions` array is the complete list. The web app never keeps its own li
 | 403 | `{ "code": "BANNED_USER", "message": "You have been banned…" }` | The account is disabled: "This account is disabled. Ask an admin." |
 | 403 | `{ "code": "INVALID_ORIGIN", "message": "Invalid origin" }` | The page's origin is not in the API's `CORS_ORIGIN`. A setup fault: "Sign-in is not set up for this address." Switch on `code`, and fall back to `message` for any code you do not know |
 | 429 | `{ "message": "Too many sign-in attempts. Try again later." }` and a `Retry-After` header (seconds) | "Too many attempts. Wait N minutes and try again." (10 failures per address per 15 minutes) |
-| 503, network error | `{ "message": … }` or none | "Could not reach the sign-in service. Try again." |
+| any 5xx, network error | none, or `{ "message": … }` | "Could not reach the sign-in service. Try again." Sign-in answers **500** (empty body) today when the database is down; treat every 5xx the same |
 
 **`POST /v1/auth/sign-out`**: body `{}` (JSON), `credentials: 'include'`. 200 `{ "success": true }` clears the cookie. Then refetch `/v1/me` (or set it to the signed-out answer) and send the user home. A browser always sends `Origin`, which the API checks: a sign-out from an untrusted page is a 403.
 

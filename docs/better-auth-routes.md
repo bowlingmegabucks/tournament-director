@@ -48,7 +48,7 @@ All three need the API to send email, which is Q-34 (stage 3).
 | Method and path | What it does | Identity twin | When we might open it |
 | --- | --- | --- | --- |
 | `POST /request-password-reset` | Emails the user a one-time link. | `GeneratePasswordResetTokenAsync` | "Forgot password" and the invite (D-101): an admin creates a user, and the same link lets them set a first password. Needs a `sendResetPassword` function that sends the mail. Rate limit it, and answer the same whether or not the email exists. |
-| `GET /reset-password/:token` | Where the emailed link lands; Better Auth checks the token and redirects to a web page with it. | none | With the one above. The web page is ours. |
+| `GET /reset-password/:token` | Where the emailed link lands; Better Auth checks the token and redirects to a web page with it. | none | With the one above. The web page is ours. **The token is in the URL path, and the request log records the path (`requestLogging.ts`): redact that segment when opening this route, or tokens will sit in the logs.** |
 | `POST /reset-password` | The new password plus the token. Enforces the minimum length. | `ResetPasswordAsync` | With the two above. |
 | `POST /send-verification-email`, `GET /verify-email` | Proves the user owns the address. | `GenerateEmailConfirmationTokenAsync` | Probably never. An admin creates each account, and finishing the invite already proves the address. |
 | `setPassword` (server-only, no HTTP path) | Sets a password on an account that has none. | `AddPasswordAsync` | Only if we add social sign-in. |

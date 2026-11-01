@@ -1,8 +1,100 @@
 # Plan: auth stage 2 (sign-in and permission checks)
 
-Branch: `authSetup`. Delete this file when the work is done and the rules are in [docs/requirements/api-access.md](../requirements/api-access.md).
+Part A branch: `authSetup`. Part B branch: `authWeb`, not started. Delete this file when Part B is done and the rules are in [docs/requirements/api-access.md](../requirements/api-access.md).
 
 Stage 2 of D-94. No legacy twin: legacy has no user accounts (`SEC-01`).
+
+## Status
+
+- **Part A (API): done and merged** (see Steps below). Sign-in, roles, permissions, `GET /v1/me`, the first-admin script, and the seeded local users all work.
+- **Part B (web): not started.** Start on a new branch from `main` (suggested name `authWeb`). Read "Part B handoff" next, then the Web and Part B steps further down. Delete this file when Part B is done and its rules are in [docs/requirements/api-access.md](../requirements/api-access.md).
+
+## Part B handoff
+
+Everything the web app needs from the API, and how to build it. A new session should be able to start from this section alone. Load the skills `react-patterns`, `ui-standards`, `typescript-standards`, `testing-patterns`, and `composition-patterns` first (the repo's CLAUDE.md says when).
+
+### The API contract
+
+Base: `apiUrl(path)` from `web/src/shared/apiUrl.ts`. In dev that is `/api`, which the Vite proxy sends to the API on port 3000 and strips (`vite.config.ts`). Locally the page (`http://localhost:5173`) and the API look like one origin, so the cookie works with no extra setup. The API's `CORS_ORIGIN` already lists `http://localhost:5173` (`api/.env.example`).
+
+**`GET /v1/me`**: who is calling and what they may do. Never cached (`Cache-Control: no-store`).
+
+| Status | Body | Meaning |
+| --- | --- | --- |
+| 200 | `{ "apiKey": false, "user": null }` | Not signed in (no cookie, a stale cookie, an expired or ended session, or a banned user) |
+| 200 | `{ "apiKey": false, "user": { "id", "email", "name", "roles": ["director"], "permissions": ["tournaments.write", …] } }` | Signed in. `roles` and `permissions` may both be `[]` (a user with no role) |
+| 503 | `{ "message": "Sign-in could not be checked. Try again." }` | The API could not look up the session (database down). **Not the same as signed out**: show an error with a retry, never the signed-out view |
+| 401 | `{ "message": "Invalid API key." }` | Only if an `x-api-key` header is sent and wrong. The web app never sends one |
+
+The `permissions` array is the complete list. The web app never keeps its own list of what a role may do (D-96, D-102). Treat a permission string it does not know as valid (the API may add some); type the known ones as a union and the incoming value as `string`. The shape is `meSchema` in `api/src/features/me/types.ts`; validate it by hand in the web `api.ts` the way the other features do (`field()`, `readJson()`), not by sharing code.
+
+**`POST /v1/auth/sign-in/email`**: body `{ "email": string, "password": string }`, `Content-Type: application/json`, `credentials: 'include'`.
+
+| Status | Body | Show |
+| --- | --- | --- |
+| 200 | `{ "redirect": false, "token": "…", "user": {…} }` plus a `Set-Cookie` | Signed in. **Ignore the body** (`token` is only the unsigned half of the cookie value and is useless without the API's secret; `user` lacks the permissions); refetch `/v1/me` |
+| 401 | `{ "message": "Invalid email or password", "code": "INVALID_EMAIL_OR_PASSWORD" }` | "Email or password is wrong." One line, no hint which one |
+| 400 | `{ "code": "INVALID_EMAIL", "message": "Invalid email" }` | The form sent a malformed email. Catch it with client-side validation first; if it still arrives, show the message |
+| 403 | `{ "code": "BANNED_USER", "message": "You have been banned…" }` | The account is disabled: "This account is disabled. Ask an admin." |
+| 403 | `{ "code": "INVALID_ORIGIN", "message": "Invalid origin" }` | The page's origin is not in the API's `CORS_ORIGIN`. A setup fault: "Sign-in is not set up for this address." Switch on `code`, and fall back to `message` for any code you do not know |
+| 429 | `{ "message": "Too many sign-in attempts. Try again later." }` and a `Retry-After` header (seconds) | "Too many attempts. Wait N minutes and try again." (10 failures per address per 15 minutes) |
+| 503, network error | `{ "message": … }` or none | "Could not reach the sign-in service. Try again." |
+
+**`POST /v1/auth/sign-out`**: body `{}` (JSON), `credentials: 'include'`. 200 `{ "success": true }` clears the cookie. Then refetch `/v1/me` (or set it to the signed-out answer) and send the user home. A browser always sends `Origin`, which the API checks: a sign-out from an untrusted page is a 403.
+
+No other `/v1/auth/*` path exists (they all answer 404). There is no sign-up, forgot-password, or change-password in this part (stage 3).
+
+### The cookie, and what the web app must do about it
+
+- The session is the `better-auth.session_token` cookie: `HttpOnly`, `SameSite=Lax`, 12 hours, renewed by the API when used after an hour. Page scripts cannot read it, and the web app must not try. **Store nothing about the session in `localStorage`, `sessionStorage`, or a cookie of our own.** Who is signed in lives only in the `['me']` query.
+- **Every API `fetch` must send `credentials: 'include'`**, or the cookie is not sent once the API is on its own subdomain (0.4.0). Today there are 12 `fetch` calls in 10 files: `web/src/features/{scores,lanes,recapSheets,results,divisions,squads,sweepers,tournaments,registrations}/api.ts` (`results` has two, `tournaments` two). Prefer one small shared helper (for example `src/shared/apiFetch.ts`, which calls `fetch(apiUrl(path), { credentials: 'include', ...init })`) over repeating the option twelve times, then change each call to use it. Tests assert the option is sent.
+- The cookie also comes back on public GETs; the API forwards a renewed cookie on any response, so nothing in the web app handles it.
+- **In production the cookie only works once the API is on `api.bowlingmegabucks.com` (0.4.0).** On `*.azurewebsites.net` the browser treats it as a third-party cookie and Safari blocks it (D-99). No one signs in to production before 0.4.0. **Open question for the start of Part B, ask the owner:** should the top bar "Sign in" link and `/login` page be hidden in the production build until 0.4.0 (a `VITE_SHOW_SIGN_IN` flag, off in production), or ship visible? Recommendation: hide the link in production for 0.3.0 and turn it on at 0.4.0.
+
+### What to build (see also the Web section and Part B steps below)
+
+Put it in `web/src/features/auth/` (shared code goes to `src/shared/` only if a second feature needs it):
+
+- `api.ts`: `fetchMe()`, `signIn(email, password)`, `signOut()`. Map each status above to a typed result or error with the message to show.
+- `useMe.ts`: a TanStack Query hook, key `['me']`. Wrap `fetchMe`. A 200 with `user: null` is data, not an error. A 503 or network failure is an error state. Refetch on window focus; keep `staleTime` short (about 60 seconds). After sign-in or sign-out, set or invalidate `['me']`.
+- `Can.tsx`: `<Can permission="tournaments.write">…</Can>` renders its children only when the signed-in user holds the permission. Hidden, not disabled (D-102). While `['me']` is loading it renders nothing. Add a `useCan(permission)` hook beside it.
+- `RequirePermission.tsx`: a route wrapper. Loading shows `Loading`. An error shows `QueryError` with a retry (**not** the signed-out view). Signed out: `<Navigate to="/login" state={{ from: location }} replace />`. Signed in without the permission: a short "You do not have permission to view this page." (not a blank page or a redirect loop). No shipped route uses it yet; its tests use a test route.
+- `LoginPage.tsx` at `/login`: email, password, a submit button, one error line, labels, `autoComplete` of `username` and `current-password`, and a disabled "Signing in…" button while it runs. Success goes back to `location.state.from` (or Home), and a user already signed in who opens `/login` goes Home. The route lives inside `AppShell` in `web/src/App.tsx`.
+- The top bar (`web/src/shared/AppShell.tsx`): "Sign in" when signed out; the user's name and a "Sign out" button when signed in; a small "Loading" state, and an error state with a retry if `['me']` fails.
+- **Dev-only quick-login buttons on `/login` (D-104).** Three buttons: "Log in as admin", "Log in as tournament director", "Log in as score keeper". Each calls the same `signIn` with the seeded user below. They render only when `import.meta.env.DEV` is true, so the production build drops them and the passwords. Under `npm run dev:mocks` the sign-in is mocked, so they work against the mock handlers (the mock must accept these three). **Add a check that the production build contains neither the button text nor the seeded passwords** (build, then search `web/dist/` for `adminP4sswordLocal`, `directorP4sswordLocal`, `scoreKeeperP4sswordLocal`, and `Log in as admin`; fail if found). Run it in `pull-request.yml` after the web build and as a local script or test.
+
+| Button | Email | Password |
+| --- | --- | --- |
+| Log in as admin | `admin@example.com` | `adminP4sswordLocal` |
+| Log in as tournament director | `director@example.com` | `directorP4sswordLocal` |
+| Log in as score keeper | `scorekeeper@example.com` | `scoreKeeperP4sswordLocal` |
+
+These exist only in a database that has run `npm run db:seed` (it adds them to a local database only). The same list is in `api/src/db/seedUsers.ts` and [api-standards.md](../api-standards.md#database).
+
+### Mocks and tests
+
+- MSW handlers live in `web/src/mocks/handlers.ts`, test data factories in `web/src/mocks/data.ts`. Add handlers for `GET /v1/me` (signed out, and one per role), `POST /v1/auth/sign-in/email` (the three seeded users succeed and change what `/v1/me` returns; a wrong password gives the 401 body above), and `POST /v1/auth/sign-out`. Keep a small in-memory "current user" in the mock so a sign-in changes what `/v1/me` returns.
+- Unit and integration: `useMe` (signed out, signed in, 503, network failure), `Can` (signed out, signed in without, with, loading), `RequirePermission` (redirect keeping `from`, no-permission message, loading, error), the login page (success and return to `from`, wrong password, 429 with the wait time, 503, loading, an already-signed-in visit), the top bar both ways, each of the 12 fetches sends credentials, the quick-login buttons (visible in dev, absent in a production build).
+- E2E (Playwright, `web/e2e/`): sign in, see your name, sign out. Add `/login` to the accessibility spec (`accessibility.spec.ts`, axe).
+- Mutation: `npm run test:mutation` in `web/` on the changed files. A survivor means a missing assertion; fix the test, not the threshold.
+- Checks to run: lint, typecheck, test, and `format:check` in `web/`; `npm run test:e2e` (the UI flow changes); `npm run check` at the root.
+
+### Process
+
+1. Branch from `main` (`authWeb`). Read this section, then D-98 to D-104 in [decisions-and-questions.md](../migration/decisions-and-questions.md) and `API-16` to `API-21` in [api-access.md](../requirements/api-access.md).
+2. Ask the owner the open question above (hide the production link until 0.4.0?).
+3. Make the mockups first (Part B step 11), open them with `open docs/plans/auth-stage-2-mockups/index.html`, and get approval before writing components. Link the real `web/src/styles/tokens.css` and show every state.
+4. Build (step 12), then checks (step 13), then `/pull-request-prep` and `/write-pr`.
+5. When done: move the web rules into `docs/requirements/api-access.md` (or a new `docs/requirements/sign-in.md` for the UI), check the web items in [v1-requirements.md](../v1-requirements.md), mark item 19 in CLAUDE.md done, update the Security section's "Web sign-in" line, and delete this plan.
+6. Version: both `package.json` files are `0.3.0` already; do not bump again in 0.x unless a tag for 0.3.0 exists.
+
+### Things that are easy to get wrong
+
+- A 200 from `/v1/me` with `user: null` is **signed out**. A 503 is **unknown**. They need different screens.
+- Do not hide a route by only hiding its link. The API enforces access; the web app only hides what a user cannot use (D-19). When the lock-down release labels a route, the link and button hide with `<Can>`, and the page itself uses `RequirePermission`.
+- Do not copy the roles table or any permission list into the web app. If a screen needs "may this user do X", it asks `useCan('x.y')`.
+- `import.meta.env.DEV` is true under `npm run dev` and `npm run dev:mocks`, false in `npm run build` and `npm run test:e2e` (a preview of a build). So the e2e tests will not see the quick-login buttons; they sign in by typing.
+- The web `Tournament` shape must match the API's. The same care applies to the `Me` shape.
 
 ## Scope
 

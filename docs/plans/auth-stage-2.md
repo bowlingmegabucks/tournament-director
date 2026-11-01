@@ -96,7 +96,7 @@ Two parts, API first (owner decision, 2026-11-01). The API part ends with the AP
 3. **Done.** `config.ts`: `AUTH_SECRET`, `AUTH_BASE_URL`; CORS `credentials: true`.
 4. **Done.** `createAuth(deps)` in `shared/auth/`, built in `server.ts` and passed to `createApp` like the other dependencies. Handler mounted at `/v1/auth`, open for sign-in and sign-out only; telemetry off.
 5. **Done.** Role table (`shared/auth/roles.ts`) from D-97, with `rolesOf` and `permissionsOf` for a stored value that may list several roles (D-103).
-6. `identifyCaller` reads the session; `mountRoutes` checks user permissions.
+6. **Done.** `identifyCaller` reads the session cookie (no cookie, no lookup) and passes on the fresh cookie when Better Auth renews or clears it; `mountRoutes` lets a user in when their roles hold the permission. A failed session lookup answers 503 on a protected route, not 401. A banned user counts as signed out at once, even if edited in SQL.
 7. `GET /v1/me` with the user and permissions.
 8. `npm run users:create-admin` in `api/` (asks for email, name, and password; the password does not echo). `db:seed` adds one local user per role with a known local-only password, listed in `api-standards.md`.
 9. Docs: rules API-18 to API-21 in `api-access.md`; settings in `deployment.md` and `api-standards.md`; Better Auth and Identity in `dotnet-to-node.md`; CLAUDE.md status.

@@ -13,7 +13,7 @@ export function createMeRouter(): Router {
   // Stryker disable next-line StringLiteral: '' and '/' match the same path.
   router.get('/', (_req, res) => {
     if (sentRejectedKey(res)) throw new HttpError(401, 'Invalid API key.')
-    const body: Me = { apiKey: callerOf(res).type === 'apiKey', user: null }
+    const body: Me = { apiKey: callerOf(res).apiKey, user: null }
     // The answer depends on the caller, so no browser or proxy may reuse it.
     res.set('Cache-Control', 'no-store').json(body)
   })

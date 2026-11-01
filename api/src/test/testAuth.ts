@@ -68,3 +68,16 @@ export function cookieOf(response: { headers: Record<string, unknown> }): string
     .map((line) => line.split(';')[0])
     .join('; ')
 }
+
+/** Sign a test user in and return the `Cookie` header a browser would send next. */
+export async function signInCookie(
+  auth: Auth,
+  email = 'ada@example.com',
+  password = testPassword,
+): Promise<string> {
+  const response = await auth.api.signInEmail({ body: { email, password }, asResponse: true })
+  return response.headers
+    .getSetCookie()
+    .map((line) => line.split(';')[0])
+    .join('; ')
+}

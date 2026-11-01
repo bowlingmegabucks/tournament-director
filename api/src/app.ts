@@ -82,7 +82,7 @@ export function createApp({
   // After CORS, so a 429 still carries the CORS headers and the browser can read it.
   app.use(createRateLimiter(config.rateLimit, meter))
   // Before the routes, so each one's access label can see who is calling (D-95, D-96).
-  app.use(identifyCaller(config.apiKey))
+  app.use(identifyCaller({ apiKey: config.apiKey, auth, logger }))
 
   // The five results routes (squad, sweeper, at-large, seeding, super sweeper) read the same data.
   const resultsDeps = { tournaments, divisions, squads, sweepers, lanes, scores, logger }

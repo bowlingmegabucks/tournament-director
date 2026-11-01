@@ -1,4 +1,5 @@
 import { prismaAdapter } from 'better-auth/adapters/prisma'
+import express from 'express'
 import request from 'supertest'
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from 'vitest'
 import { createDatabaseClient, type PrismaClient } from '../database.ts'
@@ -6,7 +7,8 @@ import { createCapturedLogger } from '../../test/logger.ts'
 import { createConfig } from '../../test/factories.ts'
 import { resetDatabase } from '../../test/resetDatabase.ts'
 import { createTestApp } from '../../test/testApp.ts'
-import { cookieOf, testPassword } from '../../test/testAuth.ts'
+import { cookieOf, setCookies, testPassword } from '../../test/testAuth.ts'
+import { callerOf, identifyCaller } from './caller.ts'
 import { createAuth, sessionSeconds } from './createAuth.ts'
 
 // The same flow as the memory tests, on the real Prisma adapter and tables (D-100). It proves the
@@ -125,5 +127,39 @@ describe('sign-in on MariaDB', () => {
 
     expect(response.status).toBe(401)
     expect(await client.session.count()).toBe(0)
+  })
+
+  it('renews a session used after an hour: the row moves out to 12 hours and a fresh cookie goes back', async () => {
+    const { auth, app } = build()
+    await auth.api.createUser({
+      body: { email: 'ada@example.com', password: testPassword, name: 'Ada', role: 'director' },
+    })
+    const signedIn = await request(app)
+      .post('/v1/auth/sign-in/email')
+      .send({ email: 'ada@example.com', password: testPassword })
+    await client.session.updateMany({
+      data: { expiresAt: new Date(Date.now() + 10 * 3600 * 1000) },
+    })
+    const who = express()
+    who.use(
+      identifyCaller({
+        apiKey: createConfig().apiKey,
+        auth,
+        logger: createCapturedLogger().logger,
+      }),
+    )
+    who.get('/who', (_req, res) => {
+      res.json(callerOf(res))
+    })
+
+    const response = await request(who).get('/who').set('Cookie', cookieOf(signedIn))
+
+    expect(response.body).toMatchObject({
+      type: 'user',
+      user: { email: 'ada@example.com', roles: ['director'] },
+    })
+    const row = await client.session.findFirstOrThrow()
+    expect(row.expiresAt.getTime() - Date.now()).toBeGreaterThan((sessionSeconds - 5) * 1000)
+    expect(setCookies(response).join(' | ')).toContain(`Max-Age=${sessionSeconds}`)
   })
 })

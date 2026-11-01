@@ -1,8 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { trace } from '@opentelemetry/api'
-import type { RequestHandler, Response } from 'express'
+import type { RequestHandler } from 'express'
 import { callerOf } from './auth/caller.ts'
-import type { Logger } from './logger.ts'
+import { requestLogger, type Logger } from './logger.ts'
+
+// Kept here too, so features import every request-logging helper from one place.
+export { requestLogger }
 
 export const requestIdHeader = 'x-request-id'
 
@@ -42,6 +45,8 @@ export function requestLogging(logger: Logger): RequestHandler {
           durationMs: Math.round(performance.now() - start),
           // Who called: the type only, never the key (D-95).
           callerType: callerOf(res).type,
+          // The signed-in user's id (never the email), when there is one.
+          userId: callerOf(res).user?.id,
           // The caller hung up before we finished.
           aborted: !res.writableFinished,
         },
@@ -57,14 +62,4 @@ function levelFor(status: number, path: string | undefined): 'error' | 'warn' | 
   if (status >= 500) return 'error'
   if (status >= 400) return 'warn'
   return path === quietPath ? 'debug' : 'info'
-}
-
-/** The logger for this request (it carries `requestId`), or `fallback` outside a request. */
-export function requestLogger(res: Response, fallback: Logger): Logger {
-  const logger: unknown = res.locals['logger']
-  return isLogger(logger) ? logger : fallback
-}
-
-function isLogger(value: unknown): value is Logger {
-  return typeof value === 'object' && value !== null && 'child' in value && 'info' in value
 }

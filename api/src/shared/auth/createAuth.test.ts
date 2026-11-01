@@ -1,18 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { createTestAuth, createTestUser, testPassword } from '../../test/testAuth.ts'
-import { sessionSeconds, type Auth } from './createAuth.ts'
+import { createTestAuth, createTestUser, signInCookie, testPassword } from '../../test/testAuth.ts'
+import { sessionSeconds } from './createAuth.ts'
 import { permissionsOf, rolesOf } from './roles.ts'
-
-async function signInCookie(auth: Auth, email = 'ada@example.com'): Promise<string> {
-  const response = await auth.api.signInEmail({
-    body: { email, password: testPassword },
-    asResponse: true,
-  })
-  return response.headers
-    .getSetCookie()
-    .map((cookie) => cookie.split(';')[0])
-    .join('; ')
-}
 
 describe('createAuth', () => {
   it('stores a user’s password as a salted hash, not as typed', async () => {

@@ -1,3 +1,4 @@
+import type { Response } from 'express'
 import { pino, type DestinationStream, type Logger } from 'pino'
 import type { Config } from '../config.ts'
 
@@ -19,4 +20,14 @@ export function createLogger(
     },
     destination,
   )
+}
+
+/** The logger for this request (it carries `requestId`), or `fallback` outside a request. */
+export function requestLogger(res: Response, fallback: Logger): Logger {
+  const logger: unknown = res.locals['logger']
+  return isLogger(logger) ? logger : fallback
+}
+
+function isLogger(value: unknown): value is Logger {
+  return typeof value === 'object' && value !== null && 'child' in value && 'info' in value
 }

@@ -48,6 +48,55 @@ describe('mountRoutes', () => {
     vi.restoreAllMocks()
   })
 
+  describe('a group with methods', () => {
+    function twoGroups() {
+      const app = express()
+      const { logger } = createCapturedLogger()
+      app.use(identifyCaller({ apiKey, auth: createTestAuth().auth, logger }))
+      const reader = Router()
+      reader.get('/', (_req, res) => {
+        res.json({ who: 'reader' })
+      })
+      const writer = Router()
+      writer.post('/', (_req, res) => {
+        res.status(201).json({ who: 'writer' })
+      })
+      mountRoutes(
+        app,
+        [
+          { path: '/x', access: 'public', router: reader, methods: ['GET'] },
+          {
+            path: '/x',
+            access: { permission: 'registrations.write', apiKey: true },
+            router: writer,
+            methods: ['POST'],
+          },
+        ],
+        noMeter,
+      )
+      app.use(createErrorHandler(logger))
+      return app
+    }
+
+    it('gives each method its own access (D-105)', async () => {
+      const app = twoGroups()
+
+      expect((await request(app).get('/x')).body).toEqual({ who: 'reader' })
+      expect((await request(app).post('/x')).status).toBe(401)
+      const written = await request(app).post('/x').set(apiKeyHeader, apiKey)
+      expect(written.status).toBe(201)
+      expect(written.body).toEqual({ who: 'writer' })
+    })
+
+    it('treats HEAD as GET', async () => {
+      expect((await request(twoGroups()).head('/x')).status).toBe(200)
+    })
+
+    it('leaves a method no group owns to the next handler', async () => {
+      expect((await request(twoGroups()).delete('/x')).status).toBe(404)
+    })
+  })
+
   it('mounts a public group (API-15)', async () => {
     const response = await request(appWith('public')).get('/ping')
 

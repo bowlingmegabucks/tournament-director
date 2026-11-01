@@ -14,6 +14,8 @@ import type { LaneRepository } from './features/lanes/repository.ts'
 import { createRecapSheetRouter } from './features/recapSheets/routes.ts'
 import { createRegistrationRouter } from './features/registrations/routes.ts'
 import type { RegistrationRepository } from './features/registrations/repository.ts'
+import { createVendorRegistrationRouter } from './features/registrations/vendorRoutes.ts'
+import type { RegistrationWriter } from './features/registrations/writer.ts'
 import { createFinalsRouter, createResultsRouter } from './features/results/routes.ts'
 import { createScoreRouter } from './features/scores/routes.ts'
 import type { ScoreRepository } from './features/scores/repository.ts'
@@ -40,6 +42,8 @@ export interface AppDependencies {
   tournaments: TournamentRepository
   divisions: DivisionRepository
   registrations: RegistrationRepository
+  /** Creates registrations for the registration site and the desk (API-05, D-112). */
+  registrationWriter: RegistrationWriter
   lanes: LaneRepository
   scores: ScoreRepository
   squads: SquadRepository
@@ -58,6 +62,7 @@ export function createApp({
   tournaments,
   divisions,
   registrations,
+  registrationWriter,
   lanes,
   scores,
   squads,
@@ -87,6 +92,16 @@ export function createApp({
 
   // The five results routes (squad, sweeper, at-large, seeding, super sweeper) read the same data.
   const resultsDeps = { tournaments, divisions, squads, sweepers, lanes, scores, logger }
+
+  // One router serves both methods; the two groups below give each its own access.
+  const vendorRegistrations = createVendorRegistrationRouter({
+    tournaments,
+    divisions,
+    squads,
+    sweepers,
+    writer: registrationWriter,
+    logger,
+  })
 
   // Every group declares its access (D-27). Anything not mounted here is a 404.
   mountRoutes(
@@ -204,6 +219,18 @@ export function createApp({
         path: '/v1/tournaments/:id/registrations',
         access: { permission: 'registrations.read' }, // D-46, D-52: signed in; the API key cannot reach it
         router: createRegistrationRouter(registrations, tournaments, divisions, squads, sweepers),
+      },
+      {
+        path: '/v1/registrations',
+        access: { permission: 'registrations.write', apiKey: true }, // API-05, D-105
+        methods: ['POST'],
+        router: vendorRegistrations,
+      },
+      {
+        path: '/v1/registrations',
+        access: { permission: 'registrations.read', apiKey: true }, // API-06, D-105
+        methods: ['GET'],
+        router: vendorRegistrations,
       },
       {
         path: '/v1/tournaments',

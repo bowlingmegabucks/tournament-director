@@ -28,6 +28,8 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 
 18. Security, stage 1: the API key. **Done on branch `apiKey`:** `API_KEY` (required) in the `x-api-key` header, access labels `public`, `{ permission }`, and `{ permission, apiKey: true }` (a valid key skips the permission check only where the route accepts it), and public `GET /v1/me`. Routes check permissions, never roles (D-96); the roles score keeper, director, and admin come with sign-in in stage 2 (D-94, D-97). See [docs/requirements/api-access.md](docs/requirements/api-access.md).
 
+19. Security, stage 2: sign-in. **API done on branch `authSetup`; web next:** Better Auth inside `api/` (email and password, no public sign-up, database sessions in an `httpOnly` cookie for 12 hours), the `user`, `session`, `account`, and `verification` tables (`api/prisma/auth-tables.sql`), roles `scoreKeeper`, `director`, and `admin` mapped to permissions in `roles.ts`, `GET /v1/me` returning the user and permissions, `npm run users:create-admin`, and seeded local users. Only `POST /v1/auth/sign-in/email` and `/sign-out` are open. The web part (`/login`, `useMe`, `<Can>`, quick-login buttons) is next on a new branch: start with the "Part B handoff" section of [docs/plans/auth-stage-2.md](docs/plans/auth-stage-2.md). Stage 3 is user management. See [docs/requirements/api-access.md](docs/requirements/api-access.md) and [docs/plans/auth-stage-2.md](docs/plans/auth-stage-2.md).
+
 Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, TypeScript, testing, composition) and stricter ESLint rules.
 
 **Legacy migration.** We are porting the WinForms Tournament Manager feature by feature. [docs/migration/](docs/migration/README.md) documents every legacy rule with an ID (`REG-04`); use it instead of the old code. Before building a feature, check [decisions-and-questions.md](docs/migration/decisions-and-questions.md) for its open questions. Cite rule IDs in tests and PRs.
@@ -35,9 +37,10 @@ Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, 
 **Release path.** 0.1.0 (structure) is out. Next:
 
 - **0.2.0:** read-only views (GET routes) on the existing legacy database; the WinForms app will be sunset. Public routes only. Bowler GETs wait for auth. Every route declares its access; undeclared routes deny.
-- **0.3.0:** authentication and authorization, with a ping-style route to test it. Decide the approach (hosted provider, Keycloak, or self-rolled) after the 0.2.0 tag. Also set the rules for what the UI shows when signed in or out (no permission, no Add button). The API still enforces access.
+- **0.3.0:** authentication and authorization (`GET /v1/me` is the test; no ping route), and the rules for what the UI shows when signed in or out (D-102). Decided: Better Auth inside `api/`, database sessions in an `httpOnly` cookie, 12 hours, new tables (default Better Auth names) in the shared database, first admin from a script (D-98 to D-101). Plan in [docs/plans/auth-stage-2.md](docs/plans/auth-stage-2.md). Also set the rules for what the UI shows when signed in or out (no permission, no Add button). The API still enforces access.
 - **Lock-down release (right after 0.3.0, before any command route):** review every read route and page that is public in 0.2.0 and put the ones that should not be public behind auth, starting with the registrations list (D-46). Vendor routes follow D-09. No POST, PATCH, or DELETE route ships before this is done (D-52).
-- **0.4.0 and up:** commands (create tournament, edit division), one feature area per release.
+- **0.4.0:** the vendor routes the API key reaches (and the rest of the legacy ASP.NET API), and the API moves to `api.bowlingmegabucks.com` (needs a paid App Service tier) so the registration site can cut over.
+- **After 0.4.0:** commands (create tournament, edit division), one feature area per release. People start using the app at 1.0.0.
 - **1.0.0:** every item in [docs/v1-requirements.md](docs/v1-requirements.md) is checked. Keep that file current: check items off as they land and add items as we find them. It includes a review of open issues in the legacy `tournament-manager` repo.
 
 ## Revisit later
@@ -60,6 +63,7 @@ Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, 
 | Tests         | Vitest, Testing Library, MSW, Playwright, Stryker (web); Vitest, Supertest, Stryker (api) |
 | API libraries | Zod (validation), helmet (headers), cors                                                  |
 | Database      | Legacy MariaDB 11.4.7 through Prisma 7 (hand-written schema, no `prisma migrate`)         |
+| Sign-in       | Better Auth in `api/` (email and password, cookie sessions in the database)               |
 
 ## Root commands
 
@@ -70,7 +74,8 @@ The root `package.json` only holds shortcuts. It is not an npm workspace; `web/`
 | `npm run setup`                         | `npm ci` in the root, `api/`, and `web/`                                                                                                              |
 | `npm run dev`                           | API (port 3000) and web (port 5173) together; web proxies `/api`                                                                                      |
 | `npm run services:up` / `services:down` | Start / stop the Docker Compose services (Seq and MariaDB). Seq UI: http://localhost:15380; database on port 15306                                    |
-| `npm run db:seed`                       | Add sample tournaments, divisions, squads, sweepers, registrations (with their bowlers, three of them in the super sweeper), and scores to the local database (you create the tables first; see [docs/api-standards.md](docs/api-standards.md#database)) |
+| `npm run users:create-admin`            | Ask for an email, name, and password (hidden) and make an admin. First production admin: see [docs/api-standards.md](docs/api-standards.md#database)                                                |
+| `npm run db:seed`                       | Add sample tournaments, divisions, squads, sweepers, registrations (with their bowlers, three of them in the super sweeper), and scores to the local database, plus one sign-in user per role (`admin@example.com` and others; passwords in [docs/api-standards.md](docs/api-standards.md#database); skipped if the table holds another user, unless you pass `-- --force-users`) (you create the tables first; see the same section) |
 | `npm run dev:mocks`                     | Web only, with MSW mocks (no API needed).                                                                                                             |
 | `npm run check`                         | script tests, then lint, format check, typecheck, and tests in `api/` and `web/`                                                                      |
 | `npm run check:version`                 | Compare the version in `api/` and `web/` with `main` and the newest release tag                                                                       |
@@ -116,7 +121,7 @@ Details in [docs/api-standards.md](docs/api-standards.md).
 - Log with the injected pino `logger`, never `console`. Fields first, then a constant message. In a handler use `requestLogger(res, logger)` so the line has the request id. `requestLogging` is the first middleware and sets the `x-request-id` header.
 - Metrics: HTTP and Node runtime metrics are automatic. Custom ones are named `tournament_director.<area>.<thing>`; see the Metrics section of `docs/api-standards.md`.
 - Throw a Zod error from a route and it becomes a 400. A crash or SIGTERM goes through `handleProcessEvents` (logs, flushes telemetry, exits).
-- Access: every route group in `mountRoutes` declares `public` or `{ permission }`, plus `apiKey: true` where the registration site may call it. Routes ask for a permission, never a role (D-96). `API_KEY` is required; see [docs/api-standards.md](docs/api-standards.md#access-and-the-api-key).
+- Access: every route group in `mountRoutes` declares `public` or `{ permission }`, plus `apiKey: true` where the registration site may call it. Routes ask for a permission, never a role (D-96). Sign-in is Better Auth (`shared/auth/createAuth.ts`), built in `server.ts` and passed to `createApp`; only sign-in and sign-out are open ([docs/better-auth-routes.md](docs/better-auth-routes.md) lists the rest). `identifyCaller` sets `callerOf(res)` (`apiKey`, `user`); roles turn into permissions in `roles.ts`. `AUTH_SECRET` and `AUTH_BASE_URL` are required. `API_KEY` is required; see [docs/api-standards.md](docs/api-standards.md#access-and-the-api-key).
 - Rate limiting is per client IP (`RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_SECONDS`). Set `TRUST_PROXY=1` on Azure or every caller shares one bucket.
 - Telemetry is OpenTelemetry, loaded by `src/instrumentation.ts` before the app. Seq locally (`npm run services:up`), Application Insights in production; each turns on only when its env var is set.
 - Database: Prisma over the legacy MariaDB (see [docs/api-standards.md](docs/api-standards.md#database)). `DATABASE_URL` is required. Run `npm run db:generate` in `api/` after `npm ci` (CI and deploy do). Wrap repository calls in `withDatabaseErrors`. Never run `prisma migrate`: WinForms owns the schema. Tests named `*.db.test.ts` need Docker (Testcontainers).

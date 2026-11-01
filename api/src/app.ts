@@ -26,12 +26,16 @@ import type { TournamentRepository } from './features/tournaments/repository.ts'
 import { createErrorHandler, notFound } from './shared/middleware.ts'
 import { createHealthRouter } from './shared/healthRoutes.ts'
 import { createReadyRouter } from './shared/readyRoutes.ts'
+import { createAuthRouter } from './features/auth/routes.ts'
+import type { Auth } from './shared/auth/createAuth.ts'
 import { identifyCaller } from './shared/auth/caller.ts'
 import { mountRoutes } from './shared/mountRoutes.ts'
 
 export interface AppDependencies {
   config: Config
   logger: Logger
+  /** Sign-in (Better Auth). Built in `server.ts`; tests pass one on a memory database. */
+  auth: Auth
   tournaments: TournamentRepository
   divisions: DivisionRepository
   registrations: RegistrationRepository
@@ -49,6 +53,7 @@ export interface AppDependencies {
 export function createApp({
   config,
   logger,
+  auth,
   tournaments,
   divisions,
   registrations,
@@ -69,12 +74,15 @@ export function createApp({
   // helmet also removes x-powered-by.
   app.use(helmet())
   // An empty list allows no cross-origin caller.
-  app.use(cors({ origin: config.corsOrigins, exposedHeaders: [requestIdHeader] }))
+  // `credentials` lets the browser send the sign-in cookie to an allowed origin (D-99).
+  app.use(
+    cors({ origin: config.corsOrigins, credentials: true, exposedHeaders: [requestIdHeader] }),
+  )
 
   // After CORS, so a 429 still carries the CORS headers and the browser can read it.
   app.use(createRateLimiter(config.rateLimit, meter))
   // Before the routes, so each one's access label can see who is calling (D-95, D-96).
-  app.use(identifyCaller(config.apiKey))
+  app.use(identifyCaller({ apiKey: config.apiKey, auth, logger }))
 
   // The five results routes (squad, sweeper, at-large, seeding, super sweeper) read the same data.
   const resultsDeps = { tournaments, divisions, squads, sweepers, lanes, scores, logger }
@@ -87,6 +95,9 @@ export function createApp({
       { path: '/ready', access: 'public', router: createReadyRouter(checkDatabase) },
       // Public: a caller with no key learns it is anonymous (D-95).
       { path: '/v1/me', access: 'public', router: createMeRouter() },
+      // Public: this is how someone proves who they are. Better Auth reads the body itself, so no
+      // express.json() may run before it.
+      { path: '/v1/auth', access: 'public', router: createAuthRouter(auth, meter, logger) },
       {
         path: '/v1/tournaments/:id/divisions',
         access: 'public',

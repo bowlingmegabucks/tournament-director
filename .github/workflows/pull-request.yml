@@ -137,13 +137,15 @@ jobs:
       # Starts the built app the way Azure does, so a bad --import path or a broken telemetry start
       # fails here, not after deploy. The connection string turns the SDK and Azure exporters on;
       # its endpoint refuses connections, so nothing leaves the runner. Then SIGTERM must exit 0.
-      # DATABASE_URL and API_KEY are required at start but the database connects on first query, and /health
+      # DATABASE_URL, API_KEY, AUTH_SECRET, and AUTH_BASE_URL are required at start but the database connects on first query, and /health
       # does not query, so a URL with no server behind it is enough.
       - name: Smoke test the build
         env:
           PORT: "3999"
           DATABASE_URL: "mariadb://smoke:smoke@127.0.0.1:1/smoke"
           API_KEY: "smoke-test-api-key-not-a-real-secret"
+          AUTH_SECRET: "smoke-test-auth-secret-not-a-real-secret"
+          AUTH_BASE_URL: "http://127.0.0.1:3999"
           APPLICATIONINSIGHTS_CONNECTION_STRING: "InstrumentationKey=00000000-0000-0000-0000-000000000000;IngestionEndpoint=https://127.0.0.1:1/"
         run: |
           node --import ./dist/instrumentation.js dist/server.js > server.log 2>&1 &

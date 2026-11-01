@@ -1,3 +1,4 @@
+import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { createApp } from './app.ts'
 import { loadConfig } from './config.ts'
 import { createPrismaDivisionRepository } from './features/divisions/prismaRepository.ts'
@@ -7,6 +8,7 @@ import { createPrismaScoreRepository } from './features/scores/prismaRepository.
 import { createPrismaSquadRepository } from './features/squads/prismaRepository.ts'
 import { createPrismaSweeperRepository } from './features/sweepers/prismaRepository.ts'
 import { createPrismaTournamentRepository } from './features/tournaments/prismaRepository.ts'
+import { createAuth } from './shared/auth/createAuth.ts'
 import { createDatabaseClient, pingDatabase } from './shared/database.ts'
 import { createLogger } from './shared/logger.ts'
 import { handleProcessEvents } from './shared/processEvents.ts'
@@ -18,6 +20,13 @@ const database = createDatabaseClient(config.databaseUrl)
 const app = createApp({
   config,
   logger,
+  auth: createAuth({
+    config: config.auth,
+    database: prismaAdapter(database, { provider: 'mysql' }),
+    // The pages that may call sign-in from a browser are the same ones CORS lets in.
+    trustedOrigins: config.corsOrigins,
+    logger,
+  }),
   tournaments: createPrismaTournamentRepository(database, logger),
   divisions: createPrismaDivisionRepository(database, logger),
   registrations: createPrismaRegistrationRepository(database, logger),

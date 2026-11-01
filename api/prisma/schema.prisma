@@ -149,3 +149,78 @@ model SquadScore {
   @@id([bowlerId, squadId, game])
   @@map("SquadScores")
 }
+
+// Sign-in tables for Better Auth (D-98, D-100). Created by prisma/auth-tables.sql, not by Prisma.
+// Better Auth reads and writes these through its Prisma adapter; routes never query them directly.
+// Names and columns are the ones Better Auth expects, so do not rename them.
+
+/// A person who can sign in. `role` holds one of the roles in `shared/auth/roles.ts` (D-97).
+model User {
+  id            String    @id @db.VarChar(36)
+  name          String    @db.VarChar(255)
+  email         String    @unique(map: "user_email_key") @db.VarChar(255)
+  emailVerified Boolean   @default(false)
+  image         String?   @db.Text
+  createdAt     DateTime  @default(now()) @db.DateTime(3)
+  updatedAt     DateTime  @default(now()) @db.DateTime(3)
+  role          String?   @db.VarChar(64)
+  banned        Boolean?  @default(false)
+  banReason     String?   @db.Text
+  banExpires    DateTime? @db.DateTime(3)
+  sessions      Session[]
+  accounts      Account[]
+
+  @@map("user")
+}
+
+/// One sign-in. Better Auth looks it up by the cookie's token on each request (D-99).
+model Session {
+  id             String   @id @db.VarChar(36)
+  expiresAt      DateTime @db.DateTime(3)
+  token          String   @unique(map: "session_token_key") @db.VarChar(255)
+  createdAt      DateTime @default(now()) @db.DateTime(3)
+  updatedAt      DateTime @db.DateTime(3)
+  ipAddress      String?  @db.VarChar(64)
+  userAgent      String?  @db.Text
+  userId         String   @db.VarChar(36)
+  impersonatedBy String?  @db.VarChar(36)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "session_userId_fkey")
+
+  @@index([userId], map: "session_userId_idx")
+  @@map("session")
+}
+
+/// How a user proves who they are. Email and password is `providerId` `credential`, and `password`
+/// holds the salted hash.
+model Account {
+  id                    String    @id @db.VarChar(36)
+  accountId             String    @db.VarChar(255)
+  providerId            String    @db.VarChar(64)
+  userId                String    @db.VarChar(36)
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime? @db.DateTime(3)
+  refreshTokenExpiresAt DateTime? @db.DateTime(3)
+  scope                 String?   @db.Text
+  password              String?   @db.Text
+  createdAt             DateTime  @default(now()) @db.DateTime(3)
+  updatedAt             DateTime  @db.DateTime(3)
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade, map: "account_userId_fkey")
+
+  @@index([userId], map: "account_userId_idx")
+  @@map("account")
+}
+
+/// A one-time token, for password reset and invites (stage 3, D-101).
+model Verification {
+  id         String   @id @db.VarChar(36)
+  identifier String   @db.VarChar(255)
+  value      String   @db.Text
+  expiresAt  DateTime @db.DateTime(3)
+  createdAt  DateTime @default(now()) @db.DateTime(3)
+  updatedAt  DateTime @default(now()) @db.DateTime(3)
+
+  @@index([identifier], map: "verification_identifier_idx")
+  @@map("verification")
+}

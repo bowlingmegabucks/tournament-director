@@ -23,6 +23,12 @@
 | `ILogger<T>` + logging scope      | pino logger; `requestLogger(res, logger)` adds the request id        |
 | OpenTelemetry in `Program.cs`     | `src/instrumentation.ts`, loaded with `node --import` before the app |
 | `AddRateLimiter` middleware       | `express-rate-limit` (`createRateLimiter`)                           |
+| ASP.NET Core Identity             | Better Auth inside `api/`: users and sessions in our database, hashed passwords, a session cookie (`createAuth`). See [better-auth-routes.md](better-auth-routes.md) |
+| `UserManager.CreateAsync`         | `auth.api.createUser` (the first-admin script and, later, the create-user screen) |
+| `IAuthenticationHandler`          | `identifyCaller`: works out who is calling before any route runs     |
+| `[Authorize(Policy = "…")]`       | A route group's access label: `{ permission: 'scores.write' }` in `mountRoutes` |
+| Roles and policy requirements     | `roles.ts`: each role holds permissions; routes ask for a permission, never a role |
+| Lockout on failed sign-in         | `createSignInLimiter`: 10 failed sign-ins per address per 15 minutes |
 | `PrintDocument` / `PrintPage`     | `window.print()` on a print-styled page: `@media print` and a named `@page` set the paper size (`PrintSheets`) |
 
 Two traps: `npm install` can change the lockfile (use `npm ci` in CI), and `==` coerces types (always use `===`).

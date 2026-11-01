@@ -1,13 +1,26 @@
 import { randomUUID } from 'node:crypto'
 import { trace } from '@opentelemetry/api'
-import type { RequestHandler, Response } from 'express'
+import type { RequestHandler } from 'express'
 import { callerOf } from './auth/caller.ts'
-import type { Logger } from './logger.ts'
+import { requestLogger, type Logger } from './logger.ts'
+
+// Kept here too, so features import every request-logging helper from one place.
+export { requestLogger }
 
 export const requestIdHeader = 'x-request-id'
 
 // Reuse an id from a caller or proxy only if it is short and plain. It goes into logs and headers.
 const safeRequestId = /^[\w.-]{1,64}$/
+
+// A path that carries a one-time secret. The emailed password-reset link puts its token in the path
+// (stage 3, `GET /v1/auth/reset-password/:token`). Anyone who reads the log must not be able to use it.
+// Express matches paths without regard to case and lets extra slashes through, so this does too.
+const secretPathSegments = /^(\/+v1\/+auth\/+reset-password\/+)[^/?]+/i
+
+/** A URL as it is safe to log: a token in the path is replaced by `[redacted]`. */
+export function redactSecrets(path: string): string {
+  return path.replace(secretPathSegments, '$1[redacted]')
+}
 
 /** Health probes run every few seconds, so their lines only show at debug level. */
 const quietPath = '/health'
@@ -33,7 +46,7 @@ export function requestLogging(logger: Logger): RequestHandler {
     res.on('close', () => {
       const status = res.statusCode
       // Path only. A query string can hold personal data.
-      const path = req.originalUrl.split('?')[0]
+      const path = redactSecrets(req.originalUrl).split('?')[0]
       requestLogger(res, logger)[levelFor(status, path)](
         {
           method: req.method,
@@ -42,6 +55,8 @@ export function requestLogging(logger: Logger): RequestHandler {
           durationMs: Math.round(performance.now() - start),
           // Who called: the type only, never the key (D-95).
           callerType: callerOf(res).type,
+          // The signed-in user's id (never the email), when there is one.
+          userId: callerOf(res).user?.id,
           // The caller hung up before we finished.
           aborted: !res.writableFinished,
         },
@@ -57,14 +72,4 @@ function levelFor(status: number, path: string | undefined): 'error' | 'warn' | 
   if (status >= 500) return 'error'
   if (status >= 400) return 'warn'
   return path === quietPath ? 'debug' : 'info'
-}
-
-/** The logger for this request (it carries `requestId`), or `fallback` outside a request. */
-export function requestLogger(res: Response, fallback: Logger): Logger {
-  const logger: unknown = res.locals['logger']
-  return isLogger(logger) ? logger : fallback
-}
-
-function isLogger(value: unknown): value is Logger {
-  return typeof value === 'object' && value !== null && 'child' in value && 'info' in value
 }

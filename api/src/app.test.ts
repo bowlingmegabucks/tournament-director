@@ -43,6 +43,14 @@ describe('CORS', () => {
     expect(response.headers['access-control-allow-origin']).toBe(origin)
   })
 
+  it('lets a configured origin send the sign-in cookie (D-99)', async () => {
+    const app = createTestApp({ config: createConfig({ corsOrigins: [origin] }) })
+
+    const response = await request(app).get('/health').set('Origin', origin)
+
+    expect(response.headers['access-control-allow-credentials']).toBe('true')
+  })
+
   it('does not allow an origin that is not configured', async () => {
     const app = createTestApp({ config: createConfig({ corsOrigins: [origin] }) })
 

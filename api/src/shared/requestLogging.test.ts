@@ -5,7 +5,7 @@ import request from 'supertest'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { LogLevel } from '../config.ts'
 import { createCapturedLogger } from '../test/logger.ts'
-import { requestLogger, requestLogging } from './requestLogging.ts'
+import { redactSecrets, requestLogger, requestLogging } from './requestLogging.ts'
 
 function createApp(level: LogLevel = 'info') {
   const { logger, records } = createCapturedLogger(level)
@@ -118,6 +118,15 @@ describe('request line', () => {
     expect(records()[0]?.['path']).toBe('/ok')
   })
 
+  it('replaces a reset-link token in the path with [redacted]', async () => {
+    const { app, records } = createApp()
+
+    await request(app).get('/v1/auth/reset-password/abc123secrettoken?callbackURL=/x')
+
+    expect(records()[0]?.['path']).toBe('/v1/auth/reset-password/[redacted]')
+    expect(JSON.stringify(records())).not.toContain('abc123secrettoken')
+  })
+
   it('warns on a 4xx', async () => {
     const { app, records } = createApp()
 
@@ -197,5 +206,33 @@ describe('requestLogger', () => {
     const { logger } = createCapturedLogger()
 
     expect(requestLogger({ locals: {} } as express.Response, logger)).toBe(logger)
+  })
+})
+
+describe('redactSecrets', () => {
+  it.each([
+    ['/v1/auth/reset-password/abc', '/v1/auth/reset-password/[redacted]'],
+    ['/V1/Auth/Reset-Password/abc', '/V1/Auth/Reset-Password/[redacted]'],
+    ['//v1/auth//reset-password//abc', '//v1/auth//reset-password//[redacted]'],
+    ['/v1/auth/reset-password/a.b-c_d%20e', '/v1/auth/reset-password/[redacted]'],
+    ['/v1/auth/reset-password/abc/extra', '/v1/auth/reset-password/[redacted]/extra'],
+    [
+      '/v1/auth/reset-password/abc?callbackURL=/x',
+      '/v1/auth/reset-password/[redacted]?callbackURL=/x',
+    ],
+  ])('redacts %s', (path, expected) => {
+    expect(redactSecrets(path)).toBe(expected)
+  })
+
+  it.each([
+    '/v1/auth/reset-password',
+    '/v1/auth/reset-password/',
+    '/v1/auth/sign-in/email',
+    '/v1/tournaments/abc',
+    '/health',
+    '/other/v1/auth/reset-password/abc',
+    '',
+  ])('leaves %j alone', (path) => {
+    expect(redactSecrets(path)).toBe(path)
   })
 })

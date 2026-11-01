@@ -8,12 +8,28 @@ const optionalText = z
   .default('')
   .transform((value) => value.trim() || undefined)
 
+function isOriginUrl(value: string): boolean {
+  if (!URL.canParse(value)) return false
+  const url = new URL(value)
+  const web = url.protocol === 'http:' || url.protocol === 'https:'
+  return web && url.pathname === '/' && url.search === '' && url.hash === ''
+}
+
 const envSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   // mariadb://USER:PASSWORD@HOST:3306/DATABASE. Required: there is no demo-data fallback (D-33).
   DATABASE_URL: z.string().regex(/^(mariadb|mysql):\/\//, 'must start with mariadb:// or mysql://'),
   // The one key the registration site sends in x-api-key (D-95). Required: no key, no start.
   API_KEY: z.string().trim().min(32, 'must be at least 32 characters'),
+  // Signs the sign-in cookie (D-98). Required: no secret, no start. Keep it apart from API_KEY.
+  AUTH_SECRET: z.string().trim().min(32, 'must be at least 32 characters'),
+  // The API's public address, scheme and host only: https://api.bowlingmegabucks.com. Better Auth
+  // builds its cookie and checks the request origin from it, and a https address marks the cookie
+  // `Secure`. Required: a missing value would let it guess from the request.
+  AUTH_BASE_URL: z
+    .string()
+    .refine(isOriginUrl, 'must be an http(s) address with no path, such as https://api.example.com')
+    .transform((value) => new URL(value).origin),
   // Comma-separated list. Empty means same-origin only.
   CORS_ORIGIN: z.string().default(''),
   NODE_ENV: z.string().default('development'),
@@ -43,6 +59,13 @@ export interface TelemetryConfig {
   appInsightsConnectionString: string | undefined
 }
 
+export interface AuthConfig {
+  /** Signs the session cookie. A secret: never log it. */
+  secret: string
+  /** The API's own origin, such as `https://api.bowlingmegabucks.com`. */
+  baseUrl: string
+}
+
 export interface RateLimitConfig {
   /** Requests allowed per client in one window. */
   max: number
@@ -57,6 +80,7 @@ export interface Config {
   databaseUrl: string
   /** The key callers send in `x-api-key` (D-95). A secret: never log it. */
   apiKey: string
+  auth: AuthConfig
   logLevel: LogLevel
   rateLimit: RateLimitConfig
   trustProxy: number
@@ -84,6 +108,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     port: data.PORT,
     databaseUrl: data.DATABASE_URL,
     apiKey: data.API_KEY,
+    auth: { secret: data.AUTH_SECRET, baseUrl: data.AUTH_BASE_URL },
     logLevel: data.LOG_LEVEL,
     rateLimit: { max: data.RATE_LIMIT_MAX, windowSeconds: data.RATE_LIMIT_WINDOW_SECONDS },
     trustProxy: data.TRUST_PROXY,

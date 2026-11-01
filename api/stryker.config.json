@@ -22,7 +22,10 @@
     "!src/db/seedDivisions.ts",
     "!src/db/seedSessions.ts",
     "!src/db/seedRegistrations.ts",
-    "!src/db/seedScores.ts"
+    "!src/db/seedScores.ts",
+    "!src/db/seedUsers.ts",
+    "!src/db/scriptAuth.ts",
+    "!src/db/createAdmin.ts"
   ],
   "incremental": true,
   "reporters": ["clear-text", "html"],

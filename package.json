@@ -12,6 +12,7 @@
     "users:create-admin": "npm --prefix api run users:create-admin",
     "dev:mocks": "npm --prefix web run dev:mocks",
     "check:version": "node scripts/checkVersion.ts",
+    "check:dist": "node scripts/checkDist.ts web/dist",
     "test:scripts": "node --test \"scripts/*.test.ts\"",
     "test:scripts:coverage": "mkdir -p scripts/coverage && node --test --experimental-test-coverage --test-coverage-include=scripts/version.ts --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=scripts/coverage/lcov.info \"scripts/*.test.ts\"",
     "format:scripts": "prettier --write scripts",

@@ -9,7 +9,7 @@ Source: `business logic/Encryption.cs`, `main/Program.cs`, `main/Controls/Social
 | SEC-01 | **No user accounts.** Anyone who can run the desk app has full access. The desk app connects straight to the database with a connection string. |
 | SEC-02 | The API has one shared key for the registration site (`x-api-key`). No per-user identity. |
 
-The old spec's roles (director, staff, viewer) and JWT login are new ideas, not legacy. The new app's plan: one API key (D-95), then permission-based access with score keeper, director, and admin roles (D-94, D-96, D-97). See [proposed-features.md](proposed-features.md).
+The old spec's roles (director, staff, viewer) and JWT login are new ideas, not legacy. The new app's plan: one API key (D-95), then permission-based access with score keeper, director, and admin roles (D-94, D-96, D-97), with Better Auth for sign-in (D-98 to D-101). See [proposed-features.md](proposed-features.md).
 
 ## SSN encryption
 

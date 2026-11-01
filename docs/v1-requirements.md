@@ -10,9 +10,10 @@ Feature-level work (ports of legacy rules) lives in [docs/migration/](migration/
 | ------- | --------------------------------------------------------------------------------- |
 | 0.1.0   | Structure. Done.                                                                  |
 | 0.2.0   | Read-only views on the existing database. Public routes only.                     |
-| 0.3.0   | Authentication and authorization, with a ping route to test it.                   |
+| 0.3.0   | Sign-in and permission checks (Better Auth, D-98) and signed-in UI rules (D-102). |
 | Next    | Lock down the read routes and pages that are public in 0.2.0. Before any command. |
-| Then    | Commands, one feature area per release (0.4.0+ in the old plan).                  |
+| 0.4.0   | Vendor routes (API key) and cutover to `api.bowlingmegabucks.com`.                |
+| Then    | Commands, one feature area per release.                                           |
 | 1.0.0   | Every item below is checked.                                                      |
 
 Version numbers follow content, not a countdown. 0.10.0 is fine.
@@ -56,7 +57,8 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 
 ## Security
 
-- [ ] Auth approach decided and built (0.3.0).
+- [ ] Auth approach built (0.3.0). Decided: Better Auth, database sessions in a cookie (D-98 to D-101).
+- [ ] User management: admin-only create-user page, email invites, roles, disable, forgot password (stage 3, D-101, Q-34).
 - [x] API key for the registration site: `API_KEY` in `x-api-key`, permission-based access labels, and `GET /v1/me` (stage 1, D-94 to D-97, `API-16`, `API-17`).
 - [x] Every route declares its access; undeclared routes deny (`API-15`, D-27). Only `public` exists until sign-in (0.3.0); recheck then.
 - [ ] Roles and permissions reviewed against [security.md](migration/security.md).

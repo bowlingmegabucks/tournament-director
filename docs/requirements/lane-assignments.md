@@ -56,7 +56,7 @@ A stored entry is read when it has a UUID registration id, a division id that is
 | `GET /v1/tournaments/{id}/squads/{sessionId}/lanes`   | `200 { session, pairs: [{ firstLane, lanes, capacity, bowlers }], unassigned, other, divisions }` (Fields above) | `400` not a UUID; `404` unknown tournament or squad; `422` bowlers per pair not 2 to 5; `500` bad tournament row; `503` database down | No. Web only   |
 | `GET /v1/tournaments/{id}/sweepers/{sessionId}/lanes` | Same, with `kind: "sweeper"` and bonus pins in `pins`                                                             | Same, `404` for a sweeper                                           | No. Web only   |
 
-Public today (D-27); both get a signed-in label in the lock-down release (D-59, D-52). The API's `features/lanes/types.ts` and the web app's `features/lanes/types.ts` carry the same fields; change both together. The API builds the pairs, so the page does no grouping.
+Both need `lanes.read` since the lock-down (D-59, D-52, D-105, `API-22`): 401 with no sign-in, 403 for the API key or a user without the permission. The API's `features/lanes/types.ts` and the web app's `features/lanes/types.ts` carry the same fields; change both together. The API builds the pairs, so the page does no grouping.
 
 ## Screens
 

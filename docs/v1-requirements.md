@@ -60,13 +60,13 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 - [x] Web sign-in (`WEB-01` to `WEB-08`): `/login`, `useMe`, `<Can>`, the top bar, and the dev-only quick-login buttons with the production-build check (D-102, D-104).
 - [ ] User management: admin-only create-user page, email invites, roles, disable, forgot password (stage 3, D-101, Q-34).
 - [x] API key for the registration site: `API_KEY` in `x-api-key`, permission-based access labels, and `GET /v1/me` (stage 1, D-94 to D-97, `API-16`, `API-17`).
-- [x] Every route declares its access; undeclared routes deny (`API-15`, D-27). Permission labels now work for users and the API key (`API-16`); no mounted route needs one until the lock-down release.
+- [x] Every route declares its access; undeclared routes deny (`API-15`, D-27). Permission labels now work for users and the API key (`API-16`); the lock-down release (`API-22`) now uses them.
 - [ ] Roles and permissions reviewed against [security.md](migration/security.md).
-- [ ] Personal data (bowler records) is behind auth. The scores view is the one exception: it shows names and scratch scores to everyone on purpose (D-70).
-- [ ] Lock-down release done before any command route (D-52): every public read route and page reviewed, and those that should not be public put behind auth.
-- [ ] Lane assignments page and its route are signed-in only (D-59). They ship public in 0.2.0; label them in the lock-down release and hide the link when signed out.
-- [ ] Recap sheet routes (`.../squads/{sessionId}/recap-sheets` and the sweeper twin) and the "Recap sheets" button are signed-in only (D-66). They ship public in 0.2.0; label them in the lock-down release and hide the button when signed out.
-- [ ] Registrations list (`GET /v1/tournaments/{id}/registrations` and its page) is signed-in only. It ships public in 0.2.0 (D-46); lock it down once 0.3.0 has auth, and hide the sidebar link when signed out.
+- [x] Personal data (bowler records) is behind auth. The scores view is the one exception: it shows names and scratch scores to everyone on purpose (D-70). Results and the finals pages show names and pin totals the same way (D-74, D-85).
+- [x] Lock-down release done before any command route (D-52, D-105, `API-22`): every public read route and page reviewed. The registrations list, lane pages, and recap sheets are behind auth; the vendor tournament routes, divisions, squads, sweepers, scores, results, and finals stay public. Still to do in 0.4.0: the registration site's key routes (`API-05` to `API-08`, labeled `apiKey: true`) and the API subdomain.
+- [x] Lane assignments page and its route are signed-in only (D-59, D-105): `lanes.read`, link and tab hidden when signed out.
+- [x] Recap sheet routes (`.../squads/{sessionId}/recap-sheets` and the sweeper twin) and the "Recap sheets" button are signed-in only (D-66, D-105): `lanes.read`; the button sits on the lane page.
+- [x] Registrations list (`GET /v1/tournaments/{id}/registrations` and its page) is signed-in only (D-46, D-105): `registrations.read`, sidebar link hidden when signed out.
 - [ ] `npm audit` clean; pinned-version overrides in CLAUDE.md reviewed.
 
 ## Production readiness

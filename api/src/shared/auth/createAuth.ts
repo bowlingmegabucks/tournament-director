@@ -1,0 +1,84 @@
+import { betterAuth, type BetterAuthOptions } from 'better-auth'
+import { admin } from 'better-auth/plugins'
+import { createAccessControl } from 'better-auth/plugins/access'
+import { adminAc, defaultStatements } from 'better-auth/plugins/admin/access'
+import type { AuthConfig } from '../../config.ts'
+import type { Logger } from '../logger.ts'
+import type { RoleName } from './roles.ts'
+
+/** A session lasts 12 hours from the last request (D-99). */
+export const sessionSeconds = 12 * 60 * 60
+/** Use inside the window renews it, at most once an hour, so a busy day never signs anyone out. */
+const sessionRenewSeconds = 60 * 60
+
+export const minPasswordLength = 12
+
+// Better Auth's own rules for who may call its admin paths (create user, ban, set role). Only the
+// admin role may. Director and score keeper get none; their permissions are ours (D-96). Declaring
+// all three names also makes Better Auth refuse a role it does not know, such as a typo.
+const accessControl = createAccessControl(defaultStatements)
+const roles = {
+  admin: accessControl.newRole(adminAc.statements),
+  director: accessControl.newRole({}),
+  scoreKeeper: accessControl.newRole({}),
+} satisfies Record<RoleName, unknown>
+
+export interface AuthDependencies {
+  config: AuthConfig
+  /** Where users and sessions live: the Prisma adapter in `server.ts`, memory in tests. */
+  database: BetterAuthOptions['database']
+  /** Pages allowed to call sign-in from a browser. Better Auth refuses a POST from any other. */
+  trustedOrigins: string[]
+  logger: Logger
+}
+
+/**
+ * Build Better Auth, the Node twin of ASP.NET Core Identity: it keeps users and sessions in our
+ * database, hashes passwords, and issues the session cookie (D-98, D-99). Only `server.ts` and the
+ * tests build it; everything else receives it.
+ *
+ * Choices:
+ * - Email and password only, and no public sign-up: new users come from an admin (D-98, D-101).
+ * - Its own rate limit and telemetry are off. Sign-in throttling sits in `features/auth/routes.ts`
+ *   where it knows the real client address (`TRUST_PROXY`), and nothing may leave the server.
+ * - It reaches the world only through `features/auth/routes.ts`, which allows two paths.
+ * - The `admin` plugin adds the `role` and ban columns. It stores a role name from `roles.ts`; the
+ *   permissions that go with it live in our own table (D-96).
+ */
+export function createAuth({ config, database, trustedOrigins, logger }: AuthDependencies) {
+  return betterAuth({
+    database,
+    secret: config.secret,
+    baseURL: config.baseUrl,
+    basePath: '/v1/auth',
+    trustedOrigins,
+    emailAndPassword: {
+      enabled: true,
+      disableSignUp: true,
+      minPasswordLength,
+    },
+    session: { expiresIn: sessionSeconds, updateAge: sessionRenewSeconds },
+    // A user made with no role gets the one with the least power. Every way we make users names a role.
+    plugins: [
+      admin({ ac: accessControl, roles, adminRoles: ['admin'], defaultRole: 'scoreKeeper' }),
+    ],
+    // Better Auth skips its origin and CSRF checks when NODE_ENV is `test`. Say "on" in every
+    // environment, so a stray variable cannot switch them off.
+    advanced: { disableOriginCheck: false, disableCSRFCheck: false },
+    rateLimit: { enabled: false },
+    telemetry: { enabled: false },
+    logger: {
+      // Our logger decides what shows.
+      level: 'debug',
+      log: (level, message, ...details) => {
+        const error = details.find((detail): detail is Error => detail instanceof Error)
+        logger[level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'debug'](
+          { source: 'better-auth', detail: message, err: error },
+          'Auth library message',
+        )
+      },
+    },
+  })
+}
+
+export type Auth = ReturnType<typeof createAuth>

@@ -1,5 +1,6 @@
 import type { Meter } from '@opentelemetry/api'
 import type { Express, RequestHandler, Router } from 'express'
+import { createAuthFailureCounter, type AuthFailureReason } from './auth/authMetrics.ts'
 import { callerOf, sentRejectedKey } from './auth/caller.ts'
 import { isPermission, type Permission } from './auth/permissions.ts'
 import { HttpError } from './errors.ts'
@@ -28,8 +29,6 @@ function isAccess(value: unknown): value is Access {
   return isPermission(value.permission) && (apiKey === undefined || typeof apiKey === 'boolean')
 }
 
-type FailureReason = 'missing_credentials' | 'invalid_key' | 'forbidden'
-
 /**
  * Every group declares its access (D-27). A group with none, or an unknown one, stops startup.
  * A protected group answers 401 when no one proved who they are, and 403 when the caller may not
@@ -37,11 +36,8 @@ type FailureReason = 'missing_credentials' | 'invalid_key' | 'forbidden'
  * Each one adds to `tournament_director.auth.failures`, split by `reason`.
  */
 export function mountRoutes(app: Express, groups: RouteGroup[], meter: Meter): void {
-  const failures = meter.createCounter('tournament_director.auth.failures', {
-    description: 'Requests to a protected route turned away with a 401 or 403.',
-    unit: '{request}',
-  })
-  const reject = (reason: FailureReason, status: number, message: string): never => {
+  const failures = createAuthFailureCounter(meter)
+  const reject = (reason: AuthFailureReason, status: number, message: string): never => {
     failures.add(1, { reason })
     throw new HttpError(status, message)
   }

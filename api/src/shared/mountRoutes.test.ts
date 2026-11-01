@@ -163,7 +163,7 @@ describe('mountRoutes', () => {
 
       expect((await find())?.descriptor).toMatchObject({
         unit: '{request}',
-        description: 'Requests to a protected route turned away with a 401 or 403.',
+        description: 'Requests turned away for who they are: a 401 or 403, or a failed sign-in.',
       })
     })
 

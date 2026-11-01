@@ -48,7 +48,7 @@ Stage 2 of D-94. No legacy twin: legacy has no user accounts (`SEC-01`).
   - Anything else: 403.
 - **`GET /v1/me`:** `user` becomes `{ id, email, name, role, permissions }` or `null`. A sign-in whose user is disabled or gone counts as `null`.
 - **No ping route.** `GET /ready` checks the API is up, and `GET /v1/me` shows who is signed in. The permission check is tested in `mountRoutes.test.ts` with test route groups and real role names, so every branch is covered without a route that ships.
-- **Logging:** the request line names the caller type and the user id. Never the password, the cookie, or the email (D-95 style). Sign-in failures count in `tournament_director.auth.failures` with a new reason, `bad_sign_in`.
+- **Logging:** the request line names the caller type and the user id. Never the password, the cookie, or the email (D-95 style). Sign-in failures count in `tournament_director.auth.failures` with the reasons `bad_sign_in` and `sign_in_throttled`. Built in step 4.
 
 ## Web
 

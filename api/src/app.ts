@@ -26,12 +26,16 @@ import type { TournamentRepository } from './features/tournaments/repository.ts'
 import { createErrorHandler, notFound } from './shared/middleware.ts'
 import { createHealthRouter } from './shared/healthRoutes.ts'
 import { createReadyRouter } from './shared/readyRoutes.ts'
+import { createAuthRouter } from './features/auth/routes.ts'
+import type { Auth } from './shared/auth/createAuth.ts'
 import { identifyCaller } from './shared/auth/caller.ts'
 import { mountRoutes } from './shared/mountRoutes.ts'
 
 export interface AppDependencies {
   config: Config
   logger: Logger
+  /** Sign-in (Better Auth). Built in `server.ts`; tests pass one on a memory database. */
+  auth: Auth
   tournaments: TournamentRepository
   divisions: DivisionRepository
   registrations: RegistrationRepository
@@ -49,6 +53,7 @@ export interface AppDependencies {
 export function createApp({
   config,
   logger,
+  auth,
   tournaments,
   divisions,
   registrations,
@@ -90,6 +95,9 @@ export function createApp({
       { path: '/ready', access: 'public', router: createReadyRouter(checkDatabase) },
       // Public: a caller with no key learns it is anonymous (D-95).
       { path: '/v1/me', access: 'public', router: createMeRouter() },
+      // Public: this is how someone proves who they are. Better Auth reads the body itself, so no
+      // express.json() may run before it.
+      { path: '/v1/auth', access: 'public', router: createAuthRouter(auth, meter, logger) },
       {
         path: '/v1/tournaments/:id/divisions',
         access: 'public',

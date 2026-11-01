@@ -1,8 +1,9 @@
-import type { Express } from 'express'
+import type { Express, Request, Response } from 'express'
 import { createApp, type AppDependencies } from '../app.ts'
 import { createConfig } from './factories.ts'
 import { createCapturedLogger } from './logger.ts'
-import { createTestAuth } from './testAuth.ts'
+import type { RoleName } from '../shared/auth/roles.ts'
+import { createTestAuth, createTestUser, signInCookie } from './testAuth.ts'
 import { createInMemoryDivisionRepository } from '../features/divisions/repository.ts'
 import { createInMemoryLaneRepository } from '../features/lanes/repository.ts'
 import { createInMemoryRegistrationRepository } from '../features/registrations/repository.ts'
@@ -27,4 +28,26 @@ export function createTestApp(overrides: Partial<AppDependencies> = {}): Express
     checkDatabase: () => Promise.resolve(),
     ...overrides,
   })
+}
+
+/**
+ * The same app, with every request sent by a signed-in user who holds `role`. For the routes that
+ * need a permission (D-52): a test of what the route returns need not sign in each time. Tests of
+ * who may call a route use `createTestApp` and set the cookie or the key themselves.
+ */
+export function createSignedInTestApp(
+  overrides: Partial<AppDependencies> = {},
+  role: RoleName = 'director',
+): Express {
+  const { auth } = createTestAuth()
+  const app = createTestApp({ ...overrides, auth })
+  const cookie = createTestUser(auth, { role }).then(({ email }) => signInCookie(auth, email))
+  // supertest takes any request handler, so wrap the app instead of changing each request.
+  const handler = (req: Request, res: Response) => {
+    void cookie.then((value) => {
+      req.headers.cookie = value
+      app(req, res)
+    })
+  }
+  return handler as unknown as Express
 }

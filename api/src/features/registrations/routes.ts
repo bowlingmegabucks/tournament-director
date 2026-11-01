@@ -12,7 +12,7 @@ const idParams = z.object({ id: z.uuid() })
 
 /**
  * Mounted at `/v1/tournaments/:id/registrations`. Web only, not part of the vendor contract
- * (D-47, D-09). Public for 0.2.0; it moves behind auth right after 0.3.0 (D-46, D-52).
+ * (D-47, D-09). Needs `registrations.read`; the API key cannot reach it (D-46, D-52, D-105).
  * `mergeParams` lets this router see the `:id` from the mount path.
  */
 export function createRegistrationRouter(

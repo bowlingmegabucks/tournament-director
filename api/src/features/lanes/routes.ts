@@ -33,8 +33,8 @@ export function findSweeper(sweepers: SweeperRepository): FindSession {
 
 /**
  * Mounted at `/v1/tournaments/:id/squads/:sessionId/lanes` and `/sweepers/:sessionId/lanes`. Web
- * only, not part of the vendor contract (D-09). Public for 0.2.0; it moves behind auth right after
- * 0.3.0 (D-59, D-52). `mergeParams` lets this router see the ids from the mount path.
+ * only, not part of the vendor contract (D-09). Needs `lanes.read`; the API key cannot reach it
+ * (D-59, D-52, D-105). `mergeParams` lets this router see the ids from the mount path.
  */
 export function createLaneRouter(
   kind: 'squad' | 'sweeper',

@@ -115,7 +115,7 @@ export function createApp({
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/lanes',
-        access: 'public', // D-59: locked down right after 0.3.0 (D-52)
+        access: { permission: 'lanes.read' }, // D-59, D-52: signed in; the API key cannot reach it
         router: createLaneRouter('squad', findSquad(squads), {
           lanes,
           tournaments,
@@ -125,7 +125,7 @@ export function createApp({
       },
       {
         path: '/v1/tournaments/:id/sweepers/:sessionId/lanes',
-        access: 'public', // D-59: locked down right after 0.3.0 (D-52)
+        access: { permission: 'lanes.read' }, // D-59, D-52: signed in; the API key cannot reach it
         router: createLaneRouter('sweeper', findSweeper(sweepers), {
           lanes,
           tournaments,
@@ -182,7 +182,7 @@ export function createApp({
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/recap-sheets',
-        access: 'public', // D-66: locked down right after 0.3.0 (D-52)
+        access: { permission: 'lanes.read' }, // D-66, D-52: signed in; the API key cannot reach it
         router: createRecapSheetRouter('squad', findSquad(squads), {
           lanes,
           tournaments,
@@ -191,7 +191,7 @@ export function createApp({
       },
       {
         path: '/v1/tournaments/:id/sweepers/:sessionId/recap-sheets',
-        access: 'public', // D-66: locked down right after 0.3.0 (D-52)
+        access: { permission: 'lanes.read' }, // D-66, D-52: signed in; the API key cannot reach it
         router: createRecapSheetRouter('sweeper', findSweeper(sweepers), {
           lanes,
           tournaments,
@@ -200,7 +200,7 @@ export function createApp({
       },
       {
         path: '/v1/tournaments/:id/registrations',
-        access: 'public', // D-46: locked down right after 0.3.0 (D-52)
+        access: { permission: 'registrations.read' }, // D-46, D-52: signed in; the API key cannot reach it
         router: createRegistrationRouter(registrations, tournaments, divisions, squads, sweepers),
       },
       {

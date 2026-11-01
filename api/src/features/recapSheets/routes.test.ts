@@ -7,7 +7,7 @@ import {
   createSweeper,
   createTournament,
 } from '../../test/factories.ts'
-import { createTestApp } from '../../test/testApp.ts'
+import { createSignedInTestApp } from '../../test/testApp.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
 import { createInMemoryLaneRepository } from '../lanes/repository.ts'
 import { createInMemorySquadRepository } from '../squads/repository.ts'
@@ -27,7 +27,7 @@ function setup(options: { maxPerPair?: number } = {}) {
     games: 4,
     bonusPins: [{ divisionId: open.id, divisionName: 'Open', bonusPinsPerGame: 12 }],
   })
-  const app = createTestApp({
+  const app = createSignedInTestApp({
     tournaments: createInMemoryTournamentRepository([tournament, other]),
     divisions: createInMemoryDivisionRepository([{ tournamentId: tournament.id, division: open }]),
     squads: createInMemorySquadRepository([
@@ -131,7 +131,7 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/recap-sheets (RPT-08)', () =
     const tournament = createTournament()
     const squad = createSquad()
     const open = createDivision()
-    const app = createTestApp({
+    const app = createSignedInTestApp({
       tournaments: createInMemoryTournamentRepository([tournament]),
       divisions: createInMemoryDivisionRepository([
         { tournamentId: tournament.id, division: open },
@@ -156,7 +156,7 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/recap-sheets (RPT-08)', () =
   it('returns no sheets for a squad nobody has a lane in (RPT-05c)', async () => {
     const tournament = createTournament()
     const squad = createSquad()
-    const app = createTestApp({
+    const app = createSignedInTestApp({
       tournaments: createInMemoryTournamentRepository([tournament]),
       squads: createInMemorySquadRepository([{ tournamentId: tournament.id, squad }]),
     })

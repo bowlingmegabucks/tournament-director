@@ -12,7 +12,14 @@ import styles from './LoginPage.module.css'
 function returnPath(state: unknown): string {
   const from = field(state, 'from')
   const pathname = field(from, 'pathname')
-  if (typeof pathname !== 'string' || !pathname.startsWith('/')) return '/'
+  if (
+    typeof pathname !== 'string' ||
+    !pathname.startsWith('/') ||
+    pathname.startsWith('//') ||
+    pathname.includes('\\')
+  ) {
+    return '/'
+  }
   const search = field(from, 'search')
   const hash = field(from, 'hash')
   return `${pathname}${typeof search === 'string' ? search : ''}${typeof hash === 'string' ? hash : ''}`
@@ -25,6 +32,8 @@ export function LoginPage() {
   const signIn = useSignIn()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+
+  const formError = signIn.error?.message ?? (me.error ? me.error.message : undefined)
 
   if (me.data?.user) return <Navigate to={returnPath(location.state)} replace />
 
@@ -39,16 +48,16 @@ export function LoginPage() {
       <h1>Sign in</h1>
       {me.isPending && <Loading label="Checking sign-in…" />}
       <form className={styles.form} onSubmit={submit}>
-        {signIn.error && (
+        {formError && (
           <p id="login-error" role="alert" className={styles.error}>
-            {signIn.error.message}
+            {formError}
           </p>
         )}
         <div className={styles.field}>
           <label htmlFor="login-email">Email</label>
           <input
             id="login-email"
-            aria-describedby={signIn.error ? 'login-error' : undefined}
+            aria-describedby={formError ? 'login-error' : undefined}
             name="email"
             type="email"
             autoComplete="username"
@@ -63,7 +72,7 @@ export function LoginPage() {
           <label htmlFor="login-password">Password</label>
           <input
             id="login-password"
-            aria-describedby={signIn.error ? 'login-error' : undefined}
+            aria-describedby={formError ? 'login-error' : undefined}
             name="password"
             type="password"
             autoComplete="current-password"

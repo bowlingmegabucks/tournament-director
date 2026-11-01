@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router'
 import { Loading } from '../../shared/Loading'
 import { Page } from '../../shared/Page'
 import { QueryError } from '../../shared/QueryError'
+import { signInEnabled } from './signInEnabled'
 import type { KnownPermission } from './types'
 import { useMe } from './useMe'
 
@@ -36,6 +37,15 @@ export function RequirePermission({ permission, children }: Readonly<RequirePerm
             void refetch()
           }}
         />
+      </Page>
+    )
+  }
+  if (data.user === null && !signInEnabled()) {
+    return (
+      <Page>
+        <title>Sign in needed · Tournament Director</title>
+        <h1>Sign in needed</h1>
+        <p>This page needs a signed-in user, and sign-in is not open yet.</p>
       </Page>
     )
   }

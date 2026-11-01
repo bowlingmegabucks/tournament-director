@@ -64,6 +64,7 @@ async function signInFailure(response: Response): Promise<SignInError> {
       return new SignInError('Sign-in is not set up for this address.')
     }
   }
+  if (response.status >= 500) return new SignInError('Sign-in is not working right now. Try again.')
   return new SignInError('Could not reach the sign-in service. Try again.')
 }
 
@@ -86,10 +87,15 @@ export async function signIn(email: string, password: string): Promise<void> {
 }
 
 export async function signOut(): Promise<void> {
-  const response = await apiFetch(apiUrl('/v1/auth/sign-out'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: '{}',
-  })
+  let response: Response
+  try {
+    response = await apiFetch(apiUrl('/v1/auth/sign-out'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+  } catch {
+    throw new Error('Could not sign out. Try again.')
+  }
   if (!response.ok) throw new Error('Could not sign out. Try again.')
 }

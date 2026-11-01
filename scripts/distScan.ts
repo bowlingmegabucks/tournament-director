@@ -1,18 +1,12 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { localUsers } from '../web/src/features/auth/localUsers.ts'
 
 /**
  * Text that must never reach a production build (D-104): the dev-only quick-login buttons and the
- * seeded local passwords. Keep the passwords in step with `api/src/db/seedUsers.ts`.
+ * seeded local passwords. Read from the quick-login list, so a rename cannot slip past.
  */
-export const forbidden = [
-  'adminP4sswordLocal',
-  'directorP4sswordLocal',
-  'scoreKeeperP4sswordLocal',
-  'Log in as admin',
-  'Log in as tournament director',
-  'Log in as score keeper',
-]
+export const forbidden: string[] = localUsers.flatMap((user) => [user.password, user.label])
 
 /** Every `{ file, text }` in `dir` (searched in all depth) that holds one of the forbidden strings. */
 export function scanDist(dir: string): { file: string; text: string }[] {

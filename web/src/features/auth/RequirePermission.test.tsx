@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -50,6 +50,16 @@ describe('RequirePermission', () => {
 
     expect(await screen.findByText('Login page, from /secret')).toBeVisible()
     expect(screen.queryByText('Secret page')).not.toBeInTheDocument()
+  })
+
+  it('says sign-in is not open, instead of a dead /login, when sign-in is off', async () => {
+    vi.stubEnv('DEV', false)
+    vi.stubEnv('VITE_SHOW_SIGN_IN', '')
+    renderGuarded()
+
+    expect(await screen.findByRole('heading', { name: 'Sign in needed' })).toBeVisible()
+    expect(screen.queryByText(/Login page/)).not.toBeInTheDocument()
+    vi.unstubAllEnvs()
   })
 
   it('tells a signed-in user without the permission, with no redirect', async () => {

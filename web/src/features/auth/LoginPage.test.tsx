@@ -125,8 +125,24 @@ describe('LoginPage', () => {
     await submit()
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Could not reach the sign-in service. Try again.',
+      'Sign-in is not working right now. Try again.',
     )
+  })
+
+  it('shows the error when /v1/me fails after a good sign-in', async () => {
+    server.use(http.get('/v1/me', () => new HttpResponse(null, { status: 500 })))
+    renderLogin()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Sign-in could not be checked. Try again.',
+    )
+  })
+
+  it.each(['//evil.example', '/\\evil.example'])('ignores the return path %s', async (pathname) => {
+    setMockUser(createSignedInUser())
+    renderLogin({ pathname: '/login', state: { from: { pathname } } })
+
+    expect(await screen.findByText('Home page')).toBeVisible()
   })
 
   it('disables the button and says "Signing in…" while it runs', async () => {

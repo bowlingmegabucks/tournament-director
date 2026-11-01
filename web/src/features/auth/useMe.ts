@@ -17,7 +17,13 @@ export function useSignIn() {
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       signIn(email, password),
     // The sign-in body lacks permissions, so ask /v1/me and wait for it before the page moves on.
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: meKeys.all }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: meKeys.all })
+      // Data fetched while signed out may differ for this user, so refetch the rest too.
+      await queryClient.invalidateQueries({
+        predicate: (query) => query.queryKey[0] !== meKeys.all[0],
+      })
+    },
   })
 }
 

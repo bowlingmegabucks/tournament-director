@@ -139,7 +139,13 @@ describe('signIn', () => {
     await expect(signIn('a', 'b')).rejects.toThrow('Too many attempts. Try again later.')
   })
 
-  it.each([400, 500, 503])('says the service is unreachable on %i', async (status) => {
+  it.each([500, 503])('says the service is not working on %i', async (status) => {
+    respond(status, { message: 'Database unavailable' })
+
+    await expect(signIn('a', 'b')).rejects.toThrow('Sign-in is not working right now. Try again.')
+  })
+
+  it.each([400])('says the service is unreachable on %i', async (status) => {
     respond(status, { message: 'Database unavailable' })
 
     await expect(signIn('a', 'b')).rejects.toThrow(
@@ -157,6 +163,12 @@ describe('signIn', () => {
 })
 
 describe('signOut', () => {
+  it('gives the plain message on a network failure', async () => {
+    server.use(http.post('/v1/auth/sign-out', () => HttpResponse.error()))
+
+    await expect(signOut()).rejects.toThrow('Could not sign out. Try again.')
+  })
+
   it('posts an empty JSON body', async () => {
     let received: unknown
     server.use(

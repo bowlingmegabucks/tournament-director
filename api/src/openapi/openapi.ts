@@ -8,7 +8,6 @@ import {
 } from '../features/registrations/vendorTypes.ts'
 import { tournamentDetailSchema, tournamentListSchema } from '../features/tournaments/types.ts'
 
-// Stryker disable StringLiteral: the summaries and descriptions are documentation, not behavior.
 type Method = 'get' | 'post'
 
 /**

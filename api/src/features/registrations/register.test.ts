@@ -211,6 +211,23 @@ describe('request lookups', () => {
   })
 })
 
+describe('a division the read side cannot list', () => {
+  it('fails as an unknown division, since a stored division that breaks its shape is skipped (D-39)', async () => {
+    const { deps, input } = setup()
+    deps.divisions.listByTournament = () => Promise.resolve([])
+
+    const failures = await failuresOf(register(deps, input()))
+
+    expect(failures).toEqual([
+      {
+        kind: 'other',
+        code: 'Division.NotFound',
+        description: 'The specified division does not exist.',
+      },
+    ])
+  })
+})
+
 describe('squads and sweepers (D-108, REG-03, REG-06)', () => {
   it('refuses a squad of another tournament or an unknown one (D-108)', async () => {
     const stranger = session('squad', faker.string.uuid())

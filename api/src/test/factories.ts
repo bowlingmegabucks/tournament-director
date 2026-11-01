@@ -136,10 +136,10 @@ export function createResultEntry(overrides: Partial<ResultEntryInput> = {}): Re
   })
 }
 
-/** A config with no CORS origins and no telemetry destination. The database URL points nowhere real. */
 /** The key `createConfig` sets. Send it in `x-api-key` to call as the API key. */
 export const testApiKey = 'test-api-key-0123456789-0123456789'
 
+/** A config with no CORS origins and no telemetry destination. The database URL points nowhere real. */
 export function createConfig(overrides: Partial<Config> = {}): Config {
   return {
     port: 0,

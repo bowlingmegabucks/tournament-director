@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { loadConfig } from './config.ts'
+import { loadConfig, loadDatabaseUrl } from './config.ts'
 
 const databaseUrl = 'mariadb://megabucks:bowling4money@localhost:15306/bowling_megabucks'
-// The smallest valid environment. DATABASE_URL has no default (D-33).
-const baseEnv = { DATABASE_URL: databaseUrl }
+const apiKey = 'api_localKey_thisIsForTestingOnly'
+// The smallest valid environment. DATABASE_URL (D-33) and API_KEY (D-95) have no default.
+const baseEnv = { DATABASE_URL: databaseUrl, API_KEY: apiKey }
 
 describe('loadConfig', () => {
   it('uses defaults for an empty environment', () => {
     expect(loadConfig(baseEnv)).toEqual({
       port: 3000,
       databaseUrl,
+      apiKey,
       logLevel: 'info',
       rateLimit: { max: 100, windowSeconds: 60 },
       trustProxy: 0,
@@ -25,13 +27,46 @@ describe('loadConfig', () => {
   })
 
   it('fails without DATABASE_URL (D-33)', () => {
-    expect(() => loadConfig({})).toThrow(/Invalid environment: .*DATABASE_URL/s)
+    expect(() => loadConfig({ API_KEY: apiKey })).toThrow(/Invalid environment: .*DATABASE_URL/s)
+  })
+
+  it('fails without API_KEY (D-95)', () => {
+    expect(() => loadConfig({ DATABASE_URL: databaseUrl })).toThrow(
+      /Invalid environment: .*API_KEY/s,
+    )
+  })
+
+  it.each(['', ' '.repeat(40), 'a'.repeat(31), `  ${'a'.repeat(31)}  `])(
+    'rejects API_KEY=%j, under 32 characters once trimmed (D-95)',
+    (key) => {
+      expect(() => loadConfig({ ...baseEnv, API_KEY: key })).toThrow(
+        /must be at least 32 characters.*API_KEY/s,
+      )
+    },
+  )
+
+  it('accepts a 32-character API_KEY and trims it', () => {
+    expect(loadConfig({ ...baseEnv, API_KEY: ` ${'a'.repeat(32)} ` }).apiKey).toBe('a'.repeat(32))
+  })
+
+  it('does not print the API key when it rejects one', () => {
+    const rejected = () => loadConfig({ ...baseEnv, API_KEY: 'short-secret' })
+    expect(rejected).toThrow(/Invalid environment/)
+    expect(rejected).not.toThrow(/short-secret/)
+  })
+
+  it('reads only the database URL for scripts, with no API_KEY needed', () => {
+    expect(loadDatabaseUrl({ DATABASE_URL: databaseUrl })).toBe(databaseUrl)
+  })
+
+  it('fails the script loader without DATABASE_URL', () => {
+    expect(() => loadDatabaseUrl({})).toThrow(/Invalid environment: .*DATABASE_URL/s)
   })
 
   it.each(['', 'postgres://u:secret@host/db', 'localhost:3306', 'not-mariadb://u:p@host/db'])(
     'rejects DATABASE_URL=%s (D-33)',
     (url) => {
-      expect(() => loadConfig({ DATABASE_URL: url })).toThrow(
+      expect(() => loadConfig({ ...baseEnv, DATABASE_URL: url })).toThrow(
         /must start with mariadb:\/\/ or mysql:\/\/.*DATABASE_URL/s,
       )
     },
@@ -39,11 +74,11 @@ describe('loadConfig', () => {
 
   it('accepts a mysql:// URL', () => {
     const url = 'mysql://u:p@host:3306/db'
-    expect(loadConfig({ DATABASE_URL: url }).databaseUrl).toBe(url)
+    expect(loadConfig({ ...baseEnv, DATABASE_URL: url }).databaseUrl).toBe(url)
   })
 
   it('does not print the password when it rejects the URL', () => {
-    const rejected = () => loadConfig({ DATABASE_URL: 'postgres://u:secret@host/db' })
+    const rejected = () => loadConfig({ ...baseEnv, DATABASE_URL: 'postgres://u:secret@host/db' })
     expect(rejected).toThrow(/Invalid environment/)
     expect(rejected).not.toThrow(/secret/)
   })

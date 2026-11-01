@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router'
+import { AuthMenu } from '../features/auth/AuthMenu'
 import logo from '../assets/logo.png'
 import styles from './AppShell.module.css'
 
@@ -12,16 +13,19 @@ export function AppShell() {
         </div>
       </header>
       <nav aria-label="Main" className={styles.nav}>
-        <ul className={styles.menu}>
-          <li>
-            <NavLink to="/" end>
-              Home
-            </NavLink>
-          </li>
-          <li>
-            <NavLink to="/tournaments">Tournaments</NavLink>
-          </li>
-        </ul>
+        <div className={styles.bar}>
+          <ul className={styles.menu}>
+            <li>
+              <NavLink to="/" end>
+                Home
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/tournaments">Tournaments</NavLink>
+            </li>
+          </ul>
+          <AuthMenu />
+        </div>
       </nav>
       <Outlet />
     </>

@@ -1,4 +1,5 @@
 import { apiUrl } from '../../shared/apiUrl'
+import { apiFetch } from '../../shared/apiFetch'
 import { field } from '../../shared/field'
 import { readJson } from '../../shared/readJson'
 import { isSessionDate } from '../../shared/sessionFormat'
@@ -76,7 +77,7 @@ export async function fetchLanes(
   tournamentId: string,
   sessionId: string,
 ): Promise<LanePage> {
-  const response = await fetch(
+  const response = await apiFetch(
     apiUrl(
       `/v1/tournaments/${encodeURIComponent(tournamentId)}/${kind}s/${encodeURIComponent(sessionId)}/lanes`,
     ),

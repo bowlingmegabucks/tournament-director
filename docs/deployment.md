@@ -45,6 +45,8 @@ If `Azure/login` fails with `AADSTS700213` (no matching federated identity), the
 
 The live site calls the real API (`web/.env.production` is gone, so mocks are off). The web job stops early if `API_BASE_URL` is not an `https://` URL.
 
+The web build hides the Sign in link and `/login` unless `VITE_SHOW_SIGN_IN=true` (`WEB-07`). Leave it off until the API is on `api.bowlingmegabucks.com` (0.4.0): on `azurewebsites.net` the browser blocks the cookie.
+
 The site (`https://bowlingmegabucks.com/tournament-director/`) and the API (`*.azurewebsites.net`) are different origins. `web/` reads the API origin from `VITE_API_BASE_URL` (`apiUrl()` in `web/src/shared/apiUrl.ts`; empty in dev, where Vite proxies `/api`), and `CORS_ORIGIN` on the API must be the site's origin.
 
 ### Custom domain (0.4.0)

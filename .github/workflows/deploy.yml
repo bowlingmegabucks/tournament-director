@@ -124,6 +124,9 @@ jobs:
           VITE_API_BASE_URL: ${{ vars.API_BASE_URL }}
           WEB_BASE_PATH: /tournament-director/
 
+      - name: Check the build has no dev-only sign-in text
+        run: node ../scripts/checkDist.ts dist
+
       - name: Check FTP_SERVER_DIR
         env:
           FTP_SERVER_DIR: ${{ vars.FTP_SERVER_DIR }}

@@ -1,4 +1,5 @@
 import { apiUrl } from '../../shared/apiUrl'
+import { apiFetch } from '../../shared/apiFetch'
 import { field } from '../../shared/field'
 import { readJson } from '../../shared/readJson'
 import { isSessionDate } from '../../shared/sessionFormat'
@@ -149,7 +150,7 @@ async function fetchResultsBody(
   tournamentId: string,
   sessionId: string,
 ): Promise<unknown> {
-  const response = await fetch(
+  const response = await apiFetch(
     apiUrl(
       `/v1/tournaments/${encodeURIComponent(tournamentId)}/${kind}s/${encodeURIComponent(sessionId)}/results`,
     ),
@@ -292,7 +293,7 @@ function isSuperSweeperResults(value: unknown): value is SuperSweeperResults {
 }
 
 async function fetchFinalsBody(kind: FinalsKind, tournamentId: string): Promise<unknown> {
-  const response = await fetch(
+  const response = await apiFetch(
     apiUrl(`/v1/tournaments/${encodeURIComponent(tournamentId)}/${kind}`),
   )
   if (response.status === 404 || response.status === 400) throw new TournamentNotFoundError()

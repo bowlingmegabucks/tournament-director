@@ -1,4 +1,6 @@
 import { Route, Routes } from 'react-router'
+import { LoginPage } from './features/auth/LoginPage'
+import { signInEnabled } from './features/auth/signInEnabled'
 import { DivisionsPage } from './features/divisions/DivisionsPage'
 import { LanesPage } from './features/lanes/LanesPage'
 import { AtLargePage } from './features/results/AtLargePage'
@@ -47,6 +49,7 @@ export default function App() {
           <Route path="at-large" element={<AtLargePage />} />
           <Route path="seeding" element={<SeedingPage />} />
         </Route>
+        {signInEnabled() && <Route path="login" element={<LoginPage />} />}
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

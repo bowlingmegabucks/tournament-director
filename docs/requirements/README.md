@@ -54,3 +54,4 @@ What the user sees and can do.
 | Results (at-large, seeding, super sweeper) | [finals-results.md](finals-results.md)        |
 | Navigation and layout                   | [navigation.md](navigation.md)                   |
 | API route access                        | [api-access.md](api-access.md)                   |
+| Sign-in (web)                           | [sign-in.md](sign-in.md)                         |

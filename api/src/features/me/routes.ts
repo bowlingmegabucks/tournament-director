@@ -1,18 +1,19 @@
 import { Router } from 'express'
-import { callerOf } from '../../shared/auth/caller.ts'
+import { callerOf, sentRejectedKey } from '../../shared/auth/caller.ts'
+import { HttpError } from '../../shared/errors.ts'
 import type { Me } from './types.ts'
 
 /**
- * `GET /v1/me` answers anyone: a caller with no key, or a wrong one, is `anonymous` (D-95). It is
- * the ping for testing credentials, and later tells the web app what to show (D-96).
+ * `GET /v1/me` answers anyone, so a caller can check its key: a valid key gets `apiKey: true`,
+ * no key gets `apiKey: false`, and a wrong key gets a 401 (API-17). Unlike other public routes,
+ * which ignore a wrong key (D-95), this one says so. Later it tells the web app who is signed in.
  */
 export function createMeRouter(): Router {
   const router = Router()
   // Stryker disable next-line StringLiteral: '' and '/' match the same path.
   router.get('/', (_req, res) => {
-    const { type, permissions } = callerOf(res)
-    // Stryker disable next-line ArrayDeclaration: no caller holds a permission until sign-in (stage 2).
-    const body: Me = { type, permissions: [...permissions] }
+    if (sentRejectedKey(res)) throw new HttpError(401, 'Invalid API key.')
+    const body: Me = { apiKey: callerOf(res).type === 'apiKey', user: null }
     // The answer depends on the caller, so no browser or proxy may reuse it.
     res.set('Cache-Control', 'no-store').json(body)
   })

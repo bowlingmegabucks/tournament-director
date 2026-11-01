@@ -7,28 +7,28 @@ import { createTestApp } from '../../test/testApp.ts'
 import { meSchema } from './types.ts'
 
 describe('GET /v1/me', () => {
-  it('names the API key, which holds no permissions (API-17, D-96)', async () => {
+  it('confirms a valid API key (API-17)', async () => {
     const response = await request(createTestApp()).get('/v1/me').set(apiKeyHeader, testApiKey)
 
     expect(response.status).toBe(200)
-    expect(response.body).toEqual({ type: 'apiKey', permissions: [] })
+    expect(response.body).toEqual({ apiKey: true, user: null })
     expect(meSchema.parse(response.body)).toEqual(response.body)
   })
 
-  it('answers anonymous with no key (API-17)', async () => {
+  it('answers apiKey false with no key (API-17)', async () => {
     const response = await request(createTestApp()).get('/v1/me')
 
     expect(response.status).toBe(200)
-    expect(response.body).toEqual({ type: 'anonymous', permissions: [] })
+    expect(response.body).toEqual({ apiKey: false, user: null })
   })
 
   it.each(['wrong-key', '', testApiKey.toUpperCase()])(
-    'answers anonymous, not 401, for the wrong key %j (D-95)',
+    'answers 401 for the wrong key %j (API-17)',
     async (key) => {
       const response = await request(createTestApp()).get('/v1/me').set(apiKeyHeader, key)
 
-      expect(response.status).toBe(200)
-      expect(response.body).toEqual({ type: 'anonymous', permissions: [] })
+      expect(response.status).toBe(401)
+      expect(response.body).toEqual({ message: 'Invalid API key.' })
     },
   )
 

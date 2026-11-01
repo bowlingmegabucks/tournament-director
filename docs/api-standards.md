@@ -123,7 +123,7 @@ Every route group declares who may call it (D-27, D-96). The .NET twin: `identif
 - Labels in `mountRoutes`: `public` (anyone), `{ permission }` (a signed-in user who holds it), or `{ permission, apiKey: true }` (the same, plus a valid API key with no permission check). Add `apiKey: true` only to routes the registration site needs. A protected group answers 401 `Missing or invalid credentials.` with no caller, and 403 to the key on a route that does not accept it or to a user without the permission. A wrong key on a public route is ignored.
 - Routes ask for a permission, never a role. Permissions live in `src/shared/auth/permissions.ts`. The API key holds none; routes opt in to it. Roles arrive with sign-in (stage 2, D-94).
 - The request line carries `callerType`, and the trace span `caller.type`. `tournament_director.auth.failures` counts 401s and 403s by `reason` (`missing_credentials`, `invalid_key`, `forbidden`).
-- `GET /v1/me` is public and returns `{ type, permissions }` with `Cache-Control: no-store`. Use it to test a key.
+- `GET /v1/me` is public and tests a key: 200 `{ apiKey: true, user: null }` for a valid key, 200 `{ apiKey: false, user: null }` with none, and 401 `Invalid API key.` for a wrong one, with `Cache-Control: no-store`. It is the one public route that does not ignore a wrong key. `user` fills in with sign-in (stage 2).
 
 ## Not built yet
 

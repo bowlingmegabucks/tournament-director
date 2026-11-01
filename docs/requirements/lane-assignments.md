@@ -60,7 +60,7 @@ Both need `lanes.read` since the lock-down (D-59, D-52, D-105, `API-22`): 401 wi
 
 ## Screens
 
-- **Squad or sweeper page** (`/tournaments/{id}/squads/{squadId}`, `/sweepers/{sweeperId}`): the page header (breadcrumb, date and time, Open or Complete) and two tabs, "Lane assignments" and "Scores". The tournament sidebar does not change, and "Squads" (or "Sweepers") stays marked. Results and the Complete button come with their features (D-60).
+- **Squad or sweeper page** (`/tournaments/{id}/squads/{squadId}`, `/sweepers/{sweeperId}`): the page header (breadcrumb, date and time, Open or Complete) and two tabs, "Lane assignments" and "Scores". The tournament sidebar does not change, and "Squads" (or "Sweepers") stays marked. Results and the Complete button come with their features (D-60). The "Lane assignments" tab shows only to users with `lanes.read`. The page root opens that tab for them and the Scores tab for everyone else, and a signed-out visit to `.../lanes` goes to `/login` (D-105).
 - **Lane assignments** (`.../lanes`): the division strip, then the unassigned list (left) and the lane pairs (right), each scrolling on its own. On a screen wide enough for two columns the areas fill what is left of the window, so the page itself does not scroll (checked at window heights of 700 to 1080px); in a very short window, or when a line above wraps, the page scrolls a little. On a phone the areas stack. A "Move" or "Assign to lanes" button sits on every bowler of an open session. Page title: `Lane assignments · {date} · {tournament} · Tournament Director`.
 
 ## Notes

@@ -15,7 +15,8 @@ export const minPasswordLength = 12
 
 // Better Auth's own rules for who may call its admin paths (create user, ban, set role). Only the
 // admin role may. Director and score keeper get none; their permissions are ours (D-96). Declaring
-// all three names also makes Better Auth refuse a role it does not know, such as a typo.
+// all three names also makes Better Auth refuse a role it does not know, such as a typo. A user may
+// hold several roles; Better Auth stores them as `director,scoreKeeper`.
 const accessControl = createAccessControl(defaultStatements)
 const roles = {
   admin: accessControl.newRole(adminAc.statements),
@@ -58,10 +59,9 @@ export function createAuth({ config, database, trustedOrigins, logger }: AuthDep
       minPasswordLength,
     },
     session: { expiresIn: sessionSeconds, updateAge: sessionRenewSeconds },
-    // A user made with no role gets the one with the least power. Every way we make users names a role.
-    plugins: [
-      admin({ ac: accessControl, roles, adminRoles: ['admin'], defaultRole: 'scoreKeeper' }),
-    ],
+    // Every way we make users names a role. A user made with none gets `none`, which is not a role,
+    // so they hold no permissions (roles.ts drops names it does not know).
+    plugins: [admin({ ac: accessControl, roles, adminRoles: ['admin'], defaultRole: 'none' })],
     // Better Auth skips its origin and CSRF checks when NODE_ENV is `test`. Say "on" in every
     // environment, so a stray variable cannot switch them off.
     advanced: { disableOriginCheck: false, disableCSRFCheck: false },

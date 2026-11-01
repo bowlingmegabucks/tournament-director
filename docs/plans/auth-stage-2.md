@@ -31,6 +31,7 @@ Stage 2 of D-94. No legacy twin: legacy has no user accounts (`SEC-01`).
 - D-100: Better Auth's default table names in the shared database, created by a SQL script. WinForms stays unchanged as the fallback until go-live.
 - D-101: first admin from a script; invites wait for stage 3.
 - D-102: what the UI shows when signed in or out.
+- D-103: a user holds one or more roles; none by default. Permissions are the union.
 
 ## API
 
@@ -91,10 +92,10 @@ Two parts, API first (owner decision, 2026-11-01). The API part ends with the AP
 ### Part A: API
 
 1. **Try it first. Done (2026-11-01).** `better-auth` 1.7.15 (MIT) works with Prisma 7 on MariaDB, Express 5, Node 24 type stripping, and the default table names. 26 checks passed: create users with our own role names, sign-in cookie (`HttpOnly`, `SameSite=Lax`, 12 hours), sliding expiry, expired session refused, wrong password and unknown email answer alike, sign-up refused, untrusted origin refused, ban stops an open session at once, role change shows on the next request, sign-out. Telemetry is off by default; set it off explicitly anyway. Not yet seen: the `Secure` flag (needs https) and Better Auth's own rate limiter (off outside production).
-2. SQL script, Prisma models, `resetDatabase`, and the Testcontainers setup.
-3. `config.ts`: `AUTH_SECRET`, `AUTH_BASE_URL`; CORS `credentials: true`.
-4. `createAuth(deps)` in `shared/auth/`, built in `server.ts` and passed to `createApp` like the other dependencies. Mount the handler. Telemetry off.
-5. Role table (`shared/auth/roles.ts`) from D-97.
+2. **Done.** SQL script, Prisma models, `resetDatabase`, and the Testcontainers setup.
+3. **Done.** `config.ts`: `AUTH_SECRET`, `AUTH_BASE_URL`; CORS `credentials: true`.
+4. **Done.** `createAuth(deps)` in `shared/auth/`, built in `server.ts` and passed to `createApp` like the other dependencies. Handler mounted at `/v1/auth`, open for sign-in and sign-out only; telemetry off.
+5. **Done.** Role table (`shared/auth/roles.ts`) from D-97, with `rolesOf` and `permissionsOf` for a stored value that may list several roles (D-103).
 6. `identifyCaller` reads the session; `mountRoutes` checks user permissions.
 7. `GET /v1/me` with the user and permissions.
 8. `npm run users:create-admin` in `api/` (asks for email, name, and password; the password does not echo). `db:seed` adds one local user per role with a known local-only password, listed in `api-standards.md`.
@@ -109,7 +110,7 @@ Two parts, API first (owner decision, 2026-11-01). The API part ends with the AP
 
 ## Not doing
 
-- Email, invites, the create-user page and other user screens, forgot password: stage 3 (D-101, Q-34).
+- Email, invites, the create-user page and other user screens, forgot password: stage 3 (D-101, Q-34). The other Better Auth endpoints stay closed; [better-auth-routes.md](../better-auth-routes.md) lists them and when we might open each.
 - A bearer header or JWT (D-98, D-99).
 - Labeling the 0.2.0 public routes: the lock-down release (D-52).
 - An `Origin` check on our own write routes. `SameSite=Lax` already keeps the cookie off cross-site posts. Add the check with the first command route, since another site under `bowlingmegabucks.com` would count as same-site.

@@ -1,6 +1,6 @@
 /**
  * Every permission a route can ask for (D-96). Names are `area.action`, kept coarse: add one only
- * when two roles must differ. The roles that bundle them (D-97) arrive with sign-in (stage 2).
+ * when two roles must differ. The roles that bundle them (D-97) are in `roles.ts`.
  */
 export const permissions = [
   'registrations.read',

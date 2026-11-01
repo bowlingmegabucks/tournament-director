@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestAuth, createTestUser, testPassword } from '../../test/testAuth.ts'
 import { sessionSeconds, type Auth } from './createAuth.ts'
+import { permissionsOf, rolesOf } from './roles.ts'
 
 async function signInCookie(auth: Auth, email = 'ada@example.com'): Promise<string> {
   const response = await auth.api.signInEmail({
@@ -57,14 +58,31 @@ describe('createAuth', () => {
     expect(database.user).toHaveLength(0)
   })
 
-  it('gives a user made with no role the least powerful one', async () => {
+  it('gives a user made with no role a name that holds no permissions', async () => {
     const { auth, database } = createTestAuth()
 
     await auth.api.createUser({
       body: { email: 'x@example.com', password: testPassword, name: 'X' },
     })
 
-    expect(database.user[0]?.['role']).toBe('scoreKeeper')
+    expect(database.user[0]?.['role']).toBe('none')
+    expect(permissionsOf(String(database.user[0]?.['role']))).toEqual([])
+  })
+
+  it('keeps several roles on one user as a comma list', async () => {
+    const { auth, database } = createTestAuth()
+
+    await auth.api.createUser({
+      body: {
+        email: 'x@example.com',
+        password: testPassword,
+        name: 'X',
+        role: ['director', 'scoreKeeper'],
+      },
+    })
+
+    expect(database.user[0]?.['role']).toBe('director,scoreKeeper')
+    expect(rolesOf(String(database.user[0]?.['role']))).toEqual(['director', 'scoreKeeper'])
   })
 
   it('finds the user behind a session cookie, with their role', async () => {

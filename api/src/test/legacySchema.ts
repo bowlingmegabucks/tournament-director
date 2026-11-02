@@ -86,6 +86,16 @@ export const legacySchemaSql = [
     FOREIGN KEY (\`BowlerId\`)   REFERENCES \`Bowlers\` (\`Id\`),
     FOREIGN KEY (\`DivisionId\`) REFERENCES \`Divisions\` (\`Id\`)
   )`,
+  `CREATE TABLE \`Payments\` (
+    \`Id\`               char(36)     NOT NULL,
+    \`CreatedAtUtc\`     datetime(6)  NOT NULL,
+    \`RegistrationId\`   char(36)     NOT NULL,
+    \`ConfirmationCode\` varchar(43)  NOT NULL,
+    \`Amount\`           decimal(5,2) NOT NULL,
+    PRIMARY KEY (\`Id\`),
+    UNIQUE KEY \`IX_Payments_ConfirmationCode\` (\`ConfirmationCode\`),
+    FOREIGN KEY (\`RegistrationId\`) REFERENCES \`Registrations\` (\`Id\`) ON DELETE CASCADE
+  )`,
   `CREATE TABLE \`SquadScores\` (
     \`BowlerId\` char(36) NOT NULL,
     \`SquadId\`  char(36) NOT NULL,

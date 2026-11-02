@@ -20,6 +20,12 @@ export interface RouteGroup {
   path: string
   access: Access
   router: Router
+  /**
+   * Only these HTTP methods belong to this group; any other passes on to the next group on the
+   * path. This lets one path give each method its own access, such as `GET` and `POST` on
+   * `/v1/registrations` (D-105). HEAD counts as GET.
+   */
+  methods?: string[]
 }
 
 function isAccess(value: unknown): value is Access {
@@ -42,12 +48,15 @@ export function mountRoutes(app: Express, groups: RouteGroup[], meter: Meter): v
     throw new HttpError(status, message)
   }
 
-  for (const { path, access, router } of groups) {
+  for (const { path, access, router, methods } of groups) {
     if (!isAccess(access)) {
       throw new Error(`Route group "${path}" needs an access label`)
     }
     if (access === 'public') {
-      app.use(path, router)
+      app.use(
+        path,
+        onlyMethods(methods, (req, res, next) => router(req, res, next)),
+      )
       continue
     }
     const check: RequestHandler = (_req, res, next) => {
@@ -79,6 +88,24 @@ export function mountRoutes(app: Express, groups: RouteGroup[], meter: Meter): v
       // route that does not accept it.
       reject('forbidden', 403, 'You do not have permission to do this.')
     }
-    app.use(path, check, router)
+    app.use(
+      path,
+      onlyMethods(methods, (req, res, next) => {
+        check(req, res, (error?: unknown) => {
+          if (error) next(error)
+          else router(req, res, next)
+        })
+      }),
+    )
+  }
+}
+
+// Run `handler` for the listed methods and skip it for the rest. No list means every method.
+function onlyMethods(methods: string[] | undefined, handler: RequestHandler): RequestHandler {
+  if (methods === undefined) return handler
+  return (req, res, next) => {
+    const method = req.method === 'HEAD' ? 'GET' : req.method
+    if (methods.includes(method)) handler(req, res, next)
+    else next()
   }
 }

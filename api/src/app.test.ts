@@ -17,6 +17,16 @@ describe('GET /health', () => {
   })
 })
 
+describe('GET /', () => {
+  it('names the API in plain text (API-01, D-111)', async () => {
+    const response = await request(createTestApp()).get('/')
+
+    expect(response.status).toBe(200)
+    expect(response.headers['content-type']).toMatch(/^text\/plain/)
+    expect(response.text).toBe('Northeast Megabucks API')
+  })
+})
+
 describe('unknown routes', () => {
   it('return a JSON 404', async () => {
     const response = await request(createTestApp()).get('/nope')

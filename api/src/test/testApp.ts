@@ -7,6 +7,7 @@ import { createTestAuth, createTestUser, signInCookie } from './testAuth.ts'
 import { createInMemoryDivisionRepository } from '../features/divisions/repository.ts'
 import { createInMemoryLaneRepository } from '../features/lanes/repository.ts'
 import { createInMemoryRegistrationRepository } from '../features/registrations/repository.ts'
+import { createInMemoryRegistrationWriter } from '../features/registrations/writer.ts'
 import { createInMemoryScoreRepository } from '../features/scores/repository.ts'
 import { createInMemorySquadRepository } from '../features/squads/repository.ts'
 import { createInMemorySweeperRepository } from '../features/sweepers/repository.ts'
@@ -21,6 +22,7 @@ export function createTestApp(overrides: Partial<AppDependencies> = {}): Express
     tournaments: createInMemoryTournamentRepository([]),
     divisions: createInMemoryDivisionRepository([]),
     registrations: createInMemoryRegistrationRepository([]),
+    registrationWriter: createInMemoryRegistrationWriter().writer,
     lanes: createInMemoryLaneRepository([]),
     scores: createInMemoryScoreRepository([]),
     squads: createInMemorySquadRepository([]),

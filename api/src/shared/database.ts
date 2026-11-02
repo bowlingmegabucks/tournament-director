@@ -25,7 +25,11 @@ export function withConnectionDefaults(databaseUrl: string): string {
  * The connection opens on the first query, so a down database does not stop startup.
  */
 export function createDatabaseClient(databaseUrl: string): PrismaClient {
-  return new PrismaClient({ adapter: new PrismaMariaDb(withConnectionDefaults(databaseUrl)) })
+  return new PrismaClient({
+    adapter: new PrismaMariaDb(withConnectionDefaults(databaseUrl)),
+    // The SSN is encrypted and legacy owns it. No query reads it, so none can leak it (BWL-17).
+    omit: { bowler: { socialSecurityNumber: true } },
+  })
 }
 
 // Stryker restore all

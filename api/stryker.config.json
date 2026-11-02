@@ -6,6 +6,7 @@
   "mutate": [
     "src/**/*.ts",
     "!src/**/*.test.ts",
+    "!src/**/*.testData.ts",
     "!src/server.ts",
     "!src/instrumentation.ts",
     "!src/test/**",
@@ -16,6 +17,9 @@
     "!src/features/squads/prismaRepository.ts",
     "!src/features/sweepers/prismaRepository.ts",
     "!src/features/registrations/prismaRepository.ts",
+    "!src/features/registrations/prismaWriter.ts",
+    "!src/features/registrations/writer.ts",
+    "!src/openapi/openapi.ts",
     "!src/features/lanes/prismaRepository.ts",
     "!src/features/scores/prismaRepository.ts",
     "!src/db/seedTournaments.ts",

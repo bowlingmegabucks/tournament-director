@@ -224,8 +224,8 @@ export function createApp({
       },
       {
         path: '/v1/registrations',
-        access: { permission: 'registrations.write', apiKey: true }, // API-05, API-07, D-105
-        methods: ['POST', 'PATCH'],
+        access: { permission: 'registrations.write', apiKey: true }, // API-05, API-07, API-08, D-105
+        methods: ['POST', 'PATCH', 'DELETE'],
         router: vendorRegistrations,
       },
       {

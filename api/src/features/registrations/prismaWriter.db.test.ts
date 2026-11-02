@@ -9,6 +9,7 @@ import { createPrismaTournamentRepository } from '../tournaments/prismaRepositor
 import { createPrismaRegistrationWriter } from './prismaWriter.ts'
 import { register } from './register.ts'
 import { parseCreateRequest } from './request.ts'
+import { deleteRegistration } from './delete.ts'
 import { updateRegistration } from './update.ts'
 import { parseUpdateRequest } from './updateRequest.ts'
 
@@ -499,5 +500,77 @@ describe('Prisma registration writer', () => {
       where: { registrationId: created.registrationId },
     })
     expect(after.map((link) => link.squadId)).toEqual([squadTwo])
+  })
+  it('deletes a registration with its squad links and payments, and keeps the bowler (API-08, REG-19)', async () => {
+    const { writer, logger } = setup()
+    const tournamentId = await insertTournament()
+    const divisionId = await insertDivision(tournamentId)
+    const squadId = await insertSession(tournamentId)
+    const bowlerId = await insertLegacyBowler('1234-56789')
+    const deps = {
+      tournaments: createPrismaTournamentRepository(client, logger),
+      divisions: createPrismaDivisionRepository(client, logger),
+      sweepers: createPrismaSweeperRepository(client, logger),
+      writer,
+      now: () => new Date('2026-10-01T12:00:00Z'),
+    }
+    const keep = async (usbcId: string, code: string) => {
+      const parsed = parseCreateRequest(
+        sampleRequest({
+          tournamentId,
+          divisionId,
+          squads: [squadId],
+          sweepers: [],
+          bowler: { ...sampleRequest().registration.bowler, usbcId },
+          payment: { processingSystem: 'Stripe', confirmationCode: code, amount: 50 },
+        }),
+      )
+      if (!parsed.success) throw new Error('bad test request')
+      const created = await register(deps, parsed.data.registration)
+      if (!created.ok) throw new Error('create failed')
+      return created.registrationId
+    }
+    const doomed = await keep('1234-56789', 'a')
+    const kept = await keep('9999-88888', 'b')
+
+    expect(await deleteRegistration(writer, doomed)).toEqual({ ok: true })
+
+    expect(await client.registration.findMany({ select: { id: true } })).toEqual([{ id: kept }])
+    expect(await client.squadRegistration.count()).toBe(1)
+    expect(await client.payment.count()).toBe(1)
+    expect(await client.bowler.count()).toBe(2)
+    expect(await ssnOf(bowlerId)).toBe(legacySsn)
+  })
+
+  it('refuses a delete once the bowler has scores in the tournament (REG-19)', async () => {
+    const { writer, logger } = setup()
+    const tournamentId = await insertTournament()
+    const divisionId = await insertDivision(tournamentId)
+    const squadId = await insertSession(tournamentId)
+    const bowlerId = await insertLegacyBowler('1234-56789')
+    const deps = {
+      tournaments: createPrismaTournamentRepository(client, logger),
+      divisions: createPrismaDivisionRepository(client, logger),
+      sweepers: createPrismaSweeperRepository(client, logger),
+      writer,
+      now: () => new Date('2026-10-01T12:00:00Z'),
+    }
+    const parsed = parseCreateRequest(
+      sampleRequest({ tournamentId, divisionId, squads: [squadId], sweepers: [], payment: null }),
+    )
+    if (!parsed.success) throw new Error('bad test request')
+    const created = await register(deps, parsed.data.registration)
+    if (!created.ok) throw new Error('create failed')
+    await client.$executeRawUnsafe(
+      'INSERT INTO SquadScores (BowlerId, SquadId, Game, Score) VALUES (?, ?, 1, 190)',
+      bowlerId,
+      squadId,
+    )
+
+    const result = await deleteRegistration(writer, created.registrationId)
+
+    expect(result).toMatchObject({ ok: false, reason: 'refused' })
+    expect(await client.registration.count()).toBe(1)
+    expect(await client.squadRegistration.count()).toBe(1)
   })
 })

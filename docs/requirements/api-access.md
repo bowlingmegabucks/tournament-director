@@ -33,8 +33,7 @@ Every mounted route group and who may call it (`app.ts`). "Key" is a valid `x-ap
 | `GET .../registrations` | `registrations.read` | no | Names and USBC IDs (D-46) |
 | `GET .../squads/{sessionId}/lanes`, `/sweepers/{sessionId}/lanes` | `lanes.read` | no | Names and averages (D-59) |
 | `GET .../squads/{sessionId}/recap-sheets`, `/sweepers/{sessionId}/recap-sheets` | `lanes.read` | no | Names and handicaps (D-66) |
-| `POST` and `PATCH /v1/registrations`, `GET /v1/registrations/{id}` | `registrations.write` (create, update), `registrations.read` (get), each with `apiKey: true` | **yes** | **Key-protected in legacy (`API-05`, `API-06`, D-09).** The registration site gets in with the key; staff need the permission. Built on `migrate-registration-create` (see [registration-api.md](registration-api.md)). One path, two access labels, one per method. |
-| `DELETE /v1/registrations/{id}` (**not built**) | `registrations.write`, with `apiKey: true` | **yes** | Slice 3 (D-112). |
+| `POST`, `PATCH`, and `DELETE /v1/registrations`, `GET /v1/registrations/{id}` | `registrations.write` (create, update, delete), `registrations.read` (get), each with `apiKey: true` | **yes** | **Key-protected in legacy (`API-05`, `API-06`, D-09).** The registration site gets in with the key; staff need the permission. Built on `migrate-registration-create` (see [registration-api.md](registration-api.md)). One path, two access labels, one per method. |
 | `GET /`, `GET /openapi/v1.json` | public | ignored | The API name as text (D-111); the OpenAPI document (D-114) |
 
 The legacy API had two kinds of caller: the public (the tournament routes) and the key holder (the registration routes). That is why the key opens only the second group, and only once those routes exist. The key holds no permissions (D-96), so it opens no route that is not labeled `apiKey: true`.

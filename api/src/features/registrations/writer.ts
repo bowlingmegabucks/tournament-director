@@ -66,6 +66,8 @@ export interface RegistrationWriter {
   /** The ids of the squads and sweepers where this bowler has any score (REG-34, REG-36, REG-15). */
   findScoredSessionIds(bowlerId: string): Promise<string[]>
   save(command: SaveRegistration): Promise<void>
+  /** Removes the registration with its squad links and payments. The bowler stays (REG-19). */
+  deleteRegistration(registrationId: string): Promise<void>
   getDetail(registrationId: string): Promise<RegistrationDetail | undefined>
 }
 
@@ -158,6 +160,13 @@ export function createInMemoryRegistrationWriter(seed: InMemoryWriterSeed = {}) 
           confirmationCode: payment.confirmationCode,
         })
       }
+      return Promise.resolve()
+    },
+    deleteRegistration: (registrationId) => {
+      state.registrations = state.registrations.filter(
+        (entry) => entry.registration.id !== registrationId,
+      )
+      state.payments = state.payments.filter((payment) => payment.registrationId !== registrationId)
       return Promise.resolve()
     },
     getDetail: (registrationId) => {

@@ -10,6 +10,7 @@ import { toVendorSquad } from '../squads/types.ts'
 import type { SweeperRepository } from '../sweepers/repository.ts'
 import { toVendorSweeper } from '../sweepers/types.ts'
 import type { TournamentRepository } from '../tournaments/repository.ts'
+import { deleteRegistration } from './delete.ts'
 import { notFoundProblem, toProblem, validation } from './problem.ts'
 import { register } from './register.ts'
 import { parseCreateRequest } from './request.ts'
@@ -223,6 +224,31 @@ export function createVendorRegistrationRouter(deps: VendorRegistrationDependenc
       return
     }
     log.info({ registrationId: id, mode: result.mode }, 'Registration updated')
+    res.status(204).end()
+  })
+
+  router.delete('/:id', async (req, res) => {
+    const { id } = idParams.parse(req.params)
+    const result = await deleteRegistration(writer, id)
+    const log = requestLogger(res, logger)
+    if (!result.ok && result.reason === 'notFound') {
+      res
+        .status(404)
+        .type('application/problem+json')
+        .json(notFoundProblem(traceIdOf(res)))
+      return
+    }
+    if (!result.ok) {
+      log.info({ codes: result.failures.map((failure) => failure.code) }, 'Delete refused')
+      const problem = toProblem(
+        result.failures,
+        'An error occurred while deleting the registration.',
+        traceIdOf(res),
+      )
+      res.status(problem.status).type('application/problem+json').json(problem)
+      return
+    }
+    log.info({ registrationId: id }, 'Registration deleted')
     res.status(204).end()
   })
 

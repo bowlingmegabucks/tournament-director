@@ -144,6 +144,16 @@ export function createPrismaRegistrationWriter(
       )
     },
 
+    async deleteRegistration(registrationId) {
+      await withDatabaseErrors(logger, () =>
+        client.$transaction([
+          client.payment.deleteMany({ where: { registrationId } }),
+          client.squadRegistration.deleteMany({ where: { registrationId } }),
+          client.registration.delete({ where: { id: registrationId } }),
+        ]),
+      )
+    },
+
     async getDetail(registrationId) {
       const row = await withDatabaseErrors(logger, () =>
         client.registration.findUnique({

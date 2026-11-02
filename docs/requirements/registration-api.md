@@ -1,12 +1,12 @@
-# Registration API (create, append, get, update)
+# Registration API (create, append, get, update, delete)
 
-Built on branch `migrate-registration-create`, slices 1 and 2 of 3 (D-112). Migration source: [docs/migration/integration-api.md](../migration/integration-api.md), [registrations.md](../migration/registrations.md), [bowlers.md](../migration/bowlers.md), and [payments.md](../migration/payments.md).
+Built on branch `migrate-registration-create`, all three slices (D-112). Migration source: [docs/migration/integration-api.md](../migration/integration-api.md), [registrations.md](../migration/registrations.md), [bowlers.md](../migration/bowlers.md), and [payments.md](../migration/payments.md).
 
-These are the legacy routes the registration site calls, rebuilt so the site notices nothing (D-09). The desk will call the same routes. `PATCH /v1/registrations/{id}` (`API-07`) is slice 2. **Slice 3** is `DELETE` (`API-08`); until then it answers 404.
+These are the legacy routes the registration site calls, rebuilt so the site notices nothing (D-09). The desk will call the same routes. `PATCH /v1/registrations/{id}` (`API-07`) is slice 2 and `DELETE /v1/registrations/{id}` (`API-08`) is slice 3.
 
 ## Who calls it, and how it behaves
 
-Access is `{ permission: 'registrations.write', apiKey: true }` for `POST` and `PATCH` and `{ permission: 'registrations.read', apiKey: true }` for `GET` (D-105). The registration site sends `x-api-key`; staff sign in. One path carries two access labels, one per method (`methods` on a route group, `mountRoutes.ts`).
+Access is `{ permission: 'registrations.write', apiKey: true }` for `POST`, `PATCH`, and `DELETE` and `{ permission: 'registrations.read', apiKey: true }` for `GET` (D-105). The registration site sends `x-api-key`; staff sign in. One path carries two access labels, one per method (`methods` on a route group, `mountRoutes.ts`).
 
 Two kinds of caller (D-106): a **paid** request carries a payment whose `processingSystem` is not `Manual` and whose `amount` is above 0; any other request is a **desk** request. On create and append both get the same checks (the legacy ones plus D-108). They differ on `PATCH` (D-115).
 
@@ -36,6 +36,7 @@ Two kinds of caller (D-106): a **paid** request carries a payment whose `process
 | REG-37, REG-15 | A new division must belong to the tournament (`400`; unknown is `500`). The eligibility checks (`REG-04`, `REG-05`) run on the new division and the average. A request without a real payment cannot change the division once the bowler has a score: `400` "Cannot change bowler division after scores have been recorded." Eligibility is not re-checked when neither a division nor an average is sent. | Yes: the lock is new on the server (D-117). Eligibility stays a `400` (D-107) | `update.test.ts`, `vendorRoutes.test.ts` |
 | REG-38 | An `average` sent alone is applied. | Yes: legacy ignored it (D-116) | `update.test.ts` |
 | REG-39 | A payment sent is saved (`PAY-02`, `PAY-04`). A code already on this registration is a retry: `204`, nothing else written or checked (D-118). A code on another registration is a `400` (`Payment.AlreadyUsed`). | Yes: legacy gave a database error and a `500` (D-118) | `update.test.ts` |
+| API-08, REG-19 | `DELETE /v1/registrations/{id}` removes the registration with its squad entries and payments and answers `204` with no body. The bowler record stays. An unknown id is a `404` problem body. A bowler with any score in the tournament gets a `400` "Cannot delete registration with scores." (`Registration.HasScores`) and nothing is deleted. A complete squad needs no check of its own: completing writes a score for every entry (D-10). The delete is one transaction. | Same as legacy | `api/src/features/registrations/delete.test.ts`, `vendorRoutes.test.ts`, `prismaWriter.db.test.ts` |
 | REG-01 | A bowler (found by exact USBC ID) with a registration in the tournament makes the request an append. Two bowler records with one USBC ID give a `500` (`Bowler.Duplicate`) and no write. | Yes: the empty-USBC-ID lookup defect cannot happen, since the API requires an ID (D-02) | `api/src/features/registrations/register.test.ts`, `prismaWriter.db.test.ts` |
 | REG-02 | The bowler passes the bowler rules (`BWL-*` below), checked on the bowler as it will be stored. | | `api/src/features/registrations/register.test.ts`, `bowlerRules.test.ts` |
 | REG-03 | The registration has at least one qualifying squad, counting squads already on it. | | `api/src/features/registrations/register.test.ts` |
@@ -66,6 +67,7 @@ Two kinds of caller (D-106): a **paid** request carries a payment whose `process
 | `GET /openapi/v1.json` | | `200` OpenAPI 3.1 | | New |
 | `POST /v1/registrations` | `API-05` body | `201 { registrationId }`, `Location` | `400` problem (checks, eligibility, ids); `401` no or wrong key and no sign-in; `403` signed in without `registrations.write`; `500` problem (unknown tournament or division, duplicate bowler record, unexpected); `503` database down | Yes |
 | `PATCH /v1/registrations/{id}` | `API-07` body | `204` | `400` problem (body, id mismatch, rules); `401`; `403` without `registrations.write`; `500` problem (unknown registration, division, or tournament; unexpected) | Yes |
+| `DELETE /v1/registrations/{id}` | | `204` | `400` problem (scores) or not a UUID; `401`; `403` without `registrations.write`; `404` problem; `500` unexpected | Yes |
 | `GET /v1/registrations/{id}` | | `200 { registration }` (`API-06`) | `400` not a UUID; `401`; `403` without `registrations.read`; `404` problem | Yes |
 
 `403` for a user without the permission is new and vendor-invisible: the registration site holds the key.

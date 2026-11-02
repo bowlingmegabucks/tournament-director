@@ -664,3 +664,119 @@ describe('PATCH /v1/registrations/{id} (API-07)', () => {
     })
   })
 })
+
+describe('DELETE /v1/registrations/{id} (API-08)', () => {
+  async function registered() {
+    const context = setup()
+    const created = await asVendor(request(context.app).post('/v1/registrations')).send(
+      context.body(),
+    )
+    const id = createRegistrationResponseSchema.parse(created.body).registrationId
+    const remove = (path = id) => asVendor(request(context.app).delete(`/v1/registrations/${path}`))
+    return { ...context, id, remove }
+  }
+
+  it('deletes the registration and answers 204 with no body (REG-19)', async () => {
+    const { remove, state, app, id } = await registered()
+
+    const response = await remove()
+
+    expect(response.status).toBe(204)
+    expect(response.text).toBe('')
+    expect(state.registrations).toEqual([])
+    expect(state.bowlers).toHaveLength(1)
+    const again = await asVendor(request(app).get(`/v1/registrations/${id}`))
+    expect(again.status).toBe(404)
+  })
+
+  it('answers an unknown registration with a 404 problem (API-08)', async () => {
+    const { remove } = await registered()
+
+    const response = await remove(faker.string.uuid())
+
+    expect(response.status).toBe(404)
+    expect(response.headers['content-type']).toMatch(/application\/problem\+json/)
+    expect(problemSchema.parse(response.body).message).toBe('Registration not found')
+  })
+
+  it('answers a path that is not a UUID with 400', async () => {
+    const { remove } = await registered()
+
+    expect((await remove('nope')).status).toBe(400)
+  })
+
+  it('answers a registration with scores with a 400 problem and keeps it (REG-19)', async () => {
+    const { remove, state, squad } = await registered()
+    const bowlerId = state.bowlers[0]?.id ?? ''
+    state.scores.push({ bowlerId, sessionId: squad.id })
+
+    const response = await remove()
+
+    expect(response.status).toBe(400)
+    const problem = problemSchema.parse(response.body)
+    expect(problem.detail).toBe('An error occurred while deleting the registration.')
+    expect(problem.errors).toEqual([
+      { code: 'Registration.HasScores', description: 'Cannot delete registration with scores.' },
+    ])
+    expect(state.registrations).toHaveLength(1)
+  })
+
+  it('logs the id after a delete, and the codes after a refusal', async () => {
+    const captured = createCapturedLogger()
+    const context = setup({ logger: captured.logger })
+    const created = await asVendor(request(context.app).post('/v1/registrations')).send(
+      context.body(),
+    )
+    const id = createRegistrationResponseSchema.parse(created.body).registrationId
+    context.state.scores.push({
+      bowlerId: context.state.bowlers[0]?.id ?? '',
+      sessionId: context.squad.id,
+    })
+
+    await asVendor(request(context.app).delete(`/v1/registrations/${id}`))
+    context.state.scores.length = 0
+    await asVendor(request(context.app).delete(`/v1/registrations/${id}`))
+
+    const records = captured.records()
+    expect(records.find((r) => r['msg'] === 'Delete refused')?.['codes']).toEqual([
+      'Registration.HasScores',
+    ])
+    expect(records.find((r) => r['msg'] === 'Registration deleted')).toMatchObject({
+      registrationId: id,
+    })
+  })
+
+  it('answers a crash with the legacy text (API-13)', async () => {
+    const { deps, id } = await registered()
+    deps.registrationWriter.getDetail = () => Promise.reject(new Error('secret'))
+
+    const response = await asVendor(request(createTestApp(deps)).delete(`/v1/registrations/${id}`))
+
+    expect(response.status).toBe(500)
+    expect(response.body.detail).toBe('An unexpected error occurred while processing your request.')
+  })
+
+  describe('who may call it (D-105)', () => {
+    it('answers 401 with no key and no sign-in', async () => {
+      const { app, id } = await registered()
+
+      expect((await request(app).delete(`/v1/registrations/${id}`)).status).toBe(401)
+    })
+
+    it('lets a signed-in director delete, and refuses a score keeper', async () => {
+      const { deps, id, state } = await registered()
+
+      const keeper = await request(createSignedInTestApp(deps, 'scoreKeeper')).delete(
+        `/v1/registrations/${id}`,
+      )
+      expect(keeper.status).toBe(403)
+      expect(state.registrations).toHaveLength(1)
+
+      const director = await request(createSignedInTestApp(deps, 'director')).delete(
+        `/v1/registrations/${id}`,
+      )
+      expect(director.status).toBe(204)
+      expect(state.registrations).toEqual([])
+    })
+  })
+})

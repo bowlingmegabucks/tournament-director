@@ -9,7 +9,7 @@ import {
 } from '../features/registrations/vendorTypes.ts'
 import { tournamentDetailSchema, tournamentListSchema } from '../features/tournaments/types.ts'
 
-type Method = 'get' | 'post' | 'patch'
+type Method = 'get' | 'post' | 'patch' | 'delete'
 
 /**
  * The routes the registration site can call (`API-01` to `API-06`, D-09). Add each vendor route here
@@ -24,6 +24,7 @@ export const vendorRoutes: { method: Method; path: string }[] = [
   { method: 'post', path: '/v1/registrations' },
   { method: 'get', path: '/v1/registrations/{id}' },
   { method: 'patch', path: '/v1/registrations/{id}' },
+  { method: 'delete', path: '/v1/registrations/{id}' },
 ]
 
 // Request bodies use the input shape (before trimming); responses use what we send.
@@ -178,6 +179,20 @@ export function buildOpenApiDocument() {
             '401': { description: 'The key is missing or wrong.' },
             '429': problem('Too many requests.'),
             '500': problem('The registration does not exist, or an unexpected error.'),
+          },
+        },
+        delete: {
+          summary: 'Deletes a registration.',
+          description:
+            'Removes the registration with its squad entries and payments. The bowler record stays. Refused with 400 once the bowler has a score in the tournament.',
+          operationId: 'deleteRegistration',
+          security: protectedByKey,
+          parameters: [idParameter],
+          responses: {
+            '204': { description: 'The registration was deleted.' },
+            '400': problem('The bowler has scores in the tournament.'),
+            '401': { description: 'The key is missing or wrong.' },
+            '404': problem('No registration has this id.'),
           },
         },
       },

@@ -88,7 +88,9 @@ export async function updateRegistration(
   const scoredIds = await writer.findScoredSessionIds(stored.bowlerId)
   const found = await writer.findSessions([
     ...stored.sessionIds,
+    // Stryker disable next-line ArrayDeclaration: an extra unknown id finds no session.
     ...(squadIds ?? []),
+    // Stryker disable next-line ArrayDeclaration: an extra unknown id finds no session.
     ...(sweeperIds ?? []),
     ...scoredIds,
   ])

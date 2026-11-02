@@ -122,7 +122,7 @@ One list for everything the new app must decide. When a question is answered, mo
 | D-115 | **`PATCH` follows the two profiles (D-106) exactly.** A `PATCH` with a real payment (not `Manual`, amount above 0) gets the legacy checks. Any other `PATCH` is a desk request and also gets D-04 (keep one qualifying squad), D-10 (no dropping a complete squad), D-110 (super sweeper lock per bowler), and D-117 (division lock). The registration site's refund `PATCH` (D-11) carries no payment, so it gets these too; dropping the last squad becomes a `DELETE`. Vendor-visible (VC-04, VC-07): the site gets a change note. | Owner decision (2026-11-02). Follows D-106 as written; the key is not a business rule. | `API-07`, `REG-31`, `REG-34`, D-04, D-10, D-106, D-110 | 2026-11-02 |
 | D-116 | **`average` on `PATCH` applies without `divisionId`.** Legacy ignored it (`REG-38`, a defect). An average alone now changes the stored average; the eligibility checks run on the new average and the current division. Looser than legacy for the caller. | Owner decision (2026-11-02). | `REG-38`, `API-07` | 2026-11-02 |
 | D-117 | **A desk `PATCH` cannot change the division once the bowler has a score** (squad or sweeper): 400 "Cannot change bowler division after scores have been recorded." A paid `PATCH` keeps legacy behavior. | Owner decision (2026-11-02). Same lock the desk screen has (`REG-15`), now on the server. | `REG-15`, `REG-37`, D-10 | 2026-11-02 |
-| D-118 | **A `PATCH` with a payment code already on file is a retry:** `204`, nothing else written or checked. Same as D-109. | Owner decision (2026-11-02). | `REG-39`, `PAY-03`, D-109 | 2026-11-02 |
+| D-118 | **A `PATCH` with a payment code already on file is a retry:** `204`, nothing else written or checked. Same as D-109. A code held by a *different* registration is a 400 (`Payment.AlreadyUsed`), so a payment is never dropped silently (our addition). | Owner decision (2026-11-02). | `REG-39`, `PAY-03`, D-109 | 2026-11-02 |
 | D-09 | **The integration API matches legacy as exactly as it can.** Any change the registration site would notice needs a reason, a discussion, and a written change doc for the vendor before we build it. Candidates are listed in [integration-api.md](integration-api.md#candidate-vendor-changes). | Owner decision. The vendor's system depends on the current contract. | `API-*` | 2026-10-20 |
 
 ## Open questions
@@ -152,7 +152,7 @@ Legacy behavior to fix, not copy (D-02).
 | `REG-07`, `API-10` | API re-registration erases the bowler's SSN, clears date of birth, and turns a missing gender into Female. **Fixed** (D-05; D-113 makes a missing gender Male) |
 | `REG-01` | Empty USBC ID matches every bowler with no USBC ID: false "already registered", or a lookup failure. **Fixed** for the API, which requires an ID (`API-09e`) |
 | create (`REG-02` to `REG-08`) | No check that division and squads belong to the tournament or that squads are open. **Fixed** (D-108) |
-| `REG-38` | API ignores an average sent without a division |
+| `REG-38` | API ignores an average sent without a division. **Fixed** (D-116) |
 | `REG-37` | API allows a division change after scores; the desk does not |
 | `SCR-05`, `SCR-06` | A bowler who fails score validation has their saved scores deleted |
 | `RES-08` | Crash when no one advances but a previous advancer bowled; crash when not enough bowlers to fill cash spots. **Fixed** (D-81, D-02) |
@@ -160,6 +160,6 @@ Legacy behavior to fix, not copy (D-02).
 | `TRN-09`, `RES-28` | Super sweeper cash ratio 0 divides by zero. **Fixed** for the results: a clear 422 message (D-93, D-17); the save check waits for tournament edit (D-13) |
 | `API-12` | Not found and conflict errors return HTTP 500. **Kept until a vendor change is agreed (D-09)** |
 | `API-14` | Rate limit runs before auth, so the authenticated limit never applies. **Vendor-visible; see D-09** |
-| `REG-31` | `PATCH` can remove every qualifying squad (D-04) |
+| `REG-31` | `PATCH` can remove every qualifying squad (D-04). **Fixed** for requests without a real payment (D-115) |
 | `SQD-17` | The server does not lock complete squads; only the screens do (D-10) |
 | `SEC-13` | API logs full requests, including personal data |

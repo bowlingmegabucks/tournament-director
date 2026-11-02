@@ -28,6 +28,8 @@ interface Options {
   completeSquad?: boolean
   superSweeper?: boolean
   scoredOn?: ('squad' | 'sweeper')[]
+  /** The tournament has a second sweeper the bowler is not on. */
+  secondSweeper?: boolean
 }
 
 /**
@@ -41,6 +43,7 @@ function setup(options: Options = {}) {
   const squad = session('squad', tournament.id, options.completeSquad)
   const secondSquad = session('squad', tournament.id)
   const sweeper = session('sweeper', tournament.id)
+  const extraSweeper = session('sweeper', tournament.id)
   const bowler = createCommonBowler()
   const registrationId = faker.string.uuid()
   const scores = (options.scoredOn ?? []).map((kind) => ({
@@ -53,7 +56,7 @@ function setup(options: Options = {}) {
       { id: division.id, tournamentId: tournament.id },
       { id: otherDivision.id, tournamentId: tournament.id },
     ],
-    sessions: [squad, secondSquad, sweeper],
+    sessions: [squad, secondSquad, sweeper, ...(options.secondSweeper ? [extraSweeper] : [])],
     registrations: [
       {
         tournamentId: tournament.id,
@@ -76,9 +79,12 @@ function setup(options: Options = {}) {
       { tournamentId: tournament.id, division },
       { tournamentId: tournament.id, division: otherDivision },
     ]),
-    sweepers: createInMemorySweeperRepository([
-      { tournamentId: tournament.id, sweeper: createSweeper({ id: sweeper.id }) },
-    ]),
+    sweepers: createInMemorySweeperRepository(
+      [sweeper, ...(options.secondSweeper ? [extraSweeper] : [])].map((entry) => ({
+        tournamentId: tournament.id,
+        sweeper: createSweeper({ id: entry.id }),
+      })),
+    ),
     writer,
     now: () => now,
   }
@@ -97,6 +103,7 @@ function setup(options: Options = {}) {
     squad,
     secondSquad,
     sweeper,
+    extraSweeper,
     division,
     otherDivision,
     tournament,
@@ -126,7 +133,12 @@ describe('request shape (API-07)', () => {
     const parsed = parseUpdateRequest({ registration: { registrationId: 'nope' } })
 
     expect(parsed).toMatchObject({ success: false })
-    expect(!parsed.success && parsed.failures[0]?.code).toBe('Registration.IdInvalid')
+    expect(!parsed.success && parsed.failures).toEqual([
+      expect.objectContaining({
+        code: 'Registration.IdInvalid',
+        description: 'Invalid Registration ID',
+      }),
+    ])
   })
 
   it('names each bad list and the payment', () => {
@@ -139,10 +151,10 @@ describe('request shape (API-07)', () => {
       },
     })
 
-    expect(!parsed.success && parsed.failures.map((f) => f.code)).toEqual([
-      'Registration.SquadIdsInvalid',
-      'Registration.SweeperIdsInvalid',
-      'Payment.Invalid',
+    expect(!parsed.success && parsed.failures.map((f) => [f.code, f.description])).toEqual([
+      ['Registration.SquadIdsInvalid', 'Invalid squad IDs'],
+      ['Registration.SweeperIdsInvalid', 'Invalid sweeper IDs'],
+      ['Payment.Invalid', 'The payment is not valid.'],
     ])
   })
 
@@ -176,6 +188,40 @@ describe('updating a registration (API-07)', () => {
         kind: 'other',
         code: 'Registration.NotFound',
         description: `Registration with ID ${id} not found.`,
+      }),
+    ])
+  })
+})
+
+describe('missing records', () => {
+  it('reports a tournament that is gone as a failure that is not a validation error', async () => {
+    const { deps, input, registrationId } = setup()
+    const empty = { ...deps, tournaments: createInMemoryTournamentRepository([]) }
+
+    const failures = await failuresOf(updateRegistration(empty, registrationId, input()))
+
+    expect(failures).toEqual([
+      expect.objectContaining({
+        kind: 'other',
+        code: 'Tournament.NotFound',
+        description: 'The specified tournament does not exist.',
+      }),
+    ])
+  })
+
+  it('reports a division the writer knows but the division list does not', async () => {
+    const { deps, input, registrationId, tournament } = setup()
+    const hidden = createDivision()
+    deps.writer.findDivisionTournament = () => Promise.resolve(tournament.id)
+    const failures = await failuresOf(
+      updateRegistration(deps, registrationId, input({ divisionId: hidden.id })),
+    )
+
+    expect(failures).toEqual([
+      expect.objectContaining({
+        kind: 'other',
+        code: 'Division.NotFound',
+        description: 'The specified division does not exist.',
       }),
     ])
   })
@@ -417,6 +463,28 @@ describe('super sweeper (REG-35, REG-36, D-110)', () => {
     expect(failures.map((f) => f.code)).toEqual(['Registration.SuperSweeperNeedsAllSweepers'])
   })
 
+  it('refuses it when only some of the tournament sweepers are on the list (REG-35)', async () => {
+    const { deps, input, registrationId } = setup({ secondSweeper: true })
+
+    const failures = await failuresOf(
+      updateRegistration(deps, registrationId, input({ superSweeper: true })),
+    )
+
+    expect(failures.map((f) => f.code)).toEqual(['Registration.SuperSweeperNeedsAllSweepers'])
+  })
+
+  it('accepts it when the list holds every sweeper (REG-35)', async () => {
+    const { deps, input, registrationId, sweeper, extraSweeper } = setup({ secondSweeper: true })
+
+    const result = await updateRegistration(
+      deps,
+      registrationId,
+      input({ superSweeper: true, sweeperIds: [sweeper.id, extraSweeper.id] }),
+    )
+
+    expect(result.ok).toBe(true)
+  })
+
   it('lets it stay on when the request repeats the value (REG-36)', async () => {
     const { deps, input, registrationId } = setup({ superSweeper: true, scoredOn: ['sweeper'] })
 
@@ -514,6 +582,35 @@ describe('division and average (REG-15, REG-37, REG-38)', () => {
 
     expect(failures.map((f) => f.kind)).toEqual(['validation'])
     expect(failures[0]?.description).toMatch(/average/i)
+  })
+
+  it('does not re-check the division when no division or average is sent (REG-37)', async () => {
+    const { deps, input, registrationId, stored } = setup({ division: { minimumAverage: 200 } })
+
+    const result = await updateRegistration(deps, registrationId, input({ superSweeper: true }))
+
+    expect(result.ok).toBe(true)
+    expect(stored()?.superSweeper).toBe(true)
+  })
+
+  it('checks the new division, not the old one (REG-37)', async () => {
+    const { deps, input, registrationId, division, otherDivision } = setup({
+      division: { maximumAverage: 150 },
+    })
+
+    const toOther = await updateRegistration(
+      deps,
+      registrationId,
+      input({ divisionId: otherDivision.id }),
+    )
+    const backToLimited = await updateRegistration(
+      deps,
+      registrationId,
+      input({ divisionId: division.id }),
+    )
+
+    expect(toOther.ok).toBe(true)
+    expect(backToLimited.ok).toBe(false)
   })
 
   it('applies an average sent without a division (REG-38, D-116)', async () => {
@@ -630,7 +727,11 @@ describe('payment (REG-39, D-118)', () => {
     )
 
     expect(failures).toEqual([
-      expect.objectContaining({ kind: 'validation', code: 'Payment.AlreadyUsed' }),
+      expect.objectContaining({
+        kind: 'validation',
+        code: 'Payment.AlreadyUsed',
+        description: 'The payment confirmation belongs to another registration.',
+      }),
     ])
     expect(state.payments).toHaveLength(1)
   })

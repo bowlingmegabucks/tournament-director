@@ -83,16 +83,16 @@ Every part is optional; only the parts sent change.
 
 | ID | Rule | Status |
 | --- | --- | --- |
-| REG-30 | Not found: 404 "Registration with ID {id} not found." |  |
-| REG-31 | `squadIds` and `sweeperIds` are **full replacement** lists. If only one is sent, the other keeps its current value. Legacy accepts an empty `squadIds`, leaving no qualifying squad. **D-04:** reject that. |  |
-| REG-32 | Every squad and sweeper id must belong to the tournament ("Invalid squad IDs" / "Invalid sweeper IDs"). |  |
-| REG-33 | Added squads or sweepers must not be complete ("Cannot add squad(s) that are already complete."). |  |
-| REG-34 | A removed squad or sweeper must have no scores for this bowler ("Bowler has already bowled in removed squads."). Dropping a squad this way is how the site refunds an entry (D-11). **D-10:** also refuse to drop a complete squad, scores or not. |  |
-| REG-35 | If super sweeper is on (now or in the request), the sweeper list must include every sweeper ("Super Sweeper cannot be enrolled when not all sweepers are registered."). |  |
-| REG-36 | Changing `superSweeper` is blocked once **any** bowler has a sweeper score in the tournament ("Cannot change Super Sweeper when sweeper scores have been recorded."). Turning it on also needs every sweeper. See Q-07. |  |
-| REG-37 | `divisionId` must belong to the tournament ("Division ID is not valid for the tournament."). The eligibility checks (`REG-04`, `REG-05`) run against the new division. |  |
-| REG-38 | `average` is applied **only when `divisionId` is also sent**. An average alone is ignored. **Defect.** |  |
-| REG-39 | A `payment` is added. |  |
+| REG-30 | Not found: 404 "Registration with ID {id} not found." | Done, differs (API-12 kept: 500) |
+| REG-31 | `squadIds` and `sweeperIds` are **full replacement** lists. If only one is sent, the other keeps its current value. Legacy accepts an empty `squadIds`, leaving no qualifying squad. **D-04:** reject that. | Done, differs (D-04, D-115) |
+| REG-32 | Every squad and sweeper id must belong to the tournament ("Invalid squad IDs" / "Invalid sweeper IDs"). | Done |
+| REG-33 | Added squads or sweepers must not be complete ("Cannot add squad(s) that are already complete."). | Done |
+| REG-34 | A removed squad or sweeper must have no scores for this bowler ("Bowler has already bowled in removed squads."). Dropping a squad this way is how the site refunds an entry (D-11). **D-10:** also refuse to drop a complete squad, scores or not. | Done, differs (D-10, D-115) |
+| REG-35 | If super sweeper is on (now or in the request), the sweeper list must include every sweeper ("Super Sweeper cannot be enrolled when not all sweepers are registered."). | Done |
+| REG-36 | Changing `superSweeper` is blocked once **any** bowler has a sweeper score in the tournament ("Cannot change Super Sweeper when sweeper scores have been recorded."). Turning it on also needs every sweeper. See Q-07. | Done, differs (D-110) |
+| REG-37 | `divisionId` must belong to the tournament ("Division ID is not valid for the tournament."). The eligibility checks (`REG-04`, `REG-05`) run against the new division. | Done |
+| REG-38 | `average` is applied **only when `divisionId` is also sent**. An average alone is ignored. **Defect.** | Done, differs (D-116) |
+| REG-39 | A `payment` is added. | Done, differs (D-118) |
 
 The API does not block a division change after scores exist. The desk does (`REG-15`).
 
@@ -100,7 +100,7 @@ The API does not block a division change after scores exist. The desk does (`REG
 
 | ID | Rule | Status |
 | --- | --- | --- |
-| REG-15 | **Change division.** Blocked if the bowler has any score in the tournament (squad or sweeper): "Cannot change bowler division after scores have been recorded." The screen also edits gender, date of birth, USBC ID, and average; eligibility runs on the new values. Saves the division and average on the registration and the other three on the bowler. |  |
+| REG-15 | **Change division.** Blocked if the bowler has any score in the tournament (squad or sweeper): "Cannot change bowler division after scores have been recorded." The screen also edits gender, date of birth, USBC ID, and average; eligibility runs on the new values. Saves the division and average on the registration and the other three on the bowler. | Server side for the API `PATCH` only: desk requests (D-117). Screen later |
 | REG-16 | **Change average.** Empty is allowed. Otherwise 1 to 300 ("Average must be greater than 0.", "Average must be less than or equal to 300."). No eligibility check. Handicap and results change at once, since they are computed live. See Q-08. |  |
 | REG-17 | **Add super sweeper.** Confirm first. Fails if: any of the bowler's sweepers is complete; already in; the tournament has no sweepers; the bowler is not in every sweeper. |  |
 | REG-18 | **Remove super sweeper.** Confirm first. Fails if not in, or if the bowler has any sweeper score in the tournament. |  |

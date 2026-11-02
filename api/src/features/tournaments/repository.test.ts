@@ -90,9 +90,9 @@ describe('in-memory tournament repository settings (TRN-21)', () => {
     ).toEqual({ games: 5, finalsRatio: 8, cashRatio: 5, superSweeperCashRatio: 8 })
   })
 
-  it('gets nothing for an unknown id', async () => {
+  it('gets nothing for an unknown id, even when others are stored', async () => {
     expect(
-      await createInMemoryTournamentRepository([]).getSettings(
+      await createInMemoryTournamentRepository([createTournament()]).getSettings(
         '7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01',
       ),
     ).toBeUndefined()

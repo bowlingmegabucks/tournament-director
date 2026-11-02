@@ -20,11 +20,14 @@ export type FieldErrors = Record<string, string>
 const missing = (value: unknown) => value === undefined || value === null || value === ''
 
 function text(label: string) {
-  return z
-    .string({ error: (issue) => (missing(issue.input) ? `${label} is required` : 'Enter text') })
-    .trim()
-    .min(1, `${label} is required`)
-    .max(100, `${label} cannot be longer than 100 characters`)
+  return (
+    z
+      .string({ error: (issue) => (missing(issue.input) ? `${label} is required` : 'Enter text') })
+      .trim()
+      // Stryker disable next-line StringLiteral: an empty message falls back to the error function above, which says the same.
+      .min(1, `${label} is required`)
+      .max(100, `${label} cannot be longer than 100 characters`)
+  )
 }
 
 function date(label: string) {
@@ -44,6 +47,7 @@ function amount(label: string) {
 // 7.55 * 100 is not exactly 755 in floating point, so allow a tiny error.
 function hasAtMostDecimals(value: number, places: number): boolean {
   const scaled = value * 10 ** places
+  // Stryker disable next-line EqualityOperator: a difference of exactly 1e-6 cannot occur for two or fewer places.
   return Math.abs(scaled - Math.round(scaled)) < 1e-6
 }
 

@@ -6,12 +6,16 @@ import type { TournamentWriter } from './writer.ts'
 
 const duplicateMessage = 'A tournament with this name and start date already exists'
 
-// A body that is not JSON is a 400 in the same shape as any other bad body (D-121). Anything else
+// A body that is not JSON is a 400, and one over the limit a 413, in the same shape as any other bad body (D-121). Anything else
 // goes on to the app's handler.
 const badJson: ErrorRequestHandler = (err: unknown, _req, res, next) => {
   const type = typeof err === 'object' && err !== null && 'type' in err ? err.type : undefined
   if (type === 'entity.parse.failed') {
     res.status(400).json({ message: 'The request body is not valid JSON.', errors: {} })
+    return
+  }
+  if (type === 'entity.too.large') {
+    res.status(413).json({ message: 'The request body is too large.', errors: {} })
     return
   }
   next(err)

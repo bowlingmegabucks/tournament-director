@@ -28,7 +28,7 @@ export function createInMemoryTournamentWriter(seed: CreatedTournament[] = []) {
       if (stored.some((existing) => sameTournament(existing, input))) {
         return Promise.resolve({ duplicate: true })
       }
-      const created = { id: randomUUID(), ...input }
+      const created = { ...input, id: randomUUID() }
       stored.push(created)
       return Promise.resolve({ created: { ...created } })
     },

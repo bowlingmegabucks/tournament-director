@@ -34,6 +34,7 @@ describe('parseCreateTournament', () => {
       ['empty', '', 'Name is required'],
       ['only spaces', '   ', 'Name is required'],
       ['missing', undefined, 'Name is required'],
+      ['null', null, 'Name is required'],
       ['101 characters', 'x'.repeat(101), 'Name cannot be longer than 100 characters'],
       ['a number', 5, 'Enter text'],
     ])('refuses a name that is %s', (_label, name, message) => {
@@ -95,6 +96,7 @@ describe('parseCreateTournament', () => {
       [10.123, 'Use at most two decimal places'],
       ['60', 'Enter a number'],
       [undefined, 'Entry fee is required'],
+      [null, 'Entry fee is required'],
     ])('refuses %j', (entryFee, message) => {
       expect(errorsFor({ entryFee })).toEqual({ entryFee: message })
     })

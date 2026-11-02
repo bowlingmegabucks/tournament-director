@@ -97,6 +97,15 @@ describe('POST /v1/tournaments', () => {
     expect(response.body).toEqual({ message: 'The request body is not valid JSON.', errors: {} })
   })
 
+  it('answers 413 for a body over the limit (D-121)', async () => {
+    const response = await request(createSignedInTestApp())
+      .post('/v1/tournaments')
+      .send({ ...body, name: 'x'.repeat(11_000) })
+
+    expect(response.status).toBe(413)
+    expect(response.body).toEqual({ message: 'The request body is too large.', errors: {} })
+  })
+
   it('answers 400 for a missing body (D-121)', async () => {
     const response = await request(createSignedInTestApp()).post('/v1/tournaments')
 

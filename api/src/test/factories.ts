@@ -10,6 +10,7 @@ import {
 import type { Registration } from '../features/registrations/types.ts'
 import type { Squad } from '../features/squads/types.ts'
 import type { Sweeper } from '../features/sweepers/types.ts'
+import type { NewTournament } from '../features/tournaments/createRequest.ts'
 import type { Tournament } from '../features/tournaments/types.ts'
 
 export function createTournament(overrides: Partial<Tournament> = {}): Tournament {
@@ -20,6 +21,21 @@ export function createTournament(overrides: Partial<Tournament> = {}): Tournamen
     endDate: '2026-10-25',
     entryFee: faker.number.int({ min: 20, max: 120 }),
     bowlingCenter: `${faker.company.name()} Lanes`,
+    ...overrides,
+  }
+}
+
+export function createNewTournament(overrides: Partial<NewTournament> = {}): NewTournament {
+  return {
+    name: `${faker.location.city()} Open`,
+    startDate: '2026-10-23',
+    endDate: '2026-10-25',
+    entryFee: faker.number.int({ min: 20, max: 120 }),
+    bowlingCenter: `${faker.company.name()} Lanes`,
+    games: 5,
+    finalsRatio: 8,
+    cashRatio: 5,
+    superSweeperCashRatio: 4,
     ...overrides,
   }
 }

@@ -43,7 +43,7 @@ What the user sees and can do.
 
 | Feature                                         | File                                             |
 | ----------------------------------------------- | ------------------------------------------------ |
-| Tournaments (list, Home card, overview)         | [tournaments.md](tournaments.md)                 |
+| Tournaments (create, list, Home card, overview) | [tournaments.md](tournaments.md)                 |
 | Divisions (list)                                | [divisions.md](divisions.md)                     |
 | Squads and sweepers (lists)                     | [squads-and-sweepers.md](squads-and-sweepers.md) |
 | Registrations (list)                            | [registrations.md](registrations.md)             |

@@ -155,19 +155,19 @@ One list for everything the new app must decide. When a question is answered, mo
 
 Legacy behavior to fix, not copy (D-02).
 
-| Rule                          | Defect                                                                                                                                                         |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `REG-07`, `API-10`            | API re-registration erases the bowler's SSN, clears date of birth, and turns a missing gender into Female. **Fixed** (D-05; D-113 makes a missing gender Male) |
-| `REG-01`                      | Empty USBC ID matches every bowler with no USBC ID: false "already registered", or a lookup failure. **Fixed** for the API, which requires an ID (`API-09e`)   |
-| create (`REG-02` to `REG-08`) | No check that division and squads belong to the tournament or that squads are open. **Fixed** (D-108)                                                          |
-| `REG-38`                      | API ignores an average sent without a division. **Fixed** (D-116)                                                                                              |
-| `REG-37`                      | API allows a division change after scores; the desk does not                                                                                                   |
-| `SCR-05`, `SCR-06`            | A bowler who fails score validation has their saved scores deleted                                                                                             |
-| `RES-08`                      | Crash when no one advances but a previous advancer bowled; crash when not enough bowlers to fill cash spots. **Fixed** (D-81, D-02)                            |
-| `RES-27`                      | Super sweeper uses the first sweeper's bonus pins for every game. **Fixed** (D-90, D-02)                                                                       |
-| `TRN-09`, `RES-28`            | Super sweeper cash ratio 0 divides by zero. **Fixed** for the results: a clear 422 message (D-93, D-17); the save check waits for tournament edit (D-13)       |
-| `API-12`                      | Not found and conflict errors return HTTP 500. **Kept until a vendor change is agreed (D-09)**                                                                 |
-| `API-14`                      | Rate limit runs before auth, so the authenticated limit never applies. **Vendor-visible; see D-09**                                                            |
-| `REG-31`                      | `PATCH` can remove every qualifying squad (D-04). **Fixed** for requests without a real payment (D-115)                                                        |
-| `SQD-17`                      | The server does not lock complete squads; only the screens do (D-10)                                                                                           |
-| `SEC-13`                      | API logs full requests, including personal data                                                                                                                |
+| Rule                          | Defect                                                                                                                                                                               |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `REG-07`, `API-10`            | API re-registration erases the bowler's SSN, clears date of birth, and turns a missing gender into Female. **Fixed** (D-05; D-113 makes a missing gender Male)                       |
+| `REG-01`                      | Empty USBC ID matches every bowler with no USBC ID: false "already registered", or a lookup failure. **Fixed** for the API, which requires an ID (`API-09e`)                         |
+| create (`REG-02` to `REG-08`) | No check that division and squads belong to the tournament or that squads are open. **Fixed** (D-108)                                                                                |
+| `REG-38`                      | API ignores an average sent without a division. **Fixed** (D-116)                                                                                                                    |
+| `REG-37`                      | API allows a division change after scores; the desk does not                                                                                                                         |
+| `SCR-05`, `SCR-06`            | A bowler who fails score validation has their saved scores deleted                                                                                                                   |
+| `RES-08`                      | Crash when no one advances but a previous advancer bowled; crash when not enough bowlers to fill cash spots. **Fixed** (D-81, D-02)                                                  |
+| `RES-27`                      | Super sweeper uses the first sweeper's bonus pins for every game. **Fixed** (D-90, D-02)                                                                                             |
+| `TRN-09`, `RES-28`            | Super sweeper cash ratio 0 divides by zero. **Fixed** for the results: a clear 422 message (D-93, D-17); **Fixed** on create (D-13, D-122); the edit check waits for tournament edit |
+| `API-12`                      | Not found and conflict errors return HTTP 500. **Kept until a vendor change is agreed (D-09)**                                                                                       |
+| `API-14`                      | Rate limit runs before auth, so the authenticated limit never applies. **Vendor-visible; see D-09**                                                                                  |
+| `REG-31`                      | `PATCH` can remove every qualifying squad (D-04). **Fixed** for requests without a real payment (D-115)                                                                              |
+| `SQD-17`                      | The server does not lock complete squads; only the screens do (D-10)                                                                                                                 |
+| `SEC-13`                      | API logs full requests, including personal data                                                                                                                                      |

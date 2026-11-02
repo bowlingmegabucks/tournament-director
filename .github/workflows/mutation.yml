@@ -39,8 +39,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The pull request diff against its base branch needs the history.
-          fetch-depth: ${{ inputs.changed-only && 0 || 1 }}
+          # The pull request diff against its base branch needs the history. The strings matter: a
+          # number 0 is falsy in an expression, so `&& 0 || 1` would always give 1.
+          fetch-depth: ${{ inputs.changed-only && '0' || '1' }}
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -77,6 +78,9 @@ jobs:
         env:
           FOLDER: ${{ inputs.folder }}
           BASE: origin/${{ github.base_ref }}
+        # pipefail: if the script fails, the step fails. Without it `tee` hides the error and the
+        # empty mode starts a full run.
+        shell: bash
         run: node scripts/mutateChanged.ts "$FOLDER" "$BASE" | tee -a "$GITHUB_OUTPUT"
 
       # Each folder sets its dashboard module in stryker.config.json (badges take ?module=web and ?module=api).

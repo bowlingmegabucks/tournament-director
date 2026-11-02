@@ -557,7 +557,11 @@ describe('division and average (REG-15, REG-37, REG-38)', () => {
     )
 
     expect(failures).toEqual([
-      expect.objectContaining({ kind: 'other', code: 'Division.NotFound' }),
+      {
+        kind: 'other',
+        code: 'Division.NotFound',
+        description: 'The specified division does not exist.',
+      },
     ])
   })
 

@@ -11,7 +11,7 @@ import type { SweeperRepository } from '../sweepers/repository.ts'
 import { toVendorSweeper } from '../sweepers/types.ts'
 import type { TournamentRepository } from '../tournaments/repository.ts'
 import { deleteRegistration } from './delete.ts'
-import { notFoundProblem, toProblem, validation } from './problem.ts'
+import { notFoundProblem, toProblem, validation, type Failure } from './problem.ts'
 import { register } from './register.ts'
 import { parseCreateRequest } from './request.ts'
 import { updateRegistration } from './update.ts'
@@ -40,6 +40,16 @@ function traceIdOf(res: Response): string {
 // body. An error we meant to send (`HttpError`, such as a database outage) or a bad id (`ZodError`)
 // goes on to the app's handler. Anything else is a crash: log it and answer with the legacy text
 // (API-13). The cause never reaches the caller.
+function idMismatch(bodyId: string, routeId: string): Failure[] {
+  if (bodyId === routeId) return []
+  return [
+    validation(
+      'Registration.IdMismatch',
+      'The registration ID in the body does not match the route.',
+    ),
+  ]
+}
+
 function routeErrors(logger: Logger): ErrorRequestHandler {
   return (err: unknown, _req, res, next) => {
     if (res.headersSent) {
@@ -196,14 +206,7 @@ export function createVendorRegistrationRouter(deps: VendorRegistrationDependenc
     const detail = 'An error occurred while updating the registration.'
     const parsed = parseUpdateRequest(req.body)
     const failures = parsed.success
-      ? parsed.data.registration.registrationId === id
-        ? []
-        : [
-            validation(
-              'Registration.IdMismatch',
-              'The registration ID in the body does not match the route.',
-            ),
-          ]
+      ? idMismatch(parsed.data.registration.registrationId, id)
       : parsed.failures
     if (!parsed.success || failures.length > 0) {
       const problem = toProblem(failures, detail, traceIdOf(res))

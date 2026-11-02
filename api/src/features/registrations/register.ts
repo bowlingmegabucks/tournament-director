@@ -144,16 +144,15 @@ export async function register(
     ...sweeperIds,
     ...(existing?.sessionIds ?? []),
   ])
-  const squadCount = found.filter(
-    (session) =>
-      session.kind === 'squad' &&
-      (squadIds.includes(session.id) || existing?.sessionIds.includes(session.id)),
-  ).length
-  const sweeperCount = found.filter(
-    (session) =>
-      session.kind === 'sweeper' &&
-      (sweeperIds.includes(session.id) || existing?.sessionIds.includes(session.id)),
-  ).length
+  const countOf = (kind: 'squad' | 'sweeper', requested: string[]) =>
+    found.filter(
+      (session) =>
+        session.kind === kind &&
+        // Stryker disable next-line all: `found` holds only requested or registered ids, so the test never differs.
+        (requested.includes(session.id) || existing?.sessionIds.includes(session.id)),
+    ).length
+  const squadCount = countOf('squad', squadIds)
+  const sweeperCount = countOf('sweeper', sweeperIds)
   const tournamentSweeperCount = (await sweepers.listByTournament(tournament.id)).length
 
   const failures: Failure[] = [

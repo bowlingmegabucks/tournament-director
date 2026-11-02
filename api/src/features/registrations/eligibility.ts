@@ -18,20 +18,10 @@ export interface EligibilityInput {
   tournamentStart: string
 }
 
-/**
- * REG-04a to REG-04h and REG-05. A failure is a 400 for every caller (D-107).
- * With no date of birth the age is 0, so a minimum age fails and a maximum age passes, as in legacy.
- */
-export function checkEligibility({
-  division,
-  average,
-  bowler,
-  tournamentStart,
-}: EligibilityInput): Failure[] {
-  const failures: Failure[] = []
-  const fail = (code: string, description: string) => failures.push(validation(code, description))
+type Fail = (code: string, description: string) => void
 
-  const { minimumAverage, maximumAverage, minimumAge, maximumAge } = division
+function checkAverage(division: Division, average: number | null, fail: Fail) {
+  const { minimumAverage, maximumAverage } = division
   if ((minimumAverage !== null || maximumAverage !== null) && average === null) {
     fail('Registration.AverageRequired', 'Average is required for selected division')
   }
@@ -41,9 +31,20 @@ export function checkEligibility({
   if (average !== null && maximumAverage !== null && average > maximumAverage) {
     fail('Registration.AverageTooHigh', 'Maximum average requirement for division not met')
   }
+}
 
-  const hasAgeLimit = minimumAge !== null || maximumAge !== null
-  if (hasAgeLimit && division.gender === null && bowler.dateOfBirth === null) {
+function checkAge(
+  division: Division,
+  bowler: EligibilityInput['bowler'],
+  tournamentStart: string,
+  fail: Fail,
+) {
+  const { minimumAge, maximumAge } = division
+  if (
+    (minimumAge !== null || maximumAge !== null) &&
+    division.gender === null &&
+    bowler.dateOfBirth === null
+  ) {
     fail('Registration.DateOfBirthRequired', 'Date of birth required for selected division')
   }
 
@@ -56,16 +57,37 @@ export function checkEligibility({
   if (maximumAge !== null && ageApplies && age > maximumAge) {
     fail('Registration.BowlerTooOld', 'Bowler too old for selected division')
   }
+}
 
-  if (division.gender !== null && !hasAgeLimit) {
-    if (bowler.gender === null) {
-      fail('Registration.GenderRequired', 'Gender is required for selected division')
-    }
-    if (bowler.gender !== division.gender) {
-      fail('Registration.GenderInvalid', 'Invalid gender for selected division')
-    }
+function checkGender(division: Division, bowler: EligibilityInput['bowler'], fail: Fail) {
+  const hasAgeLimit = division.minimumAge !== null || division.maximumAge !== null
+  if (division.gender === null || hasAgeLimit) return
+  if (bowler.gender === null) {
+    fail('Registration.GenderRequired', 'Gender is required for selected division')
+  }
+  if (bowler.gender !== division.gender) {
+    fail('Registration.GenderInvalid', 'Invalid gender for selected division')
+  }
+}
+
+/**
+ * REG-04a to REG-04h and REG-05. A failure is a 400 for every caller (D-107).
+ * With no date of birth the age is 0, so a minimum age fails and a maximum age passes, as in legacy.
+ */
+export function checkEligibility({
+  division,
+  average,
+  bowler,
+  tournamentStart,
+}: EligibilityInput): Failure[] {
+  const failures: Failure[] = []
+  const fail: Fail = (code, description) => {
+    failures.push(validation(code, description))
   }
 
+  checkAverage(division, average, fail)
+  checkAge(division, bowler, tournamentStart, fail)
+  checkGender(division, bowler, fail)
   if (division.handicapPercentage !== null && bowler.usbcId === '') {
     fail('Registration.UsbcIdRequired', 'USBC Id is required for Handicap Divisions')
   }

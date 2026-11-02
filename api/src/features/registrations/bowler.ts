@@ -52,7 +52,7 @@ const emptyBowler: BowlerData = {
  */
 export function normalizePhone(raw: string): string {
   // Stryker disable next-line StringLiteral: any text without digits drops the extension the same way.
-  const withoutExtension = raw.replace(/\s*(ext|x|extension)\.?\s*\d{1,6}\s*$/i, '')
+  const withoutExtension = raw.trimEnd().replace(/(ext|x|extension)\.?\s*\d{1,6}$/i, '')
   const digits = withoutExtension.replace(/\D/g, '')
   const national = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits
   return national.length === 10 ? national : ''

@@ -3,12 +3,13 @@ import type { BowlerData } from './bowler.ts'
 import { validation, type Failure } from './problem.ts'
 
 // BWL-07 in two parts: nine or more digits with separators, then an optional extension.
-const phoneBody = /^\s*\+?1?\s*(\d[\s\-.]*){9,}$/
-const phoneExtension = /\s*(ext|x|extension)\.?\s*\d{1,6}$/i
+const phoneBody = /^\+?\s*\d[\d\s\-.]*$/
+const phoneExtension = /(ext|x|extension)\.?\s*\d{1,6}$/i
 
 /** BWL-07 runs on the phone as sent, before it is cut down to ten digits. */
 export function isValidPhone(raw: string): boolean {
-  return phoneBody.test(raw.replace(phoneExtension, ''))
+  const body = raw.trim().replace(phoneExtension, '').trim()
+  return phoneBody.test(body) && body.replace(/\D/g, '').length >= 9
 }
 
 function checkName(bowler: BowlerData): Failure[] {

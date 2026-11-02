@@ -7,7 +7,7 @@ import { isPaidRequest, toNewPayment } from './payment.ts'
 import { other, validation, type Failure } from './problem.ts'
 import { checkNewSessions, unique } from './register.ts'
 import type { UpdateInput } from './updateRequest.ts'
-import type { RegistrationWriter } from './writer.ts'
+import type { RegistrationWriter, StoredSession } from './writer.ts'
 
 export interface UpdateDependencies {
   tournaments: TournamentRepository
@@ -23,6 +23,104 @@ export type UpdateResult =
   { ok: true; mode: 'update' | 'retry' } | { ok: false; failures: Failure[] }
 
 const fail = (...failures: Failure[]): UpdateResult => ({ ok: false, failures })
+
+async function checkDivisionMove(
+  writer: RegistrationWriter,
+  divisionId: string,
+  tournamentId: string,
+): Promise<Failure | undefined> {
+  const owner = await writer.findDivisionTournament(divisionId)
+  if (owner === undefined) {
+    return other('Division.NotFound', 'The specified division does not exist.')
+  }
+  if (owner !== tournamentId) {
+    return validation(
+      'Registration.DivisionNotInTournament',
+      'Division ID is not valid for the tournament.',
+    )
+  }
+  return undefined
+}
+
+interface SessionRules {
+  tournamentId: string
+  /** A request without a real payment (D-115). */
+  desk: boolean
+  divisionMoved: boolean
+  found: StoredSession[]
+  scoredIds: string[]
+  addSquads: string[]
+  addSweepers: string[]
+  removeIds: string[]
+  nextSquads: string[]
+  nextSweepers: string[]
+  superSweeper: boolean
+  superSweeperWas: boolean
+  tournamentSweeperIds: string[]
+}
+
+function sessionFailures(rules: SessionRules): Failure[] {
+  const { tournamentId, desk, found, scoredIds, removeIds, nextSweepers, superSweeper } = rules
+  const scoredHere = found.filter(
+    (session) => scoredIds.includes(session.id) && session.tournamentId === tournamentId,
+  )
+  const failures: Failure[] = [
+    ...checkNewSessions('squad', rules.addSquads, found, tournamentId),
+    ...checkNewSessions('sweeper', rules.addSweepers, found, tournamentId),
+  ]
+
+  // REG-34 and D-10.
+  if (removeIds.some((id) => scoredIds.includes(id))) {
+    failures.push(
+      validation(
+        'Registration.RemovedSessionHasScores',
+        'Bowler has already bowled in removed squads.',
+      ),
+    )
+  }
+  if (desk && found.some((session) => removeIds.includes(session.id) && session.complete)) {
+    failures.push(
+      validation(
+        'Registration.RemovedSessionComplete',
+        'Cannot remove a squad or sweeper that is already complete.',
+      ),
+    )
+  }
+  // REG-31 and D-04.
+  if (desk && rules.nextSquads.length === 0) {
+    failures.push(validation('Registration.SquadsRequired', 'Bowler must enter at least one squad'))
+  }
+  // REG-35 and REG-36 (D-110).
+  if (superSweeper && !rules.tournamentSweeperIds.every((id) => nextSweepers.includes(id))) {
+    failures.push(
+      validation(
+        'Registration.SuperSweeperNeedsAllSweepers',
+        'Super Sweeper cannot be enrolled when not all sweepers are registered.',
+      ),
+    )
+  }
+  if (
+    superSweeper !== rules.superSweeperWas &&
+    scoredHere.some((session) => session.kind === 'sweeper')
+  ) {
+    failures.push(
+      validation(
+        'Registration.SuperSweeperLocked',
+        'Cannot change Super Sweeper when sweeper scores have been recorded.',
+      ),
+    )
+  }
+  // REG-15 and D-117.
+  if (desk && rules.divisionMoved && scoredHere.length > 0) {
+    failures.push(
+      validation(
+        'Registration.DivisionLocked',
+        'Cannot change bowler division after scores have been recorded.',
+      ),
+    )
+  }
+  return failures
+}
 
 /**
  * API-07: change a registration (REG-30 to REG-39). Squad and sweeper lists replace the stored
@@ -69,18 +167,8 @@ export async function updateRegistration(
   const divisionId = newDivisionId ?? stored.divisionId
   const divisionChanged = divisionId !== stored.divisionId
   if (newDivisionId !== undefined && divisionChanged) {
-    const owner = await writer.findDivisionTournament(newDivisionId)
-    if (owner === undefined) {
-      return fail(other('Division.NotFound', 'The specified division does not exist.'))
-    }
-    if (owner !== tournamentId) {
-      return fail(
-        validation(
-          'Registration.DivisionNotInTournament',
-          'Division ID is not valid for the tournament.',
-        ),
-      )
-    }
+    const problem = await checkDivisionMove(writer, newDivisionId, tournamentId)
+    if (problem) return fail(problem)
   }
 
   const squadIds = input.squadIds ? unique(input.squadIds) : undefined
@@ -110,67 +198,22 @@ export async function updateRegistration(
     ...removed(nextSquads, currentSquads),
     ...removed(nextSweepers, currentSweepers),
   ]
-  const scoredHere = found.filter(
-    (session) => scoredIds.includes(session.id) && session.tournamentId === tournamentId,
-  )
-
-  const tournamentSweepers = await sweepers.listByTournament(tournamentId)
-  const failures: Failure[] = [
-    ...checkNewSessions('squad', addSquads, found, tournamentId),
-    ...checkNewSessions('sweeper', addSweepers, found, tournamentId),
-  ]
-
-  // REG-34 and D-10.
-  if (removeIds.some((id) => scoredIds.includes(id))) {
-    failures.push(
-      validation(
-        'Registration.RemovedSessionHasScores',
-        'Bowler has already bowled in removed squads.',
-      ),
-    )
-  }
-  if (desk && found.some((session) => removeIds.includes(session.id) && session.complete)) {
-    failures.push(
-      validation(
-        'Registration.RemovedSessionComplete',
-        'Cannot remove a squad or sweeper that is already complete.',
-      ),
-    )
-  }
-  // REG-31 and D-04.
-  if (desk && nextSquads.length === 0) {
-    failures.push(validation('Registration.SquadsRequired', 'Bowler must enter at least one squad'))
-  }
-  // REG-35 and REG-36 (D-110).
   const superSweeper = input.superSweeper ?? stored.superSweeper
-  if (superSweeper && !tournamentSweepers.every((sweeper) => nextSweepers.includes(sweeper.id))) {
-    failures.push(
-      validation(
-        'Registration.SuperSweeperNeedsAllSweepers',
-        'Super Sweeper cannot be enrolled when not all sweepers are registered.',
-      ),
-    )
-  }
-  if (
-    superSweeper !== stored.superSweeper &&
-    scoredHere.some((session) => session.kind === 'sweeper')
-  ) {
-    failures.push(
-      validation(
-        'Registration.SuperSweeperLocked',
-        'Cannot change Super Sweeper when sweeper scores have been recorded.',
-      ),
-    )
-  }
-  // REG-15 and D-117.
-  if (desk && divisionChanged && scoredHere.length > 0) {
-    failures.push(
-      validation(
-        'Registration.DivisionLocked',
-        'Cannot change bowler division after scores have been recorded.',
-      ),
-    )
-  }
+  const failures = sessionFailures({
+    tournamentId,
+    desk,
+    divisionMoved: divisionChanged,
+    found,
+    scoredIds,
+    addSquads,
+    addSweepers,
+    removeIds,
+    nextSquads,
+    nextSweepers,
+    superSweeper,
+    superSweeperWas: stored.superSweeper,
+    tournamentSweeperIds: (await sweepers.listByTournament(tournamentId)).map((s) => s.id),
+  })
   // REG-37 and REG-38 (D-116): eligibility on the new division, or the new average.
   const average = input.average ?? stored.average
   if (input.divisionId != null || input.average != null) {

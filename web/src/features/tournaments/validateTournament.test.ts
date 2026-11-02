@@ -57,9 +57,12 @@ describe('validateTournament', () => {
   })
 
   describe('dates (TRN-02, D-124)', () => {
-    it.each(['2027-02-30', '03/12/2027', 'soon', '2027-3-1'])('refuses %j', (startDate) => {
-      expect(errorsFor({ startDate })).toEqual({ startDate: 'Enter a valid date' })
-    })
+    it.each(['2027-02-30', '03/12/2027', 'soon', '2027-3-1', '2027-03-12x', 'x2027-03-12'])(
+      'refuses %j',
+      (startDate) => {
+        expect(errorsFor({ startDate })).toEqual({ startDate: 'Enter a valid date' })
+      },
+    )
 
     it('accepts an end date equal to the start date', () => {
       expect(errorsFor({ startDate: '2027-03-12', endDate: '2027-03-12' })).toEqual({})
@@ -75,6 +78,12 @@ describe('validateTournament', () => {
       expect(errorsFor({ endDate: 'soon' })).toEqual({ endDate: 'Enter a valid date' })
     })
 
+    it('does not compare when the start date has its own error', () => {
+      expect(errorsFor({ startDate: 'zzzz', endDate: '2027-03-12' })).toEqual({
+        startDate: 'Enter a valid date',
+      })
+    })
+
     it('accepts dates in the past', () => {
       expect(errorsFor({ startDate: '1999-01-01', endDate: '1999-01-02' })).toEqual({})
     })
@@ -88,12 +97,16 @@ describe('validateTournament', () => {
       ['10.123', 'Use at most two decimal places'],
       ['sixty', 'Enter a number'],
       ['1e2', 'Enter a number'],
+      ['abc5', 'Enter a number'],
+      ['5abc', 'Enter a number'],
+      ['.', 'Enter a number'],
+      ['5.5.5', 'Enter a number'],
       ['', 'Entry fee is required'],
     ])('refuses %j', (entryFee, message) => {
       expect(errorsFor({ entryFee })).toEqual({ entryFee: message })
     })
 
-    it.each(['0.01', '7.55', '999.99', ' 60 ', '60.', '.5'])('accepts %j', (entryFee) => {
+    it.each(['0.01', '7.55', '999.99', ' 60 ', '60.', '.5', '.55'])('accepts %j', (entryFee) => {
       expect(errorsFor({ entryFee })).toEqual({})
     })
   })

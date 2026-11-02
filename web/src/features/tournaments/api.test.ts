@@ -261,7 +261,10 @@ describe('fetchTournamentSettings (TRN-21)', () => {
 
   it.each([
     ['no settings key', {}],
-    ['a missing ratio', { settings: { games: 4, finalsRatio: 7, cashRatio: 5 } }],
+    ['no super sweeper ratio', { settings: { games: 4, finalsRatio: 7, cashRatio: 5 } }],
+    ['no finals ratio', { settings: { games: 4, cashRatio: 5, superSweeperCashRatio: 3 } }],
+    ['no cash ratio', { settings: { games: 4, finalsRatio: 7, superSweeperCashRatio: 3 } }],
+    ['a text ratio', { settings: { ...settings, cashRatio: '5' } }],
     ['a text game count', { settings: { ...settings, games: '4' } }],
   ])('rejects %s', async (_label, body) => {
     server.use(http.get(`/v1/tournaments/${id}/settings`, () => HttpResponse.json(body)))

@@ -262,4 +262,123 @@ describe('NewTournamentPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Sign in', level: 1 })).toBeVisible()
   })
+
+  it('gives each field its hint and input mode (TRN-22)', async () => {
+    signInAs('director')
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+
+    expect(screen.getByLabelText('Start date (required)')).toHaveAttribute('type', 'date')
+    expect(screen.getByLabelText('End date (required)')).toHaveAttribute('type', 'date')
+    expect(screen.getByLabelText('Name (required)')).toHaveAttribute('type', 'text')
+    expect(screen.getByLabelText('Name (required)')).not.toHaveAttribute('inputmode')
+    expect(screen.getByLabelText('Name (required)')).not.toHaveAccessibleDescription()
+    const games = screen.getByLabelText('Games per squad (required)')
+    expect(games).toHaveAttribute('inputmode', 'numeric')
+    expect(games).toHaveAccessibleDescription('1 to 99.')
+    for (const label of [
+      'Entry fee in dollars',
+      'Finals ratio',
+      'Cash ratio',
+      'Super sweeper cash ratio',
+    ]) {
+      expect(screen.getByLabelText(`${label} (required)`)).toHaveAttribute('inputmode', 'decimal')
+    }
+    expect(screen.getByLabelText('Entry fee in dollars (required)')).toHaveAccessibleDescription(
+      'Per squad entry. A squad can set its own later. Up to 999.99.',
+    )
+    expect(screen.getByLabelText('Finals ratio (required)')).toHaveAccessibleDescription(
+      '1 in N advance. Greater than 1. Example: 8.',
+    )
+    expect(screen.getByLabelText('Cash ratio (required)')).toHaveAccessibleDescription(
+      '1 in N cash. Greater than 1. Example: 5.',
+    )
+    expect(
+      screen.getByLabelText('Super sweeper cash ratio (required)'),
+    ).toHaveAccessibleDescription('1 in N super sweeper bowlers cash. At least 1.')
+  })
+
+  it('reads the hint and the message together when a field is wrong', async () => {
+    signInAs('director')
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    const games = screen.getByLabelText('Games per squad (required)')
+
+    await user.type(games, '0')
+    await user.tab()
+
+    expect(games).toHaveAccessibleDescription('1 to 99. Must have at least one game')
+  })
+
+  it('hides the summary once every message is fixed', async () => {
+    signInAs('director')
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    await fillIn(user, { 'Games per squad (required)': '0' })
+    await user.click(save())
+    expect(await screen.findByRole('alert')).toHaveTextContent('Fix 1 field to save.')
+
+    await user.type(screen.getByLabelText('Games per squad (required)'), '5')
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('clears the summary when the next save goes out', async () => {
+    signInAs('director')
+    const stored = createTournament()
+    server.use(http.post('/v1/tournaments', () => new HttpResponse(null, { status: 503 })))
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    await fillIn(user, { 'Games per squad (required)': '0' })
+    await user.click(save())
+    await screen.findByText('Fix 1 field to save.')
+    await user.clear(screen.getByLabelText('Games per squad (required)'))
+    await user.type(screen.getByLabelText('Games per squad (required)'), '5')
+    server.use(http.post('/v1/tournaments', () => new HttpResponse(null, { status: 503 })))
+
+    await user.click(save())
+
+    expect(await screen.findByText('Failed to save the tournament (503)')).toBeVisible()
+    expect(screen.queryByText(/Fix \d+ field/)).not.toBeInTheDocument()
+  })
+
+  it('shows the message as a toast when the API refuses without naming a field (D-121)', async () => {
+    signInAs('director')
+    server.use(
+      http.post('/v1/tournaments', () =>
+        HttpResponse.json(
+          { message: 'The request body is too large.', errors: {} },
+          { status: 400 },
+        ),
+      ),
+    )
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    await fillIn(user)
+
+    await user.click(save())
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The request body is too large.')
+    expect(screen.queryByText(/Fix \d+ field/)).not.toBeInTheDocument()
+  })
+
+  it('removes an old toast when the director saves again', async () => {
+    signInAs('director')
+    server.use(http.post('/v1/tournaments', () => new HttpResponse(null, { status: 503 })))
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    await fillIn(user)
+    await user.click(save())
+    await screen.findByText('Failed to save the tournament (503)')
+
+    await user.clear(screen.getByLabelText('Name (required)'))
+    await user.click(save())
+
+    expect(screen.queryByText('Failed to save the tournament (503)')).not.toBeInTheDocument()
+  })
 })

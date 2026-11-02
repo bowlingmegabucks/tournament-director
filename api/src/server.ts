@@ -10,6 +10,7 @@ import { createPrismaSquadRepository } from './features/squads/prismaRepository.
 import { createPrismaSweeperRepository } from './features/sweepers/prismaRepository.ts'
 import { createPrismaTournamentRepository } from './features/tournaments/prismaRepository.ts'
 import { createInviteMailer } from './features/users/inviteMail.ts'
+import { createPrismaTournamentWriter } from './features/tournaments/prismaWriter.ts'
 import { createSmtpMailer } from './shared/mail/mailer.ts'
 import { createAuth, createInviteExtender } from './shared/auth/createAuth.ts'
 import { createDatabaseClient, pingDatabase } from './shared/database.ts'
@@ -43,6 +44,7 @@ const app = createApp({
   invites,
   auth,
   tournaments: createPrismaTournamentRepository(database, logger),
+  tournamentWriter: createPrismaTournamentWriter(database, logger),
   divisions: createPrismaDivisionRepository(database, logger),
   registrations: createPrismaRegistrationRepository(database, logger),
   registrationWriter: createPrismaRegistrationWriter(database, logger),

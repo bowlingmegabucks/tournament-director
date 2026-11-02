@@ -12,6 +12,7 @@ import { createInMemoryScoreRepository } from '../features/scores/repository.ts'
 import { createInMemorySquadRepository } from '../features/squads/repository.ts'
 import { createInMemorySweeperRepository } from '../features/sweepers/repository.ts'
 import { createInMemoryTournamentRepository } from '../features/tournaments/repository.ts'
+import { createInMemoryTournamentWriter } from '../features/tournaments/writer.ts'
 
 /** An app with in-memory storage, a database that always answers, and no CORS. Override only what a test cares about. */
 export function createTestApp(overrides: Partial<AppDependencies> = {}): Express {
@@ -20,6 +21,7 @@ export function createTestApp(overrides: Partial<AppDependencies> = {}): Express
     logger: createCapturedLogger().logger,
     auth: createTestAuth().auth,
     tournaments: createInMemoryTournamentRepository([]),
+    tournamentWriter: createInMemoryTournamentWriter().writer,
     divisions: createInMemoryDivisionRepository([]),
     registrations: createInMemoryRegistrationRepository([]),
     registrationWriter: createInMemoryRegistrationWriter().writer,

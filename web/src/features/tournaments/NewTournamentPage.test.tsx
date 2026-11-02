@@ -327,7 +327,6 @@ describe('NewTournamentPage', () => {
 
   it('clears the summary when the next save goes out', async () => {
     signInAs('director')
-    const stored = createTournament()
     server.use(http.post('/v1/tournaments', () => new HttpResponse(null, { status: 503 })))
     const user = userEvent.setup()
     renderApp('/tournaments/new')

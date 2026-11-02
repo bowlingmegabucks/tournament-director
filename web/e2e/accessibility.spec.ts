@@ -144,6 +144,23 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('new tournament form has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('link', { name: 'New tournament' }).click()
+      await expect(page.getByRole('heading', { name: 'New tournament', level: 1 })).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
+    test('new tournament form with errors has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('link', { name: 'New tournament' }).click()
+      await page.getByRole('button', { name: 'Save tournament' }).click()
+      await expect(page.getByRole('alert')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
     test('tournament overview has no WCAG 2.2 AA violations', async ({ page }) => {
       await page.goto('/tournaments')
       await page.getByRole('article').first().getByRole('link').click()

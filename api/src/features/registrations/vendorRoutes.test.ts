@@ -457,3 +457,210 @@ describe('GET /v1/registrations/{id} (API-06)', () => {
     expect(response.body.registration.average).toBeNull()
   })
 })
+
+describe('PATCH /v1/registrations/{id} (API-07)', () => {
+  const paid = { processingSystem: 'Stripe', confirmationCode: 'ch_9', amount: 25 }
+
+  async function registered() {
+    const context = setup()
+    const created = await asVendor(request(context.app).post('/v1/registrations')).send(
+      context.body(),
+    )
+    const id = createRegistrationResponseSchema.parse(created.body).registrationId
+    const patch = (changes: Record<string, unknown>, path = id) =>
+      asVendor(request(context.app).patch(`/v1/registrations/${path}`)).send({
+        registration: { registrationId: id, ...changes },
+      })
+    return { ...context, id, patch }
+  }
+
+  it('changes the registration and answers 204 with no body (API-07)', async () => {
+    const { patch, state, secondSquad } = await registered()
+
+    const response = await patch({ squadIds: [secondSquad.id], average: 150, payment: paid })
+
+    expect(response.status).toBe(204)
+    expect(response.text).toBe('')
+    expect(state.registrations[0]?.registration).toMatchObject({
+      average: 150,
+      sessionIds: [secondSquad.id],
+    })
+  })
+
+  it('shows the change on the next GET (API-06)', async () => {
+    const { patch, app, id, secondSquad } = await registered()
+    await patch({ squadIds: [secondSquad.id] })
+
+    const response = await asVendor(request(app).get(`/v1/registrations/${id}`))
+
+    const detail = registrationDetailResponseSchema.parse(response.body)
+    expect(detail.registration.squads.map((s) => s.id)).toEqual([secondSquad.id])
+  })
+
+  it('answers a body id that differs from the path with a 400 problem (Registration.IdMismatch)', async () => {
+    const { patch, state, secondSquad } = await registered()
+
+    const response = await patch({ squadIds: [secondSquad.id] }, faker.string.uuid())
+
+    expect(response.status).toBe(400)
+    expect(response.headers['content-type']).toMatch(/application\/problem\+json/)
+    const problem = problemSchema.parse(response.body)
+    expect(problem.detail).toBe('An error occurred while updating the registration.')
+    expect(problem.errors?.map((e) => e.code)).toEqual(['Registration.IdMismatch'])
+    expect(state.registrations[0]?.registration.sessionIds).not.toContain(secondSquad.id)
+  })
+
+  it('answers a bad body with the failed checks (API-09)', async () => {
+    const { app, id } = await registered()
+
+    const response = await asVendor(request(app).patch(`/v1/registrations/${id}`)).send({
+      registration: { registrationId: id, squadIds: ['nope'] },
+    })
+
+    expect(response.status).toBe(400)
+    expect(problemSchema.parse(response.body).errors?.map((e) => e.code)).toEqual([
+      'Registration.SquadIdsInvalid',
+    ])
+  })
+
+  it('answers a path that is not a UUID with 400', async () => {
+    const { app } = await registered()
+
+    const response = await asVendor(request(app).patch('/v1/registrations/nope')).send({})
+
+    expect(response.status).toBe(400)
+  })
+
+  it('answers JSON that does not parse with a 400 problem', async () => {
+    const { app, id } = await registered()
+
+    const response = await asVendor(request(app).patch(`/v1/registrations/${id}`))
+      .set('content-type', 'application/json')
+      .send('{nope')
+
+    expect(response.status).toBe(400)
+    expect(response.headers['content-type']).toMatch(/application\/problem\+json/)
+  })
+
+  it('answers a business rule failure with 400 and its code (D-04)', async () => {
+    const { patch, state, squad } = await registered()
+
+    const response = await patch({ squadIds: [] })
+
+    expect(response.status).toBe(400)
+    expect(problemSchema.parse(response.body).errors?.map((e) => e.code)).toEqual([
+      'Registration.SquadsRequired',
+    ])
+    expect(state.registrations[0]?.registration.sessionIds).toEqual([squad.id])
+  })
+
+  it('lets a paid request leave no squad (D-106)', async () => {
+    const { patch } = await registered()
+
+    const response = await patch({ squadIds: [], payment: paid })
+
+    expect(response.status).toBe(204)
+  })
+
+  it('answers an unknown registration with a 500 problem, as legacy does (REG-30, API-12)', async () => {
+    const { app } = await registered()
+    const id = faker.string.uuid()
+
+    const response = await asVendor(request(app).patch(`/v1/registrations/${id}`)).send({
+      registration: { registrationId: id },
+    })
+
+    expect(response.status).toBe(500)
+    expect(problemSchema.parse(response.body).message).toBe(`Registration with ID ${id} not found.`)
+  })
+
+  it('answers a repeated payment code with 204 and writes nothing more (D-118)', async () => {
+    const { patch, state, secondSquad } = await registered()
+    await patch({ payment: paid })
+
+    const again = await patch({ payment: paid, squadIds: [secondSquad.id] })
+
+    expect(again.status).toBe(204)
+    expect(state.payments).toHaveLength(1)
+    expect(state.registrations[0]?.registration.sessionIds).not.toContain(secondSquad.id)
+  })
+
+  it('logs the codes, not the body, when it refuses', async () => {
+    const captured = createCapturedLogger()
+    const context = setup({ logger: captured.logger })
+    const created = await asVendor(request(context.app).post('/v1/registrations')).send(
+      context.body(),
+    )
+    const id = createRegistrationResponseSchema.parse(created.body).registrationId
+
+    await asVendor(request(context.app).patch(`/v1/registrations/${id}`)).send({
+      registration: { registrationId: id, squadIds: [] },
+    })
+
+    const line = captured.records().find((r) => r['msg'] === 'Update refused')
+    expect(line?.['codes']).toEqual(['Registration.SquadsRequired'])
+    expect(JSON.stringify(line)).not.toContain('Fontaine')
+  })
+
+  it('logs the id after a change', async () => {
+    const captured = createCapturedLogger()
+    const context = setup({ logger: captured.logger })
+    const created = await asVendor(request(context.app).post('/v1/registrations')).send(
+      context.body(),
+    )
+    const id = createRegistrationResponseSchema.parse(created.body).registrationId
+
+    await asVendor(request(context.app).patch(`/v1/registrations/${id}`)).send({
+      registration: { registrationId: id, average: 170 },
+    })
+
+    const line = captured.records().find((r) => r['msg'] === 'Registration updated')
+    expect(line).toMatchObject({ registrationId: id, mode: 'update' })
+  })
+
+  it('answers a crash with the legacy text (API-13)', async () => {
+    const { deps, id } = await registered()
+    deps.registrationWriter.getDetail = () => Promise.reject(new Error('secret'))
+
+    const response = await asVendor(
+      request(createTestApp(deps)).patch(`/v1/registrations/${id}`),
+    ).send({ registration: { registrationId: id } })
+
+    expect(response.status).toBe(500)
+    expect(response.body.detail).toBe('An unexpected error occurred while processing your request.')
+    expect(JSON.stringify(response.body)).not.toContain('secret')
+  })
+
+  describe('who may call it (D-105)', () => {
+    it('answers 401 with no key and no sign-in', async () => {
+      const { app, id } = await registered()
+
+      const response = await request(app)
+        .patch(`/v1/registrations/${id}`)
+        .send({ registration: { registrationId: id } })
+
+      expect(response.status).toBe(401)
+    })
+
+    it('lets a signed-in director change a registration (registrations.write)', async () => {
+      const { deps, id } = await registered()
+
+      const response = await request(createSignedInTestApp(deps, 'director'))
+        .patch(`/v1/registrations/${id}`)
+        .send({ registration: { registrationId: id, average: 160 } })
+
+      expect(response.status).toBe(204)
+    })
+
+    it('refuses a score keeper', async () => {
+      const { deps, id, state } = await registered()
+
+      const response = await request(createSignedInTestApp(deps, 'scoreKeeper'))
+        .patch(`/v1/registrations/${id}`)
+        .send({ registration: { registrationId: id, average: 160 } })
+
+      expect(response.status).toBe(403)
+      expect(state.registrations[0]?.registration.average).toBe(185)
+    })
+  })
+})

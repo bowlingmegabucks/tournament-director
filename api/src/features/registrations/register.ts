@@ -5,6 +5,7 @@ import type { TournamentRepository } from '../tournaments/repository.ts'
 import { mergeBowler, toBowlerPatch, toNewBowler } from './bowler.ts'
 import { checkBowler } from './bowlerRules.ts'
 import { checkEligibility } from './eligibility.ts'
+import { toNewPayment } from './payment.ts'
 import { other, validation, type Failure } from './problem.ts'
 import type { RegistrationInput } from './request.ts'
 import type { RegistrationWriter, StoredRegistration, StoredSession } from './writer.ts'
@@ -23,11 +24,11 @@ export type RegisterResult =
   | { ok: true; registrationId: string; mode: 'create' | 'append' | 'retry' }
   | { ok: false; mode: 'create' | 'append'; failures: Failure[] }
 
-const unique = (ids: string[]) => [...new Set(ids)]
+export const unique = (ids: string[]) => [...new Set(ids)]
 
 // D-108 and REG-32/REG-33: the new squads or sweepers must exist, belong to this tournament,
 // be the right kind, and still be open.
-function checkNewSessions(
+export function checkNewSessions(
   kind: 'squad' | 'sweeper',
   requested: string[],
   found: StoredSession[],
@@ -89,14 +90,7 @@ export async function register(
   const now = deps.now?.() ?? new Date()
   const newId = deps.newId ?? randomUUID
 
-  const payment = input.payment
-    ? {
-        id: newId(),
-        confirmationCode: `${input.payment.processingSystem}_${input.payment.confirmationCode}`,
-        amount: input.payment.amount,
-        createdAtUtc: now,
-      }
-    : null
+  const payment = input.payment ? toNewPayment(input.payment, newId(), now) : null
   if (payment) {
     const existingId = await writer.findRegistrationIdByPaymentCode(payment.confirmationCode)
     if (existingId) return { ok: true, registrationId: existingId, mode: 'retry' }

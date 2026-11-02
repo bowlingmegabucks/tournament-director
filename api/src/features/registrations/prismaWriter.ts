@@ -82,7 +82,18 @@ export function createPrismaRegistrationWriter(
       return row?.registrationId
     },
 
-    async save({ bowler, registration, addSessionIds, payment }) {
+    async findScoredSessionIds(bowlerId) {
+      const rows = await withDatabaseErrors(logger, () =>
+        client.squadScore.findMany({
+          where: { bowlerId },
+          distinct: ['squadId'],
+          select: { squadId: true },
+        }),
+      )
+      return rows.map((row) => row.squadId)
+    },
+
+    async save({ bowler, registration, addSessionIds, removeSessionIds = [], payment }) {
       await withDatabaseErrors(logger, () =>
         client.$transaction(async (tx) => {
           if (bowler.isNew) {
@@ -104,6 +115,11 @@ export function createPrismaRegistrationWriter(
             await tx.registration.update({ where: { id: registration.id }, data: columns })
           }
 
+          if (removeSessionIds.length > 0) {
+            await tx.squadRegistration.deleteMany({
+              where: { registrationId: registration.id, squadId: { in: removeSessionIds } },
+            })
+          }
           if (addSessionIds.length > 0) {
             await tx.squadRegistration.createMany({
               data: addSessionIds.map((squadId) => ({

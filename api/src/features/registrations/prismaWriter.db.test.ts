@@ -9,6 +9,8 @@ import { createPrismaTournamentRepository } from '../tournaments/prismaRepositor
 import { createPrismaRegistrationWriter } from './prismaWriter.ts'
 import { register } from './register.ts'
 import { parseCreateRequest } from './request.ts'
+import { updateRegistration } from './update.ts'
+import { parseUpdateRequest } from './updateRequest.ts'
 
 const legacySsn = 'c2VjcmV0LXNzbg=='
 
@@ -413,5 +415,89 @@ describe('Prisma registration writer', () => {
     expect(await client.squadRegistration.count()).toBe(2)
     expect(await client.bowler.count()).toBe(1)
     expect(await ssnOf(bowlerId)).toBe(legacySsn)
+  })
+  it('finds the sessions where a bowler has scores, once each (REG-34, REG-36)', async () => {
+    const { writer } = setup()
+    const tournamentId = await insertTournament()
+    const squadId = await insertSession(tournamentId)
+    const otherSquadId = await insertSession(tournamentId)
+    const bowlerId = await insertLegacyBowler('1111-22222')
+    const otherBowlerId = await insertLegacyBowler('3333-44444')
+    for (const [bowler, squad, game] of [
+      [bowlerId, squadId, 1],
+      [bowlerId, squadId, 2],
+      [otherBowlerId, otherSquadId, 1],
+    ] as const) {
+      await client.$executeRawUnsafe(
+        'INSERT INTO SquadScores (BowlerId, SquadId, Game, Score) VALUES (?, ?, ?, 200)',
+        bowler,
+        squad,
+        game,
+      )
+    }
+
+    expect(await writer.findScoredSessionIds(bowlerId)).toEqual([squadId])
+    expect(await writer.findScoredSessionIds(crypto.randomUUID())).toEqual([])
+  })
+
+  it('updates through the rules: swaps squads, keeps the bowler and SSN, refuses a scored removal (API-07, REG-34, D-05)', async () => {
+    const { writer } = setup()
+    const tournamentId = await insertTournament()
+    const divisionId = await insertDivision(tournamentId)
+    const squadOne = await insertSession(tournamentId)
+    const squadTwo = await insertSession(tournamentId)
+    const bowlerId = await insertLegacyBowler('1234-56789')
+    const deps = {
+      tournaments: createPrismaTournamentRepository(client, setup().logger),
+      divisions: createPrismaDivisionRepository(client, setup().logger),
+      sweepers: createPrismaSweeperRepository(client, setup().logger),
+      writer,
+      now: () => new Date('2026-10-01T12:00:00Z'),
+    }
+    const parsed = parseCreateRequest(
+      sampleRequest({ tournamentId, divisionId, squads: [squadOne], sweepers: [], payment: null }),
+    )
+    if (!parsed.success) throw new Error('bad test request')
+    const created = await register(deps, parsed.data.registration)
+    if (!created.ok) throw new Error('create failed')
+    const change = (changes: Record<string, unknown>) => {
+      const update = parseUpdateRequest({
+        registration: { registrationId: created.registrationId, ...changes },
+      })
+      if (!update.success) throw new Error('bad test update')
+      return updateRegistration(deps, created.registrationId, update.data.registration)
+    }
+
+    const swapped = await change({
+      squadIds: [squadTwo],
+      average: 170,
+      payment: { processingSystem: 'Stripe', confirmationCode: 'ch_7', amount: 40 },
+    })
+
+    expect(swapped).toEqual({ ok: true, mode: 'update' })
+    const links = await client.squadRegistration.findMany({
+      where: { registrationId: created.registrationId },
+    })
+    expect(links.map((link) => link.squadId)).toEqual([squadTwo])
+    expect(
+      (await client.registration.findUniqueOrThrow({ where: { id: created.registrationId } }))
+        .average,
+    ).toBe(170)
+    expect(await client.payment.count()).toBe(1)
+    expect(await ssnOf(bowlerId)).toBe(legacySsn)
+    expect(await client.bowler.count()).toBe(1)
+
+    await client.$executeRawUnsafe(
+      'INSERT INTO SquadScores (BowlerId, SquadId, Game, Score) VALUES (?, ?, 1, 190)',
+      bowlerId,
+      squadTwo,
+    )
+    const refused = await change({ squadIds: [squadOne] })
+
+    expect(refused.ok).toBe(false)
+    const after = await client.squadRegistration.findMany({
+      where: { registrationId: created.registrationId },
+    })
+    expect(after.map((link) => link.squadId)).toEqual([squadTwo])
   })
 })

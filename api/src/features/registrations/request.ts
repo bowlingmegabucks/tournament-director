@@ -26,7 +26,7 @@ const bowlerSchema = z.object({
 })
 
 // The stored code is `<system>_<code>` in a varchar(43) with amount decimal(5,2) (PAY-02).
-const paymentSchema = z
+export const paymentSchema = z
   .object({
     processingSystem: required,
     confirmationCode: required,
@@ -86,7 +86,15 @@ const checks: Record<string, { code: string; description: string }> = {
   payment: { code: 'Payment.Invalid', description: 'The payment is not valid.' },
 }
 
-function describeIssue(issue: z.core.$ZodIssue): { code: string; description: string } {
+interface Check {
+  code: string
+  description: string
+}
+
+function describeIssue(
+  issue: z.core.$ZodIssue,
+  table: Record<string, Check> = checks,
+): { code: string; description: string } {
   const [root, ...rest] = issue.path
   if (root !== 'registration' || rest.length === 0) {
     return { code: 'Registration.Required', description: 'Registration details are required.' }
@@ -94,7 +102,7 @@ function describeIssue(issue: z.core.$ZodIssue): { code: string; description: st
   // `bowler.address.street` is checked as `bowler.address`; `squads.0` as `squads`.
   const keys = rest.map(String)
   const known = [keys.join('.'), keys.slice(0, 2).join('.'), keys[0] ?? '']
-    .map((key) => checks[key])
+    .map((key) => table[key])
     .find((check) => check !== undefined)
   if (known) return known
   return {
@@ -103,18 +111,27 @@ function describeIssue(issue: z.core.$ZodIssue): { code: string; description: st
   }
 }
 
-export type ParsedRequest =
-  { success: true; data: CreateRegistrationRequest } | { success: false; failures: Failure[] }
+export type ParsedRequest<T = CreateRegistrationRequest> =
+  { success: true; data: T } | { success: false; failures: Failure[] }
 
 /** `API-09` to `API-09f`: every failed check, once each, before any business rule runs. */
 export function parseCreateRequest(body: unknown): ParsedRequest {
-  const result = createRegistrationRequestSchema.safeParse(body)
+  return parseWith(createRegistrationRequestSchema, checks, body)
+}
+
+/** Parse a body with a schema and report each failed check once, by the table's codes. */
+export function parseWith<T>(
+  schema: z.ZodType<T>,
+  table: Record<string, Check>,
+  body: unknown,
+): ParsedRequest<T> {
+  const result = schema.safeParse(body)
   if (result.success) return { success: true, data: result.data }
 
   const seen = new Set<string>()
   const failures: Failure[] = []
   for (const issue of result.error.issues) {
-    const { code, description } = describeIssue(issue)
+    const { code, description } = describeIssue(issue, table)
     if (seen.has(code)) continue
     seen.add(code)
     failures.push(validation(code, description))

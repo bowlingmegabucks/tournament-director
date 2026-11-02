@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { createRegistrationRequestSchema } from '../features/registrations/request.ts'
+import { updateRegistrationRequestSchema } from '../features/registrations/updateRequest.ts'
 import { problemSchema } from '../features/registrations/problem.ts'
 import {
   createRegistrationResponseSchema,
@@ -8,7 +9,7 @@ import {
 } from '../features/registrations/vendorTypes.ts'
 import { tournamentDetailSchema, tournamentListSchema } from '../features/tournaments/types.ts'
 
-type Method = 'get' | 'post'
+type Method = 'get' | 'post' | 'patch'
 
 /**
  * The routes the registration site can call (`API-01` to `API-06`, D-09). Add each vendor route here
@@ -22,6 +23,7 @@ export const vendorRoutes: { method: Method; path: string }[] = [
   { method: 'get', path: '/v1/tournaments/{id}' },
   { method: 'post', path: '/v1/registrations' },
   { method: 'get', path: '/v1/registrations/{id}' },
+  { method: 'patch', path: '/v1/registrations/{id}' },
 ]
 
 // Request bodies use the input shape (before trimming); responses use what we send.
@@ -160,6 +162,22 @@ export function buildOpenApiDocument() {
             '400': { description: 'The id is not a UUID.' },
             '401': { description: 'The key is missing or wrong.' },
             '404': problem('No registration has this id.'),
+          },
+        },
+        patch: {
+          summary: 'Changes a registration.',
+          description:
+            'Send only what changes. `squadIds` and `sweeperIds` replace the stored lists; a list left out stays. A request without a real payment (not Manual, amount above 0) also cannot leave the registration with no squad, drop a complete squad or sweeper, or change the division once the bowler has scores. A payment code already on file is a retry: the answer is 204 and nothing changes. Failed checks answer 400; an unknown registration answers 500.',
+          operationId: 'updateRegistration',
+          security: protectedByKey,
+          parameters: [idParameter],
+          requestBody: { required: true, content: json(input(updateRegistrationRequestSchema)) },
+          responses: {
+            '204': { description: 'The registration was changed.' },
+            '400': problem('A check failed. Each reason is in `errors`.'),
+            '401': { description: 'The key is missing or wrong.' },
+            '429': problem('Too many requests.'),
+            '500': problem('The registration does not exist, or an unexpected error.'),
           },
         },
       },

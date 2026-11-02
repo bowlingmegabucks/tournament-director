@@ -94,7 +94,7 @@ export function createApp({
   // The five results routes (squad, sweeper, at-large, seeding, super sweeper) read the same data.
   const resultsDeps = { tournaments, divisions, squads, sweepers, lanes, scores, logger }
 
-  // One router serves both methods; the two groups below give each its own access.
+  // One router serves every method; the two groups below give each its own access.
   const vendorRegistrations = createVendorRegistrationRouter({
     tournaments,
     divisions,
@@ -224,8 +224,8 @@ export function createApp({
       },
       {
         path: '/v1/registrations',
-        access: { permission: 'registrations.write', apiKey: true }, // API-05, D-105
-        methods: ['POST'],
+        access: { permission: 'registrations.write', apiKey: true }, // API-05, API-07, D-105
+        methods: ['POST', 'PATCH'],
         router: vendorRegistrations,
       },
       {

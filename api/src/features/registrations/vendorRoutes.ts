@@ -13,6 +13,8 @@ import type { TournamentRepository } from '../tournaments/repository.ts'
 import { notFoundProblem, toProblem, validation } from './problem.ts'
 import { register } from './register.ts'
 import { parseCreateRequest } from './request.ts'
+import { updateRegistration } from './update.ts'
+import { parseUpdateRequest } from './updateRequest.ts'
 import type { RegistrationDetailResponse } from './vendorTypes.ts'
 import type { RegistrationWriter } from './writer.ts'
 
@@ -186,6 +188,42 @@ export function createVendorRegistrationRouter(deps: VendorRegistrationDependenc
       },
     }
     res.json(body)
+  })
+
+  router.patch('/:id', express.json({ limit: '100kb' }), async (req, res) => {
+    const { id } = idParams.parse(req.params)
+    const detail = 'An error occurred while updating the registration.'
+    const parsed = parseUpdateRequest(req.body)
+    const failures = parsed.success
+      ? parsed.data.registration.registrationId === id
+        ? []
+        : [
+            validation(
+              'Registration.IdMismatch',
+              'The registration ID in the body does not match the route.',
+            ),
+          ]
+      : parsed.failures
+    if (!parsed.success || failures.length > 0) {
+      const problem = toProblem(failures, detail, traceIdOf(res))
+      res.status(problem.status).type('application/problem+json').json(problem)
+      return
+    }
+
+    const result = await updateRegistration(
+      { tournaments, divisions, sweepers, writer },
+      id,
+      parsed.data.registration,
+    )
+    const log = requestLogger(res, logger)
+    if (!result.ok) {
+      log.info({ codes: result.failures.map((failure) => failure.code) }, 'Update refused')
+      const problem = toProblem(result.failures, detail, traceIdOf(res))
+      res.status(problem.status).type('application/problem+json').json(problem)
+      return
+    }
+    log.info({ registrationId: id, mode: result.mode }, 'Registration updated')
+    res.status(204).end()
   })
 
   router.use(routeErrors(logger))

@@ -44,6 +44,8 @@ export interface SaveRegistration {
     superSweeper: boolean
   }
   addSessionIds: string[]
+  /** Squads and sweepers taken off the registration (REG-31). */
+  removeSessionIds?: string[]
   payment: NewPayment | null
 }
 
@@ -61,6 +63,8 @@ export interface RegistrationWriter {
   findSessions(ids: string[]): Promise<StoredSession[]>
   /** The registration that already holds this payment code (D-109). */
   findRegistrationIdByPaymentCode(confirmationCode: string): Promise<string | undefined>
+  /** The ids of the squads and sweepers where this bowler has any score (REG-34, REG-36, REG-15). */
+  findScoredSessionIds(bowlerId: string): Promise<string[]>
   save(command: SaveRegistration): Promise<void>
   getDetail(registrationId: string): Promise<RegistrationDetail | undefined>
 }
@@ -72,6 +76,8 @@ export interface InMemoryWriterSeed {
   divisions?: { id: string; tournamentId: string }[]
   sessions?: StoredSession[]
   payments?: { registrationId: string; confirmationCode: string }[]
+  /** A score of one bowler in one squad or sweeper. */
+  scores?: { bowlerId: string; sessionId: string }[]
 }
 
 /** Storage in memory. `state` lets a test see what was saved. */
@@ -82,6 +88,7 @@ export function createInMemoryRegistrationWriter(seed: InMemoryWriterSeed = {}) 
     divisions: [...(seed.divisions ?? [])],
     sessions: [...(seed.sessions ?? [])],
     payments: [...(seed.payments ?? [])],
+    scores: [...(seed.scores ?? [])],
   }
 
   const writer: RegistrationWriter = {
@@ -102,7 +109,13 @@ export function createInMemoryRegistrationWriter(seed: InMemoryWriterSeed = {}) 
       Promise.resolve(
         state.payments.find((payment) => payment.confirmationCode === code)?.registrationId,
       ),
-    save: ({ bowler, registration, addSessionIds, payment }) => {
+    findScoredSessionIds: (bowlerId) =>
+      Promise.resolve([
+        ...new Set(
+          state.scores.filter((score) => score.bowlerId === bowlerId).map((s) => s.sessionId),
+        ),
+      ]),
+    save: ({ bowler, registration, addSessionIds, removeSessionIds = [], payment }) => {
       if (bowler.isNew) {
         state.bowlers.push({ id: bowler.id, ...bowler.data })
       } else {
@@ -132,7 +145,10 @@ export function createInMemoryRegistrationWriter(seed: InMemoryWriterSeed = {}) 
             divisionId: registration.divisionId,
             average: registration.average,
             superSweeper: registration.superSweeper,
-            sessionIds: [...entry.registration.sessionIds, ...addSessionIds],
+            sessionIds: [
+              ...entry.registration.sessionIds.filter((id) => !removeSessionIds.includes(id)),
+              ...addSessionIds,
+            ],
           })
         }
       }

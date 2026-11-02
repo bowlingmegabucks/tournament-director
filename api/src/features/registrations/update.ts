@@ -44,11 +44,14 @@ async function eligibilityFailures(
   return { failures: checkEligibility({ division, ...rest }) }
 }
 
+const uniqueOrUndefined = (ids: string[] | null | undefined) => (ids ? unique(ids) : undefined)
+
 async function checkPaymentCode(
   writer: RegistrationWriter,
-  code: string,
+  code: string | undefined,
   registrationId: string,
 ): Promise<UpdateResult | undefined> {
+  if (code === undefined) return undefined
   const holder = await writer.findRegistrationIdByPaymentCode(code)
   if (holder === registrationId) return { ok: true, mode: 'retry' }
   if (holder === undefined) return undefined
@@ -207,10 +210,8 @@ export async function updateRegistration(
   const newId = deps.newId ?? randomUUID
 
   const payment = input.payment ? toNewPayment(input.payment, newId(), now) : null
-  if (payment) {
-    const early = await checkPaymentCode(writer, payment.confirmationCode, registrationId)
-    if (early) return early
-  }
+  const early = await checkPaymentCode(writer, payment?.confirmationCode, registrationId)
+  if (early) return early
 
   const stored = await writer.getDetail(registrationId)
   if (!stored) {
@@ -231,8 +232,8 @@ export async function updateRegistration(
     if (problem) return fail(problem)
   }
 
-  const squadIds = input.squadIds ? unique(input.squadIds) : undefined
-  const sweeperIds = input.sweeperIds ? unique(input.sweeperIds) : undefined
+  const squadIds = uniqueOrUndefined(input.squadIds)
+  const sweeperIds = uniqueOrUndefined(input.sweeperIds)
   const scoredIds = await writer.findScoredSessionIds(stored.bowlerId)
   const found = await writer.findSessions([
     ...stored.sessionIds,

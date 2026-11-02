@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type { DivisionRepository } from '../divisions/repository.ts'
 import type { SweeperRepository } from '../sweepers/repository.ts'
 import type { TournamentRepository } from '../tournaments/repository.ts'
-import { checkEligibility } from './eligibility.ts'
+import { checkEligibility, type EligibilityInput } from './eligibility.ts'
 import { isPaidRequest, toNewPayment } from './payment.ts'
 import { other, validation, type Failure } from './problem.ts'
 import { checkNewSessions, unique } from './register.ts'
@@ -23,6 +23,26 @@ export type UpdateResult =
   { ok: true; mode: 'update' | 'retry' } | { ok: false; failures: Failure[] }
 
 const fail = (...failures: Failure[]): UpdateResult => ({ ok: false, failures })
+
+async function eligibilityFailures(
+  divisions: DivisionRepository,
+  {
+    tournamentId,
+    divisionId,
+    ...rest
+  }: Omit<EligibilityInput, 'division'> & {
+    tournamentId: string
+    divisionId: string
+  },
+): Promise<{ failures: Failure[] } | { failure: Failure }> {
+  const division = (await divisions.listByTournament(tournamentId)).find(
+    (candidate) => candidate.id === divisionId,
+  )
+  if (!division) {
+    return { failure: other('Division.NotFound', 'The specified division does not exist.') }
+  }
+  return { failures: checkEligibility({ division, ...rest }) }
+}
 
 async function checkPaymentCode(
   writer: RegistrationWriter,
@@ -247,20 +267,15 @@ export async function updateRegistration(
   // REG-37 and REG-38 (D-116): eligibility on the new division, or the new average.
   const average = input.average ?? stored.average
   if (input.divisionId != null || input.average != null) {
-    const division = (await divisions.listByTournament(tournamentId)).find(
-      (candidate) => candidate.id === divisionId,
-    )
-    if (!division) {
-      return fail(other('Division.NotFound', 'The specified division does not exist.'))
-    }
-    failures.push(
-      ...checkEligibility({
-        division,
-        average,
-        bowler: stored.bowler,
-        tournamentStart: tournament.startDate,
-      }),
-    )
+    const eligibility = await eligibilityFailures(divisions, {
+      tournamentId,
+      divisionId,
+      average,
+      bowler: stored.bowler,
+      tournamentStart: tournament.startDate,
+    })
+    if ('failure' in eligibility) return fail(eligibility.failure)
+    failures.push(...eligibility.failures)
   }
   if (failures.length > 0) return { ok: false, failures }
 

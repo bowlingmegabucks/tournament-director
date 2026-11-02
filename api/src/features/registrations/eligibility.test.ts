@@ -89,6 +89,14 @@ describe('age limits (REG-04d to REG-04f)', () => {
   })
 })
 
+describe('a bowler with no gender on file', () => {
+  it('meets the age test of a division with no gender (REG-04e)', () => {
+    expect(check({ division: { minimumAge: 60, gender: null }, bowler: { gender: null } })).toEqual(
+      ['Bowler too young for selected division'],
+    )
+  })
+})
+
 describe('gender (REG-04g, REG-04h)', () => {
   it('lets the division gender in, and refuses the other (division gender only)', () => {
     const division = { gender: 'Female' as const }

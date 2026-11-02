@@ -132,6 +132,7 @@ describe('request shape (API-07)', () => {
     const parsed = parseUpdateRequest({
       registration: {
         registrationId: faker.string.uuid(),
+        divisionId: 'z',
         squadIds: ['x'],
         sweeperIds: ['y'],
         payment: { processingSystem: 'Stripe', confirmationCode: 'a', amount: 5000 },
@@ -139,6 +140,7 @@ describe('request shape (API-07)', () => {
     })
 
     expect(!parsed.success && parsed.failures.map((f) => [f.code, f.description])).toEqual([
+      ['Registration.DivisionIdInvalid', 'Invalid Division ID'],
       ['Registration.SquadIdsInvalid', 'Invalid squad IDs'],
       ['Registration.SweeperIdsInvalid', 'Invalid sweeper IDs'],
       ['Payment.Invalid', 'The payment is not valid.'],

@@ -6,6 +6,7 @@
   "mutate": [
     "src/**/*.ts",
     "!src/**/*.test.ts",
+    "!src/**/*.testData.ts",
     "!src/server.ts",
     "!src/instrumentation.ts",
     "!src/test/**",

@@ -228,6 +228,77 @@ describe('a division the read side cannot list', () => {
   })
 })
 
+describe('a division the read side lists beside others', () => {
+  it('fails as an unknown division when the list holds only other divisions (D-39)', async () => {
+    const { deps, input } = setup()
+    deps.divisions.listByTournament = () => Promise.resolve([createDivision()])
+
+    const failures = await failuresOf(register(deps, input()))
+
+    expect(failures).toEqual([
+      {
+        kind: 'other',
+        code: 'Division.NotFound',
+        description: 'The specified division does not exist.',
+      },
+    ])
+  })
+})
+
+describe('what register looks up and words', () => {
+  it('asks for the requested squads and sweepers only when the bowler has no registration', async () => {
+    const { deps, input, squads, sweepers } = setup()
+    const asked: string[][] = []
+    const findSessions = deps.writer.findSessions
+    deps.writer.findSessions = (ids) => {
+      asked.push(ids)
+      return findSessions(ids)
+    }
+
+    await register(deps, input({ squads: [squads[0]?.id], sweepers: [sweepers[0]?.id] }))
+
+    expect(asked).toEqual([[squads[0]?.id, sweepers[0]?.id]])
+  })
+
+  it('words a request with no squad (REG-03)', async () => {
+    const { deps, input, sweepers } = setup()
+
+    const failures = await failuresOf(register(deps, input({ squads: [sweepers[0]?.id] })))
+
+    expect(failures).toContainEqual({
+      kind: 'validation',
+      code: 'Registration.SquadsRequired',
+      description: 'Bowler must enter at least one squad',
+    })
+  })
+
+  it('treats a birth date of today as a bad date (BWL-10), by the date and not the time', async () => {
+    const { deps, input } = setup()
+    const today = now.toISOString().slice(0, 10)
+
+    const failures = await failuresOf(
+      register(
+        deps,
+        input({ bowler: { ...sampleRequest().registration.bowler, dateOfBirth: today } }),
+      ),
+    )
+
+    expect(failures.map((f) => f.code)).toContain('Bowler.DateOfBirthInvalid')
+  })
+
+  it('does not call a squad listed as a sweeper complete (D-108)', async () => {
+    const { deps, input, tournament } = setup()
+    const doneSquad = { ...session('squad', tournament.id, true) }
+    deps.writer.findSessions = (ids) =>
+      Promise.resolve([doneSquad].filter((s) => ids.includes(s.id)))
+
+    const failures = await failuresOf(register(deps, input({ sweepers: [doneSquad.id] })))
+
+    expect(failures.map((f) => f.code)).toContain('Registration.InvalidSweeperIds')
+    expect(failures.map((f) => f.code)).not.toContain('Registration.SweeperComplete')
+  })
+})
+
 describe('squads and sweepers (D-108, REG-03, REG-06)', () => {
   it('refuses a squad of another tournament or an unknown one (D-108)', async () => {
     const stranger = session('squad', faker.string.uuid())
@@ -390,9 +461,21 @@ describe('appending to an existing registration (REG-10 to REG-14)', () => {
 
     const failures = await failuresOf(register(deps, input({ squads: [squads[0]?.id] })))
 
-    expect(failures.map((f) => f.description)).toEqual([
-      'The specified squads are already registered.',
+    expect(failures).toEqual([
+      {
+        kind: 'validation',
+        code: 'Squad.Conflict',
+        description: 'The specified squads are already registered.',
+      },
     ])
+  })
+
+  it('refuses a squad already entered even when the registration holds other sessions too (REG-11)', async () => {
+    const { deps, input, squads } = withRegistration({ alsoOnSweeper: true })
+
+    const failures = await failuresOf(register(deps, input({ squads: [squads[0]?.id] })))
+
+    expect(failures.map((f) => f.code)).toEqual(['Squad.Conflict'])
   })
 
   it('refuses a sweeper already on the registration (REG-11)', async () => {
@@ -416,9 +499,11 @@ describe('appending to an existing registration (REG-10 to REG-14)', () => {
       register(deps, input({ squads: [second?.id], sweepers: [sweeperId] })),
     )
 
-    expect(failures.map((f) => f.description)).toContain(
-      'The specified sweepers are already registered.',
-    )
+    expect(failures).toContainEqual({
+      kind: 'validation',
+      code: 'Sweeper.Conflict',
+      description: 'The specified sweepers are already registered.',
+    })
   })
 
   it('moves the registration to the requested division (REG-12)', async () => {

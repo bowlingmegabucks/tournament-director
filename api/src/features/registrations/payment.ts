@@ -3,7 +3,7 @@ import type { NewPayment } from './writer.ts'
 
 /**
  * D-106: a request is *paid* when it carries a payment that is not the `Manual` placeholder and
- * has an amount above 0. The registration site always pays first; the desk sends a `Manual_` $0
+ * has an amount above 0. `Manual` is an exact match, as in legacy. The registration site always pays first; the desk sends a `Manual_` $0
  * entry (PAY-01a). A paid request gets the legacy rules; any other request gets the desk rules.
  */
 export function isPaidRequest(payment: PaymentInput | null | undefined): boolean {
@@ -11,7 +11,8 @@ export function isPaidRequest(payment: PaymentInput | null | undefined): boolean
     payment !== null &&
     payment !== undefined &&
     payment.processingSystem !== 'Manual' &&
-    payment.amount > 0
+    // The column keeps cents, so an amount that rounds to $0.00 is not a payment.
+    Math.round(payment.amount * 100) > 0
   )
 }
 

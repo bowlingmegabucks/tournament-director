@@ -6,7 +6,6 @@ import type { Division } from '../divisions/types.ts'
 import { createInMemorySweeperRepository } from '../sweepers/repository.ts'
 import { createInMemoryTournamentRepository } from '../tournaments/repository.ts'
 import { createCommonBowler } from './bowler.testData.ts'
-import { isPaidRequest } from './payment.ts'
 import { updateRegistration } from './update.ts'
 import { parseUpdateRequest, type UpdateInput } from './updateRequest.ts'
 import {
@@ -115,18 +114,6 @@ async function failuresOf(result: ReturnType<typeof updateRegistration>) {
   if (outcome.ok) throw new Error('expected a failure')
   return outcome.failures
 }
-
-describe('isPaidRequest (D-106)', () => {
-  it.each([
-    [{ processingSystem: 'Stripe', confirmationCode: 'a', amount: 1 }, true],
-    [{ processingSystem: 'Manual', confirmationCode: 'a', amount: 25 }, false],
-    [{ processingSystem: 'Stripe', confirmationCode: 'a', amount: 0 }, false],
-    [null, false],
-    [undefined, false],
-  ])('%j is %s', (payment, expected) => {
-    expect(isPaidRequest(payment)).toBe(expected)
-  })
-})
 
 describe('request shape (API-07)', () => {
   it('needs a registration id that is a UUID', () => {

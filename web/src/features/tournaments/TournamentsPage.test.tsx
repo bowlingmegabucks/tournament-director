@@ -3,7 +3,8 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
-import { createTournament } from '../../mocks/data'
+import { createSignedInUser, createTournament } from '../../mocks/data'
+import { setMockUser } from '../../mocks/authHandlers'
 import { renderApp } from '../../test/renderApp'
 import { useFixedToday } from '../../test/fixedToday'
 import type { Tournament } from './types'
@@ -157,5 +158,44 @@ describe('TournamentsPage', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Try again' }))
 
     expect(await screen.findByText('Running Open')).toBeVisible()
+  })
+
+  describe('New tournament button (TRN-22, D-102)', () => {
+    it.each(['director', 'admin'])('shows it to a %s and opens the form', async (role) => {
+      serve([running()])
+      setMockUser(createSignedInUser({ roles: [role] }))
+
+      renderApp('/tournaments')
+
+      expect(await screen.findByRole('link', { name: 'New tournament' })).toHaveAttribute(
+        'href',
+        '/tournaments/new',
+      )
+    })
+
+    it('also shows it when there are no tournaments yet', async () => {
+      serve([])
+      setMockUser(createSignedInUser({ roles: ['director'] }))
+
+      renderApp('/tournaments')
+
+      expect(await screen.findByText('No tournaments yet.')).toBeVisible()
+      expect(await screen.findByRole('link', { name: 'New tournament' })).toBeVisible()
+    })
+
+    it.each([
+      ['a score keeper', () => setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))],
+      ['a signed-out visitor', () => undefined],
+    ])('hides it from %s', async (_who, setUp) => {
+      serve([running()])
+      setUp()
+
+      renderApp('/tournaments')
+
+      await screen.findByText('Running Open')
+      // Let the sign-in check finish first, or the absence proves nothing.
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(screen.queryByRole('link', { name: 'New tournament' })).not.toBeInTheDocument()
+    })
   })
 })

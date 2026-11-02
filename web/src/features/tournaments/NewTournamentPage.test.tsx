@@ -1,0 +1,265 @@
+import { describe, expect, it } from 'vitest'
+import { screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
+import { server } from '../../mocks/server'
+import { createSignedInUser, createTournament } from '../../mocks/data'
+import { setMockUser } from '../../mocks/authHandlers'
+import { renderApp } from '../../test/renderApp'
+import type { NewTournament } from './types'
+
+const filled: Record<string, string> = {
+  'Name (required)': 'Spring Classic',
+  'Start date (required)': '2027-03-12',
+  'End date (required)': '2027-03-14',
+  'Bowling center (required)': 'Bowl-O-Rama',
+  'Entry fee in dollars (required)': '60',
+  'Games per squad (required)': '5',
+  'Finals ratio (required)': '8',
+  'Cash ratio (required)': '5',
+  'Super sweeper cash ratio (required)': '4',
+}
+
+async function fillIn(
+  user: ReturnType<typeof userEvent.setup>,
+  overrides: Record<string, string> = {},
+) {
+  for (const [label, value] of Object.entries({ ...filled, ...overrides })) {
+    const input = screen.getByLabelText(label)
+    await user.clear(input)
+    if (value !== '') await user.type(input, value)
+  }
+}
+
+function signInAs(role: 'director' | 'scoreKeeper') {
+  setMockUser(createSignedInUser({ roles: [role] }))
+}
+
+const save = () => screen.getByRole('button', { name: /Save tournament|Saving/ })
+
+describe('NewTournamentPage', () => {
+  it('shows the empty form with no super sweeper default (TRN-22, D-122)', async () => {
+    signInAs('director')
+    renderApp('/tournaments/new')
+
+    expect(await screen.findByRole('heading', { name: 'New tournament', level: 1 })).toBeVisible()
+    expect(document.title).toBe('New tournament · Tournament Director')
+    expect(screen.getByLabelText('Super sweeper cash ratio (required)')).toHaveValue('')
+    expect(screen.getByRole('link', { name: 'Cancel' })).toHaveAttribute('href', '/tournaments')
+  })
+
+  it('lists every missing field and focuses the first (TRN-01, TRN-07, TRN-22)', async () => {
+    signInAs('director')
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+
+    await user.click(save())
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Fix 9 fields to save.')
+    expect(alert).toHaveTextContent('Name is required')
+    expect(alert).toHaveTextContent('Super sweeper cash ratio is required')
+    expect(screen.getByLabelText('Name (required)')).toHaveFocus()
+    expect(screen.getByLabelText('Name (required)')).toBeInvalid()
+    expect(screen.getByLabelText('Name (required)')).toHaveAccessibleDescription('Name is required')
+  })
+
+  it('says "field" for one problem and moves focus from the summary link', async () => {
+    signInAs('director')
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    await fillIn(user, { 'Games per squad (required)': '0' })
+
+    await user.click(save())
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Fix 1 field to save.')
+    await user.click(screen.getByLabelText('Name (required)'))
+    await user.click(screen.getByRole('link', { name: 'Must have at least one game' }))
+    expect(screen.getByLabelText('Games per squad (required)')).toHaveFocus()
+  })
+
+  it.each([
+    ['End date (required)', '2027-03-01', 'End date must be on or after start date (TRN-02)'],
+    ['Entry fee in dollars (required)', '0', 'Entry fee must be greater than $0 (TRN-03)'],
+    ['Games per squad (required)', '0', 'Must have at least one game (TRN-04)'],
+    ['Finals ratio (required)', '1', 'Finals ratio must be greater than 1 (TRN-05)'],
+    ['Cash ratio (required)', '1', 'Cash ratio must be greater than 1 (TRN-06)'],
+    [
+      'Super sweeper cash ratio (required)',
+      '0',
+      'Super sweeper cash ratio must be at least 1 (TRN-09)',
+    ],
+  ])('shows the message under %s as the director leaves it', async (label, value, expected) => {
+    signInAs('director')
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    await fillIn(user)
+
+    const input = screen.getByLabelText(label)
+    await user.clear(input)
+    await user.type(input, value)
+    await user.tab()
+
+    expect(input).toHaveAccessibleDescription(
+      expect.stringContaining(expected.replace(/ \(TRN-\d+\)$/, '')),
+    )
+  })
+
+  it('clears a message when the text changes', async () => {
+    signInAs('director')
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    const name = screen.getByLabelText('Name (required)')
+    await user.click(name)
+    await user.tab()
+    expect(name).toBeInvalid()
+
+    await user.type(name, 'S')
+
+    expect(name).toBeValid()
+  })
+
+  it('sends the typed values, goes to the overview, and shows the toast (TRN-19, TRN-22, D-120)', async () => {
+    signInAs('director')
+    const stored = createTournament({ name: 'Spring Classic', entryFee: 60 })
+    let sent: NewTournament | undefined
+    server.use(
+      http.post('/v1/tournaments', async ({ request }) => {
+        sent = (await request.json()) as NewTournament
+        return HttpResponse.json({ tournament: stored }, { status: 201 })
+      }),
+      http.get(`/v1/tournaments/${stored.id}`, () => HttpResponse.json({ tournament: stored })),
+    )
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    await fillIn(user, {
+      'Name (required)': '  Spring Classic ',
+      'Entry fee in dollars (required)': '60.00',
+    })
+
+    await user.click(save())
+
+    expect(await screen.findByRole('heading', { name: 'Spring Classic', level: 1 })).toBeVisible()
+    expect(await screen.findByText('Tournament created')).toBeVisible()
+    expect(sent).toEqual({
+      name: 'Spring Classic',
+      startDate: '2027-03-12',
+      endDate: '2027-03-14',
+      bowlingCenter: 'Bowl-O-Rama',
+      entryFee: 60,
+      games: 5,
+      finalsRatio: 8,
+      cashRatio: 5,
+      superSweeperCashRatio: 4,
+    })
+  })
+
+  it('disables Save and says Saving while the request runs', async () => {
+    signInAs('director')
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const stored = createTournament()
+    server.use(
+      http.post('/v1/tournaments', async () => {
+        await gate
+        return HttpResponse.json({ tournament: stored }, { status: 201 })
+      }),
+      http.get(`/v1/tournaments/${stored.id}`, () => HttpResponse.json({ tournament: stored })),
+    )
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    await fillIn(user)
+
+    await user.click(save())
+
+    expect(await screen.findByRole('button', { name: 'Saving…' })).toBeDisabled()
+    release()
+    await screen.findByRole('heading', { name: stored.name, level: 1 })
+  })
+
+  it('shows a duplicate under Name and keeps what was typed (TRN-20, D-123)', async () => {
+    signInAs('director')
+    const message = 'A tournament with this name and start date already exists'
+    server.use(
+      http.post('/v1/tournaments', () =>
+        HttpResponse.json({ message, errors: { name: message } }, { status: 409 }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    await fillIn(user)
+
+    await user.click(save())
+
+    expect(await screen.findByLabelText('Name (required)')).toHaveAccessibleDescription(message)
+    expect(screen.getByLabelText('Name (required)')).toHaveValue('Spring Classic')
+    expect(screen.getByLabelText('Name (required)')).toHaveFocus()
+    expect(save()).toBeEnabled()
+  })
+
+  it('shows a server field error under its field (D-121)', async () => {
+    signInAs('director')
+    server.use(
+      http.post('/v1/tournaments', () =>
+        HttpResponse.json(
+          {
+            message: 'Check the highlighted fields.',
+            errors: { cashRatio: 'Cash ratio must be greater than 1' },
+          },
+          { status: 400 },
+        ),
+      ),
+    )
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    await fillIn(user)
+
+    await user.click(save())
+
+    expect(await screen.findByLabelText('Cash ratio (required)')).toHaveAccessibleDescription(
+      expect.stringContaining('Cash ratio must be greater than 1'),
+    )
+  })
+
+  it('keeps an error toast until dismissed when the save fails for another reason', async () => {
+    signInAs('director')
+    server.use(http.post('/v1/tournaments', () => new HttpResponse(null, { status: 503 })))
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    await fillIn(user)
+
+    await user.click(save())
+
+    const toast = await screen.findByRole('alert')
+    expect(toast).toHaveTextContent('Failed to save the tournament (503)')
+    expect(screen.getByLabelText('Name (required)')).toHaveValue('Spring Classic')
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(screen.queryByText('Failed to save the tournament (503)')).not.toBeInTheDocument()
+  })
+
+  it('tells a signed-in user without the permission (D-102)', async () => {
+    signInAs('scoreKeeper')
+    renderApp('/tournaments/new')
+
+    expect(await screen.findByText('You do not have permission to view this page.')).toBeVisible()
+    expect(screen.queryByLabelText('Name (required)')).not.toBeInTheDocument()
+  })
+
+  it('sends a signed-out visitor to sign in (D-102)', async () => {
+    renderApp('/tournaments/new')
+
+    expect(await screen.findByRole('heading', { name: 'Sign in', level: 1 })).toBeVisible()
+  })
+})

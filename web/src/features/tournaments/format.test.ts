@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { formatDateRange, formatFee } from './format'
+import { formatDateRange, formatFee, formatRatio } from './format'
 
 describe('formatDateRange', () => {
   afterEach(() => {
@@ -29,5 +29,19 @@ describe('formatFee', () => {
     [1234.56, '$1,234.56'],
   ])('%d reads %s', (fee, expected) => {
     expect(formatFee(fee)).toBe(expected)
+  })
+})
+
+describe('formatRatio', () => {
+  it.each([
+    [8, '1 in 8'],
+    [7.5, '1 in 7.5'],
+    [1, '1 in 1'],
+  ])('writes %j as %s', (ratio, text) => {
+    expect(formatRatio(ratio)).toBe(text)
+  })
+
+  it('shows the legacy 0 as not set (D-17)', () => {
+    expect(formatRatio(0)).toBe('0 (not set)')
   })
 })

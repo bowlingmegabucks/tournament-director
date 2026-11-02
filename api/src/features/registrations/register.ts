@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import type { Division } from '../divisions/types.ts'
 import type { DivisionRepository } from '../divisions/repository.ts'
 import type { SweeperRepository } from '../sweepers/repository.ts'
 import type { TournamentRepository } from '../tournaments/repository.ts'
@@ -82,11 +83,33 @@ function checkOverlap(
  * for every caller (D-107). Other-tournament ids and complete squads are a 400 too (D-108). A
  * payment code already on file means the caller is retrying: answer with that registration (D-109).
  */
+async function findDivision(
+  { divisions, writer }: RegisterDependencies,
+  divisionId: string,
+  tournamentId: string,
+): Promise<{ division: Division } | { failure: Failure }> {
+  const owner = await writer.findDivisionTournament(divisionId)
+  const notFound = other('Division.NotFound', 'The specified division does not exist.')
+  if (owner === undefined) return { failure: notFound }
+  if (owner !== tournamentId) {
+    return {
+      failure: validation(
+        'Registration.DivisionNotInTournament',
+        'Division ID is not valid for the tournament.',
+      ),
+    }
+  }
+  const division = (await divisions.listByTournament(tournamentId)).find(
+    (candidate) => candidate.id === divisionId,
+  )
+  return division ? { division } : { failure: notFound }
+}
+
 export async function register(
   deps: RegisterDependencies,
   input: RegistrationInput,
 ): Promise<RegisterResult> {
-  const { tournaments, divisions, sweepers, writer } = deps
+  const { tournaments, sweepers, writer } = deps
   const now = deps.now?.() ?? new Date()
   const newId = deps.newId ?? randomUUID
 
@@ -102,24 +125,9 @@ export async function register(
       other('Tournament.NotFound', 'The specified tournament does not exist.'),
     ])
   }
-  const divisionTournamentId = await writer.findDivisionTournament(input.divisionId)
-  if (divisionTournamentId === undefined) {
-    return fail('create', [other('Division.NotFound', 'The specified division does not exist.')])
-  }
-  if (divisionTournamentId !== tournament.id) {
-    return fail('create', [
-      validation(
-        'Registration.DivisionNotInTournament',
-        'Division ID is not valid for the tournament.',
-      ),
-    ])
-  }
-  const division = (await divisions.listByTournament(tournament.id)).find(
-    (candidate) => candidate.id === input.divisionId,
-  )
-  if (!division) {
-    return fail('create', [other('Division.NotFound', 'The specified division does not exist.')])
-  }
+  const located = await findDivision(deps, input.divisionId, tournament.id)
+  if ('failure' in located) return fail('create', [located.failure])
+  const { division } = located
 
   const usbcId = input.bowler.usbcId
   const knownBowlers = await writer.findBowlersByUsbcId(usbcId)

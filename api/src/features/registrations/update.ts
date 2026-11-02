@@ -24,6 +24,47 @@ export type UpdateResult =
 
 const fail = (...failures: Failure[]): UpdateResult => ({ ok: false, failures })
 
+async function checkPaymentCode(
+  writer: RegistrationWriter,
+  code: string,
+  registrationId: string,
+): Promise<UpdateResult | undefined> {
+  const holder = await writer.findRegistrationIdByPaymentCode(code)
+  if (holder === registrationId) return { ok: true, mode: 'retry' }
+  if (holder === undefined) return undefined
+  return fail(
+    validation('Payment.AlreadyUsed', 'The payment confirmation belongs to another registration.'),
+  )
+}
+
+/** The squads and sweepers on the registration now, after the request, and the difference. */
+function planSessions(
+  found: StoredSession[],
+  storedIds: string[],
+  squadIds: string[] | undefined,
+  sweeperIds: string[] | undefined,
+) {
+  const onRegistration = (kind: 'squad' | 'sweeper') =>
+    found
+      .filter((session) => session.kind === kind && storedIds.includes(session.id))
+      .map((session) => session.id)
+  const currentSquads = onRegistration('squad')
+  const currentSweepers = onRegistration('sweeper')
+  const nextSquads = squadIds ?? currentSquads
+  const nextSweepers = sweeperIds ?? currentSweepers
+  const added = (next: string[], current: string[]) => next.filter((id) => !current.includes(id))
+  const removed = (next: string[], current: string[]) => current.filter((id) => !next.includes(id))
+  return {
+    currentSquads,
+    currentSweepers,
+    nextSquads,
+    nextSweepers,
+    addSquads: added(nextSquads, currentSquads),
+    addSweepers: added(nextSweepers, currentSweepers),
+    removeIds: [...removed(nextSquads, currentSquads), ...removed(nextSweepers, currentSweepers)],
+  }
+}
+
 async function checkDivisionMove(
   writer: RegistrationWriter,
   divisionId: string,
@@ -60,7 +101,7 @@ interface SessionRules {
 }
 
 function sessionFailures(rules: SessionRules): Failure[] {
-  const { tournamentId, desk, found, scoredIds, removeIds, nextSweepers, superSweeper } = rules
+  const { tournamentId, desk, found, scoredIds, removeIds } = rules
   const scoredHere = found.filter(
     (session) => scoredIds.includes(session.id) && session.tournamentId === tournamentId,
   )
@@ -90,6 +131,13 @@ function sessionFailures(rules: SessionRules): Failure[] {
   if (desk && rules.nextSquads.length === 0) {
     failures.push(validation('Registration.SquadsRequired', 'Bowler must enter at least one squad'))
   }
+  failures.push(...lockFailures(rules, scoredHere))
+  return failures
+}
+
+function lockFailures(rules: SessionRules, scoredHere: StoredSession[]): Failure[] {
+  const { desk, nextSweepers, superSweeper } = rules
+  const failures: Failure[] = []
   // REG-35 and REG-36 (D-110).
   if (superSweeper && !rules.tournamentSweeperIds.every((id) => nextSweepers.includes(id))) {
     failures.push(
@@ -140,16 +188,8 @@ export async function updateRegistration(
 
   const payment = input.payment ? toNewPayment(input.payment, newId(), now) : null
   if (payment) {
-    const holder = await writer.findRegistrationIdByPaymentCode(payment.confirmationCode)
-    if (holder === registrationId) return { ok: true, mode: 'retry' }
-    if (holder !== undefined) {
-      return fail(
-        validation(
-          'Payment.AlreadyUsed',
-          'The payment confirmation belongs to another registration.',
-        ),
-      )
-    }
+    const early = await checkPaymentCode(writer, payment.confirmationCode, registrationId)
+    if (early) return early
   }
 
   const stored = await writer.getDetail(registrationId)
@@ -182,22 +222,12 @@ export async function updateRegistration(
     ...(sweeperIds ?? []),
     ...scoredIds,
   ])
-  const onRegistration = (kind: 'squad' | 'sweeper') =>
-    found
-      .filter((session) => session.kind === kind && stored.sessionIds.includes(session.id))
-      .map((session) => session.id)
-  const currentSquads = onRegistration('squad')
-  const currentSweepers = onRegistration('sweeper')
-  const nextSquads = squadIds ?? currentSquads
-  const nextSweepers = sweeperIds ?? currentSweepers
-  const added = (next: string[], current: string[]) => next.filter((id) => !current.includes(id))
-  const removed = (next: string[], current: string[]) => current.filter((id) => !next.includes(id))
-  const addSquads = added(nextSquads, currentSquads)
-  const addSweepers = added(nextSweepers, currentSweepers)
-  const removeIds = [
-    ...removed(nextSquads, currentSquads),
-    ...removed(nextSweepers, currentSweepers),
-  ]
+  const { nextSquads, nextSweepers, addSquads, addSweepers, removeIds } = planSessions(
+    found,
+    stored.sessionIds,
+    squadIds,
+    sweeperIds,
+  )
   const superSweeper = input.superSweeper ?? stored.superSweeper
   const failures = sessionFailures({
     tournamentId,

@@ -151,9 +151,10 @@ Changes the registration site would notice. Under D-09, none of these ship until
 | VC-01 | Return 404 for "not found" and 409 for conflicts, not 500 (`API-12`) | 500 says "our server broke" when the request was the problem; retries are wasted | Must handle 404 and 409 if it branches on status | Not started |
 | VC-02 | Apply the 50-per-minute limit to key holders (`API-14`) | Legacy meant 50; callers get 20 | None (looser limit) | Not started |
 | VC-03 | Missing `gender` stays unknown instead of Female (`API-10`) | Stops wrong gender on records | `GET` may return `gender: null`; should send `"M"` or `"F"` | **Changed (D-113):** missing gender becomes Male, not unknown. One-line vendor note: send `"M"` or `"F"`. |
-| VC-04 | Reject a `PATCH` that leaves no qualifying squad (D-04) | No sweeper-only entries | New 400 for a request that used to pass | Not started |
+| VC-04 | Reject a `PATCH` that leaves no qualifying squad (D-04) | No sweeper-only entries | New 400 for a request that used to pass | Decided (D-115): applies to a `PATCH` without a real payment |
 | VC-05 | Accept entries that fail division limits, with a warning, instead of a 400 (D-01) | The site does not check division rules and has already taken payment | Requests that used to fail will pass; the response may carry warnings | **Dropped (D-107):** eligibility stays a 400 |
 | VC-06 | Reject division or squad ids from another tournament, and squads already complete, on create and append | Legacy accepts them by mistake | New 400s for bad requests | Decided (D-108); one-line vendor note when built |
+| VC-07 | A `PATCH` without a real payment cannot drop a complete squad or sweeper (D-10) or change the division after scores (D-117) | Locks results once a squad is complete | New 400s for a refund `PATCH` after completion | Decided (D-115); vendor note when built |
 
 **Two profiles (D-106).** A request with a real payment (not `Manual`, amount above 0) behaves as legacy; a request without one is a desk request and also gets the new checks (VC-04, D-10). Repeat payment codes (D-109) and the per-bowler super sweeper lock (D-110) are looser than legacy.
 

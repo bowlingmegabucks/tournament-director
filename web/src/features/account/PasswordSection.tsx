@@ -18,6 +18,12 @@ export function PasswordSection({ onNotice }: Readonly<{ onNotice: (notice: Noti
 
   const error = mismatch ? 'The two new passwords do not match.' : change.error?.message
 
+  // Any edit starts over: the old reason no longer describes what is in the fields.
+  function edited() {
+    setMismatch(false)
+    change.reset()
+  }
+
   function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     if (newPassword !== confirm) {
@@ -59,7 +65,10 @@ export function PasswordSection({ onNotice }: Readonly<{ onNotice: (notice: Noti
           autoComplete="current-password"
           value={currentPassword}
           describedBy={error ? 'account-password-error' : undefined}
-          onChange={setCurrentPassword}
+          onChange={(value) => {
+            setCurrentPassword(value)
+            edited()
+          }}
         />
         <PasswordField
           id="account-new"
@@ -70,7 +79,7 @@ export function PasswordSection({ onNotice }: Readonly<{ onNotice: (notice: Noti
           describedBy={error ? 'account-password-error' : undefined}
           onChange={(value) => {
             setNewPassword(value)
-            setMismatch(false)
+            edited()
           }}
         />
         <PasswordField
@@ -82,7 +91,7 @@ export function PasswordSection({ onNotice }: Readonly<{ onNotice: (notice: Noti
           describedBy={error ? 'account-password-error' : undefined}
           onChange={(value) => {
             setConfirm(value)
-            setMismatch(false)
+            edited()
           }}
         />
         <button type="submit" disabled={change.isPending}>

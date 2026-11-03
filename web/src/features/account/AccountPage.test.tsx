@@ -103,6 +103,26 @@ describe('AccountPage', () => {
       expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     })
 
+    it('refuses a name of spaces without calling the API', async () => {
+      let called = false
+      server.use(
+        http.patch('/v1/account', () => {
+          called = true
+          return HttpResponse.json({ name: '' })
+        }),
+      )
+      setMockUser(createSignedInUser())
+      renderApp('/account')
+      const field = await screen.findByLabelText('Name')
+
+      await userEvent.clear(field)
+      await userEvent.type(field, '   ')
+      await userEvent.click(screen.getByRole('button', { name: 'Save name' }))
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('Enter a name.')
+      expect(called).toBe(false)
+    })
+
     it('shows the saved, trimmed name after a save, not what was typed', async () => {
       server.use(
         http.patch('/v1/account', () => {
@@ -264,6 +284,21 @@ describe('AccountPage', () => {
 
       expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     })
+
+    it.each(['Current password', 'New password', 'Confirm new password'])(
+      'drops the API error banner when %s is edited',
+      async (label) => {
+        setMockUser(createSignedInUser())
+        renderApp('/account')
+        await fillPasswords(wrongCurrentPassword, good)
+        await submitPassword()
+        await screen.findByText('The current password is wrong.')
+
+        await userEvent.type(screen.getByLabelText(label), 'x')
+
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      },
+    )
 
     it('handles the submit itself, so the page does not reload', async () => {
       setMockUser(createSignedInUser())

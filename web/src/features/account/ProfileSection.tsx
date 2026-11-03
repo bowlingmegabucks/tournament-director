@@ -19,6 +19,11 @@ export function ProfileSection({ onNotice }: Readonly<{ onNotice: (notice: Notic
 
   function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
+    // `required` accepts spaces, so check here.
+    if (name.trim() === '') {
+      onNotice({ kind: 'error', text: 'Enter a name.' })
+      return
+    }
     save.mutate(name.trim(), {
       onSuccess: (saved) => {
         setDraft(undefined)

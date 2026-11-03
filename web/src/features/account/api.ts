@@ -26,33 +26,28 @@ async function failure(response: Response, what: string): Promise<AccountError> 
   return new AccountError(`${what} Try again.`)
 }
 
-/** Change the signed-in user's password. The API ends their other sessions and keeps this one. */
-export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
-  let response: Response
+/** Send a JSON request. A network failure becomes an `AccountError`; a bad status is the caller's to judge. */
+async function send(path: string, method: 'POST' | 'PATCH', body: object): Promise<Response> {
   try {
-    response = await apiFetch(apiUrl('/v1/account/password'), {
-      method: 'POST',
+    return await apiFetch(apiUrl(path), {
+      method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ currentPassword, newPassword }),
+      body: JSON.stringify(body),
     })
   } catch {
     throw new AccountError('Could not reach the server. Try again.')
   }
+}
+
+/** Change the signed-in user's password. The API ends their other sessions and keeps this one. */
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  const response = await send('/v1/account/password', 'POST', { currentPassword, newPassword })
   if (!response.ok) throw await failure(response, 'The password could not be changed.')
 }
 
 /** Change the signed-in user's own name. Returns the name the API saved (trimmed). */
 export async function updateName(name: string): Promise<string> {
-  let response: Response
-  try {
-    response = await apiFetch(apiUrl('/v1/account'), {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
-    })
-  } catch {
-    throw new AccountError('Could not reach the server. Try again.')
-  }
+  const response = await send('/v1/account', 'PATCH', { name })
   if (!response.ok) throw await failure(response, 'The name could not be saved.')
   const body = await readJson(response, 'The name was saved, but the answer could not be read')
   const saved = field(body, 'name')

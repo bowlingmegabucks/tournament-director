@@ -270,9 +270,22 @@ describe('loadConfig mail settings', () => {
     },
   )
 
-  it.each(['example.com', 'ftp://example.com'])('rejects WEB_BASE_URL=%s', (web) => {
-    expect(() => loadConfig({ ...mailEnv, WEB_BASE_URL: web })).toThrow(/WEB_BASE_URL/)
+  it('names every missing setting in one message', () => {
+    expect(() => loadConfig({ ...mailEnv, SMTP_USER: '', MAIL_FROM: '' })).toThrow(
+      'Invalid environment: SMTP_USER, MAIL_FROM required when SMTP_HOST is set',
+    )
   })
+
+  it.each(['http://localhost:5173/td', 'https://example.com'])('accepts WEB_BASE_URL=%s', (web) => {
+    expect(loadConfig({ ...mailEnv, WEB_BASE_URL: web }).mail?.webBaseUrl).toBe(web)
+  })
+
+  it.each(['example.com', 'ftp://example.com', 'xhttp://example.com', 'httpx://example.com'])(
+    'rejects WEB_BASE_URL=%s',
+    (web) => {
+      expect(() => loadConfig({ ...mailEnv, WEB_BASE_URL: web })).toThrow(/WEB_BASE_URL/)
+    },
+  )
 
   it('allows a self-signed certificate when asked, outside production', () => {
     const { mail } = loadConfig({ ...mailEnv, SMTP_ALLOW_SELF_SIGNED: 'true' })

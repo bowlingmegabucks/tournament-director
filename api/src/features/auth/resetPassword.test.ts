@@ -1,3 +1,9 @@
+import {
+  AggregationTemporality,
+  InMemoryMetricExporter,
+  MeterProvider,
+  PeriodicExportingMetricReader,
+} from '@opentelemetry/sdk-metrics'
 import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 import { maxPasswordLength, minPasswordLength } from '../../shared/auth/createAuth.ts'
@@ -14,7 +20,11 @@ const newPassword = 'a brand new password 42'
 async function setup() {
   const captured = createCapturedLogger()
   const tokens: string[] = []
-  const { auth, database } = createTestAuth({
+  const exporter = new InMemoryMetricExporter(AggregationTemporality.CUMULATIVE)
+  const provider = new MeterProvider({
+    readers: [new PeriodicExportingMetricReader({ exporter, exportIntervalMillis: 60_000 })],
+  })
+  const { auth, database, outage } = createTestAuth({
     logger: captured.logger,
     sendResetPassword: ({ token }) => {
       tokens.push(token)
@@ -23,12 +33,37 @@ async function setup() {
   })
   const user = await createTestUser(auth, { email: 'bea@example.com', role: 'scoreKeeper' })
   await auth.api.requestPasswordReset({ body: { email: user.email } })
-  const app = createTestApp({ auth, logger: captured.logger })
+  const app = createTestApp({ auth, logger: captured.logger, meter: provider.getMeter('test') })
   const token = tokens[0] ?? ''
+  /** How many refused calls the failure counter holds for this reason. */
+  const count = async (reason: string): Promise<number> => {
+    await provider.forceFlush()
+    const metric = exporter
+      .getMetrics()
+      .flatMap((data) => data.scopeMetrics)
+      .flatMap((scope) => scope.metrics)
+      .findLast((m) => m.descriptor.name === 'tournament_director.auth.failures')
+    return (
+      metric?.dataPoints
+        .filter((point) => point.attributes['reason'] === reason)
+        .reduce((sum, point) => sum + Number(point.value), 0) ?? 0
+    )
+  }
   const reset = (body: object) => request(app).post(resetPath).send(body)
   const signIn = (password: string) =>
     request(app).post(signInPath).send({ email: user.email, password })
-  return { app, auth, database, user, token, reset, signIn, records: captured.records }
+  return {
+    app,
+    auth,
+    database,
+    outage,
+    user,
+    token,
+    reset,
+    signIn,
+    count,
+    records: captured.records,
+  }
 }
 
 describe('POST /v1/auth/reset-password', () => {
@@ -139,6 +174,50 @@ describe('POST /v1/auth/reset-password', () => {
     expect(logged).toContain('Set-password failed')
     expect(logged).not.toContain('secret-guess-token')
     expect(logged).not.toContain(newPassword)
+  })
+
+  it('logs a refused call at warn level with its status', async () => {
+    const { reset, records } = await setup()
+
+    await reset({ newPassword, token: 'not-a-real-token' })
+
+    expect(records()).toContainEqual(
+      expect.objectContaining({ msg: 'Set-password failed', status: 400, level: 40 }),
+    )
+  })
+
+  it('counts each refused call as bad_reset, and a good call as nothing', async () => {
+    const { reset, count } = await setup()
+
+    await reset({ newPassword, token: 'guess-1' })
+    await reset({ newPassword, token: 'guess-2' })
+    const good = await reset({ newPassword, token: (await setup()).token })
+
+    expect(good.status).toBe(400) // another setup's token is not this app's
+    expect(await count('bad_reset')).toBe(3)
+  })
+
+  it('neither logs nor counts a call that worked', async () => {
+    const { reset, count, records, token } = await setup()
+
+    expect((await reset({ newPassword, token })).status).toBe(200)
+
+    expect(JSON.stringify(records())).not.toContain('Set-password failed')
+    expect(await count('bad_reset')).toBe(0)
+  })
+
+  it.each([
+    ['a database outage (503)', undefined],
+    ['a plain 500', new Error('something odd')],
+  ])('neither logs nor counts %s as a refused call', async (_label, error) => {
+    const { reset, outage, count, records, token } = await setup()
+    outage.start(error)
+
+    const response = await reset({ newPassword, token })
+
+    expect(response.status).toBe(error ? 500 : 503)
+    expect(JSON.stringify(records())).not.toContain('Set-password failed')
+    expect(await count('bad_reset')).toBe(0)
   })
 
   it('keeps the callback and verification paths closed', async () => {

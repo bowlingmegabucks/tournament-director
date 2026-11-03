@@ -62,6 +62,17 @@ describe('RequirePermission', () => {
     vi.unstubAllEnvs()
   })
 
+  it('still shows the page to a signed-in user when the sign-in links are off', async () => {
+    vi.stubEnv('DEV', false)
+    vi.stubEnv('VITE_SHOW_SIGN_IN', '')
+    setMockUser(createSignedInUser({ roles: ['director'] }))
+    renderGuarded()
+
+    expect(await screen.findByText('Secret page')).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Sign in needed' })).not.toBeInTheDocument()
+    vi.unstubAllEnvs()
+  })
+
   it('tells a signed-in user without the permission, with no redirect', async () => {
     setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
     renderGuarded()

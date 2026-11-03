@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
@@ -305,6 +305,18 @@ describe('UsersPage: disable, enable, edit roles', () => {
     expect(await screen.findByText('Roles saved for Local Director.')).toBeVisible()
     expect(sent).toEqual({ roles: ['director', 'scoreKeeper', 'admin'] })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('stops the browser submitting the roles form itself', async () => {
+    await openPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Edit roles for Local Director' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Edit roles for Local Director' })
+    await within(dialog).findByRole('checkbox', { name: 'Tournament director' })
+
+    const notStopped = fireEvent.submit(within(dialog).getByRole('button', { name: 'Save roles' }))
+
+    expect(notStopped).toBe(false)
+    await screen.findByText('Roles saved for Local Director.')
   })
 
   it('will not save with no role ticked', async () => {

@@ -8,7 +8,8 @@ const phoneExtension = /(ext|x|extension)\.?\s*\d{1,6}$/i
 
 /** BWL-07 runs on the phone as sent, before it is cut down to ten digits. */
 export function isValidPhone(raw: string): boolean {
-  const body = raw.trim().replace(phoneExtension, '').trim()
+  // The space before an extension stays, and `phoneBody` allows trailing space.
+  const body = raw.trim().replace(phoneExtension, '')
   return phoneBody.test(body) && body.replace(/\D/g, '').length >= 9
 }
 

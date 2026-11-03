@@ -79,6 +79,19 @@ describe('createTerminalPrompts', () => {
     })
 
     it.each([
+      ['Ada\rleftover', 'Name: Ada\n'],
+      ['Ada\u0003leftover', 'Name: Ada\n'],
+    ])('does not echo what follows Enter or Ctrl-C in the same chunk: %j', async (typed, shown) => {
+      const { input, prompts, output } = setup()
+
+      const answer = prompts.ask('Name:').catch(() => undefined)
+      input.emit('data', typed)
+      await answer
+
+      expect(output()).toBe(shown)
+    })
+
+    it.each([
       ['ignores anything typed after the Enter in the same chunk', 'Ada\rleftover', 'Ada'],
       ['accepts a space and any printable character', 'Ada O’Neil ~\r', 'Ada O’Neil ~'],
       ['returns an empty line when only Enter is pressed', '\r', ''],

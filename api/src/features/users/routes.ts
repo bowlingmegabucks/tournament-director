@@ -1,4 +1,4 @@
-import express, { Router, type Request, type RequestHandler } from 'express'
+import { Router, type Request } from 'express'
 import { APIError } from 'better-auth/api'
 import { fromNodeHeaders } from 'better-auth/node'
 import { randomBytes } from 'node:crypto'
@@ -7,6 +7,7 @@ import { callerOf } from '../../shared/auth/caller.ts'
 import { roleNames, rolesOf } from '../../shared/auth/roles.ts'
 import { withDatabaseErrors } from '../../shared/database.ts'
 import { HttpError } from '../../shared/errors.ts'
+import { jsonBody } from '../../shared/jsonBody.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { requestLogger } from '../../shared/requestLogging.ts'
 import type { InviteMailer } from './inviteMail.ts'
@@ -24,13 +25,6 @@ export interface UserRouterDependencies {
   /** `undefined` when the API has no mail settings. Then no user can be added. */
   invites: InviteMailer | undefined
   logger: Logger
-}
-
-// A body that is not JSON is the caller's mistake: a 400, not the app's generic 500.
-const jsonBody: RequestHandler = (req, res, next) => {
-  express.json({ limit: '10kb' })(req, res, (err?: unknown) => {
-    next(err ? new HttpError(400, 'The request body is not valid JSON.') : undefined)
-  })
 }
 
 const idParams = z.object({ id: z.string().min(1).max(64) })
@@ -125,6 +119,7 @@ export function createUserRouter({ auth, invites, logger }: UserRouterDependenci
     res.json(body)
   })
 
+  // Stryker disable next-line StringLiteral: '' and '/' match the same path.
   router.get('/', async (req, res) => {
     const log = requestLogger(res, logger)
     const { users } = await withDatabaseErrors(log, () =>
@@ -210,6 +205,7 @@ export function createUserRouter({ auth, invites, logger }: UserRouterDependenci
     res.status(204).end()
   })
 
+  // Stryker disable next-line StringLiteral: '' and '/' match the same path.
   router.post('/', jsonBody, async (req, res) => {
     if (!invites) {
       throw new HttpError(503, 'Email is not set up on the server, so no invite can be sent.')

@@ -20,46 +20,46 @@ The legacy code lives in the `tournament-manager` repo under `legacy/source/`. E
 
 ### Start here
 
-| File | Covers |
-| --- | --- |
-| [glossary.md](glossary.md) | Bowling and app terms: squad, sweeper, advancer, casher, at-large, cross |
-| [domain-model.md](domain-model.md) | Entities, how they relate, and the lifecycle of a tournament |
-| [database.md](database.md) | Production schema, enum values, storage quirks, ID format |
+| File                               | Covers                                                                   |
+| ---------------------------------- | ------------------------------------------------------------------------ |
+| [glossary.md](glossary.md)         | Bowling and app terms: squad, sweeper, advancer, casher, at-large, cross |
+| [domain-model.md](domain-model.md) | Entities, how they relate, and the lifecycle of a tournament             |
+| [database.md](database.md)         | Production schema, enum values, storage quirks, ID format                |
 
 ### Features (one file per feature, in migration order)
 
-| File | Covers |
-| --- | --- |
-| [tournaments.md](tournaments.md) | Create and list tournaments; ratios and fees |
-| [divisions.md](divisions.md) | Divisions, handicap settings, eligibility limits |
-| [bowlers.md](bowlers.md) | Bowler records, validation, search, name format, age |
-| [registrations.md](registrations.md) | Entering a bowler: create, append, update, delete, super sweeper |
-| [squads-and-sweepers.md](squads-and-sweepers.md) | Squad and sweeper setup and completion |
-| [lane-assignments.md](lane-assignments.md) | Lane positions, moving bowlers, recap-sheet lane rotation |
-| [scores.md](scores.md) | Score entry, handicap, sweeper bonus pins, ranking and tie-breaks |
-| [payments.md](payments.md) | Payment records |
+| File                                             | Covers                                                            |
+| ------------------------------------------------ | ----------------------------------------------------------------- |
+| [tournaments.md](tournaments.md)                 | Create and list tournaments; ratios and fees                      |
+| [divisions.md](divisions.md)                     | Divisions, handicap settings, eligibility limits                  |
+| [bowlers.md](bowlers.md)                         | Bowler records, validation, search, name format, age              |
+| [registrations.md](registrations.md)             | Entering a bowler: create, append, update, delete, super sweeper  |
+| [squads-and-sweepers.md](squads-and-sweepers.md) | Squad and sweeper setup and completion                            |
+| [lane-assignments.md](lane-assignments.md)       | Lane positions, moving bowlers, recap-sheet lane rotation         |
+| [scores.md](scores.md)                           | Score entry, handicap, sweeper bonus pins, ranking and tie-breaks |
+| [payments.md](payments.md)                       | Payment records                                                   |
 
 ### Shared
 
-| File | Covers |
-| --- | --- |
-| [integration-api.md](integration-api.md) | The web API the third-party registration site calls |
-| [reports.md](reports.md) | PDF reports, recap sheets, clipboard formats |
-| [security.md](security.md) | SSN encryption, API key, secrets, rate limits |
-| [screens.md](screens.md) | WinForms screens and the actions on each |
-| [decisions-and-questions.md](decisions-and-questions.md) | Every decision and open question in one list |
-| [proposed-features.md](proposed-features.md) | Ideas for the new app that legacy never had |
-| [rewrite-corrections.md](rewrite-corrections.md) | What the old `rewrite/` spec got wrong |
+| File                                                     | Covers                                              |
+| -------------------------------------------------------- | --------------------------------------------------- |
+| [integration-api.md](integration-api.md)                 | The web API the third-party registration site calls |
+| [reports.md](reports.md)                                 | PDF reports, recap sheets, clipboard formats        |
+| [security.md](security.md)                               | SSN encryption, API key, secrets, rate limits       |
+| [screens.md](screens.md)                                 | WinForms screens and the actions on each            |
+| [decisions-and-questions.md](decisions-and-questions.md) | Every decision and open question in one list        |
+| [proposed-features.md](proposed-features.md)             | Ideas for the new app that legacy never had         |
+| [rewrite-corrections.md](rewrite-corrections.md)         | What the old `rewrite/` spec got wrong              |
 
 ## The legacy system at a glance
 
-| Part | Tech | Job |
-| --- | --- | --- |
-| Desktop app (`main/`, `presentation/`) | WinForms, .NET 10, QuestPDF | Everything the tournament desk does |
-| Business logic (`business logic/`) | EF Core 10, FluentValidation, ErrorOr | Rules, calculations, data access. Shared by the desktop app and the API |
-| Web API (`api/`) | FastEndpoints, `x-api-key` auth | Lets the third-party registration site create and change registrations |
-| Database | MariaDB 11.4 (EF Core migrations) | One database for all tournaments |
-| Hosting | Azure App Service (API), Azure Key Vault (secrets), App Insights | Terraform in `infrastructure/` |
+| Part                                   | Tech                                                             | Job                                                                     |
+| -------------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Desktop app (`main/`, `presentation/`) | WinForms, .NET 10, QuestPDF                                      | Everything the tournament desk does                                     |
+| Business logic (`business logic/`)     | EF Core 10, FluentValidation, ErrorOr                            | Rules, calculations, data access. Shared by the desktop app and the API |
+| Web API (`api/`)                       | FastEndpoints, `x-api-key` auth                                  | Lets the third-party registration site create and change registrations  |
+| Database                               | MariaDB 11.4 (EF Core migrations)                                | One database for all tournaments                                        |
+| Hosting                                | Azure App Service (API), Azure Key Vault (secrets), App Insights | Terraform in `infrastructure/`                                          |
 
 The desktop app talks to the database directly. It does not call the API.
 

@@ -175,7 +175,12 @@ describe('POST /v1/registrations (API-05)', () => {
       .send(JSON.stringify({ registration: { padding: 'x'.repeat(200_000) } }))
 
     expect(response.status).toBe(413)
-    expect(problemSchema.parse(response.body).status).toBe(413)
+    const problem = problemSchema.parse(response.body)
+    expect(problem.status).toBe(413)
+    expect(problem.detail).toBe('The request body is too large.')
+    expect(problem.errors).toEqual([
+      { code: 'Registration.Required', description: 'The request body is too large.' },
+    ])
   })
 
   it('logs the codes of a refusal and the id of a save, never the bowler (SEC-13)', async () => {
@@ -351,6 +356,39 @@ describe('GET /v1/registrations/{id} (API-06)', () => {
     return { ...context, id: createRegistrationResponseSchema.parse(response.body).registrationId }
   }
 
+  it('names the division the registration is in, not the first one of the tournament', async () => {
+    const { deps, id, tournament, division } = await created()
+    const other = createDivision()
+    deps.divisions = createInMemoryDivisionRepository([
+      { tournamentId: tournament.id, division: other },
+      { tournamentId: tournament.id, division },
+    ])
+
+    const response = await asVendor(request(createTestApp(deps)).get(`/v1/registrations/${id}`))
+
+    expect(response.status).toBe(200)
+    expect(registrationDetailResponseSchema.parse(response.body).registration.division.id).toBe(
+      division.id,
+    )
+  })
+
+  it('answers 500 and logs the id when the division cannot be read', async () => {
+    const captured = createCapturedLogger()
+    const context = setup({ logger: captured.logger })
+    const made = await asVendor(request(context.app).post('/v1/registrations')).send(context.body())
+    const id = createRegistrationResponseSchema.parse(made.body).registrationId
+    context.deps.divisions = createInMemoryDivisionRepository([])
+
+    const response = await asVendor(
+      request(createTestApp(context.deps)).get(`/v1/registrations/${id}`),
+    )
+
+    expect(response.status).toBe(500)
+    expect(JSON.stringify(captured.records())).toContain(
+      `Registration ${id} has no readable division`,
+    )
+  })
+
   it('returns the registration in the contract shape, without the SSN or payments (PAY-06, BWL-17)', async () => {
     const { app, id, tournament, division, squad, sweeper } = await created()
 
@@ -506,7 +544,12 @@ describe('PATCH /v1/registrations/{id} (API-07)', () => {
     expect(response.headers['content-type']).toMatch(/application\/problem\+json/)
     const problem = problemSchema.parse(response.body)
     expect(problem.detail).toBe('An error occurred while updating the registration.')
-    expect(problem.errors?.map((e) => e.code)).toEqual(['Registration.IdMismatch'])
+    expect(problem.errors).toEqual([
+      {
+        code: 'Registration.IdMismatch',
+        description: 'The registration ID in the body does not match the route.',
+      },
+    ])
     expect(state.registrations[0]?.registration.sessionIds).not.toContain(secondSquad.id)
   })
 

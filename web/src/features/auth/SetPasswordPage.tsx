@@ -11,7 +11,7 @@ const MAX_LENGTH = 128
 
 /**
  * Where the invite email leads (`/set-password?token=…`, D-101). The new user chooses a password
- * and then signs in. The token works once and lasts 3 days.
+ * and then signs in. The token works once. An invite lasts 72 hours; a reset link, 1 hour.
  */
 export function SetPasswordPage() {
   const [params] = useSearchParams()
@@ -42,7 +42,7 @@ export function SetPasswordPage() {
           This link is not valid. Ask an admin for a new one.
         </p>
       )}
-      {token !== '' && passwordRequest.isSuccess && (
+      {passwordRequest.isSuccess && (
         <>
           <output>Your password is set.</output>
           <p>

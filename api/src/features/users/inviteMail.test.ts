@@ -46,7 +46,7 @@ describe('buildPasswordReset', () => {
     expect(message.subject).toBe('Reset your Tournament Director password')
     expect(message.text).toContain('asked to reset your Tournament Director password')
     expect(message.text).toContain('https://example.com/x?token=t')
-    expect(message.text).toContain('72 hours')
+    expect(message.text).toContain('1 hour')
     expect(message.html).toContain('<a href="https://example.com/x?token=t">')
   })
 
@@ -64,7 +64,7 @@ describe('buildAdminReset', () => {
     expect(message.subject).toBe('Reset your Tournament Director password')
     expect(message.text).toContain('An admin started a password reset')
     expect(message.text).toContain('https://example.com/x?token=t')
-    expect(message.text).toContain('72 hours')
+    expect(message.text).toContain('1 hour')
     expect(message.html).toContain('<a href="https://example.com/x?token=t">')
   })
 
@@ -113,7 +113,7 @@ describe('buildPasswordReset wording', () => {
         'Someone asked to reset your Tournament Director password. Choose a new one with this link:',
         'https://example.com/x?token=t&a=1',
         '',
-        'The link works for 72 hours. If you did not ask for this, ignore it: your password stays as it is.',
+        'The link works for 1 hour. If you did not ask for this, ignore it: your password stays as it is.',
       ].join('\n'),
     )
     expect(message.html).toBe(
@@ -121,7 +121,7 @@ describe('buildPasswordReset wording', () => {
         '<p>Hi Ada &amp; Co,</p>',
         '<p>Someone asked to reset your Tournament Director password. Choose a new one with this link:</p>',
         '<p><a href="https://example.com/x?token=t&amp;a=1">Choose a new password</a></p>',
-        '<p>The link works for 72 hours. If you did not ask for this, ignore it: your password stays as it is.</p>',
+        '<p>The link works for 1 hour. If you did not ask for this, ignore it: your password stays as it is.</p>',
       ].join('\n'),
     )
   })
@@ -139,7 +139,7 @@ describe('buildAdminReset wording', () => {
         'An admin started a password reset for your Tournament Director account. Choose a new password with this link:',
         'https://example.com/x?token=t&a=1',
         '',
-        'The link works for 72 hours. Your password stays as it is until you use it.',
+        'The link works for 1 hour. Your password stays as it is until you use it.',
       ].join('\n'),
     )
     expect(message.html).toBe(
@@ -147,7 +147,7 @@ describe('buildAdminReset wording', () => {
         '<p>Hi Ada &amp; Co,</p>',
         '<p>An admin started a password reset for your Tournament Director account. Choose a new password with this link:</p>',
         '<p><a href="https://example.com/x?token=t&amp;a=1">Choose a new password</a></p>',
-        '<p>The link works for 72 hours. Your password stays as it is until you use it.</p>',
+        '<p>The link works for 1 hour. Your password stays as it is until you use it.</p>',
       ].join('\n'),
     )
   })
@@ -255,5 +255,48 @@ describe('createInviteMailer', () => {
     expect(JSON.stringify(records())).toContain('Admin reset email failed')
     expect(JSON.stringify(records())).toContain('535 bad login')
     expect(JSON.stringify(records())).not.toContain('secret-token')
+  })
+})
+
+describe('createInviteMailer link lifetime', () => {
+  const logger = createCapturedLogger().logger
+
+  it('lengthens the token of an invite before the mail goes out, and no other', async () => {
+    const order: string[] = []
+    const mailer = {
+      send: vi.fn(() => {
+        order.push('send')
+        return Promise.resolve()
+      }),
+    }
+    const extend = vi.fn((token: string) => {
+      order.push(`extend ${token}`)
+      return Promise.resolve()
+    })
+    const invites = createInviteMailer(mailer, webBaseUrl, logger, extend)
+
+    invites.expectInvite('a@example.com')
+    await invites.deliver({ user: { email: 'a@example.com', name: 'A' }, token: 't1' })
+    invites.expectAdminReset('b@example.com')
+    await invites.deliver({ user: { email: 'b@example.com', name: 'B' }, token: 't2' })
+
+    expect(order).toEqual(['extend t1', 'send', 'send'])
+  })
+
+  it('reports an invite as failed, and sends nothing, when the token cannot be lengthened', async () => {
+    const mailer = { send: vi.fn().mockResolvedValue(undefined) }
+    const captured = createCapturedLogger()
+    const invites = createInviteMailer(mailer, webBaseUrl, captured.logger, () =>
+      Promise.reject(new Error('database down')),
+    )
+
+    invites.expectInvite('a@example.com')
+    await invites.deliver({ user: { email: 'a@example.com', name: 'A' }, token: 't1' })
+
+    expect(invites.take('a@example.com')).toBe(false)
+    expect(mailer.send).not.toHaveBeenCalled()
+    expect(captured.records().map((record) => record['msg'])).toEqual([
+      'Invite link lifetime update failed',
+    ])
   })
 })

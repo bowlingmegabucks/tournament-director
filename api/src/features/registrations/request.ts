@@ -32,9 +32,7 @@ export const paymentSchema = z
     confirmationCode: required,
     amount: z.number().min(0).max(999.99),
   })
-  .refine((payment) => `${payment.processingSystem}_${payment.confirmationCode}`.length <= 43, {
-    message: 'The payment code is too long',
-  })
+  .refine((payment) => `${payment.processingSystem}_${payment.confirmationCode}`.length <= 43)
 
 /** `API-05`. The `squads` and `sweepers` lists and `superSweeper` are required, as in legacy. */
 export const createRegistrationRequestSchema = z.object({
@@ -96,11 +94,13 @@ function describeIssue(
   table: Record<string, Check> = checks,
 ): { code: string; description: string } {
   const [root, ...rest] = issue.path
+  // Stryker disable next-line ConditionalExpression: the schema's only key is `registration`, so an issue never has another root.
   if (root !== 'registration' || rest.length === 0) {
     return { code: 'Registration.Required', description: 'Registration details are required.' }
   }
   // `bowler.address.street` is checked as `bowler.address`; `squads.0` as `squads`.
   const keys = rest.map(String)
+  // Stryker disable next-line StringLiteral: `rest` is not empty here, so `keys[0]` always exists.
   const known = [keys.join('.'), keys.slice(0, 2).join('.'), keys[0] ?? '']
     .map((key) => table[key])
     .find((check) => check !== undefined)

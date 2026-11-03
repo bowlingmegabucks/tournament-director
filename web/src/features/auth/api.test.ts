@@ -115,6 +115,20 @@ describe('signIn', () => {
     )
   })
 
+  it.each([[400], [404]])('reads a ban code only on a 403, not on a %i', async (status) => {
+    respond(status, { code: 'BANNED_USER' })
+
+    await expect(signIn('a', 'b')).rejects.toThrow(
+      'Could not reach the sign-in service. Try again.',
+    )
+  })
+
+  it('says the service is down on a 500, whatever the code', async () => {
+    respond(500, { code: 'BANNED_USER' })
+
+    await expect(signIn('a', 'b')).rejects.toThrow('Sign-in is not working right now. Try again.')
+  })
+
   it('falls back to the service message on a 403 without JSON', async () => {
     respond(403)
 
@@ -235,8 +249,8 @@ describe('setPassword', () => {
     )
   })
 
-  it('says the service is down on a 500', async () => {
-    reply(503)
+  it.each([[500], [503]])('says the service is down on a %i', async (status) => {
+    reply(status)
 
     await expect(setPassword('t', 'x')).rejects.toThrow(
       'Setting the password is not working right now. Try again.',

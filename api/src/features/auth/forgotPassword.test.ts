@@ -1,5 +1,5 @@
 import request from 'supertest'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { forgotAttempts } from '../../shared/auth/signInLimit.ts'
 import type { Mailer } from '../../shared/mail/mailer.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
@@ -30,6 +30,10 @@ async function setup({
 const settle = () => new Promise((resolve) => setTimeout(resolve, 10))
 
 describe('POST /v1/auth/request-password-reset', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it('emails a link to the set-password page, in the reset wording', async () => {
     const { forgot, send } = await setup()
 
@@ -107,6 +111,36 @@ describe('POST /v1/auth/request-password-reset', () => {
     expect(send).toHaveBeenCalledTimes(1)
   })
 
+  it('trims the address, and treats a different case as the same address', async () => {
+    const { forgot, send } = await setup()
+
+    expect((await forgot('  BEA@Example.com  ')).status).toBe(200)
+    expect((await forgot('bea@example.com')).status).toBe(200)
+    await settle()
+
+    expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  it('refuses an address longer than 254 characters', async () => {
+    const { forgot, send } = await setup()
+    const long = `a@${`${'b'.repeat(60)}.`.repeat(5)}com`
+
+    const response = await forgot(long)
+
+    expect(long.length).toBeGreaterThan(254)
+    expect(response.status).toBe(400)
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('refuses a body over 10 kb', async () => {
+    const { forgot } = await setup()
+
+    const response = await forgot(`${'a'.repeat(11_000)}@example.com`)
+
+    expect(response.status).toBe(400)
+    expect(response.body).toEqual({ message: 'The request body is too large.' })
+  })
+
   it.each([['not-an-email'], [''], [null], [42]])('answers 400 for the email %j', async (email) => {
     const { forgot, send } = await setup()
 
@@ -151,5 +185,23 @@ describe('POST /v1/auth/request-password-reset', () => {
     const logged = JSON.stringify(records())
     expect(logged).not.toContain('bea@example.com')
     expect(logged).not.toContain('set-password')
+  })
+
+  it('sends again once a minute has passed, and not a moment before', async () => {
+    const { forgot, send } = await setup()
+    const start = Date.now()
+    const clock = vi.spyOn(Date, 'now')
+
+    clock.mockReturnValue(start)
+    await forgot()
+    clock.mockReturnValue(start + 59_999)
+    await forgot()
+    await settle()
+    expect(send).toHaveBeenCalledTimes(1)
+
+    clock.mockReturnValue(start + 60_000)
+    await forgot()
+    await settle()
+    expect(send).toHaveBeenCalledTimes(2)
   })
 })

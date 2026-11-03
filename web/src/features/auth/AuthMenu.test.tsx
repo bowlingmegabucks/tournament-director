@@ -78,6 +78,7 @@ describe('AuthMenu (top bar)', () => {
     )
     renderApp('/nowhere')
 
+    expect(within(mainMenu()).queryByText('Loading…')).not.toBeInTheDocument()
     expect(within(mainMenu()).queryByRole('link', { name: 'Sign in' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Sign in' })).not.toBeInTheDocument()
     expect(asked).toBe(false)

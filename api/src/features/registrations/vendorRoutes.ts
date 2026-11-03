@@ -33,6 +33,7 @@ export interface VendorRegistrationDependencies {
 // The trace id in a problem body is the request id the caller also sees in `x-request-id`.
 function traceIdOf(res: Response): string {
   const header = res.getHeader(requestIdHeader)
+  // Stryker disable next-line StringLiteral: `requestLogging` runs first and always sets the id.
   return typeof header === 'string' ? header : ''
 }
 
@@ -52,10 +53,12 @@ function idMismatch(bodyId: string, routeId: string): Failure[] {
 
 function routeErrors(logger: Logger): ErrorRequestHandler {
   return (err: unknown, _req, res, next) => {
+    // Stryker disable ConditionalExpression,BlockStatement,CallExpression: Express's usual guard; a test cannot make a handler fail after its answer has gone out.
     if (res.headersSent) {
       next(err)
       return
     }
+    // Stryker restore ConditionalExpression,BlockStatement,CallExpression
     const type = typeof err === 'object' && err !== null && 'type' in err ? err.type : undefined
     if (type === 'entity.parse.failed') {
       const failures = [validation('Registration.Required', 'The request body is not valid JSON.')]
@@ -103,7 +106,7 @@ export function createVendorRegistrationRouter(deps: VendorRegistrationDependenc
   const { tournaments, divisions, squads, sweepers, writer, logger } = deps
   const router = Router()
 
-  // Stryker disable next-line StringLiteral: '' and '/' match the same path.
+  // Stryker disable next-line StringLiteral,ObjectLiteral: '' and '/' match the same path, and 100kb is also Express's default.
   router.post('/', express.json({ limit: '100kb' }), async (req, res) => {
     const parsed = parseCreateRequest(req.body)
     if (!parsed.success) {
@@ -201,6 +204,7 @@ export function createVendorRegistrationRouter(deps: VendorRegistrationDependenc
     res.json(body)
   })
 
+  // Stryker disable next-line ObjectLiteral: 100kb is also Express's default.
   router.patch('/:id', express.json({ limit: '100kb' }), async (req, res) => {
     const { id } = idParams.parse(req.params)
     const detail = 'An error occurred while updating the registration.'

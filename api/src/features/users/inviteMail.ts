@@ -1,8 +1,12 @@
-import { resetLinkSeconds } from '../../shared/auth/createAuth.ts'
+import { inviteLinkSeconds, resetLinkSeconds } from '../../shared/auth/createAuth.ts'
 import type { Logger } from '../../shared/logger.ts'
 import type { Mailer } from '../../shared/mail/mailer.ts'
 
-const hours = resetLinkSeconds / 3600
+/** "72 hours", or "1 hour". */
+function lifetime(seconds: number): string {
+  const hours = seconds / 3600
+  return `${hours} ${hours === 1 ? 'hour' : 'hours'}`
+}
 
 function escapeHtml(text: string): string {
   return text
@@ -20,13 +24,13 @@ export function buildInvite(name: string, link: string) {
     'An admin added you to Tournament Director. Choose your password with this link:',
     link,
     '',
-    `The link works for ${hours} hours. If you did not expect this email, ignore it.`,
+    `The link works for ${lifetime(inviteLinkSeconds)}. If you did not expect this email, ignore it.`,
   ].join('\n')
   const html = [
     `<p>Hi ${escapeHtml(name)},</p>`,
     '<p>An admin added you to Tournament Director. Choose your password with this link:</p>',
     `<p><a href="${escapeHtml(link)}">Choose your password</a></p>`,
-    `<p>The link works for ${hours} hours. If you did not expect this email, ignore it.</p>`,
+    `<p>The link works for ${lifetime(inviteLinkSeconds)}. If you did not expect this email, ignore it.</p>`,
   ].join('\n')
   return { subject: 'Your Tournament Director account', text, html }
 }
@@ -39,13 +43,13 @@ export function buildPasswordReset(name: string, link: string) {
     'Someone asked to reset your Tournament Director password. Choose a new one with this link:',
     link,
     '',
-    `The link works for ${hours} hours. If you did not ask for this, ignore it: your password stays as it is.`,
+    `The link works for ${lifetime(resetLinkSeconds)}. If you did not ask for this, ignore it: your password stays as it is.`,
   ].join('\n')
   const html = [
     `<p>Hi ${escapeHtml(name)},</p>`,
     '<p>Someone asked to reset your Tournament Director password. Choose a new one with this link:</p>',
     `<p><a href="${escapeHtml(link)}">Choose a new password</a></p>`,
-    `<p>The link works for ${hours} hours. If you did not ask for this, ignore it: your password stays as it is.</p>`,
+    `<p>The link works for ${lifetime(resetLinkSeconds)}. If you did not ask for this, ignore it: your password stays as it is.</p>`,
   ].join('\n')
   return { subject: 'Reset your Tournament Director password', text, html }
 }
@@ -58,13 +62,13 @@ export function buildAdminReset(name: string, link: string) {
     'An admin started a password reset for your Tournament Director account. Choose a new password with this link:',
     link,
     '',
-    `The link works for ${hours} hours. Your password stays as it is until you use it.`,
+    `The link works for ${lifetime(resetLinkSeconds)}. Your password stays as it is until you use it.`,
   ].join('\n')
   const html = [
     `<p>Hi ${escapeHtml(name)},</p>`,
     '<p>An admin started a password reset for your Tournament Director account. Choose a new password with this link:</p>',
     `<p><a href="${escapeHtml(link)}">Choose a new password</a></p>`,
-    `<p>The link works for ${hours} hours. Your password stays as it is until you use it.</p>`,
+    `<p>The link works for ${lifetime(resetLinkSeconds)}. Your password stays as it is until you use it.</p>`,
   ].join('\n')
   return { subject: 'Reset your Tournament Director password', text, html }
 }
@@ -103,6 +107,8 @@ export function createInviteMailer(
   mailer: Mailer,
   webBaseUrl: string,
   logger: Logger,
+  /** Gives an invite token its longer life. Without it an invite works for `resetLinkSeconds`. */
+  extendInvite?: (token: string) => Promise<void>,
 ): InviteMailer {
   const outcomes = new Map<string, boolean>()
   const expected = new Map<string, 'invite' | 'adminReset'>()
@@ -124,6 +130,15 @@ export function createInviteMailer(
             logger.error({ err }, 'Password reset email failed')
           })
         return
+      }
+      if (kind === 'invite' && extendInvite) {
+        try {
+          await extendInvite(token)
+        } catch (err) {
+          logger.error({ err }, 'Invite link lifetime update failed')
+          outcomes.set(user.email, false)
+          return
+        }
       }
       try {
         await mailer.send({

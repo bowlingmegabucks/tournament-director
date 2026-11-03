@@ -14,6 +14,7 @@ import {
   signInCookie,
 } from '../../test/testAuth.ts'
 import type { RoleName } from '../../shared/auth/roles.ts'
+import { createInviteExtender } from '../../shared/auth/createAuth.ts'
 import { createInviteMailer } from './inviteMail.ts'
 
 const webBaseUrl = 'https://example.com/tournament-director'
@@ -25,7 +26,9 @@ async function setup({
   send = vi.fn<Mailer['send']>().mockResolvedValue(undefined),
 }: { role?: RoleName; mail?: boolean; send?: Mock<Mailer['send']> } = {}) {
   const captured = createCapturedLogger()
-  const invites = createInviteMailer({ send }, webBaseUrl, captured.logger)
+  const invites = createInviteMailer({ send }, webBaseUrl, captured.logger, (token) =>
+    createInviteExtender(() => auth)(token),
+  )
   const { auth, database, outage } = createTestAuth({
     logger: captured.logger,
     sendResetPassword: invites.deliver,
@@ -258,7 +261,7 @@ describe('POST /v1/users', () => {
     expect(response.body).toEqual({ message: 'The request body is not valid JSON.' })
   })
 
-  it('refuses a body over 10 KB as not valid JSON', async () => {
+  it('refuses a body over 10 KB as too large', async () => {
     const { app, cookie } = await setup()
 
     const response = await request(app)
@@ -267,7 +270,7 @@ describe('POST /v1/users', () => {
       .send({ ...newUser, name: 'x'.repeat(11_000) })
 
     expect(response.status).toBe(400)
-    expect(response.body).toEqual({ message: 'The request body is not valid JSON.' })
+    expect(response.body).toEqual({ message: 'The request body is too large.' })
   })
 
   it('answers 409 only for the duplicate-email error, not another refusal', async () => {

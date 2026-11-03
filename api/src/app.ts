@@ -113,6 +113,7 @@ export function createApp({
   mountRoutes(
     app,
     [
+      // Stryker disable next-line StringLiteral: '' and '/' match the same path.
       { path: '/', access: 'public', router: createRootRouter() },
       { path: '/openapi/v1.json', access: 'public', router: createOpenApiRouter() },
       { path: '/health', access: 'public', router: createHealthRouter() },

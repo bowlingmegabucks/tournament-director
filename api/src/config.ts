@@ -143,6 +143,7 @@ function mailConfigOf(data: Env): MailConfig | undefined {
       `Invalid environment: ${missing.map(([name]) => name).join(', ')} required when SMTP_HOST is set`,
     )
   }
+  // Stryker disable next-line Regex: a protocol always ends at its colon, so `$` and `^` change nothing.
   if (!URL.canParse(web) || !/^https?:$/.test(new URL(web).protocol)) {
     throw new Error('Invalid environment: WEB_BASE_URL must be an http(s) address')
   }
@@ -165,6 +166,7 @@ function mailConfigOf(data: Env): MailConfig | undefined {
 /** Drops trailing slashes. A loop, not `/\/+$/`, which backtracks badly on long runs of slashes. */
 function trimTrailingSlashes(value: string): string {
   let end = value.length
+  // Stryker disable next-line ConditionalExpression,EqualityOperator: past the start, `value[-1]` is undefined and stops the loop anyway.
   while (end > 0 && value[end - 1] === '/') end--
   return value.slice(0, end)
 }

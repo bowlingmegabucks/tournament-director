@@ -12,8 +12,10 @@ export const sessionSeconds = 12 * 60 * 60
 /** Use inside the window renews it, at most once an hour, so a busy day never signs anyone out. */
 const sessionRenewSeconds = 60 * 60
 
-/** A set-password link works for 3 days: it is the invite, and an invitee may not read mail at once. */
-export const resetLinkSeconds = 3 * 24 * 60 * 60
+/** A forgot-password or admin-reset link works for 1 hour. Better Auth has this one setting. */
+export const resetLinkSeconds = 60 * 60
+/** An invite link works for 72 hours: the invitee may not read mail at once. */
+export const inviteLinkSeconds = 72 * 60 * 60
 
 export const minPasswordLength = 12
 /** Better Auth's own ceiling. A longer one is refused at sign-in, so we refuse it up front. */
@@ -78,7 +80,7 @@ export function createAuth({
       disableSignUp: true,
       minPasswordLength,
       maxPasswordLength,
-      // The reset token doubles as the invite token, so it outlives Better Auth's one hour.
+      // The invite token is a reset token too. `createInviteExtender` gives it the longer life.
       resetPasswordTokenExpiresIn: resetLinkSeconds,
       sendResetPassword,
       // Setting a password ends the user's other sessions: a stolen one dies with the old password.
@@ -132,3 +134,17 @@ export function withoutToken(answer: unknown): Record<string, unknown> | undefin
 }
 
 export type Auth = ReturnType<typeof createAuth>
+
+/**
+ * Returns a function that makes a reset token last `inviteLinkSeconds`. Better Auth gives every
+ * reset token the same life, so the invite mailer lengthens its own. It takes `getAuth` because the
+ * mailer is built before the auth that holds it.
+ */
+export function createInviteExtender(getAuth: () => Auth): (token: string) => Promise<void> {
+  return async (token) => {
+    const { internalAdapter } = await getAuth().$context
+    await internalAdapter.updateVerificationByIdentifier(`reset-password:${token}`, {
+      expiresAt: new Date(Date.now() + inviteLinkSeconds * 1000),
+    })
+  }
+}

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createTestAuth, createTestUser, signInCookie, testPassword } from '../../test/testAuth.ts'
-import { sessionSeconds, withoutToken } from './createAuth.ts'
+import {
+  createInviteExtender,
+  inviteLinkSeconds,
+  resetLinkSeconds,
+  sessionSeconds,
+  withoutToken,
+} from './createAuth.ts'
 import { permissionsOf, rolesOf } from './roles.ts'
 
 describe('createAuth', () => {
@@ -266,5 +272,44 @@ describe('withoutToken', () => {
     ['a number', 7],
   ])('has nothing to remove from %s', (_name, answer) => {
     expect(withoutToken(answer)).toBeUndefined()
+  })
+})
+
+describe('reset and invite links', () => {
+  async function twoTokens() {
+    const tokens: string[] = []
+    const { auth, database } = createTestAuth({
+      sendResetPassword: ({ token }) => {
+        tokens.push(token)
+        return Promise.resolve()
+      },
+    })
+    const user = await createTestUser(auth)
+    await auth.api.requestPasswordReset({ body: { email: user.email } })
+    await auth.api.requestPasswordReset({ body: { email: user.email } })
+    const left = (token: string) => {
+      const row = database.verification.find((value) => String(value['identifier']).endsWith(token))
+      return new Date(String(row?.['expiresAt'])).getTime() - Date.now()
+    }
+    return { auth, tokens, left }
+  }
+
+  it('lasts 1 hour by default', async () => {
+    const { tokens, left } = await twoTokens()
+
+    expect(resetLinkSeconds).toBe(3600)
+    expect(left(tokens[0] ?? '')).toBeGreaterThan((resetLinkSeconds - 5) * 1000)
+    expect(left(tokens[0] ?? '')).toBeLessThanOrEqual(resetLinkSeconds * 1000)
+  })
+
+  it('lasts 72 hours once the invite extender has run, for that token only', async () => {
+    const { auth, tokens, left } = await twoTokens()
+
+    await createInviteExtender(() => auth)(tokens[0] ?? '')
+
+    expect(inviteLinkSeconds).toBe(72 * 3600)
+    expect(left(tokens[0] ?? '')).toBeGreaterThan((inviteLinkSeconds - 5) * 1000)
+    expect(left(tokens[0] ?? '')).toBeLessThanOrEqual(inviteLinkSeconds * 1000)
+    expect(left(tokens[1] ?? '')).toBeLessThanOrEqual(resetLinkSeconds * 1000)
   })
 })

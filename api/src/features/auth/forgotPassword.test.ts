@@ -138,7 +138,7 @@ describe('POST /v1/auth/request-password-reset', () => {
     const response = await forgot(`${'a'.repeat(11_000)}@example.com`)
 
     expect(response.status).toBe(400)
-    expect(response.body).toEqual({ message: 'The request body is not valid JSON.' })
+    expect(response.body).toEqual({ message: 'The request body is too large.' })
   })
 
   it.each([['not-an-email'], [''], [null], [42]])('answers 400 for the email %j', async (email) => {

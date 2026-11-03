@@ -261,7 +261,7 @@ describe('POST /v1/users', () => {
     expect(response.body).toEqual({ message: 'The request body is not valid JSON.' })
   })
 
-  it('refuses a body over 10 KB as not valid JSON', async () => {
+  it('refuses a body over 10 KB as too large', async () => {
     const { app, cookie } = await setup()
 
     const response = await request(app)
@@ -270,7 +270,7 @@ describe('POST /v1/users', () => {
       .send({ ...newUser, name: 'x'.repeat(11_000) })
 
     expect(response.status).toBe(400)
-    expect(response.body).toEqual({ message: 'The request body is not valid JSON.' })
+    expect(response.body).toEqual({ message: 'The request body is too large.' })
   })
 
   it('answers 409 only for the duplicate-email error, not another refusal', async () => {

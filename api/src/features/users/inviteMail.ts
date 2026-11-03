@@ -131,8 +131,16 @@ export function createInviteMailer(
           })
         return
       }
+      if (kind === 'invite' && extendInvite) {
+        try {
+          await extendInvite(token)
+        } catch (err) {
+          logger.error({ err }, 'Invite link lifetime update failed')
+          outcomes.set(user.email, false)
+          return
+        }
+      }
       try {
-        if (kind === 'invite') await extendInvite?.(token)
         await mailer.send({
           to: user.email,
           ...(kind === 'invite' ? buildInvite(user.name, link) : buildAdminReset(user.name, link)),

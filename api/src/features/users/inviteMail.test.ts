@@ -285,7 +285,8 @@ describe('createInviteMailer link lifetime', () => {
 
   it('reports an invite as failed, and sends nothing, when the token cannot be lengthened', async () => {
     const mailer = { send: vi.fn().mockResolvedValue(undefined) }
-    const invites = createInviteMailer(mailer, webBaseUrl, logger, () =>
+    const captured = createCapturedLogger()
+    const invites = createInviteMailer(mailer, webBaseUrl, captured.logger, () =>
       Promise.reject(new Error('database down')),
     )
 
@@ -294,5 +295,8 @@ describe('createInviteMailer link lifetime', () => {
 
     expect(invites.take('a@example.com')).toBe(false)
     expect(mailer.send).not.toHaveBeenCalled()
+    expect(captured.records().map((record) => record['msg'])).toEqual([
+      'Invite link lifetime update failed',
+    ])
   })
 })

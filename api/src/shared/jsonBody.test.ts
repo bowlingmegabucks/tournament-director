@@ -42,7 +42,7 @@ describe('jsonBody', () => {
       .send({ filler: 'x'.repeat(11 * 1024) })
 
     expect(response.status).toBe(400)
-    expect(response.body).toEqual({ message: 'The request body is not valid JSON.' })
+    expect(response.body).toEqual({ message: 'The request body is too large.' })
   })
 
   it('accepts a body just under 10 KB', async () => {

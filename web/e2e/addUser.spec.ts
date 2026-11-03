@@ -95,3 +95,36 @@ test('the users list does not scroll sideways on a phone', async ({ page }) => {
   )
   expect(overflow).toBe(false)
 })
+
+test('a score keeper changes their own name and password', async ({ page }) => {
+  await page.goto('/login')
+  await page.getByLabel('Email').fill('scorekeeper@example.com')
+  await page.getByLabel('Password').fill('scoreKeeperP4sswordLocal')
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('link', { name: 'Local Score Keeper' })
+    .click()
+  await expect(page.getByRole('heading', { name: 'My account', level: 1 })).toBeVisible()
+
+  await page.getByLabel('Name').fill('Sam Keeper')
+  await page.getByRole('button', { name: 'Save name' }).click()
+  await expect(page.getByText('Name saved as Sam Keeper.')).toBeVisible()
+  await expect(
+    page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Sam Keeper' }),
+  ).toBeVisible()
+
+  await page.getByLabel('Current password').fill('scoreKeeperP4sswordLocal')
+  await page.getByLabel('New password', { exact: true }).fill('a long enough password')
+  await page.getByLabel('Confirm new password').fill('a long enough password')
+  await page.getByRole('button', { name: 'Change password' }).click()
+  await expect(
+    page.getByText('Password changed. Your other sessions are signed out.'),
+  ).toBeVisible()
+})
+
+test('a signed-out visitor to the account page is sent to sign in', async ({ page }) => {
+  await page.goto('/account')
+
+  await expect(page.getByRole('heading', { name: 'Sign in', level: 1 })).toBeVisible()
+})

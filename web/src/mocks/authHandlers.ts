@@ -27,6 +27,9 @@ const accounts = [
 /** A set-password token the mock API treats as expired. Any other token works. */
 export const expiredInviteToken = 'expired-token'
 
+/** A current password the mock API refuses. Any other works. */
+export const wrongCurrentPassword = 'not-my-password'
+
 // Who is signed in, so a sign-in changes what /v1/me returns, as the real cookie does.
 let current: SignedInUser | null = null
 
@@ -67,6 +70,24 @@ export const authHandlers = [
       return HttpResponse.json({ message: 'Invalid token', code: 'INVALID_TOKEN' }, { status: 400 })
     }
     return HttpResponse.json({ status: true })
+  }),
+  http.patch('/v1/account', async ({ request }) => {
+    const body: unknown = await request.json()
+    const name = typeof body === 'object' && body !== null ? Reflect.get(body, 'name') : undefined
+    if (typeof name !== 'string' || name.trim() === '') {
+      return HttpResponse.json({ message: 'Invalid request.' }, { status: 400 })
+    }
+    if (current) current = { ...current, name: name.trim() }
+    return HttpResponse.json({ name: name.trim() })
+  }),
+  http.post('/v1/account/password', async ({ request }) => {
+    const body: unknown = await request.json()
+    const currentPassword =
+      typeof body === 'object' && body !== null ? Reflect.get(body, 'currentPassword') : undefined
+    if (currentPassword === wrongCurrentPassword) {
+      return HttpResponse.json({ message: 'The current password is wrong.' }, { status: 400 })
+    }
+    return new HttpResponse(null, { status: 204 })
   }),
   http.post('/v1/auth/sign-out', () => {
     current = null

@@ -36,7 +36,7 @@ export async function fetchMe(): Promise<Me> {
   return { user }
 }
 
-function waitMessage(retryAfter: string | null): string {
+export function waitMessage(retryAfter: string | null): string {
   const seconds = Number(retryAfter)
   if (!retryAfter || !Number.isFinite(seconds) || seconds <= 0) {
     return 'Too many attempts. Try again later.'

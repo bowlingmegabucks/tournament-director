@@ -52,6 +52,26 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('account page has no WCAG 2.2 AA violations', async ({ page }) => {
+      await page.goto('/login')
+      await page.getByLabel('Email').fill('director@example.com')
+      await page.getByLabel('Password').fill('directorP4sswordLocal')
+      await page.getByRole('button', { name: 'Sign in' }).click()
+      await page
+        .getByRole('navigation', { name: 'Main' })
+        .getByRole('link', { name: 'Local Director' })
+        .click()
+      await expect(page.getByRole('heading', { name: 'My account', level: 1 })).toBeVisible()
+      // Show an error alert and a toast too, so axe scans both.
+      await page.getByLabel('Current password').fill('x')
+      await page.getByLabel('New password', { exact: true }).fill('a long enough password')
+      await page.getByLabel('Confirm new password').fill('a different long password')
+      await page.getByRole('button', { name: 'Change password' }).click()
+      await expect(page.getByText('The two new passwords do not match.')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
     test('users page has no WCAG 2.2 AA violations', async ({ page }) => {
       await page.goto('/login')
       await page.getByLabel('Email').fill('admin@example.com')

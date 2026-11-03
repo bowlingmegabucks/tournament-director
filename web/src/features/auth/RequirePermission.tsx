@@ -8,12 +8,13 @@ import type { KnownPermission } from './types'
 import { useMe } from './useMe'
 
 interface RequirePermissionProps {
-  permission: KnownPermission
+  /** Leave it out when any signed-in user may open the page. */
+  permission?: KnownPermission
   children: ReactNode
 }
 
 /**
- * Wraps a page that needs a permission (D-102). Signed out goes to `/login` and comes back after
+ * Wraps a page that needs a permission, or just a sign-in when none is named (D-102). Signed out goes to `/login` and comes back after
  * sign-in. Signed in without the permission sees a message. A failed check shows an error with a
  * retry, never the signed-out view.
  */
@@ -50,7 +51,7 @@ export function RequirePermission({ permission, children }: Readonly<RequirePerm
     )
   }
   if (data.user === null) return <Navigate to="/login" state={{ from: location }} replace />
-  if (!data.user.permissions.includes(permission)) {
+  if (permission !== undefined && !data.user.permissions.includes(permission)) {
     return (
       <Page>
         <title>No access · Tournament Director</title>

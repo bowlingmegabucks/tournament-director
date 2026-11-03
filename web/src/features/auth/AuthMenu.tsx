@@ -40,7 +40,9 @@ function AuthMenuContent() {
     )
   return (
     <div className={styles.who}>
-      <span>{data.user.name}</span>
+      <Link to="/account" className={styles.name}>
+        {data.user.name}
+      </Link>
       <button
         type="button"
         disabled={signOut.isPending}

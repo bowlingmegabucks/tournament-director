@@ -19,3 +19,10 @@
 .error {
   color: var(--color-danger);
 }
+
+.name {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--target-min);
+  color: var(--color-text);
+}

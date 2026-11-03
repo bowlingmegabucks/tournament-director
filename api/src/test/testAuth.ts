@@ -56,7 +56,7 @@ export interface TestAuthOptions {
   /** Where Better Auth's own messages go. A test passes a captured logger to read them. */
   logger?: Logger
   /** Mails the set-password link. Tests that add users pass `createInviteMailer(...).deliver`. */
-  sendResetPassword?: AuthDependencies['sendResetPassword']
+  sendResetPassword?: NonNullable<AuthDependencies['sendResetPassword']>
 }
 
 /**

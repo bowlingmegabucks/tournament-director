@@ -20,7 +20,7 @@ async function fill(name: string, email: string) {
   await userEvent.type(screen.getByLabelText('Email'), email)
 }
 
-const submit = () => userEvent.click(screen.getByRole('button', { name: 'Add user' }))
+const clickSubmit = () => userEvent.click(screen.getByRole('button', { name: 'Add user' }))
 
 describe('NewUserPage', () => {
   it('lists the API roles with labels and hints, none ticked', async () => {
@@ -51,7 +51,7 @@ describe('NewUserPage', () => {
     await openPage()
     await fill('Bea Bowler', 'bea@example.com')
 
-    await submit()
+    await clickSubmit()
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Pick at least one role.')
     await userEvent.click(screen.getByRole('checkbox', { name: 'Score keeper' }))
@@ -73,7 +73,7 @@ describe('NewUserPage', () => {
     await fill('  Bea Bowler ', ' bea@example.com ')
     await userEvent.click(screen.getByRole('checkbox', { name: 'Tournament director' }))
 
-    await submit()
+    await clickSubmit()
 
     expect(await screen.findByText('Invite sent to bea@example.com.')).toBeVisible()
     expect(sent).toEqual({ name: 'Bea Bowler', email: 'bea@example.com', roles: ['director'] })
@@ -96,7 +96,7 @@ describe('NewUserPage', () => {
     await fill('A', 'a@b.co')
     await userEvent.click(screen.getByRole('checkbox', { name: 'Admin' }))
 
-    await submit()
+    await clickSubmit()
 
     expect(screen.getByRole('button', { name: 'Adding…' })).toBeDisabled()
     await screen.findByText('Invite sent to a@b.co.')
@@ -107,7 +107,7 @@ describe('NewUserPage', () => {
     await fill('Taken Person', takenEmail)
     await userEvent.click(screen.getByRole('checkbox', { name: 'Admin' }))
 
-    await submit()
+    await clickSubmit()
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'A user with this email already exists.',
@@ -186,7 +186,7 @@ describe('NewUserPage details', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: 'Tournament director' }))
     expect(screen.getByRole('checkbox', { name: 'Tournament director' })).not.toBeChecked()
 
-    await submit()
+    await clickSubmit()
 
     await screen.findByText('Invite sent to bea@example.com.')
     expect(sent).toMatchObject({ roles: ['scoreKeeper'] })
@@ -196,7 +196,7 @@ describe('NewUserPage details', () => {
     await openPage()
     await fill('Bea', 'bea@example.com')
 
-    await submit()
+    await clickSubmit()
 
     expect(await screen.findByRole('group', { name: 'Roles' })).toHaveAccessibleDescription(
       'Pick at least one role.',
@@ -207,7 +207,7 @@ describe('NewUserPage details', () => {
     await openPage()
     await fill('Bea', 'bea@example.com')
     await userEvent.click(screen.getByRole('checkbox', { name: 'Score keeper' }))
-    await submit()
+    await clickSubmit()
     await screen.findByText('Invite sent to bea@example.com.')
 
     await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }))

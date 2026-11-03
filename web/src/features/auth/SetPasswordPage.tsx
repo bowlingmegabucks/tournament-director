@@ -16,12 +16,12 @@ const MAX_LENGTH = 128
 export function SetPasswordPage() {
   const [params] = useSearchParams()
   const token = params.get('token') ?? ''
-  const setPassword = useSetPassword()
-  const [password, setPasswordText] = useState('')
+  const passwordRequest = useSetPassword()
+  const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [mismatch, setMismatch] = useState(false)
 
-  const error = mismatch ? 'The two passwords do not match.' : setPassword.error?.message
+  const error = mismatch ? 'The two passwords do not match.' : passwordRequest.error?.message
 
   function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -30,7 +30,7 @@ export function SetPasswordPage() {
       return
     }
     setMismatch(false)
-    setPassword.mutate({ token, newPassword: password })
+    passwordRequest.mutate({ token, newPassword: password })
   }
 
   return (
@@ -42,15 +42,15 @@ export function SetPasswordPage() {
           This link is not valid. Ask an admin for a new one.
         </p>
       )}
-      {token !== '' && setPassword.isSuccess && (
+      {token !== '' && passwordRequest.isSuccess && (
         <>
-          <p role="status">Your password is set.</p>
+          <output>Your password is set.</output>
           <p>
             <Link to="/login">Go to sign in</Link>
           </p>
         </>
       )}
-      {token !== '' && !setPassword.isSuccess && (
+      {token !== '' && !passwordRequest.isSuccess && (
         <form className={styles.form} onSubmit={submit}>
           <p>Use {MIN_LENGTH} or more characters.</p>
           {error && (
@@ -71,7 +71,7 @@ export function SetPasswordPage() {
               maxLength={MAX_LENGTH}
               value={password}
               onChange={(event) => {
-                setPasswordText(event.target.value)
+                setPassword(event.target.value)
                 setMismatch(false)
               }}
             />
@@ -94,8 +94,8 @@ export function SetPasswordPage() {
               }}
             />
           </div>
-          <button type="submit" disabled={setPassword.isPending}>
-            {setPassword.isPending ? 'Saving…' : 'Set password'}
+          <button type="submit" disabled={passwordRequest.isPending}>
+            {passwordRequest.isPending ? 'Saving…' : 'Set password'}
           </button>
         </form>
       )}

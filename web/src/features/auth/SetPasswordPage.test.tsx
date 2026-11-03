@@ -13,7 +13,7 @@ async function fill(password: string, confirm = password) {
   await userEvent.type(screen.getByLabelText('Confirm password'), confirm)
 }
 
-const submit = () => userEvent.click(screen.getByRole('button', { name: 'Set password' }))
+const clickSubmit = () => userEvent.click(screen.getByRole('button', { name: 'Set password' }))
 
 describe('SetPasswordPage', () => {
   it('has labelled new-password fields', async () => {
@@ -40,7 +40,7 @@ describe('SetPasswordPage', () => {
     renderApp('/set-password?token=abc')
     await fill(good)
 
-    await submit()
+    await clickSubmit()
 
     expect(await screen.findByText('Your password is set.')).toBeVisible()
     expect(sent).toEqual({ token: 'abc', newPassword: good })
@@ -60,7 +60,7 @@ describe('SetPasswordPage', () => {
     renderApp('/set-password?token=abc')
     await fill(good, `${good}!`)
 
-    await submit()
+    await clickSubmit()
 
     expect(await screen.findByRole('alert')).toHaveTextContent('The two passwords do not match.')
     expect(called).toBe(false)
@@ -70,7 +70,7 @@ describe('SetPasswordPage', () => {
     renderApp(`/set-password?token=${expiredInviteToken}`)
     await fill(good)
 
-    await submit()
+    await clickSubmit()
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'This link has expired or was already used. Ask an admin for a new one.',
@@ -88,7 +88,7 @@ describe('SetPasswordPage', () => {
     renderApp('/set-password?token=abc')
     await fill(good)
 
-    await submit()
+    await clickSubmit()
 
     expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled()
     await screen.findByText('Your password is set.')
@@ -117,7 +117,7 @@ describe('SetPasswordPage details', () => {
       renderApp('/set-password?token=abc')
       await screen.findByLabelText('New password')
       await fill(good, `${good}!`)
-      await submit()
+      await clickSubmit()
       await screen.findByText('The two passwords do not match.')
 
       await userEvent.type(screen.getByLabelText(label), 'x')
@@ -131,7 +131,7 @@ describe('SetPasswordPage details', () => {
     await screen.findByLabelText('New password')
     await fill(good, `${good}!`)
 
-    await submit()
+    await clickSubmit()
 
     await screen.findByRole('alert')
     expect(screen.getByLabelText('New password')).toHaveAccessibleDescription(

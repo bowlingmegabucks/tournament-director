@@ -5,7 +5,7 @@ import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import { renderApp } from '../../test/renderApp'
 
-const submit = () => userEvent.click(screen.getByRole('button', { name: 'Send link' }))
+const clickSubmit = () => userEvent.click(screen.getByRole('button', { name: 'Send link' }))
 
 describe('ForgotPasswordPage', () => {
   it('is one click from the sign-in page', async () => {
@@ -28,7 +28,7 @@ describe('ForgotPasswordPage', () => {
     renderApp('/forgot-password')
     await userEvent.type(await screen.findByLabelText('Email'), ' bea@example.com ')
 
-    await submit()
+    await clickSubmit()
 
     expect(await screen.findByRole('status')).toHaveTextContent(
       'If that address has an account, we sent it a link to choose a new password.',
@@ -48,7 +48,7 @@ describe('ForgotPasswordPage', () => {
     renderApp('/forgot-password')
     await userEvent.type(await screen.findByLabelText('Email'), 'bea@example.com')
 
-    await submit()
+    await clickSubmit()
 
     expect(screen.getByRole('button', { name: 'Sending…' })).toBeDisabled()
     await screen.findByRole('status')
@@ -66,7 +66,7 @@ describe('ForgotPasswordPage', () => {
     renderApp('/forgot-password')
     await userEvent.type(await screen.findByLabelText('Email'), 'bea@example.com')
 
-    await submit()
+    await clickSubmit()
 
     expect(await screen.findByRole('alert')).toHaveTextContent(message)
     expect(screen.getByLabelText('Email')).toHaveValue('bea@example.com')
@@ -77,7 +77,7 @@ describe('ForgotPasswordPage', () => {
     renderApp('/forgot-password')
     await userEvent.type(await screen.findByLabelText('Email'), 'bea@example.com')
 
-    await submit()
+    await clickSubmit()
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Could not reach the server. Try again.',
@@ -93,7 +93,7 @@ describe('ForgotPasswordPage details', () => {
     renderApp('/forgot-password')
     await userEvent.type(await screen.findByLabelText('Email'), 'bea@example.com')
 
-    await submit()
+    await clickSubmit()
 
     await screen.findByRole('alert')
     expect(screen.getByLabelText('Email')).toHaveAccessibleDescription(

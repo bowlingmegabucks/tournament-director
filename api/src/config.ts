@@ -158,8 +158,15 @@ function mailConfigOf(data: Env): MailConfig | undefined {
     user,
     password,
     from,
-    webBaseUrl: web.replace(/\/+$/, ''),
+    webBaseUrl: trimTrailingSlashes(web),
   }
+}
+
+/** Drops trailing slashes. A loop, not `/\/+$/`, which backtracks badly on long runs of slashes. */
+function trimTrailingSlashes(value: string): string {
+  let end = value.length
+  while (end > 0 && value[end - 1] === '/') end--
+  return value.slice(0, end)
 }
 
 /** Only the database URL, for scripts such as `db:seed` that do not serve requests. */

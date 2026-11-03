@@ -35,7 +35,7 @@ async function fill(email: string, password: string) {
   await userEvent.type(screen.getByLabelText('Password'), password)
 }
 
-const submit = () => userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+const clickSignIn = () => userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
 
 describe('LoginPage', () => {
   it('has labelled fields with the right autocomplete', async () => {
@@ -52,7 +52,7 @@ describe('LoginPage', () => {
     renderLogin()
     await fill('director@example.com', 'directorP4sswordLocal')
 
-    await submit()
+    await clickSignIn()
 
     expect(await screen.findByText('Home page')).toBeVisible()
   })
@@ -64,7 +64,7 @@ describe('LoginPage', () => {
     })
     await fill('director@example.com', 'directorP4sswordLocal')
 
-    await submit()
+    await clickSignIn()
 
     expect(await screen.findByText('Secret page at [/secret] [?a=1] [#top]')).toBeVisible()
   })
@@ -77,7 +77,7 @@ describe('LoginPage', () => {
     renderLogin({ pathname: '/login', state })
     await fill('director@example.com', 'directorP4sswordLocal')
 
-    await submit()
+    await clickSignIn()
 
     expect(await screen.findByText(`Secret page at ${shown}`)).toBeVisible()
   })
@@ -107,7 +107,7 @@ describe('LoginPage', () => {
     renderLogin({ pathname: '/login', state })
     await fill('director@example.com', 'directorP4sswordLocal')
 
-    await submit()
+    await clickSignIn()
 
     expect(await screen.findByText('Home page')).toBeVisible()
   })
@@ -116,7 +116,7 @@ describe('LoginPage', () => {
     renderLogin()
     await fill('director@example.com', 'wrong')
 
-    await submit()
+    await clickSignIn()
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Email or password is wrong.')
     expect(screen.getByLabelText('Email')).toHaveValue('director@example.com')
@@ -143,7 +143,7 @@ describe('LoginPage', () => {
     renderLogin()
     await fill('a@b.com', 'x')
 
-    await submit()
+    await clickSignIn()
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Wait 15 minutes')
   })
@@ -157,7 +157,7 @@ describe('LoginPage', () => {
     renderLogin()
     await fill('a@b.com', 'x')
 
-    await submit()
+    await clickSignIn()
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Sign-in is not working right now. Try again.',
@@ -184,7 +184,7 @@ describe('LoginPage', () => {
     renderLogin()
     await fill('director@example.com', 'directorP4sswordLocal')
 
-    await submit()
+    await clickSignIn()
 
     const button = screen.getByRole('button', { name: 'Signing in…' })
     expect(button).toBeDisabled()

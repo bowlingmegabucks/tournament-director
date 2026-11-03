@@ -214,6 +214,7 @@ describe('redactSecrets', () => {
     ['/v1/auth/reset-password/abc', '/v1/auth/reset-password/[redacted]'],
     ['/V1/Auth/Reset-Password/abc', '/V1/Auth/Reset-Password/[redacted]'],
     ['//v1/auth//reset-password//abc', '//v1/auth//reset-password//[redacted]'],
+    ['/v1//auth/reset-password/abc', '/v1//auth/reset-password/[redacted]'],
     ['/v1/auth/reset-password/a.b-c_d%20e', '/v1/auth/reset-password/[redacted]'],
     ['/v1/auth/reset-password/abc/extra', '/v1/auth/reset-password/[redacted]/extra'],
     [

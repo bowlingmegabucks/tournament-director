@@ -1,6 +1,6 @@
 import type { Meter } from '@opentelemetry/api'
 import { toNodeHandler } from 'better-auth/node'
-import express, { Router, type RequestHandler } from 'express'
+import { Router, type RequestHandler } from 'express'
 import { z } from 'zod'
 import type { Auth } from '../../shared/auth/createAuth.ts'
 import { createAuthFailureCounter } from '../../shared/auth/authMetrics.ts'
@@ -12,9 +12,11 @@ import {
 import type { Logger } from '../../shared/logger.ts'
 import { withDatabaseErrors } from '../../shared/database.ts'
 import { HttpError } from '../../shared/errors.ts'
+import { jsonBody } from '../../shared/jsonBody.ts'
 import type { InviteMailer } from '../users/inviteMail.ts'
 import { requestLogger } from '../../shared/requestLogging.ts'
 
+// Stryker disable next-line MethodExpression: `toUpperCase` and `toLowerCase` give the same lookup, since Better Auth ignores case.
 const forgotBody = z.object({ email: z.string().trim().toLowerCase().max(254).pipe(z.email()) })
 const forgotCooldownMs = 60_000
 
@@ -82,27 +84,22 @@ export function createAuthRouter(
   router.post('/sign-out', handle)
 
   const requested = new Map<string, number>()
-  router.post(
-    '/request-password-reset',
-    createForgotLimiter(meter),
-    express.json({ limit: '10kb' }),
-    async (req, res) => {
-      if (!invites) {
-        throw new HttpError(503, 'Email is not set up on the server, so no link can be sent.')
-      }
-      const { email } = forgotBody.parse(req.body)
-      const now = Date.now()
-      for (const [known, at] of requested) if (now - at >= forgotCooldownMs) requested.delete(known)
-      // The same answer either way: a repeat within the cooldown just sends nothing.
-      if (!requested.has(email)) {
-        requested.set(email, now)
-        await withDatabaseErrors(requestLogger(res, logger), () =>
-          auth.api.requestPasswordReset({ body: { email } }),
-        )
-      }
-      res.json({ status: true })
-    },
-  )
+  router.post('/request-password-reset', createForgotLimiter(meter), jsonBody, async (req, res) => {
+    if (!invites) {
+      throw new HttpError(503, 'Email is not set up on the server, so no link can be sent.')
+    }
+    const { email } = forgotBody.parse(req.body)
+    const now = Date.now()
+    for (const [known, at] of requested) if (now - at >= forgotCooldownMs) requested.delete(known)
+    // The same answer either way: a repeat within the cooldown just sends nothing.
+    if (!requested.has(email)) {
+      requested.set(email, now)
+      await withDatabaseErrors(requestLogger(res, logger), () =>
+        auth.api.requestPasswordReset({ body: { email } }),
+      )
+    }
+    res.json({ status: true })
+  })
 
   router.post(
     '/reset-password',

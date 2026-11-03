@@ -26,6 +26,32 @@ describe('createTtlCache', () => {
     expect(await cached('a', () => Promise.resolve('ok'))).toBe('ok')
   })
 
+  it('keeps every answer while it is under the cap', async () => {
+    const cached = createTtlCache<number>(1000, () => 0)
+    const load = vi.fn(() => Promise.resolve(1))
+    await cached('a', load)
+    await cached('b', load)
+    await cached('a', load)
+    await cached('b', load)
+    expect(load).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not forget a newer answer when an older call for the key fails late', async () => {
+    let time = 0
+    const cached = createTtlCache<number>(1000, () => time)
+    let failOld: (error: Error) => void = () => undefined
+    const old = cached('a', () => new Promise<number>((_, reject) => (failOld = reject)))
+    time = 1000
+    const newer = vi.fn(() => Promise.resolve(2))
+    await cached('a', newer)
+
+    failOld(new Error('late'))
+    await expect(old).rejects.toThrow('late')
+    await cached('a', newer)
+
+    expect(newer).toHaveBeenCalledTimes(1)
+  })
+
   it('starts over at the cap', async () => {
     const cached = createTtlCache<number>(1000, () => 0)
     const load = vi.fn(() => Promise.resolve(1))

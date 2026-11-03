@@ -91,9 +91,8 @@ export function mountRoutes(app: Express, groups: RouteGroup[], meter: Meter): v
     app.use(
       path,
       onlyMethods(methods, (req, res, next) => {
-        check(req, res, (error?: unknown) => {
-          if (error) next(error)
-          else router(req, res, next)
+        check(req, res, () => {
+          router(req, res, next)
         })
       }),
     )

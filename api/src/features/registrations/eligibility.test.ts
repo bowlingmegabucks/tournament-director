@@ -68,6 +68,21 @@ describe('age limits (REG-04d to REG-04f)', () => {
     )
   })
 
+  it.each([
+    ['a minimum age only', { minimumAge: 20, maximumAge: null }],
+    ['a maximum age only', { minimumAge: null, maximumAge: 60 }],
+  ])('needs a birth date for %s (REG-04d)', (_name, limits) => {
+    const result = check({ division: { ...limits, gender: null }, bowler: { dateOfBirth: null } })
+
+    expect(result).toContain('Date of birth required for selected division')
+  })
+
+  it('does not need a birth date when the division has no age limit (REG-04d)', () => {
+    const division = { minimumAge: null, maximumAge: null, gender: null }
+
+    expect(check({ division, bowler: { dateOfBirth: null } })).toEqual([])
+  })
+
   it('refuses a bowler under the minimum age on the start date (REG-04e)', () => {
     const division = { minimumAge: 50 }
     expect(check({ division })).toEqual(['Bowler too young for selected division'])

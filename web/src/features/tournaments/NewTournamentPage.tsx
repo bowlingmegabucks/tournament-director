@@ -62,8 +62,11 @@ function Field({
     .join(' ')
   return (
     <div className={styles.field}>
-      <label htmlFor={id}>{labels[name]} (required)</label>
+      <label className={styles.label} htmlFor={id}>
+        {labels[name]} (required)
+      </label>
       <input
+        className={styles.input}
         id={id}
         name={name}
         type={type}
@@ -175,7 +178,7 @@ export function NewTournamentPage() {
             <strong>
               Fix {invalid.length} {invalid.length === 1 ? 'field' : 'fields'} to save.
             </strong>
-            <ul>
+            <ul className={styles.summaryList}>
               {invalid.map((name) => (
                 <li key={name}>
                   <a

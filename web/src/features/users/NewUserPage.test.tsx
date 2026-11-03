@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { screen } from '@testing-library/react'
+import { fireEvent, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
@@ -164,5 +164,68 @@ describe('the add-user route', () => {
 
     expect(await screen.findByRole('heading', { name: 'No access' })).toBeVisible()
     expect(screen.queryByRole('heading', { name: 'Add user' })).not.toBeInTheDocument()
+  })
+})
+
+describe('NewUserPage details', () => {
+  it('drops a role when its box is unticked', async () => {
+    let sent: unknown
+    server.use(
+      http.post('/v1/users', async ({ request }) => {
+        sent = await request.json()
+        return HttpResponse.json(
+          { id: 'u1', email: 'bea@example.com', name: 'Bea', roles: ['scoreKeeper'] },
+          { status: 201 },
+        )
+      }),
+    )
+    await openPage()
+    await fill('Bea', 'bea@example.com')
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Tournament director' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Score keeper' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Tournament director' }))
+    expect(screen.getByRole('checkbox', { name: 'Tournament director' })).not.toBeChecked()
+
+    await submit()
+
+    await screen.findByText('Invite sent to bea@example.com.')
+    expect(sent).toMatchObject({ roles: ['scoreKeeper'] })
+  })
+
+  it('links the roles group to the missing-role message', async () => {
+    await openPage()
+    await fill('Bea', 'bea@example.com')
+
+    await submit()
+
+    expect(await screen.findByRole('group', { name: 'Roles' })).toHaveAccessibleDescription(
+      'Pick at least one role.',
+    )
+  })
+
+  it('closes the confirmation when it is dismissed', async () => {
+    await openPage()
+    await fill('Bea', 'bea@example.com')
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Score keeper' }))
+    await submit()
+    await screen.findByText('Invite sent to bea@example.com.')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+
+    expect(screen.queryByText('Invite sent to bea@example.com.')).not.toBeInTheDocument()
+  })
+
+  it('does not show Loading once the options arrive', async () => {
+    await openPage()
+
+    expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+  })
+
+  it('stops the browser submitting the form itself', async () => {
+    await openPage()
+
+    const notStopped = fireEvent.submit(screen.getByRole('button', { name: 'Add user' }))
+
+    expect(notStopped).toBe(false)
   })
 })

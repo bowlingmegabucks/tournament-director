@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
@@ -126,5 +126,91 @@ describe('UsersPage', () => {
     renderApp('/users')
 
     expect(await screen.findByRole('heading', { name: 'No access' })).toBeVisible()
+  })
+})
+
+describe('UsersPage states and notices', () => {
+  it('shows the table, not Loading or the empty state, once users arrive', async () => {
+    await openPage()
+
+    expect(screen.queryByText('Loading users…')).not.toBeInTheDocument()
+    expect(screen.queryByText('No users yet.')).not.toBeInTheDocument()
+  })
+
+  it('shows no table when there are no users', async () => {
+    server.use(http.get('/v1/users', () => HttpResponse.json({ users: [] })))
+    setMockUser(createSignedInUser({ roles: ['admin'] }))
+    renderApp('/users')
+
+    await screen.findByText('No users yet.')
+
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+  })
+
+  it('says "Sending reset link…" on the chosen button and "Send reset link" on the rest', async () => {
+    server.use(
+      http.post('/v1/users/:id/password-reset', async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+    await openPage()
+    expect(screen.getAllByRole('button', { name: /^Send reset link to/ })[0]).toHaveTextContent(
+      /^Send reset link$/,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Send reset link to Local Admin' }))
+
+    expect(
+      screen.getByRole('button', { name: 'Sending reset link to Local Admin' }),
+    ).toHaveTextContent('Sending reset link…')
+    expect(screen.getByRole('button', { name: 'Send reset link to Old Timer' })).toHaveTextContent(
+      /^Send reset link$/,
+    )
+    await screen.findByText('Reset link sent to admin@example.com.')
+  })
+
+  it('clears an old notice when the next send starts', async () => {
+    let calls = 0
+    server.use(
+      http.post('/v1/users/:id/password-reset', async () => {
+        calls += 1
+        if (calls === 1) return HttpResponse.json({ message: 'Mail is down.' }, { status: 502 })
+        await new Promise((resolve) => setTimeout(resolve, 100))
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+    await openPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Send reset link to Old Timer' }))
+    await screen.findByText('Mail is down.')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Send reset link to Local Admin' }))
+
+    expect(screen.queryByText('Mail is down.')).not.toBeInTheDocument()
+    await screen.findByText('Reset link sent to admin@example.com.')
+  })
+
+  it('closes a success notice by itself after 8 seconds, and keeps an error', async () => {
+    const timeouts = vi.spyOn(globalThis, 'setTimeout')
+    const delays = () => timeouts.mock.calls.map((call) => call[1])
+    server.use(
+      http.post('/v1/users/:id/password-reset', ({ params }) =>
+        params['id'] === 'u-old'
+          ? HttpResponse.json({ message: 'Mail is down.' }, { status: 502 })
+          : new HttpResponse(null, { status: 204 }),
+      ),
+    )
+    await openPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Send reset link to Old Timer' }))
+    await screen.findByText('Mail is down.')
+    expect(delays()).not.toContain(8000)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Send reset link to Local Admin' }))
+    await screen.findByText('Reset link sent to admin@example.com.')
+
+    await waitFor(() => {
+      expect(delays()).toContain(8000)
+    })
+    timeouts.mockRestore()
   })
 })

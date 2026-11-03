@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import { createSignedInUser } from '../../mocks/data'
-import { fetchMe, setPassword, SetPasswordError, signIn, signOut } from './api'
+import {
+  fetchMe,
+  requestPasswordReset,
+  setPassword,
+  SetPasswordError,
+  signIn,
+  signOut,
+} from './api'
 
 describe('fetchMe', () => {
   it('returns the user with roles and permissions', async () => {
@@ -246,5 +253,29 @@ describe('setPassword', () => {
     server.use(http.post('/v1/auth/reset-password', () => HttpResponse.error()))
 
     await expect(setPassword('t', 'x')).rejects.toThrow('Could not reach the server. Try again.')
+  })
+})
+
+describe('JSON requests', () => {
+  it.each([
+    ['sign-out', '/v1/auth/sign-out', () => signOut()],
+    ['set-password', '/v1/auth/reset-password', () => setPassword('t', 'a long enough password')],
+    [
+      'request-password-reset',
+      '/v1/auth/request-password-reset',
+      () => requestPasswordReset('a@b.co'),
+    ],
+  ])('%s sends a JSON content type', async (_label, path, call) => {
+    let type: string | null = null
+    server.use(
+      http.post(path, ({ request }) => {
+        type = request.headers.get('Content-Type')
+        return HttpResponse.json({ status: true })
+      }),
+    )
+
+    await call()
+
+    expect(type).toBe('application/json')
   })
 })

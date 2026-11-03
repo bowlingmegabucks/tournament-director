@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { screen } from '@testing-library/react'
+import { fireEvent, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
@@ -99,5 +99,54 @@ describe('SetPasswordPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('This link is not valid.')
     expect(screen.queryByLabelText('New password')).not.toBeInTheDocument()
+  })
+})
+
+describe('SetPasswordPage details', () => {
+  it('shows no error before anything is sent', async () => {
+    renderApp('/set-password?token=abc')
+
+    await screen.findByLabelText('New password')
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it.each(['New password', 'Confirm password'])(
+    'clears the mismatch message when %s changes',
+    async (label) => {
+      renderApp('/set-password?token=abc')
+      await screen.findByLabelText('New password')
+      await fill(good, `${good}!`)
+      await submit()
+      await screen.findByText('The two passwords do not match.')
+
+      await userEvent.type(screen.getByLabelText(label), 'x')
+
+      expect(screen.queryByText('The two passwords do not match.')).not.toBeInTheDocument()
+    },
+  )
+
+  it('links both fields to the error message', async () => {
+    renderApp('/set-password?token=abc')
+    await screen.findByLabelText('New password')
+    await fill(good, `${good}!`)
+
+    await submit()
+
+    await screen.findByRole('alert')
+    expect(screen.getByLabelText('New password')).toHaveAccessibleDescription(
+      'The two passwords do not match.',
+    )
+    expect(screen.getByLabelText('Confirm password')).toHaveAccessibleDescription(
+      'The two passwords do not match.',
+    )
+  })
+
+  it('stops the browser submitting the form itself', async () => {
+    renderApp('/set-password?token=abc')
+
+    const notStopped = fireEvent.submit(await screen.findByRole('button', { name: 'Set password' }))
+
+    expect(notStopped).toBe(false)
   })
 })

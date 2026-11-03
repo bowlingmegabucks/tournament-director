@@ -1,3 +1,4 @@
+import { APIError } from 'better-auth/api'
 import request from 'supertest'
 import { describe, expect, it, vi, type Mock } from 'vitest'
 import { apiKeyHeader } from '../../shared/auth/caller.ts'
@@ -187,6 +188,24 @@ describe('POST /v1/users', () => {
     expect(database.user).toHaveLength(1)
   })
 
+  it('trims the email before it is stored', async () => {
+    const { add } = await setup()
+
+    const response = await add({ ...newUser, email: '  Bea@Example.com  ' })
+
+    expect(response.status).toBe(201)
+    expect(response.body.email).toBe('bea@example.com')
+  })
+
+  it('says which rule an empty role list breaks', async () => {
+    const { add } = await setup()
+
+    const response = await add({ ...newUser, roles: [] })
+
+    expect(response.status).toBe(400)
+    expect(response.body.message).toContain('pick at least one role')
+  })
+
   it('answers 400 for a body that is not JSON', async () => {
     const { app, cookie } = await setup()
 
@@ -198,6 +217,29 @@ describe('POST /v1/users', () => {
 
     expect(response.status).toBe(400)
     expect(response.body).toEqual({ message: 'The request body is not valid JSON.' })
+  })
+
+  it('refuses a body over 10 KB as not valid JSON', async () => {
+    const { app, cookie } = await setup()
+
+    const response = await request(app)
+      .post('/v1/users')
+      .set('Cookie', cookie)
+      .send({ ...newUser, name: 'x'.repeat(11_000) })
+
+    expect(response.status).toBe(400)
+    expect(response.body).toEqual({ message: 'The request body is not valid JSON.' })
+  })
+
+  it('answers 409 only for the duplicate-email error, not another refusal', async () => {
+    const { add, auth } = await setup()
+    vi.spyOn(auth.api, 'createUser').mockRejectedValueOnce(
+      new APIError('BAD_REQUEST', { message: 'Other', code: 'SOMETHING_ELSE' }),
+    )
+
+    const response = await add()
+
+    expect(response.status).not.toBe(409)
   })
 
   it('answers 503 and adds no one when the API has no mail settings', async () => {
@@ -372,7 +414,24 @@ describe('POST /v1/users/:id/password-reset', () => {
     const { id } = await withUser()
     const none = await setup({ mail: false })
 
-    expect((await none.reset(id)).status).toBe(503)
+    const response = await none.reset(id)
+
+    expect(response.status).toBe(503)
+    expect(response.body).toEqual({
+      message: 'Email is not set up on the server, so no link can be sent.',
+    })
+  })
+
+  it('answers 404 only when the user is not found, not for another failure', async () => {
+    const { reset, auth, send } = await setup()
+    vi.spyOn(auth.api, 'getUser').mockRejectedValueOnce(
+      new APIError('FORBIDDEN', { message: 'No' }),
+    )
+
+    const response = await reset('some-id')
+
+    expect(response.status).not.toBe(404)
+    expect(send).not.toHaveBeenCalled()
   })
 
   it('logs the user id, never the email or the link', async () => {

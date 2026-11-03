@@ -193,3 +193,75 @@ describe('sendPasswordReset', () => {
     )
   })
 })
+
+describe('request and response checks', () => {
+  it('sends the new user as JSON', async () => {
+    let type: string | null = null
+    server.use(
+      http.post('/v1/users', ({ request }) => {
+        type = request.headers.get('Content-Type')
+        return HttpResponse.json({ id: 'u1', ...input }, { status: 201 })
+      }),
+    )
+
+    await createUser(input)
+
+    expect(type).toBe('application/json')
+  })
+
+  it.each(['id', 'email', 'name', 'roles'])(
+    'warns that the user may exist when the answer has no %s',
+    async (missing) => {
+      const full: Record<string, unknown> = { id: 'u1', ...input }
+      delete full[missing]
+      server.use(http.post('/v1/users', () => HttpResponse.json(full, { status: 201 })))
+
+      await expect(createUser(input)).rejects.toThrow(
+        'The user was added, but the answer could not be read.',
+      )
+    },
+  )
+
+  it('warns that the user may exist when the success answer is not JSON', async () => {
+    server.use(http.post('/v1/users', () => new HttpResponse('oops', { status: 201 })))
+
+    await expect(createUser(input)).rejects.toThrow(
+      'The user was added, but the answer could not be read',
+    )
+  })
+
+  it('uses the general message when the API message is empty', async () => {
+    server.use(http.post('/v1/users', () => HttpResponse.json({ message: '' }, { status: 409 })))
+
+    await expect(createUser(input)).rejects.toThrow('The user could not be added. Try again.')
+  })
+
+  it.each(['id', 'email', 'name', 'roles', 'disabled'])(
+    'rejects a listed user with no %s',
+    async (missing) => {
+      const user: Record<string, unknown> = {
+        id: 'a',
+        email: 'a@example.com',
+        name: 'A',
+        roles: [],
+        disabled: false,
+      }
+      delete user[missing]
+      server.use(http.get('/v1/users', () => HttpResponse.json({ users: [user] })))
+
+      await expect(fetchUsers()).rejects.toThrow('unexpected response')
+    },
+  )
+
+  it('uses the general message when a reset failure has an empty message', async () => {
+    server.use(
+      http.post('/v1/users/:id/password-reset', () =>
+        HttpResponse.json({ message: '' }, { status: 502 }),
+      ),
+    )
+
+    await expect(sendPasswordReset('u1')).rejects.toThrow(
+      'The reset link could not be sent. Try again.',
+    )
+  })
+})

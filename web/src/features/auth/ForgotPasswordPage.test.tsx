@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { screen } from '@testing-library/react'
+import { fireEvent, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
@@ -82,5 +82,30 @@ describe('ForgotPasswordPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Could not reach the server. Try again.',
     )
+  })
+})
+
+describe('ForgotPasswordPage details', () => {
+  it('links the email field to a failure message', async () => {
+    server.use(
+      http.post('/v1/auth/request-password-reset', () => HttpResponse.json({}, { status: 500 })),
+    )
+    renderApp('/forgot-password')
+    await userEvent.type(await screen.findByLabelText('Email'), 'bea@example.com')
+
+    await submit()
+
+    await screen.findByRole('alert')
+    expect(screen.getByLabelText('Email')).toHaveAccessibleDescription(
+      'Could not send the link. Try again.',
+    )
+  })
+
+  it('stops the browser submitting the form itself', async () => {
+    renderApp('/forgot-password')
+
+    const notStopped = fireEvent.submit(await screen.findByRole('button', { name: 'Send link' }))
+
+    expect(notStopped).toBe(false)
   })
 })

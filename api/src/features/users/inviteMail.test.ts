@@ -75,6 +75,84 @@ describe('buildAdminReset', () => {
   })
 })
 
+describe('buildInvite wording', () => {
+  it('writes this exact message', () => {
+    const message = buildInvite('Ada & Co', 'https://example.com/x?token=t&a=1')
+
+    expect(message.subject).toBe('Your Tournament Director account')
+    expect(message.text).toBe(
+      [
+        'Hi Ada & Co,',
+        '',
+        'An admin added you to Tournament Director. Choose your password with this link:',
+        'https://example.com/x?token=t&a=1',
+        '',
+        'The link works for 72 hours. If you did not expect this email, ignore it.',
+      ].join('\n'),
+    )
+    expect(message.html).toBe(
+      [
+        '<p>Hi Ada &amp; Co,</p>',
+        '<p>An admin added you to Tournament Director. Choose your password with this link:</p>',
+        '<p><a href="https://example.com/x?token=t&amp;a=1">Choose your password</a></p>',
+        '<p>The link works for 72 hours. If you did not expect this email, ignore it.</p>',
+      ].join('\n'),
+    )
+  })
+})
+
+describe('buildPasswordReset wording', () => {
+  it('writes this exact message', () => {
+    const message = buildPasswordReset('Ada & Co', 'https://example.com/x?token=t&a=1')
+
+    expect(message.subject).toBe('Reset your Tournament Director password')
+    expect(message.text).toBe(
+      [
+        'Hi Ada & Co,',
+        '',
+        'Someone asked to reset your Tournament Director password. Choose a new one with this link:',
+        'https://example.com/x?token=t&a=1',
+        '',
+        'The link works for 72 hours. If you did not ask for this, ignore it: your password stays as it is.',
+      ].join('\n'),
+    )
+    expect(message.html).toBe(
+      [
+        '<p>Hi Ada &amp; Co,</p>',
+        '<p>Someone asked to reset your Tournament Director password. Choose a new one with this link:</p>',
+        '<p><a href="https://example.com/x?token=t&amp;a=1">Choose a new password</a></p>',
+        '<p>The link works for 72 hours. If you did not ask for this, ignore it: your password stays as it is.</p>',
+      ].join('\n'),
+    )
+  })
+})
+
+describe('buildAdminReset wording', () => {
+  it('writes this exact message', () => {
+    const message = buildAdminReset('Ada & Co', 'https://example.com/x?token=t&a=1')
+
+    expect(message.subject).toBe('Reset your Tournament Director password')
+    expect(message.text).toBe(
+      [
+        'Hi Ada & Co,',
+        '',
+        'An admin started a password reset for your Tournament Director account. Choose a new password with this link:',
+        'https://example.com/x?token=t&a=1',
+        '',
+        'The link works for 72 hours. Your password stays as it is until you use it.',
+      ].join('\n'),
+    )
+    expect(message.html).toBe(
+      [
+        '<p>Hi Ada &amp; Co,</p>',
+        '<p>An admin started a password reset for your Tournament Director account. Choose a new password with this link:</p>',
+        '<p><a href="https://example.com/x?token=t&amp;a=1">Choose a new password</a></p>',
+        '<p>The link works for 72 hours. Your password stays as it is until you use it.</p>',
+      ].join('\n'),
+    )
+  })
+})
+
 describe('createInviteMailer', () => {
   const user = { email: 'ada@example.com', name: 'Ada' }
 
@@ -106,6 +184,7 @@ describe('createInviteMailer', () => {
     expect(invites.take(user.email)).toBe(false)
     const logged = JSON.stringify(records())
     expect(logged).toContain('Invite email failed')
+    expect(logged).toContain('535 bad login')
     expect(logged).not.toContain('secret-token')
   })
 
@@ -137,6 +216,7 @@ describe('createInviteMailer', () => {
 
     const logged = JSON.stringify(records())
     expect(logged).toContain('Password reset email failed')
+    expect(logged).toContain('535 bad login')
     expect(logged).not.toContain('secret-token')
     expect(invites.take(user.email)).toBeUndefined()
   })
@@ -173,6 +253,7 @@ describe('createInviteMailer', () => {
     expect(send.mock.calls[0]?.[0].text).toContain('An admin started a password reset')
     expect(invites.take(user.email)).toBe(false)
     expect(JSON.stringify(records())).toContain('Admin reset email failed')
+    expect(JSON.stringify(records())).toContain('535 bad login')
     expect(JSON.stringify(records())).not.toContain('secret-token')
   })
 })

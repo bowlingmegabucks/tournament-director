@@ -115,7 +115,8 @@ describe('NewTournamentPage', () => {
     renderApp('/tournaments/new')
     await screen.findByRole('heading', { name: 'New tournament' })
     const name = screen.getByLabelText('Name (required)')
-    await user.click(name)
+    await user.type(name, 'S')
+    await user.clear(name)
     await user.tab()
     expect(name).toBeInvalid()
 
@@ -379,5 +380,91 @@ describe('NewTournamentPage', () => {
     await user.click(save())
 
     expect(screen.queryByText('Failed to save the tournament (503)')).not.toBeInTheDocument()
+  })
+
+  it('says nothing about a field the director only tabbed through (TRN-22)', async () => {
+    signInAs('director')
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+
+    await user.click(screen.getByLabelText('Name (required)'))
+    for (let field = 0; field < 9; field += 1) await user.tab()
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    for (const label of Object.keys(filled)) expect(screen.getByLabelText(label)).toBeValid()
+  })
+
+  it('checks a field the director left empty once a save has failed (TRN-22)', async () => {
+    signInAs('director')
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    await user.click(save())
+    await screen.findByRole('alert')
+    const center = screen.getByLabelText('Bowling center (required)')
+
+    await user.click(center)
+    await user.tab()
+
+    expect(center).toHaveAccessibleDescription('Bowling center is required')
+  })
+
+  it('drops the end date message when the start date moves back before it (TRN-02)', async () => {
+    signInAs('director')
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    await fillIn(user, {
+      'Start date (required)': '2027-03-14',
+      'End date (required)': '2027-03-12',
+    })
+    await user.tab()
+    expect(screen.getByLabelText('End date (required)')).toBeInvalid()
+
+    await user.clear(screen.getByLabelText('Start date (required)'))
+    await user.type(screen.getByLabelText('Start date (required)'), '2027-03-10')
+
+    expect(screen.getByLabelText('End date (required)')).toBeValid()
+  })
+
+  it('keeps the end date message while the start date is still after it (TRN-02)', async () => {
+    signInAs('director')
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    await fillIn(user, {
+      'Start date (required)': '2027-03-14',
+      'End date (required)': '2027-03-12',
+    })
+    await user.tab()
+
+    await user.clear(screen.getByLabelText('Start date (required)'))
+    await user.type(screen.getByLabelText('Start date (required)'), '2027-03-13')
+
+    expect(screen.getByLabelText('End date (required)')).toHaveAccessibleDescription(
+      'End date must be on or after start date',
+    )
+  })
+
+  it('flags the end date when the start date moves past it (TRN-02)', async () => {
+    signInAs('director')
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    await fillIn(user, {
+      'Start date (required)': '2027-03-10',
+      'End date (required)': '2027-03-12',
+    })
+    expect(screen.getByLabelText('End date (required)')).toBeValid()
+
+    const start = screen.getByLabelText('Start date (required)')
+    await user.clear(start)
+    await user.type(start, '2027-03-20')
+    await user.tab()
+
+    expect(screen.getByLabelText('End date (required)')).toHaveAccessibleDescription(
+      'End date must be on or after start date',
+    )
   })
 })

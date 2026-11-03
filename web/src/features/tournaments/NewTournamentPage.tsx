@@ -7,7 +7,12 @@ import { TournamentRejectedError } from './api'
 import styles from './NewTournamentPage.module.css'
 import type { FieldErrors, TournamentField, TournamentFormValues } from './types'
 import { useCreateTournament } from './useCreateTournament'
-import { emptyTournamentForm, toNewTournament, validateTournament } from './validateTournament'
+import {
+  emptyTournamentForm,
+  endBeforeStartMessage,
+  toNewTournament,
+  validateTournament,
+} from './validateTournament'
 
 // The order on the page, so the summary and the focus start at the top.
 const fieldOrder: readonly TournamentField[] = [
@@ -102,6 +107,8 @@ export function NewTournamentPage() {
   // The summary appears after a failed save and stays until the next one.
   const [summary, setSummary] = useState(false)
   const [failure, setFailure] = useState<string | undefined>()
+  // A field the director has typed in. Leaving one they never touched says nothing.
+  const [edited, setEdited] = useState<Partial<Record<TournamentField, true>>>({})
 
   const idOf = (name: TournamentField) => `${base}-${name}`
   const invalid = fieldOrder.filter((name) => errors[name] !== undefined)
@@ -119,16 +126,33 @@ export function NewTournamentPage() {
 
   function change(name: TournamentField) {
     return (event: ChangeEvent<HTMLInputElement>) => {
-      setValues((current) => ({ ...current, [name]: event.target.value }))
-      // A message about the old text would mislead.
-      setErrors((current) => ({ ...current, [name]: undefined }))
+      const value = event.target.value
+      setValues((current) => ({ ...current, [name]: value }))
+      setEdited((current) => ({ ...current, [name]: true }))
+      setErrors((current) => {
+        // A message about the old text would mislead.
+        const next = { ...current, [name]: undefined }
+        // The end date's message depends on the start date, so it may be stale now.
+        // An emptied start date has nothing to compare, so the message waits for the next one.
+        if (name === 'startDate' && value !== '' && current.endDate === endBeforeStartMessage) {
+          next.endDate = validateTournament({ ...values, startDate: value }).endDate
+        }
+        return next
+      })
     }
   }
 
   function blur(name: TournamentField) {
     return () => {
-      const message = validateTournament(values)[name]
-      setErrors((current) => ({ ...current, [name]: message }))
+      // Tabbing through an empty field is not a mistake, unless a save has already failed.
+      if (!edited[name] && !summary) return
+      const found = validateTournament(values)
+      setErrors((current) => ({
+        ...current,
+        [name]: found[name],
+        // Moving the start date past a typed end date makes the end date wrong.
+        ...(name === 'startDate' && values.endDate !== '' ? { endDate: found.endDate } : {}),
+      }))
     }
   }
 

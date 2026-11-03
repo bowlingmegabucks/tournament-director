@@ -5,6 +5,9 @@ import type { FieldErrors, NewTournament, TournamentFormValues } from './types'
  * runs the same rules with the same messages and stays the authority (D-121): change both together.
  */
 
+/** The one message that depends on two fields, so the form can tell when it has gone stale. */
+export const endBeforeStartMessage = 'End date must be on or after start date'
+
 const MAX_TEXT = 100
 const MAX_FEE = 999.99
 const MAX_GAMES = 99
@@ -78,7 +81,7 @@ export function validateTournament(values: TournamentFormValues): FieldErrors {
     errors.endDate === undefined &&
     values.endDate < values.startDate
   ) {
-    errors.endDate = 'End date must be on or after start date'
+    errors.endDate = endBeforeStartMessage
   }
   set(
     'entryFee',

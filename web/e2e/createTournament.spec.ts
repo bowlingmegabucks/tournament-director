@@ -17,15 +17,20 @@ test('a director creates a tournament and sees it on the overview', async ({ pag
   await page.getByLabel('End date (required)', { exact: true }).fill('2099-03-14')
   await page.getByLabel('Bowling center (required)', { exact: true }).fill('Bowl-O-Rama')
   await page.getByLabel('Entry fee in dollars (required)', { exact: true }).fill('60')
-  await page.getByLabel('Games per squad (required)', { exact: true }).fill('5')
-  await page.getByLabel('Finals ratio (required)', { exact: true }).fill('8')
-  await page.getByLabel('Cash ratio (required)', { exact: true }).fill('5')
-  await page.getByLabel('Super sweeper cash ratio (required)', { exact: true }).fill('4')
+  await page.getByLabel('Games per squad (required)', { exact: true }).fill('6')
+  await page.getByLabel('Finals ratio (required)', { exact: true }).fill('7.5')
+  await page.getByLabel('Cash ratio (required)', { exact: true }).fill('4.5')
+  await page.getByLabel('Super sweeper cash ratio (required)', { exact: true }).fill('3')
   await page.getByRole('button', { name: 'Save tournament' }).click()
 
   await expect(page.getByRole('heading', { name: 'Spring Classic', level: 1 })).toBeVisible()
   await expect(page.getByText('Tournament created')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Format', level: 2 })).toBeVisible()
+  // What was typed comes back, not a default.
+  await expect(page.getByText('Games per squad').locator('+ dd')).toHaveText('6')
+  await expect(page.getByText('Finals ratio').locator('+ dd')).toHaveText('1 in 7.5')
+  await expect(page.getByText('Cash ratio', { exact: true }).locator('+ dd')).toHaveText('1 in 4.5')
+  await expect(page.getByText('Super sweeper cash ratio').locator('+ dd')).toHaveText('1 in 3')
 })
 
 test('a visitor who is not signed in sees no New tournament button', async ({ page }) => {

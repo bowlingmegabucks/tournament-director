@@ -11,7 +11,7 @@ Each branch follows the usual path: settle the rules here, build with tests, run
 | 1   | `userEdit`        | The biggest gap: no way to remove someone's access without editing the database.                               |
 | 2   | `userChecks`      | Checks the new code against a real database and with mutation tests. Do it before the work goes to production. |
 | 3   | `userGoLive`      | Production setup. Nothing here works for real users until it is done.                                          |
-| 4   | `userSelfService` | Optional. Only if the owner wants it before 1.0.0.                                                             |
+| 4   | `userSelfService` | Built. The owner chose both change-my-password and my profile.                                                 |
 
 ## 1. `userEdit`: disable, enable, edit roles (built)
 
@@ -54,7 +54,9 @@ Do these in order. They belong with the 0.4.0 steps for the API subdomain and tu
 6. **Smoke test in production,** in this order: sign in as the admin; add a second user; open the invite from the real mailbox; set a password; sign in as that user; use Forgot password; send a reset from the users list. Check that the director and score keeper do not see "Users".
 7. **Check the logs** (Application Insights): no email address, no link, no token in any line.
 
-## 4. `userSelfService` (optional)
+## 4. `userSelfService` (built)
+
+Built as `USR-23` to `USR-25`. One change from the plan below: we did not open Better Auth's `POST /change-password` or `/update-user`. Our own `POST /v1/account/password` and `PATCH /v1/account` call them in the same process, so the body is only what our schema names (a `role` or `banned` field is a 400). A new access label, `signedIn`, lets a user with no role reach them.
 
 - **Change my own password.** Open Better Auth's `POST /change-password` (closed today) for a signed-in user: current password and new password, with the 12 to 128 character rule, and end other sessions. It needs its own throttle (it guesses a password), a page, and a link in the top bar's user area. Forgot password already covers the need, so skip it if it is not wanted.
 - **My profile** (change my own name): only if wanted. Test first that a user cannot set their own role or banned flag through `POST /update-user` (see [better-auth-routes.md](../better-auth-routes.md)).

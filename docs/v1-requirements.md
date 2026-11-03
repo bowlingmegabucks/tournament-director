@@ -62,7 +62,7 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
   - [x] Disable, enable, and edit roles, with a last-admin guard and the acting admin in the logs (`userEdit`, `USR-19` to `USR-22`).
   - [x] Real-database tests, mutation tests for the user code, and shorter forgot-password and reset links (`userChecks`; `USR-03`, `USR-13`, `USR-16`).
   - [ ] Production setup: tables, first admin, mail settings, SPF and DKIM, first real send (`userGoLive`).
-  - [ ] Change my own password (`userSelfService`, optional).
+  - [x] Change my own password and my own name, on `/account` (`userSelfService`, `USR-23` to `USR-25`).
 - [x] API key for the registration site: `API_KEY` in `x-api-key`, permission-based access labels, and `GET /v1/me` (stage 1, D-94 to D-97, `API-16`, `API-17`).
 - [x] Every route declares its access; undeclared routes deny (`API-15`, D-27). Permission labels now work for users and the API key (`API-16`); the lock-down release (`API-22`) now uses them.
 - [ ] Roles and permissions reviewed against [security.md](migration/security.md).

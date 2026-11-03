@@ -120,51 +120,53 @@ export function UsersPage() {
                     ? user.roles.map((role) => roleLabel(role).label).join(', ')
                     : 'None'}
                 </td>
-                <td className={styles.actions}>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    aria-label={`Edit roles for ${user.name}`}
-                    onClick={() => {
-                      updateRoles.reset()
-                      setEditing(user)
-                    }}
-                  >
-                    Edit roles
-                  </button>
-                  {user.disabled ? (
+                <td>
+                  <div className={styles.actions}>
                     <button
                       type="button"
                       disabled={busy}
-                      aria-label={`Enable ${user.name}`}
+                      aria-label={`Edit roles for ${user.name}`}
                       onClick={() => {
-                        changeDisabled(user, false)
+                        updateRoles.reset()
+                        setEditing(user)
                       }}
                     >
-                      Enable
+                      Edit roles
                     </button>
-                  ) : (
+                    {user.disabled ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        aria-label={`Enable ${user.name}`}
+                        onClick={() => {
+                          changeDisabled(user, false)
+                        }}
+                      >
+                        Enable
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        aria-label={`Disable ${user.name}`}
+                        onClick={() => {
+                          setDisabling(user)
+                        }}
+                      >
+                        Disable
+                      </button>
+                    )}
                     <button
                       type="button"
                       disabled={busy}
-                      aria-label={`Disable ${user.name}`}
+                      aria-label={`${sending(user.id) ? 'Sending reset link' : 'Send reset link'} to ${user.name}`}
                       onClick={() => {
-                        setDisabling(user)
+                        sendLink(user)
                       }}
                     >
-                      Disable
+                      {sending(user.id) ? 'Sending reset link…' : 'Send reset link'}
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    disabled={busy}
-                    aria-label={`${sending(user.id) ? 'Sending reset link' : 'Send reset link'} to ${user.name}`}
-                    onClick={() => {
-                      sendLink(user)
-                    }}
-                  >
-                    {sending(user.id) ? 'Sending reset link…' : 'Send reset link'}
-                  </button>
+                  </div>
                 </td>
               </tr>
             ))}

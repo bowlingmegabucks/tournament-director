@@ -124,9 +124,12 @@ describe('useSetUserDisabled', () => {
     client.setQueryData(userKeys.list, [])
     const { result } = renderHook(() => useSetUserDisabled(), { wrapper })
 
+    client.setQueryData(['tournaments'], [])
+
     await act(() => result.current.mutateAsync({ userId: 'u-dee', disabled: true }))
 
     expect(client.getQueryState(userKeys.list)?.isInvalidated).toBe(true)
+    expect(client.getQueryState(['tournaments'])?.isInvalidated).toBe(false)
   })
 })
 
@@ -135,11 +138,13 @@ describe('useUpdateUserRoles', () => {
     const { client, wrapper } = setup()
     client.setQueryData(userKeys.list, [])
     client.setQueryData(meKeys.all, {})
+    client.setQueryData(['tournaments'], [])
     const { result } = renderHook(() => useUpdateUserRoles(), { wrapper })
 
     await act(() => result.current.mutateAsync({ userId: 'u-dee', roles: ['director'] }))
 
     expect(client.getQueryState(userKeys.list)?.isInvalidated).toBe(true)
     expect(client.getQueryState(meKeys.all)?.isInvalidated).toBe(true)
+    expect(client.getQueryState(['tournaments'])?.isInvalidated).toBe(false)
   })
 })

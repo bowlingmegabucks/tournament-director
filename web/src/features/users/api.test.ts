@@ -316,6 +316,29 @@ describe('setUserDisabled', () => {
     await expect(setUserDisabled('u-1', true)).rejects.toThrow('Because.')
   })
 
+  it('keeps its own words for a 500, even when the body has a message', async () => {
+    server.use(
+      http.post('/v1/users/:id/disable', () =>
+        HttpResponse.json({ message: 'Stack trace…' }, { status: 500 }),
+      ),
+    )
+
+    await expect(setUserDisabled('u-1', true)).rejects.toThrow(
+      'The user could not be disabled. Try again.',
+    )
+  })
+
+  it.each([{ message: '' }, { message: 5 }, {}])(
+    'falls back when a 409 carries %j',
+    async (body) => {
+      server.use(http.post('/v1/users/:id/disable', () => HttpResponse.json(body, { status: 409 })))
+
+      await expect(setUserDisabled('u-1', true)).rejects.toThrow(
+        'The user could not be disabled. Try again.',
+      )
+    },
+  )
+
   it('falls back when a 409 has no readable message', async () => {
     server.use(http.post('/v1/users/:id/disable', () => new HttpResponse('oops', { status: 409 })))
 
@@ -332,10 +355,12 @@ describe('setUserDisabled', () => {
 })
 
 describe('updateUserRoles', () => {
-  it('sends the roles and returns the user', async () => {
+  it('sends the roles as JSON and returns the user', async () => {
     let sent: unknown
+    let contentType: string | null = null
     server.use(
       http.patch('/v1/users/:id', async ({ request }) => {
+        contentType = request.headers.get('content-type')
         sent = await request.json()
         return HttpResponse.json({
           id: 'u-dee',
@@ -350,6 +375,7 @@ describe('updateUserRoles', () => {
     const user = await updateUserRoles('u-dee', ['admin'])
 
     expect(sent).toEqual({ roles: ['admin'] })
+    expect(contentType).toBe('application/json')
     expect(user.roles).toEqual(['admin'])
   })
 

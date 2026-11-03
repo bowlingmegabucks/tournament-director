@@ -128,3 +128,66 @@ export async function sendPasswordReset(userId: string): Promise<void> {
   }
   if (!response.ok) throw await resetFailure(response)
 }
+
+/** A failed disable, enable, or role change. The message is what the page shows. */
+export class EditUserError extends Error {}
+
+// The API's own words are safe to show for these: 400 (what to fix), 409 (last admin, or yourself),
+// 503 (the database is down).
+const showEditMessage = new Set([400, 409, 503])
+
+async function editFailure(response: Response, fallback: string): Promise<EditUserError> {
+  if (response.status === 401)
+    return new EditUserError('You are signed out. Sign in again and retry.')
+  if (response.status === 403) return new EditUserError('Only an admin can change users.')
+  if (response.status === 404)
+    return new EditUserError('That user no longer exists. Reload the list.')
+  if (showEditMessage.has(response.status)) {
+    try {
+      const message = field(await response.json(), 'message')
+      if (typeof message === 'string' && message !== '') return new EditUserError(message)
+    } catch {
+      // Not JSON: fall through to the general message.
+    }
+  }
+  return new EditUserError(fallback)
+}
+
+async function send(path: string, init: RequestInit, fallback: string): Promise<Response> {
+  let response: Response
+  try {
+    response = await apiFetch(apiUrl(path), init)
+  } catch {
+    throw new EditUserError('Could not reach the server. Try again.')
+  }
+  if (!response.ok) throw await editFailure(response, fallback)
+  return response
+}
+
+/** Disable a user (ends their sessions) or enable them again. Nothing is deleted. */
+export async function setUserDisabled(userId: string, disabled: boolean): Promise<void> {
+  const action = disabled ? 'disable' : 'enable'
+  await send(
+    `/v1/users/${encodeURIComponent(userId)}/${action}`,
+    { method: 'POST' },
+    `The user could not be ${disabled ? 'disabled' : 'enabled'}. Try again.`,
+  )
+}
+
+/** Replace a user's roles with the given set. */
+export async function updateUserRoles(userId: string, roles: string[]): Promise<ListedUser> {
+  const response = await send(
+    `/v1/users/${encodeURIComponent(userId)}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roles }),
+    },
+    'The roles could not be saved. Try again.',
+  )
+  const body = await readJson(response, 'The roles were saved, but the answer could not be read')
+  if (!isListedUser(body)) {
+    throw new EditUserError('The roles were saved, but the answer could not be read.')
+  }
+  return body
+}

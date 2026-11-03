@@ -69,6 +69,25 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('edit-roles and disable dialogs have no WCAG 2.2 AA violations', async ({ page }) => {
+      await page.goto('/login')
+      await page.getByLabel('Email').fill('admin@example.com')
+      await page.getByLabel('Password').fill('adminP4sswordLocal')
+      await page.getByRole('button', { name: 'Sign in' }).click()
+      await page
+        .getByRole('navigation', { name: 'Main' })
+        .getByRole('link', { name: 'Users' })
+        .click()
+      await page.getByRole('button', { name: 'Edit roles for Local Director' }).click()
+      await expect(page.getByRole('checkbox', { name: 'Admin' })).toBeVisible()
+      await expectNoViolations(page)
+
+      await page.getByRole('button', { name: 'Cancel' }).click()
+      await page.getByRole('button', { name: 'Disable Local Director' }).click()
+      await expect(page.getByRole('dialog', { name: 'Disable Local Director?' })).toBeVisible()
+      await expectNoViolations(page)
+    })
+
     test('forgot-password page (sent) has no WCAG 2.2 AA violations', async ({ page }) => {
       await page.goto('/forgot-password')
       await page.getByLabel('Email').fill('bea@example.com')

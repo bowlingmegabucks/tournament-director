@@ -43,7 +43,7 @@ OpenTelemetry covers traces, metrics, and logs. Seq is the local backend; Applic
 - `src/telemetry.ts` builds the SDK. A destination turns telemetry on: `OTEL_EXPORTER_OTLP_ENDPOINT` (OTLP over HTTP/protobuf) and/or `APPLICATIONINSIGHTS_CONNECTION_STRING` (Azure Monitor). With neither set, nothing starts and nothing is sent. Tests and production without Application Insights run this way.
 - `http` and Express are instrumented. `/health` is left out so probes do not fill the traces.
 - `server.ts` calls `shutdownTelemetry()` on SIGTERM so buffered data goes out before exit.
-- Local: `npm run services:up` at the repo root, copy `.env.example` to `.env`, then open Seq at http://localhost:15380.
+- Local: `npm run services:up` at the repo root, copy `.env.example` to `.env`, then open Seq at http://localhost:15380. Mailpit catches the API's email (the invite): open its inbox at http://localhost:15325. `.env.example` points the `SMTP_*` settings at it, with `SMTP_ALLOW_SELF_SIGNED=true` because its certificate is self-signed; the API refuses that setting when `NODE_ENV=production`.
 - `OTEL_EXPORTER_OTLP_HEADERS` (an API key, for example) is read by the exporters, not by `config.ts`.
 
 ## Logging

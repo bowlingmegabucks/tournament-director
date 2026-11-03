@@ -28,6 +28,8 @@ export function createSmtpMailer(config: MailConfig): Mailer {
     port: config.port,
     secure: config.secure,
     requireTLS: !config.secure,
+    // The local Mailpit container signs its own certificate. Config refuses this in production.
+    tls: { rejectUnauthorized: !config.allowSelfSigned },
     auth: { user: config.user, pass: config.password },
     connectionTimeout: timeoutMs,
     greetingTimeout: timeoutMs,

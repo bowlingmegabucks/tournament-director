@@ -11,6 +11,7 @@ const config: MailConfig = {
   host: 'smtp.example.com',
   port: 587,
   secure: false,
+  allowSelfSigned: false,
   user: 'bowling@example.com',
   password: 'mailbox-password',
   from: 'Tournament Director <bowling@example.com>',
@@ -33,6 +34,7 @@ describe('createSmtpMailer', () => {
         secure: false,
         requireTLS: true,
         auth: { user: 'bowling@example.com', pass: 'mailbox-password' },
+        tls: { rejectUnauthorized: true },
         connectionTimeout: 15_000,
         greetingTimeout: 15_000,
         socketTimeout: 15_000,
@@ -45,6 +47,14 @@ describe('createSmtpMailer', () => {
 
     expect(createTransport).toHaveBeenCalledWith(
       expect.objectContaining({ port: 465, secure: true, requireTLS: false }),
+    )
+  })
+
+  it('trusts a self-signed certificate only when configured', () => {
+    createSmtpMailer({ ...config, allowSelfSigned: true })
+
+    expect(createTransport).toHaveBeenCalledWith(
+      expect.objectContaining({ tls: { rejectUnauthorized: false } }),
     )
   })
 

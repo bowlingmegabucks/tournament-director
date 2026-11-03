@@ -21,15 +21,18 @@ Stage 3 of security (D-94, D-101). Built on branch `registerUser`. This slice is
 
 API (App Service application settings in production, `api/.env` locally; see `api/.env.example`). Leave `SMTP_HOST` empty to turn email off. With a host set, the next four are required, or the API does not start.
 
-| Setting         | Example                                            | Notes                                                       |
-| --------------- | -------------------------------------------------- | ----------------------------------------------------------- |
-| `SMTP_HOST`     | `mail.example.com`                                 | The mail server. Empty turns email off.                     |
-| `SMTP_PORT`     | `587`                                              | 587 is STARTTLS; 465 is TLS from the start. Default 587.    |
-| `SMTP_SECURE`   | `false`                                            | `true` for port 465. Default `false`.                       |
-| `SMTP_USER`     | `bowling@example.com`                              | The mailbox login.                                          |
-| `SMTP_PASSWORD` | (secret)                                           | Never log it.                                               |
-| `MAIL_FROM`     | `Tournament Director <bowling@example.com>`        | The From address. Most hosts require it to be the mailbox.  |
-| `WEB_BASE_URL`  | `https://bowlingmegabucks.com/tournament-director` | The web app, no trailing slash. Invite links start with it. |
+| Setting                  | Example                                            | Notes                                                                                                                                     |
+| ------------------------ | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `SMTP_HOST`              | `mail.example.com`                                 | The mail server. Empty turns email off.                                                                                                   |
+| `SMTP_PORT`              | `587`                                              | 587 is STARTTLS; 465 is TLS from the start. Default 587.                                                                                  |
+| `SMTP_SECURE`            | `false`                                            | `true` for port 465. Default `false`.                                                                                                     |
+| `SMTP_ALLOW_SELF_SIGNED` | `false`                                            | Local only: `true` trusts the Mailpit container's self-signed certificate. The API will not start with `true` when `NODE_ENV=production`. |
+| `SMTP_USER`              | `bowling@example.com`                              | The mailbox login.                                                                                                                        |
+| `SMTP_PASSWORD`          | (secret)                                           | Never log it.                                                                                                                             |
+| `MAIL_FROM`              | `Tournament Director <bowling@example.com>`        | The From address. Most hosts require it to be the mailbox.                                                                                |
+| `WEB_BASE_URL`           | `https://bowlingmegabucks.com/tournament-director` | The web app, no trailing slash. Invite links start with it.                                                                               |
+
+Locally, `npm run services:up` starts Mailpit, which catches every invite; read them at http://localhost:15325 (`.env.example` has the matching settings).
 
 The web app needs no new GitHub secret or variable: it sends no mail and holds no mail setting.
 

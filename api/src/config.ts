@@ -51,6 +51,8 @@ const envSchema = z.object({
   // 587 is STARTTLS (SMTP_SECURE false); 465 is TLS from the start (SMTP_SECURE true).
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
   SMTP_SECURE: z.enum(['true', 'false']).default('false'),
+  // Local only: trust a self-signed certificate (the Mailpit container). Refused in production.
+  SMTP_ALLOW_SELF_SIGNED: z.enum(['true', 'false']).default('false'),
   SMTP_USER: optionalText,
   SMTP_PASSWORD: optionalText,
   // The From address: `bowling@example.com` or `Tournament Director <bowling@example.com>`.
@@ -83,6 +85,8 @@ export interface MailConfig {
   port: number
   /** `true` is TLS from the start (port 465). `false` upgrades with STARTTLS, which is required. */
   secure: boolean
+  /** Trust a self-signed certificate. Local use only: never `true` in production. */
+  allowSelfSigned: boolean
   user: string
   /** A secret: never log it. */
   password: string
@@ -142,10 +146,15 @@ function mailConfigOf(data: Env): MailConfig | undefined {
   if (!URL.canParse(web) || !/^https?:$/.test(new URL(web).protocol)) {
     throw new Error('Invalid environment: WEB_BASE_URL must be an http(s) address')
   }
+  const allowSelfSigned = data.SMTP_ALLOW_SELF_SIGNED === 'true'
+  if (allowSelfSigned && data.NODE_ENV === 'production') {
+    throw new Error('Invalid environment: SMTP_ALLOW_SELF_SIGNED must not be true in production')
+  }
   return {
     host: data.SMTP_HOST,
     port: data.SMTP_PORT,
     secure: data.SMTP_SECURE === 'true',
+    allowSelfSigned,
     user,
     password,
     from,

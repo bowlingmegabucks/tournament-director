@@ -247,6 +247,7 @@ describe('loadConfig mail settings', () => {
       host: 'smtp.example.com',
       port: 587,
       secure: false,
+      allowSelfSigned: false,
       user: 'bowling@example.com',
       password: 'mailbox-password',
       from: 'Tournament Director <bowling@example.com>',
@@ -271,6 +272,18 @@ describe('loadConfig mail settings', () => {
 
   it.each(['example.com', 'ftp://example.com'])('rejects WEB_BASE_URL=%s', (web) => {
     expect(() => loadConfig({ ...mailEnv, WEB_BASE_URL: web })).toThrow(/WEB_BASE_URL/)
+  })
+
+  it('allows a self-signed certificate when asked, outside production', () => {
+    const { mail } = loadConfig({ ...mailEnv, SMTP_ALLOW_SELF_SIGNED: 'true' })
+
+    expect(mail).toMatchObject({ allowSelfSigned: true })
+  })
+
+  it('refuses a self-signed certificate in production', () => {
+    expect(() =>
+      loadConfig({ ...mailEnv, SMTP_ALLOW_SELF_SIGNED: 'true', NODE_ENV: 'production' }),
+    ).toThrow(/SMTP_ALLOW_SELF_SIGNED must not be true in production/)
   })
 
   it('rejects SMTP_SECURE other than true or false', () => {

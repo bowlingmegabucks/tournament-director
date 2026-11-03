@@ -1,7 +1,7 @@
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import request from 'supertest'
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it, vi } from 'vitest'
-import { createAuth } from '../../shared/auth/createAuth.ts'
+import { createAuth, createInviteExtender } from '../../shared/auth/createAuth.ts'
 import { createDatabaseClient, type PrismaClient } from '../../shared/database.ts'
 import type { Mailer } from '../../shared/mail/mailer.ts'
 import { createConfig } from '../../test/factories.ts'
@@ -29,7 +29,12 @@ describe('user routes on MariaDB', () => {
 
   async function setup(send = vi.fn<Mailer['send']>().mockResolvedValue(undefined)) {
     const captured = createCapturedLogger()
-    const invites = createInviteMailer({ send }, 'https://example.com/td', captured.logger)
+    const invites = createInviteMailer(
+      { send },
+      'https://example.com/td',
+      captured.logger,
+      createInviteExtender(() => auth),
+    )
     const auth = createAuth({
       config: createConfig().auth,
       database: prismaAdapter(client, { provider: 'mysql' }),
@@ -164,15 +169,30 @@ describe('user routes on MariaDB', () => {
     expect((await signIn('another password 4242')).status).toBe(401)
   })
 
-  it('keeps the invite link for three days', async () => {
-    const { add } = await setup()
+  it('keeps an invite link for 72 hours, and a forgot-password or admin reset link for 1 hour', async () => {
+    const { auth, add, reset, send, app } = await setup()
+    const lifeOfLastLink = async () => {
+      const rows = await client.verification.findMany({ orderBy: { createdAt: 'desc' } })
+      return (rows[0]?.expiresAt.getTime() ?? 0) - Date.now()
+    }
+    const near = (left: number, hours: number) => {
+      expect(left).toBeGreaterThan((hours * 3600 - 60) * 1000)
+      expect(left).toBeLessThanOrEqual(hours * 3600 * 1000)
+    }
     await add({ email: 'bea@example.com', name: 'Bea', roles: ['director'] })
+    near(await lifeOfLastLink(), 72)
+    const dee = await createTestUser(auth, {
+      email: 'dee@example.com',
+      name: 'Dee',
+      role: 'director',
+    })
 
-    const row = await client.verification.findFirstOrThrow()
+    await reset(dee.id)
+    near(await lifeOfLastLink(), 1)
 
-    const left = row.expiresAt.getTime() - Date.now()
-    expect(left).toBeGreaterThan((3 * 24 * 3600 - 60) * 1000)
-    expect(left).toBeLessThanOrEqual(3 * 24 * 3600 * 1000)
+    await request(app).post('/v1/auth/request-password-reset').send({ email: 'dee@example.com' })
+    near(await lifeOfLastLink(), 1)
+    expect(send).toHaveBeenCalledTimes(3)
   })
 
   it('mails an admin reset to the user and ends the old password only when the link is used', async () => {

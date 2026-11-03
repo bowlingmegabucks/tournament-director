@@ -27,7 +27,7 @@ export function ForgotPasswordPage() {
         <>
           <output>
             If that address has an account, we sent it a link to choose a new password. The link
-            works for 72 hours.
+            works for 1 hour.
           </output>
           <p>
             <Link to="/login">Back to sign in</Link>

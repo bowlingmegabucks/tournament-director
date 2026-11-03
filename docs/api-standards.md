@@ -116,10 +116,10 @@ The legacy MariaDB database, read through Prisma (D-30). The .NET twin: `PrismaC
   - **Production, once:** run it on your machine against the production database without leaving the URL in shell history: `read -s DATABASE_URL; export DATABASE_URL; npm run users:create-admin; unset DATABASE_URL` (paste the `mariadb://…?ssl=true` URL at the silent prompt). A `DATABASE_URL` already in the environment wins over `api/.env`.
   - **Local test users.** `npm run db:seed` also adds one user per role, to a local database only (it skips them when `DATABASE_URL` is not `localhost`, `127.0.0.1`, or `[::1]`), because their passwords are in the repo. A user that exists is left alone. It refuses (and says so) when the table holds anyone who is not one of the three, or the database holds a tournament that is not a sample, because a tunnel to production looks local and the passwords are public; `npm run db:seed -- --force-users` adds them anyway, for a local database where you made your own user too.
 
-    | Email | Password | Role |
-    | --- | --- | --- |
-    | `admin@example.com` | `adminP4sswordLocal` | admin |
-    | `director@example.com` | `directorP4sswordLocal` | director |
+    | Email                     | Password                   | Role        |
+    | ------------------------- | -------------------------- | ----------- |
+    | `admin@example.com`       | `adminP4sswordLocal`       | admin       |
+    | `director@example.com`    | `directorP4sswordLocal`    | director    |
     | `scorekeeper@example.com` | `scoreKeeperP4sswordLocal` | scoreKeeper |
 
     The local `/login` page will have a one-click button for each (D-104).

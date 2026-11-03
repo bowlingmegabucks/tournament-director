@@ -14,6 +14,7 @@ import {
   signInCookie,
 } from '../../test/testAuth.ts'
 import type { RoleName } from '../../shared/auth/roles.ts'
+import { createInviteExtender } from '../../shared/auth/createAuth.ts'
 import { createInviteMailer } from './inviteMail.ts'
 
 const webBaseUrl = 'https://example.com/tournament-director'
@@ -25,7 +26,9 @@ async function setup({
   send = vi.fn<Mailer['send']>().mockResolvedValue(undefined),
 }: { role?: RoleName; mail?: boolean; send?: Mock<Mailer['send']> } = {}) {
   const captured = createCapturedLogger()
-  const invites = createInviteMailer({ send }, webBaseUrl, captured.logger)
+  const invites = createInviteMailer({ send }, webBaseUrl, captured.logger, (token) =>
+    createInviteExtender(() => auth)(token),
+  )
   const { auth, database, outage } = createTestAuth({
     logger: captured.logger,
     sendResetPassword: invites.deliver,

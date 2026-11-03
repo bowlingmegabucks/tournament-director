@@ -22,18 +22,18 @@ erDiagram
     Sweeper ||--o{ SquadScore : ""
 ```
 
-| Entity | One-line summary | Scope |
-| --- | --- | --- |
-| Tournament | Event settings: dates, fee, games, ratios, center | Global |
-| Division | Bracket with handicap and eligibility rules | One tournament |
-| Squad | Qualifying session; may override fee and ratios | One tournament |
-| Sweeper | Side event with its own fee, games, cash ratio | One tournament |
-| SweeperDivision | Bonus pins per game for one division in one sweeper | One sweeper |
-| Bowler | A person. Reused across tournaments | Global |
-| Registration | A bowler's entry into one division of one tournament | One tournament |
+| Entity            | One-line summary                                                | Scope                |
+| ----------------- | --------------------------------------------------------------- | -------------------- |
+| Tournament        | Event settings: dates, fee, games, ratios, center               | Global               |
+| Division          | Bracket with handicap and eligibility rules                     | One tournament       |
+| Squad             | Qualifying session; may override fee and ratios                 | One tournament       |
+| Sweeper           | Side event with its own fee, games, cash ratio                  | One tournament       |
+| SweeperDivision   | Bonus pins per game for one division in one sweeper             | One sweeper          |
+| Bowler            | A person. Reused across tournaments                             | Global               |
+| Registration      | A bowler's entry into one division of one tournament            | One tournament       |
 | SquadRegistration | A registration bowling one squad or sweeper, with lane position | One squad or sweeper |
-| SquadScore | One game score for one bowler in one squad or sweeper | One squad or sweeper |
-| Payment | A payment record against a registration | One registration |
+| SquadScore        | One game score for one bowler in one squad or sweeper           | One squad or sweeper |
+| Payment           | A payment record against a registration                         | One registration     |
 
 ## Key facts that shape everything
 
@@ -67,10 +67,10 @@ Finals themselves (the stepladder or bracket) happen outside the app. The app en
 
 ## The .NET to Node map for this domain
 
-| Legacy (.NET) | New app (Node/React) |
-| --- | --- |
+| Legacy (.NET)                                                   | New app (Node/React)                                                          |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | Strongly typed IDs (`BowlerId`, `SquadId`, ...) wrapping `Guid` | Branded string types over UUIDs, if wanted (see `typescript-standards` skill) |
-| `SmartEnum` `Gender` | A string union in TypeScript; map to the stored int at the repository |
-| `ErrorOr` results and `ErrorDetail` | `HttpError` for expected failures (see `docs/api-standards.md`) |
-| FluentValidation validators | Zod schemas plus plain functions for cross-field rules |
-| EF Core table-per-hierarchy for squads | One table, a discriminator column, two TypeScript types |
+| `SmartEnum` `Gender`                                            | A string union in TypeScript; map to the stored int at the repository         |
+| `ErrorOr` results and `ErrorDetail`                             | `HttpError` for expected failures (see `docs/api-standards.md`)               |
+| FluentValidation validators                                     | Zod schemas plus plain functions for cross-field rules                        |
+| EF Core table-per-hierarchy for squads                          | One table, a discriminator column, two TypeScript types                       |

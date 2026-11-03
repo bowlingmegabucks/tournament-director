@@ -31,7 +31,7 @@ describe('ForgotPasswordPage', () => {
     await clickSubmit()
 
     expect(await screen.findByRole('status')).toHaveTextContent(
-      'If that address has an account, we sent it a link to choose a new password.',
+      'If that address has an account, we sent it a link to choose a new password. The link works for 1 hour.',
     )
     expect(sent).toEqual({ email: 'bea@example.com' })
     expect(screen.getByRole('link', { name: 'Back to sign in' })).toHaveAttribute('href', '/login')

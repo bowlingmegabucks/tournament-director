@@ -11,7 +11,7 @@ import { createPrismaSweeperRepository } from './features/sweepers/prismaReposit
 import { createPrismaTournamentRepository } from './features/tournaments/prismaRepository.ts'
 import { createInviteMailer } from './features/users/inviteMail.ts'
 import { createSmtpMailer } from './shared/mail/mailer.ts'
-import { createAuth } from './shared/auth/createAuth.ts'
+import { createAuth, createInviteExtender } from './shared/auth/createAuth.ts'
 import { createDatabaseClient, pingDatabase } from './shared/database.ts'
 import { createLogger } from './shared/logger.ts'
 import { handleProcessEvents } from './shared/processEvents.ts'
@@ -22,19 +22,26 @@ const logger = createLogger(config)
 const database = createDatabaseClient(config.databaseUrl)
 // No mail settings, no mailer: the create-user route then refuses, and no invite can go out.
 const invites =
-  config.mail && createInviteMailer(createSmtpMailer(config.mail), config.mail.webBaseUrl, logger)
+  config.mail &&
+  createInviteMailer(
+    createSmtpMailer(config.mail),
+    config.mail.webBaseUrl,
+    logger,
+    createInviteExtender(() => auth),
+  )
+const auth = createAuth({
+  config: config.auth,
+  sendResetPassword: invites?.deliver,
+  database: prismaAdapter(database, { provider: 'mysql' }),
+  // The pages that may call sign-in from a browser are the same ones CORS lets in.
+  trustedOrigins: config.corsOrigins,
+  logger,
+})
 const app = createApp({
   config,
   logger,
   invites,
-  auth: createAuth({
-    config: config.auth,
-    sendResetPassword: invites?.deliver,
-    database: prismaAdapter(database, { provider: 'mysql' }),
-    // The pages that may call sign-in from a browser are the same ones CORS lets in.
-    trustedOrigins: config.corsOrigins,
-    logger,
-  }),
+  auth,
   tournaments: createPrismaTournamentRepository(database, logger),
   divisions: createPrismaDivisionRepository(database, logger),
   registrations: createPrismaRegistrationRepository(database, logger),

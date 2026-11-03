@@ -36,10 +36,20 @@ export function createResetLimiter(meter: Meter): RequestHandler {
   })
 }
 
+// Stryker disable next-line StringLiteral: the name only has to match between the two functions.
+const wrongPasswordMark = 'wrongPassword'
+
+/** The route calls this when the current password was wrong. Only those answers use up attempts. */
+export function markWrongPassword(res: Response): void {
+  res.locals[wrongPasswordMark] = true
+}
+
 /**
  * The same limit for change-my-password, which guesses the current password. It counts per user,
  * not per address: the caller is signed in, and a desk full of people behind one address must not
- * share a count. Put it after `identifyCaller`; it has its own count apart from sign-in.
+ * share a count. Only an answer the route marked with `markWrongPassword` counts: a short new
+ * password or a stale session is a mistake, not a guess. Put it after `identifyCaller`; it has its
+ * own count apart from sign-in.
  */
 export function createPasswordChangeLimiter(meter: Meter): RequestHandler {
   return createFailureLimiter(
@@ -48,8 +58,11 @@ export function createPasswordChangeLimiter(meter: Meter): RequestHandler {
       reason: 'password_change_throttled',
       message: 'Too many attempts to change the password. Try again later.',
     },
-    // Stryker disable next-line StringLiteral: unreachable, the route group is signed-in only.
-    { key: (_req, res) => callerOf(res).user?.id ?? 'unknown' },
+    {
+      // Stryker disable next-line StringLiteral: unreachable, the route group is signed-in only.
+      key: (_req, res) => callerOf(res).user?.id ?? 'unknown',
+      wasGuess: (res) => res.locals[wrongPasswordMark] === true,
+    },
   )
 }
 
@@ -78,10 +91,13 @@ function createFailureLimiter(
     limit = signInAttempts,
     countSuccesses = false,
     key,
+    wasGuess,
   }: {
     limit?: number
     countSuccesses?: boolean
     key?: (req: Request, res: Response) => string
+    /** Which answers use up an attempt. Default: any 4xx. */
+    wasGuess?: (res: Response) => boolean
   } = {},
 ): RequestHandler {
   const failures = createAuthFailureCounter(meter)
@@ -92,7 +108,8 @@ function createFailureLimiter(
     legacyHeaders: false,
     skipSuccessfulRequests: !countSuccesses,
     // A 5xx is our fault, not a wrong password, so it does not use up anyone's attempts.
-    requestWasSuccessful: (_req, res) => res.statusCode < 400 || res.statusCode >= 500,
+    requestWasSuccessful: (_req, res) =>
+      wasGuess ? !wasGuess(res) : res.statusCode < 400 || res.statusCode >= 500,
     keyGenerator: (req, res) =>
       // Stryker disable next-line StringLiteral: unreachable, a live socket always has an address.
       key ? key(req, res) : clientKey(req.ip ?? req.socket.remoteAddress ?? 'unknown'),

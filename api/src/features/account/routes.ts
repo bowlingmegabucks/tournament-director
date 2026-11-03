@@ -5,7 +5,7 @@ import type { Meter } from '@opentelemetry/api'
 import type { Auth } from '../../shared/auth/createAuth.ts'
 import { createAuthFailureCounter } from '../../shared/auth/authMetrics.ts'
 import { callerOf } from '../../shared/auth/caller.ts'
-import { createPasswordChangeLimiter } from '../../shared/auth/signInLimit.ts'
+import { createPasswordChangeLimiter, markWrongPassword } from '../../shared/auth/signInLimit.ts'
 import { withDatabaseErrors } from '../../shared/database.ts'
 import { HttpError } from '../../shared/errors.ts'
 import { jsonBody } from '../../shared/jsonBody.ts'
@@ -17,6 +17,18 @@ export interface AccountRouterDependencies {
   auth: Auth
   meter: Meter
   logger: Logger
+}
+
+/**
+ * What a Better Auth refusal means to our caller. A session that ended between our check and its
+ * own is a 401; any other refusal it makes (an APIError below 500) is a 400 with our words, not its text. Anything else (a
+ * database failure) goes on unchanged for the error handler.
+ */
+function refusal(err: unknown, message: string): unknown {
+  if (!(err instanceof APIError)) return err
+  if (err.statusCode === 401) return new HttpError(401, 'Missing or invalid credentials.')
+  if (err.statusCode < 500) return new HttpError(400, message)
+  return err
 }
 
 /**
@@ -57,11 +69,12 @@ export function createAccountRouter({ auth, meter, logger }: AccountRouterDepend
         })
         .catch((err: unknown) => {
           if (err instanceof APIError && err.body?.code === 'INVALID_PASSWORD') {
+            markWrongPassword(res)
             failures.add(1, { reason: 'bad_password_change' })
             log.warn({ userId }, 'Password change refused')
             throw new HttpError(400, 'The current password is wrong.')
           }
-          throw err
+          throw refusal(err, 'The password could not be changed.')
         }),
     )
     // Changing the password ends every session and starts a new one for this browser. Pass its cookie on.
@@ -75,7 +88,11 @@ export function createAccountRouter({ auth, meter, logger }: AccountRouterDepend
     const { name } = updateProfileSchema.parse(req.body)
     const log = requestLogger(res, logger)
     await withDatabaseErrors(log, () =>
-      auth.api.updateUser({ body: { name }, headers: fromNodeHeaders(req.headers) }),
+      auth.api
+        .updateUser({ body: { name }, headers: fromNodeHeaders(req.headers) })
+        .catch((err: unknown) => {
+          throw refusal(err, 'The name could not be saved.')
+        }),
     )
     log.info({ userId: callerOf(res).user?.id }, 'Profile changed')
     const body: Profile = { name }

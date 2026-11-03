@@ -173,8 +173,57 @@ describe('POST /v1/account/password', () => {
 
     const response = await change({ currentPassword: testPassword, newPassword })
 
-    expect(response.body).not.toEqual({ message: 'The current password is wrong.' })
+    expect(response.status).toBe(400)
+    expect(response.body).toEqual({ message: 'The password could not be changed.' })
     expect(await failures()).toEqual({})
+  })
+
+  it('answers 401 when Better Auth finds the session gone', async () => {
+    const { change, auth } = await setup()
+    vi.spyOn(auth.api, 'changePassword').mockRejectedValue(new APIError('UNAUTHORIZED'))
+
+    const response = await change({ currentPassword: testPassword, newPassword })
+
+    expect(response.status).toBe(401)
+    expect(response.body).toEqual({ message: 'Missing or invalid credentials.' })
+  })
+
+  it('leaves a server-side failure of Better Auth to the error handler', async () => {
+    const { change, rename, auth } = await setup()
+    vi.spyOn(auth.api, 'changePassword').mockRejectedValue(new APIError('INTERNAL_SERVER_ERROR'))
+    vi.spyOn(auth.api, 'updateUser').mockRejectedValue(new Error('boom'))
+
+    expect((await change({ currentPassword: testPassword, newPassword })).status).toBe(500)
+    expect((await rename({ name: 'X' })).status).toBe(500)
+  })
+
+  it('does not count input mistakes as password guesses', async () => {
+    const { change } = await setup()
+    for (let i = 0; i < passwordChangeAttempts; i++) {
+      expect((await change({ currentPassword: testPassword, newPassword: 'short' })).status).toBe(
+        400,
+      )
+      expect(
+        (await change({ currentPassword: testPassword, newPassword: testPassword })).status,
+      ).toBe(400)
+    }
+
+    const response = await change({ currentPassword: testPassword, newPassword })
+
+    expect(response.status).toBe(204)
+  })
+
+  it('refuses a disabled user, who is signed out', async () => {
+    const { change, rename, auth, user } = await setup()
+    const admin = await createTestUser(auth, { email: 'boss@example.com', name: 'Boss' })
+    const adminCookie = await signInCookie(auth, admin.email)
+    await auth.api.banUser({
+      body: { userId: user.id },
+      headers: new Headers({ cookie: adminCookie }),
+    })
+
+    expect((await change({ currentPassword: testPassword, newPassword })).status).toBe(401)
+    expect((await rename({ name: 'Still Here' })).status).toBe(401)
   })
 
   it('never lets a browser or proxy keep the answer', async () => {
@@ -302,6 +351,18 @@ describe('PATCH /v1/account', () => {
         .send({ name: 'X', role: 'admin' })
       expect(response.status).toBe(404)
     }
+  })
+
+  it('answers 401 when Better Auth finds the session gone, and 400 for any other refusal', async () => {
+    const { rename, auth } = await setup()
+    const update = vi.spyOn(auth.api, 'updateUser')
+    update.mockRejectedValueOnce(new APIError('UNAUTHORIZED'))
+    update.mockRejectedValueOnce(new APIError('BAD_REQUEST', { message: 'library text' }))
+
+    expect((await rename({ name: 'X' })).status).toBe(401)
+    const other = await rename({ name: 'X' })
+    expect(other.status).toBe(400)
+    expect(other.body).toEqual({ message: 'The name could not be saved.' })
   })
 
   it('logs the user id', async () => {

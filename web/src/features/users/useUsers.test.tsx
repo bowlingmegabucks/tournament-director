@@ -5,7 +5,16 @@ import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { server } from '../../mocks/server'
 import { mockUsers } from '../../mocks/userHandlers'
-import { useCreateUser, useSendPasswordReset, useUserOptions, useUsers, userKeys } from './useUsers'
+import { meKeys } from '../auth/useMe'
+import {
+  useCreateUser,
+  useSendPasswordReset,
+  useSetUserDisabled,
+  useUpdateUserRoles,
+  useUserOptions,
+  useUsers,
+  userKeys,
+} from './useUsers'
 
 function setup() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -106,5 +115,36 @@ describe('useSendPasswordReset', () => {
     })
 
     await waitFor(() => expect(result.current.isError).toBe(true))
+  })
+})
+
+describe('useSetUserDisabled', () => {
+  it('marks the list stale after a change', async () => {
+    const { client, wrapper } = setup()
+    client.setQueryData(userKeys.list, [])
+    const { result } = renderHook(() => useSetUserDisabled(), { wrapper })
+
+    client.setQueryData(['tournaments'], [])
+
+    await act(() => result.current.mutateAsync({ userId: 'u-dee', disabled: true }))
+
+    expect(client.getQueryState(userKeys.list)?.isInvalidated).toBe(true)
+    expect(client.getQueryState(['tournaments'])?.isInvalidated).toBe(false)
+  })
+})
+
+describe('useUpdateUserRoles', () => {
+  it('marks the list and who-am-I stale after a change', async () => {
+    const { client, wrapper } = setup()
+    client.setQueryData(userKeys.list, [])
+    client.setQueryData(meKeys.all, {})
+    client.setQueryData(['tournaments'], [])
+    const { result } = renderHook(() => useUpdateUserRoles(), { wrapper })
+
+    await act(() => result.current.mutateAsync({ userId: 'u-dee', roles: ['director'] }))
+
+    expect(client.getQueryState(userKeys.list)?.isInvalidated).toBe(true)
+    expect(client.getQueryState(meKeys.all)?.isInvalidated).toBe(true)
+    expect(client.getQueryState(['tournaments'])?.isInvalidated).toBe(false)
   })
 })

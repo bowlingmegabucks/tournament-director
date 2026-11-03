@@ -5,14 +5,19 @@ import { roleNames } from '../../shared/auth/roles.ts'
  * `POST /v1/users`: add a user and email them a set-password link (D-101). At least one role,
  * picked from the list (D-103). The admin never types or sees a password.
  */
+const rolesSchema = z
+  .array(z.enum(roleNames))
+  .min(1, 'pick at least one role')
+  .transform((roles) => [...new Set(roles)])
+
 export const createUserSchema = z.object({
   email: z.string().trim().toLowerCase().max(254).pipe(z.email()),
   name: z.string().trim().min(1).max(100),
-  roles: z
-    .array(z.enum(roleNames))
-    .min(1, 'pick at least one role')
-    .transform((roles) => [...new Set(roles)]),
+  roles: rolesSchema,
 })
+
+/** `PATCH /v1/users/:id`: the full new set of roles, at least one (D-103). */
+export const updateUserSchema = z.object({ roles: rolesSchema })
 
 export type CreateUserRequest = z.infer<typeof createUserSchema>
 

@@ -3,11 +3,14 @@ import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import {
   CreateUserError,
+  EditUserError,
   ResetPasswordError,
   createUser,
   fetchUserOptions,
   fetchUsers,
   sendPasswordReset,
+  setUserDisabled,
+  updateUserRoles,
 } from './api'
 
 const input = { name: 'Bea', email: 'bea@example.com', roles: ['director'] }
@@ -263,5 +266,139 @@ describe('request and response checks', () => {
     await expect(sendPasswordReset('u1')).rejects.toThrow(
       'The reset link could not be sent. Try again.',
     )
+  })
+})
+
+describe('setUserDisabled', () => {
+  it.each([
+    [true, 'disable'],
+    [false, 'enable'],
+  ])('posts to the %s path', async (disabled, action) => {
+    let called = ''
+    server.use(
+      http.post('/v1/users/:id/:action', ({ params }) => {
+        called = `${String(params['id'])}/${String(params['action'])}`
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+
+    await setUserDisabled('u 1', disabled)
+
+    expect(called).toBe(`u 1/${action}`)
+  })
+
+  it.each([
+    [401, 'You are signed out. Sign in again and retry.'],
+    [403, 'Only an admin can change users.'],
+    [404, 'That user no longer exists. Reload the list.'],
+    [500, 'The user could not be disabled. Try again.'],
+  ])('turns a %s into a message', async (status, message) => {
+    server.use(http.post('/v1/users/:id/disable', () => new HttpResponse(null, { status })))
+
+    await expect(setUserDisabled('u-1', true)).rejects.toThrow(message)
+  })
+
+  it('says "enabled" in the fallback when enabling', async () => {
+    server.use(http.post('/v1/users/:id/enable', () => new HttpResponse(null, { status: 500 })))
+
+    await expect(setUserDisabled('u-1', false)).rejects.toThrow(
+      'The user could not be enabled. Try again.',
+    )
+  })
+
+  it.each([400, 409, 503])('shows the API message for a %s', async (status) => {
+    server.use(
+      http.post('/v1/users/:id/disable', () =>
+        HttpResponse.json({ message: 'Because.' }, { status }),
+      ),
+    )
+
+    await expect(setUserDisabled('u-1', true)).rejects.toThrow('Because.')
+  })
+
+  it('keeps its own words for a 500, even when the body has a message', async () => {
+    server.use(
+      http.post('/v1/users/:id/disable', () =>
+        HttpResponse.json({ message: 'Stack trace…' }, { status: 500 }),
+      ),
+    )
+
+    await expect(setUserDisabled('u-1', true)).rejects.toThrow(
+      'The user could not be disabled. Try again.',
+    )
+  })
+
+  it.each([{ message: '' }, { message: 5 }, {}])(
+    'falls back when a 409 carries %j',
+    async (body) => {
+      server.use(http.post('/v1/users/:id/disable', () => HttpResponse.json(body, { status: 409 })))
+
+      await expect(setUserDisabled('u-1', true)).rejects.toThrow(
+        'The user could not be disabled. Try again.',
+      )
+    },
+  )
+
+  it('falls back when a 409 has no readable message', async () => {
+    server.use(http.post('/v1/users/:id/disable', () => new HttpResponse('oops', { status: 409 })))
+
+    await expect(setUserDisabled('u-1', true)).rejects.toBeInstanceOf(EditUserError)
+  })
+
+  it('says so when the server cannot be reached', async () => {
+    server.use(http.post('/v1/users/:id/disable', () => HttpResponse.error()))
+
+    await expect(setUserDisabled('u-1', true)).rejects.toThrow(
+      'Could not reach the server. Try again.',
+    )
+  })
+})
+
+describe('updateUserRoles', () => {
+  it('sends the roles as JSON and returns the user', async () => {
+    let sent: unknown
+    let contentType: string | null = null
+    server.use(
+      http.patch('/v1/users/:id', async ({ request }) => {
+        contentType = request.headers.get('content-type')
+        sent = await request.json()
+        return HttpResponse.json({
+          id: 'u-dee',
+          email: 'd@example.com',
+          name: 'Dee',
+          roles: ['admin'],
+          disabled: false,
+        })
+      }),
+    )
+
+    const user = await updateUserRoles('u-dee', ['admin'])
+
+    expect(sent).toEqual({ roles: ['admin'] })
+    expect(contentType).toBe('application/json')
+    expect(user.roles).toEqual(['admin'])
+  })
+
+  it('shows the API message for the last-admin refusal', async () => {
+    await expect(updateUserRoles('u-ada', ['director'])).rejects.toThrow(
+      'This would leave no enabled admin. Make another user an admin first.',
+    )
+  })
+
+  it('uses its own fallback', async () => {
+    server.use(http.patch('/v1/users/:id', () => new HttpResponse(null, { status: 500 })))
+
+    await expect(updateUserRoles('u-dee', ['admin'])).rejects.toThrow(
+      'The roles could not be saved. Try again.',
+    )
+  })
+
+  it.each([
+    ['not JSON', () => new HttpResponse('oops')],
+    ['not a user', () => HttpResponse.json({ id: 1 })],
+  ])('rejects an answer that is %s', async (_label, respond) => {
+    server.use(http.patch('/v1/users/:id', respond))
+
+    await expect(updateUserRoles('u-dee', ['admin'])).rejects.toThrow(/answer could not be read/)
   })
 })

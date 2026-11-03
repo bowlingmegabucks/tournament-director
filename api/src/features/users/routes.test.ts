@@ -45,7 +45,29 @@ async function setup({
   const list = () => request(app).get('/v1/users').set('Cookie', cookie)
   const reset = (id: string) =>
     request(app).post(`/v1/users/${id}/password-reset`).set('Cookie', cookie)
-  return { app, auth, database, outage, send, cookie, add, list, reset, records: captured.records }
+  const patch = (id: string, body: unknown) =>
+    request(app)
+      .patch(`/v1/users/${id}`)
+      .set('Cookie', cookie)
+      .send(body as object)
+  const disable = (id: string) => request(app).post(`/v1/users/${id}/disable`).set('Cookie', cookie)
+  const enable = (id: string) => request(app).post(`/v1/users/${id}/enable`).set('Cookie', cookie)
+  return {
+    app,
+    auth,
+    database,
+    outage,
+    send,
+    cookie,
+    caller,
+    add,
+    list,
+    reset,
+    patch,
+    disable,
+    enable,
+    records: captured.records,
+  }
 }
 
 describe('access to /v1/users', () => {
@@ -72,13 +94,30 @@ describe('access to /v1/users', () => {
     expect((await request(app).post('/v1/users/abc/password-reset')).status).toBe(401)
   })
 
+  it('answers 401 to a signed-out caller on disable, enable, and edit', async () => {
+    const { app } = await setup()
+
+    expect((await request(app).post('/v1/users/abc/disable')).status).toBe(401)
+    expect((await request(app).post('/v1/users/abc/enable')).status).toBe(401)
+    expect(
+      (
+        await request(app)
+          .patch('/v1/users/abc')
+          .send({ roles: ['admin'] })
+      ).status,
+    ).toBe(401)
+  })
+
   it.each<RoleName>(['director', 'scoreKeeper'])(
-    'answers 403 to a %s on the list and the reset',
+    'answers 403 to a %s on the list, the reset, and the edits',
     async (role) => {
-      const { list, reset, send } = await setup({ role })
+      const { list, reset, disable, enable, patch, send } = await setup({ role })
 
       expect((await list()).status).toBe(403)
       expect((await reset('abc')).status).toBe(403)
+      expect((await disable('abc')).status).toBe(403)
+      expect((await enable('abc')).status).toBe(403)
+      expect((await patch('abc', { roles: ['admin'] })).status).toBe(403)
       expect(send).not.toHaveBeenCalled()
     },
   )
@@ -442,5 +481,242 @@ describe('POST /v1/users/:id/password-reset', () => {
     const line = records().find((record) => record.msg === 'Password reset sent')
     expect(line).toMatchObject({ userId: id })
     expect(JSON.stringify(records())).not.toContain('set-password')
+  })
+})
+
+describe('disable and enable', () => {
+  async function withUser() {
+    const context = await setup()
+    const created = await context.add()
+    return { ...context, id: created.body.id as string }
+  }
+
+  it('disables a user: the list says so', async () => {
+    const { disable, list, id } = await withUser()
+
+    const response = await disable(id)
+
+    expect(response.status).toBe(204)
+    const users = (await list()).body.users as { id: string; disabled: boolean }[]
+    expect(users.find((user) => user.id === id)?.disabled).toBe(true)
+  })
+
+  it('ends a signed-in user’s access at once, and blocks sign-in', async () => {
+    const { app, auth, disable, enable, id } = await setup().then(async (context) => {
+      const created = await context.add()
+      return { ...context, id: created.body.id as string }
+    })
+    // Give Bea a known password through the credential account the admin made.
+    const ctx = await auth.$context
+    const hashed = await ctx.password.hash('bea password long enough')
+    await ctx.internalAdapter.updatePassword(id, hashed)
+    const beaCookie = await signInCookie(auth, 'bea@example.com', 'bea password long enough')
+    expect((await request(app).get('/v1/me').set('Cookie', beaCookie)).body.user).not.toBeNull()
+
+    await disable(id)
+
+    const me = await request(app).get('/v1/me').set('Cookie', beaCookie)
+    expect(me.body.user ?? null).toBeNull()
+    const signIn = await request(app)
+      .post('/v1/auth/sign-in/email')
+      .send({ email: 'bea@example.com', password: 'bea password long enough' })
+    expect(signIn.status).toBe(403)
+
+    expect((await enable(id)).status).toBe(204)
+    const again = await request(app)
+      .post('/v1/auth/sign-in/email')
+      .send({ email: 'bea@example.com', password: 'bea password long enough' })
+    expect(again.status).toBe(200)
+  })
+
+  it('enables a user again', async () => {
+    const { disable, enable, list, id } = await withUser()
+    await disable(id)
+
+    const response = await enable(id)
+
+    expect(response.status).toBe(204)
+    const users = (await list()).body.users as { id: string; disabled: boolean }[]
+    expect(users.find((user) => user.id === id)?.disabled).toBe(false)
+  })
+
+  it('answers 404 for an unknown user', async () => {
+    const { disable, enable } = await setup()
+
+    expect((await disable('nope')).status).toBe(404)
+    expect((await enable('nope')).status).toBe(404)
+  })
+
+  it('refuses to let an admin disable their own account', async () => {
+    const { disable, caller } = await setup()
+
+    const response = await disable(caller.id)
+
+    expect(response.status).toBe(409)
+    expect(response.body.message).toBe('You cannot disable your own account.')
+  })
+
+  it('logs who did it and whom, never an email', async () => {
+    const { disable, enable, id, caller, records } = await withUser()
+
+    await disable(id)
+    await enable(id)
+
+    expect(records()).toContainEqual(
+      expect.objectContaining({ msg: 'User disabled', actorId: caller.id, userId: id }),
+    )
+    expect(records()).toContainEqual(
+      expect.objectContaining({ msg: 'User enabled', actorId: caller.id, userId: id }),
+    )
+    expect(JSON.stringify(records())).not.toContain('bea@example.com')
+  })
+})
+
+describe('PATCH /v1/users/:id', () => {
+  async function withUser() {
+    const context = await setup()
+    const created = await context.add()
+    return { ...context, id: created.body.id as string }
+  }
+
+  it('replaces the roles and answers with the user', async () => {
+    const { patch, list, database, id } = await withUser()
+
+    const response = await patch(id, { roles: ['director', 'director', 'scoreKeeper'] })
+
+    expect(response.status).toBe(200)
+    expect(response.body).toEqual({
+      id,
+      email: 'bea@example.com',
+      name: 'Bea Bowler',
+      roles: ['director', 'scoreKeeper'],
+      disabled: false,
+    })
+    expect(database.user.find((user) => user['id'] === id)?.['role']).toBe('director,scoreKeeper')
+    const listed = (await list()).body.users as { id: string; roles: string[] }[]
+    expect(listed.find((user) => user.id === id)?.roles).toEqual(['director', 'scoreKeeper'])
+  })
+
+  it('reaches the user’s next request', async () => {
+    const { app, auth, patch, id } = await withUser()
+    const ctx = await auth.$context
+    await ctx.internalAdapter.updatePassword(
+      id,
+      await ctx.password.hash('bea password long enough'),
+    )
+    const beaCookie = await signInCookie(auth, 'bea@example.com', 'bea password long enough')
+    const before = await request(app).get('/v1/me').set('Cookie', beaCookie)
+    expect(before.body.user.roles).toEqual(['scoreKeeper'])
+
+    await patch(id, { roles: ['director'] })
+
+    const after = await request(app).get('/v1/me').set('Cookie', beaCookie)
+    expect(after.body.user.roles).toEqual(['director'])
+  })
+
+  it.each([
+    ['no roles', { roles: [] }],
+    ['an unknown role', { roles: ['owner'] }],
+    ['no roles field', {}],
+  ])('answers 400 for %s', async (_label, body) => {
+    const { patch, id } = await withUser()
+
+    expect((await patch(id, body)).status).toBe(400)
+  })
+
+  it('answers 404 for an unknown user', async () => {
+    const { patch } = await setup()
+
+    expect((await patch('nope', { roles: ['admin'] })).status).toBe(404)
+  })
+
+  it('refuses to remove admin from the last enabled admin', async () => {
+    const { patch, caller } = await setup()
+
+    const response = await patch(caller.id, { roles: ['director'] })
+
+    expect(response.status).toBe(409)
+    expect(response.body.message).toContain('no enabled admin')
+  })
+
+  it('lets the only admin add roles while keeping admin', async () => {
+    const { patch, caller } = await setup()
+
+    const response = await patch(caller.id, { roles: ['admin', 'director'] })
+
+    expect(response.status).toBe(200)
+  })
+
+  it('lets an admin drop their own admin role when another enabled admin exists', async () => {
+    const { add, patch, caller } = await setup()
+    await add({ ...newUser, email: 'sam@example.com', roles: ['admin'] })
+
+    const response = await patch(caller.id, { roles: ['director'] })
+
+    expect(response.status).toBe(200)
+  })
+
+  it('does not count a disabled admin as one that remains', async () => {
+    const { add, patch, disable, caller } = await setup()
+    const sam = await add({ ...newUser, email: 'sam@example.com', roles: ['admin'] })
+    await disable(sam.body.id as string)
+
+    expect((await patch(caller.id, { roles: ['director'] })).status).toBe(409)
+  })
+
+  it('lets an admin take any role from another user, even the admin role from a disabled admin', async () => {
+    const { add, patch, disable } = await setup()
+    const sam = await add({ ...newUser, email: 'sam@example.com', roles: ['admin'] })
+    await disable(sam.body.id as string)
+
+    const response = await patch(sam.body.id as string, { roles: ['scoreKeeper'] })
+
+    expect(response.status).toBe(200)
+  })
+
+  it('asks only for admins, up to 200, when it looks for another admin', async () => {
+    const { add, patch, auth, caller } = await setup()
+    await add({ ...newUser, email: 'sam@example.com', roles: ['admin'] })
+    const listUsers = vi.spyOn(auth.api, 'listUsers')
+
+    await patch(caller.id, { roles: ['director'] })
+
+    expect(listUsers).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: expect.objectContaining({
+          limit: 200,
+          filterField: 'role',
+          filterValue: 'admin',
+        }) as object,
+      }),
+    )
+  })
+
+  it('logs who did it and the new roles, never an email', async () => {
+    const { patch, id, caller, records } = await withUser()
+
+    await patch(id, { roles: ['director'] })
+
+    expect(records()).toContainEqual(
+      expect.objectContaining({
+        msg: 'User roles changed',
+        actorId: caller.id,
+        userId: id,
+        roles: ['director'],
+      }),
+    )
+    expect(JSON.stringify(records())).not.toContain('bea@example.com')
+  })
+
+  it('answers 400 for a body that is not JSON', async () => {
+    const { app, cookie, id } = await withUser()
+
+    const response = await request(app)
+      .patch(`/v1/users/${id}`)
+      .set('Cookie', cookie)
+      .set('Content-Type', 'application/json')
+      .send('{nope')
+
+    expect(response.status).toBe(400)
   })
 })

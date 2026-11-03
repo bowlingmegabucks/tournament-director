@@ -13,7 +13,9 @@ Each branch follows the usual path: settle the rules here, build with tests, run
 | 3   | `userGoLive`      | Production setup. Nothing here works for real users until it is done.                                          |
 | 4   | `userSelfService` | Optional. Only if the owner wants it before 1.0.0.                                                             |
 
-## 1. `userEdit`: disable, enable, edit roles
+## 1. `userEdit`: disable, enable, edit roles (built)
+
+Built as `USR-19` to `USR-22`. One change from the plan below: the last-admin check on disable is the self-disable refusal, since the caller is always an enabled admin.
 
 **Goal.** An admin can disable a user who has left, bring them back, and change a user's roles, from the users list.
 

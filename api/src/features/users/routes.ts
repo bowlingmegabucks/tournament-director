@@ -1,8 +1,9 @@
-import express, { Router, type RequestHandler } from 'express'
+import express, { Router, type Request, type RequestHandler } from 'express'
 import { APIError } from 'better-auth/api'
 import { fromNodeHeaders } from 'better-auth/node'
 import { randomBytes } from 'node:crypto'
 import type { Auth } from '../../shared/auth/createAuth.ts'
+import { callerOf } from '../../shared/auth/caller.ts'
 import { roleNames, rolesOf } from '../../shared/auth/roles.ts'
 import { withDatabaseErrors } from '../../shared/database.ts'
 import { HttpError } from '../../shared/errors.ts'
@@ -10,7 +11,13 @@ import type { Logger } from '../../shared/logger.ts'
 import { requestLogger } from '../../shared/requestLogging.ts'
 import type { InviteMailer } from './inviteMail.ts'
 import { z } from 'zod'
-import { createUserSchema, type CreatedUser, type ListedUser, type UserOptions } from './types.ts'
+import {
+  createUserSchema,
+  updateUserSchema,
+  type CreatedUser,
+  type ListedUser,
+  type UserOptions,
+} from './types.ts'
 
 export interface UserRouterDependencies {
   auth: Auth
@@ -36,12 +43,38 @@ function isDuplicateEmail(err: unknown): boolean {
   return err instanceof APIError && err.body?.code === duplicateEmail
 }
 
+interface StoredUser {
+  id: string
+  email: string
+  name: string
+  role?: string | null
+  banned?: boolean | null
+}
+
+function listed(user: StoredUser): ListedUser {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    roles: rolesOf(user.role),
+    disabled: user.banned === true,
+  }
+}
+
+const lastAdminMessage = 'This would leave no enabled admin. Make another user an admin first.'
+
 /**
  * Mounted at `/v1/users` behind `users.manage`: admins only, and the API key cannot reach it.
  * Web only, not part of the vendor contract.
  *
  * - `GET /options`: the roles to pick from and whether email is set up.
  * - `GET /`: every user, by name: `{ users: [{ id, email, name, roles, disabled }] }`.
+ * - `POST /:id/disable` and `POST /:id/enable`: end or restore a user's access (204). Disabling
+ *   ends their open sessions. Never deletes, so the history stays.
+ * - `PATCH /:id`: body `{ roles }`, the full new set (at least one). 200 with the user. It reaches
+ *   the user's next request.
+ * - Disable refuses a user disabling themselves (409); edit refuses to take `admin` from the last
+ *   enabled admin (409). Each change logs `actorId`, the admin who made it, and the affected `userId`.
  * - `POST /:id/password-reset`: emails the user a link to choose a new password. The admin never
  *   sees or sets a password (D-101). 204; 404 for an unknown id; 502 when the mail fails; 503
  *   without mail settings.
@@ -57,6 +90,36 @@ export function createUserRouter({ auth, invites, logger }: UserRouterDependenci
     next()
   })
 
+  const findUser = async (req: Request, id: string): Promise<StoredUser> => {
+    const found = await auth.api
+      .getUser({ query: { id }, headers: fromNodeHeaders(req.headers) })
+      .catch((err: unknown) => {
+        if (err instanceof APIError && err.statusCode === 404) return null
+        throw err
+      })
+    if (!found) throw new HttpError(404, 'User not found.')
+    return found
+  }
+
+  // Is an enabled admin left besides this user? Asks only for users whose role holds `admin`, so
+  // the cap counts admins, not every user. (Two admins removing each other's access at once, by
+  // demotion or disable, could both pass; with about five users and one admin screen, that race
+  // is not worth a lock.)
+  const othersAreEnabledAdmins = async (req: Request, id: string): Promise<boolean> => {
+    const { users } = await auth.api.listUsers({
+      query: {
+        filterField: 'role',
+        filterOperator: 'contains',
+        filterValue: 'admin',
+        limit: maxListed,
+      },
+      headers: fromNodeHeaders(req.headers),
+    })
+    return users.some(
+      (user) => user.id !== id && user.banned !== true && rolesOf(user.role).includes('admin'),
+    )
+  }
+
   router.get('/options', (_req, res) => {
     const body: UserOptions = { roles: roleNames, inviteEmail: invites !== undefined }
     res.json(body)
@@ -71,15 +134,59 @@ export function createUserRouter({ auth, invites, logger }: UserRouterDependenci
       }),
     )
     const body: { users: ListedUser[] } = {
-      users: users.map((user) => ({
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        roles: rolesOf(user.role),
-        disabled: user.banned === true,
-      })),
+      users: users.map(listed),
     }
     res.json(body)
+  })
+
+  router.post('/:id/disable', async (req, res) => {
+    const { id } = idParams.parse(req.params)
+    const actorId = callerOf(res).user?.id
+    const log = requestLogger(res, logger)
+    await withDatabaseErrors(log, async () => {
+      await findUser(req, id)
+      // Refusing self-disable is also the last-admin guard: the caller is an enabled admin, so any
+      // other target leaves them standing.
+      if (id === actorId) throw new HttpError(409, 'You cannot disable your own account.')
+      await auth.api.banUser({ body: { userId: id }, headers: fromNodeHeaders(req.headers) })
+    })
+    log.info({ actorId, userId: id }, 'User disabled')
+    res.status(204).end()
+  })
+
+  router.post('/:id/enable', async (req, res) => {
+    const { id } = idParams.parse(req.params)
+    const actorId = callerOf(res).user?.id
+    const log = requestLogger(res, logger)
+    await withDatabaseErrors(log, async () => {
+      await findUser(req, id)
+      await auth.api.unbanUser({ body: { userId: id }, headers: fromNodeHeaders(req.headers) })
+    })
+    log.info({ actorId, userId: id }, 'User enabled')
+    res.status(204).end()
+  })
+
+  router.patch('/:id', jsonBody, async (req, res) => {
+    const { id } = idParams.parse(req.params)
+    const { roles } = updateUserSchema.parse(req.body)
+    const actorId = callerOf(res).user?.id
+    const log = requestLogger(res, logger)
+    const updated = await withDatabaseErrors(log, async () => {
+      await findUser(req, id)
+      // The caller is an enabled admin, so changing anyone else always leaves one. Only taking
+      // `admin` from themselves can empty the list, and this check then finds no one else.
+      if (!roles.includes('admin') && !(await othersAreEnabledAdmins(req, id))) {
+        throw new HttpError(409, lastAdminMessage)
+      }
+      // Answer with what was stored, not with what was asked for.
+      const { user } = await auth.api.setRole({
+        body: { userId: id, role: roles },
+        headers: fromNodeHeaders(req.headers),
+      })
+      return user
+    })
+    log.info({ actorId, userId: id, roles }, 'User roles changed')
+    res.json(listed(updated))
   })
 
   router.post('/:id/password-reset', async (req, res) => {
@@ -89,16 +196,7 @@ export function createUserRouter({ auth, invites, logger }: UserRouterDependenci
     const { id } = idParams.parse(req.params)
     const log = requestLogger(res, logger)
     await withDatabaseErrors(log, async () => {
-      const found = await auth.api
-        .getUser({
-          query: { id },
-          headers: fromNodeHeaders(req.headers),
-        })
-        .catch((err: unknown) => {
-          if (err instanceof APIError && err.statusCode === 404) return null
-          throw err
-        })
-      if (!found) throw new HttpError(404, 'User not found.')
+      const found = await findUser(req, id)
       invites.expectAdminReset(found.email)
       await auth.api.requestPasswordReset({ body: { email: found.email } })
       if (invites.take(found.email) !== true) {
@@ -108,7 +206,7 @@ export function createUserRouter({ auth, invites, logger }: UserRouterDependenci
         )
       }
     })
-    log.info({ userId: id }, 'Password reset sent')
+    log.info({ actorId: callerOf(res).user?.id, userId: id }, 'Password reset sent')
     res.status(204).end()
   })
 
@@ -158,7 +256,7 @@ export function createUserRouter({ auth, invites, logger }: UserRouterDependenci
       )
     })
 
-    log.info({ userId: created.id, roles }, 'User added')
+    log.info({ actorId: callerOf(res).user?.id, userId: created.id, roles }, 'User added')
     const body: CreatedUser = {
       id: created.id,
       email: created.email,

@@ -214,3 +214,329 @@ describe('UsersPage states and notices', () => {
     timeouts.mockRestore()
   })
 })
+
+describe('UsersPage: disable, enable, edit roles', () => {
+  it('asks before disabling, then disables and says so', async () => {
+    let called = ''
+    server.use(
+      http.post('/v1/users/:id/disable', ({ params }) => {
+        called = String(params['id'])
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+    await openPage()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Disable Local Director' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Disable Local Director?' })
+    expect(called).toBe('')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Disable' }))
+
+    expect(await screen.findByText('Local Director is disabled.')).toBeVisible()
+    expect(called).toBe('u-dee')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('does nothing when the confirmation is cancelled', async () => {
+    let called = false
+    server.use(
+      http.post('/v1/users/:id/disable', () => {
+        called = true
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+    await openPage()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Disable Local Director' }))
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancel' }),
+    )
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(called).toBe(false)
+  })
+
+  it('shows Enable, not Disable, for a disabled user, and enables without asking', async () => {
+    await openPage()
+    const row = screen.getByRole('row', { name: /Old Timer/ })
+    expect(within(row).queryByRole('button', { name: 'Disable Old Timer' })).not.toBeInTheDocument()
+
+    await userEvent.click(within(row).getByRole('button', { name: 'Enable Old Timer' }))
+
+    expect(await screen.findByText('Old Timer is enabled.')).toBeVisible()
+  })
+
+  it('keeps a refusal on screen until dismissed', async () => {
+    await openPage()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Disable Local Admin' }))
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Disable' }),
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'You cannot disable your own account.',
+    )
+  })
+
+  it('opens the roles with the current ones ticked, saves, and says so', async () => {
+    let sent: unknown
+    server.use(
+      http.patch('/v1/users/:id', async ({ request }) => {
+        sent = await request.json()
+        return HttpResponse.json({
+          id: 'u-dee',
+          email: 'director@example.com',
+          name: 'Local Director',
+          roles: ['director', 'scoreKeeper', 'admin'],
+          disabled: false,
+        })
+      }),
+    )
+    await openPage()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit roles for Local Director' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Edit roles for Local Director' })
+    const director = await within(dialog).findByRole('checkbox', { name: 'Tournament director' })
+    expect(director).toBeChecked()
+    expect(within(dialog).getByRole('checkbox', { name: 'Admin' })).not.toBeChecked()
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Admin' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save roles' }))
+
+    expect(await screen.findByText('Roles saved for Local Director.')).toBeVisible()
+    expect(sent).toEqual({ roles: ['director', 'scoreKeeper', 'admin'] })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('will not save with no role ticked', async () => {
+    let called = false
+    server.use(
+      http.patch('/v1/users/:id', () => {
+        called = true
+        return new HttpResponse(null, { status: 500 })
+      }),
+    )
+    await openPage()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit roles for Old Timer' }))
+    const dialog = await screen.findByRole('dialog')
+    await within(dialog).findByRole('checkbox', { name: 'Admin' })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save roles' }))
+
+    expect(within(dialog).getByText('Pick at least one role.')).toBeVisible()
+    expect(called).toBe(false)
+  })
+
+  it('clears the missing-role message once a role is ticked', async () => {
+    await openPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Edit roles for Old Timer' }))
+    const dialog = await screen.findByRole('dialog')
+    await within(dialog).findByRole('checkbox', { name: 'Admin' })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save roles' }))
+
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Admin' }))
+
+    expect(within(dialog).queryByText('Pick at least one role.')).not.toBeInTheDocument()
+  })
+
+  it('keeps the dialog open and shows the API refusal', async () => {
+    await openPage()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit roles for Local Admin' }))
+    const dialog = await screen.findByRole('dialog')
+    await userEvent.click(await within(dialog).findByRole('checkbox', { name: 'Admin' }))
+    await userEvent.click(await within(dialog).findByRole('checkbox', { name: 'Score keeper' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save roles' }))
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('no enabled admin')
+    expect(screen.getByRole('dialog')).toBeVisible()
+  })
+
+  it('closes the dialog on Cancel without saving', async () => {
+    await openPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Edit roles for Local Director' }))
+
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancel' }),
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+  })
+
+  it('takes a role away when its box is unticked', async () => {
+    let sent: unknown
+    server.use(
+      http.patch('/v1/users/:id', async ({ request }) => {
+        sent = await request.json()
+        return HttpResponse.json({
+          id: 'u-dee',
+          email: 'director@example.com',
+          name: 'Local Director',
+          roles: ['director'],
+          disabled: false,
+        })
+      }),
+    )
+    await openPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Edit roles for Local Director' }))
+    const dialog = await screen.findByRole('dialog')
+
+    expect(within(dialog).queryByText('Pick at least one role.')).not.toBeInTheDocument()
+    await userEvent.click(await within(dialog).findByRole('checkbox', { name: 'Score keeper' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save roles' }))
+
+    await screen.findByText('Roles saved for Local Director.')
+    expect(sent).toEqual({ roles: ['director'] })
+  })
+
+  it('shows loading for the roles, and keeps Save off until they arrive', async () => {
+    server.use(
+      http.get('/v1/users/options', async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        return HttpResponse.json({ roles: ['scoreKeeper', 'director', 'admin'], inviteEmail: true })
+      }),
+    )
+    await openPage()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit roles for Local Director' }))
+    const dialog = await screen.findByRole('dialog')
+
+    expect(within(dialog).getByText('Loading roles…')).toBeVisible()
+    expect(within(dialog).getByRole('button', { name: 'Save roles' })).toBeDisabled()
+    await within(dialog).findByRole('checkbox', { name: 'Admin' })
+    expect(within(dialog).queryByText('Loading roles…')).not.toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Save roles' })).toBeEnabled()
+  })
+
+  it('offers a retry when the roles cannot load', async () => {
+    let fail = true
+    server.use(
+      http.get('/v1/users/options', () =>
+        fail
+          ? new HttpResponse(null, { status: 500 })
+          : HttpResponse.json({ roles: ['scoreKeeper', 'director', 'admin'], inviteEmail: true }),
+      ),
+    )
+    await openPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Edit roles for Local Director' }))
+    const dialog = await screen.findByRole('dialog')
+    const retry = await within(dialog).findByRole('button', { name: 'Try again' })
+    expect(within(dialog).queryByText('Loading roles…')).not.toBeInTheDocument()
+
+    fail = false
+    await userEvent.click(retry)
+
+    expect(await within(dialog).findByRole('checkbox', { name: 'Admin' })).toBeVisible()
+  })
+
+  it('says "Saving…" and disables Save while the roles save', async () => {
+    server.use(
+      http.patch('/v1/users/:id', async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        return HttpResponse.json({
+          id: 'u-dee',
+          email: 'director@example.com',
+          name: 'Local Director',
+          roles: ['director'],
+          disabled: false,
+        })
+      }),
+    )
+    await openPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Edit roles for Local Director' }))
+    const dialog = await screen.findByRole('dialog')
+    await within(dialog).findByRole('checkbox', { name: 'Admin' })
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save roles' }))
+
+    expect(within(dialog).getByRole('button', { name: 'Saving…' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Disable Local Admin' })).toBeDisabled()
+    await screen.findByText('Roles saved for Local Director.')
+  })
+
+  it('clears an old error when the next action starts', async () => {
+    server.use(
+      http.post('/v1/users/:id/password-reset', () =>
+        HttpResponse.json({ message: 'Mail is down.' }, { status: 502 }),
+      ),
+      http.post('/v1/users/:id/enable', async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+    await openPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Send reset link to Old Timer' }))
+    await screen.findByText('Mail is down.')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Enable Old Timer' }))
+
+    expect(screen.queryByText('Mail is down.')).not.toBeInTheDocument()
+    await screen.findByText('Old Timer is enabled.')
+  })
+
+  it('clears an old error when roles are saved', async () => {
+    server.use(
+      http.post('/v1/users/:id/password-reset', () =>
+        HttpResponse.json({ message: 'Mail is down.' }, { status: 502 }),
+      ),
+      http.patch('/v1/users/:id', async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        return HttpResponse.json({
+          id: 'u-old',
+          email: 'old@example.com',
+          name: 'Old Timer',
+          roles: ['admin'],
+          disabled: true,
+        })
+      }),
+    )
+    await openPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Send reset link to Old Timer' }))
+    await screen.findByText('Mail is down.')
+    await userEvent.click(screen.getByRole('button', { name: 'Edit roles for Old Timer' }))
+    const dialog = await screen.findByRole('dialog')
+    await userEvent.click(await within(dialog).findByRole('checkbox', { name: 'Admin' }))
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save roles' }))
+
+    expect(screen.queryByText('Mail is down.')).not.toBeInTheDocument()
+    await screen.findByText('Roles saved for Old Timer.')
+  })
+
+  it('does not show an old refusal when the dialog opens again', async () => {
+    await openPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Edit roles for Local Admin' }))
+    let dialog = await screen.findByRole('dialog')
+    await userEvent.click(await within(dialog).findByRole('checkbox', { name: 'Admin' }))
+    await userEvent.click(await within(dialog).findByRole('checkbox', { name: 'Score keeper' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save roles' }))
+    await within(dialog).findByRole('alert')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit roles for Local Admin' }))
+    dialog = await screen.findByRole('dialog')
+
+    expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('opens the same dialog again after Cancel', async () => {
+    await openPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Disable Local Director' }))
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancel' }),
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Edit roles for Local Director' }))
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancel' }),
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Disable Local Director' }))
+    expect(await screen.findByRole('dialog', { name: 'Disable Local Director?' })).toBeVisible()
+    await userEvent.keyboard('{Escape}')
+    await userEvent.click(screen.getByRole('button', { name: 'Edit roles for Local Director' }))
+    expect(
+      await screen.findByRole('dialog', { name: 'Edit roles for Local Director' }),
+    ).toBeVisible()
+  })
+})

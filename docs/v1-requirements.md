@@ -59,7 +59,7 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 - [x] Auth approach decided and the API built (0.3.0): Better Auth, database sessions in a cookie, roles and permissions, `GET /v1/me` (D-98 to D-103, `API-16` to `API-21`).
 - [x] Web sign-in (`WEB-01` to `WEB-08`): `/login`, `useMe`, `<Can>`, the top bar, and the dev-only quick-login buttons with the production-build check (D-102, D-104).
 - [ ] User management (stage 3, D-101, Q-34). Done on `registerUser`: the admin-only add-user page, the invite email, the set-password page, forgot password, and the admin users list with password reset (`USR-01` to `USR-18`). Left, planned in [user-management-followups.md](plans/user-management-followups.md) as 0.4.1 work:
-  - [ ] Disable, enable, and edit roles, with a last-admin guard and the acting admin in the logs (`userEdit`).
+  - [x] Disable, enable, and edit roles, with a last-admin guard and the acting admin in the logs (`userEdit`, `USR-19` to `USR-22`).
   - [ ] Real-database tests, mutation tests, and shorter forgot-password links (`userChecks`).
   - [ ] Production setup: tables, first admin, mail settings, SPF and DKIM, first real send (`userGoLive`).
   - [ ] Change my own password (`userSelfService`, optional).

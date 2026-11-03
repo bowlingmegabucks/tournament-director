@@ -65,6 +65,24 @@ test('an admin sends a user a password reset link', async ({ page }) => {
   await expect(page.getByText('Reset link sent to director@example.com.')).toBeVisible()
 })
 
+test('an admin edits roles and disables a user', async ({ page }) => {
+  await signInAsAdmin(page)
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Users' }).click()
+
+  await page.getByRole('button', { name: 'Edit roles for Local Director' }).click()
+  const roles = page.getByRole('dialog', { name: 'Edit roles for Local Director' })
+  await roles.getByRole('checkbox', { name: 'Admin' }).check()
+  await roles.getByRole('button', { name: 'Save roles' }).click()
+  await expect(page.getByText('Roles saved for Local Director.')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Disable Local Director' }).click()
+  await page
+    .getByRole('dialog', { name: 'Disable Local Director?' })
+    .getByRole('button', { name: 'Disable' })
+    .click()
+  await expect(page.getByText('Local Director is disabled.')).toBeVisible()
+})
+
 test('the users list does not scroll sideways on a phone', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 700 })
   await signInAsAdmin(page)

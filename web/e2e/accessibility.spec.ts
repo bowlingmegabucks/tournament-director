@@ -32,6 +32,25 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('add-user page has no WCAG 2.2 AA violations', async ({ page }) => {
+      await page.goto('/login')
+      await page.getByLabel('Email').fill('admin@example.com')
+      await page.getByLabel('Password').fill('adminP4sswordLocal')
+      await page.getByRole('button', { name: 'Sign in' }).click()
+      await page
+        .getByRole('navigation', { name: 'Main' })
+        .getByRole('link', { name: 'Add user' })
+        .click()
+      await expect(page.getByRole('group', { name: 'Roles' })).toBeVisible()
+      // Show the error state too, so axe scans the message colors.
+      await page.getByLabel('Name', { exact: true }).fill('Bea Bowler')
+      await page.getByLabel('Email').fill('bea@example.com')
+      await page.getByRole('button', { name: 'Add user' }).click()
+      await expect(page.getByText('Pick at least one role.')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
     test('sign-in page with an error has no WCAG 2.2 AA violations', async ({ page }) => {
       await page.goto('/login')
       await page.getByLabel('Email').fill('director@example.com')

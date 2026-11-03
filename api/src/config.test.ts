@@ -21,6 +21,7 @@ describe('loadConfig', () => {
       databaseUrl,
       apiKey,
       auth: { secret: authSecret, baseUrl: authBaseUrl },
+      mail: undefined,
       logLevel: 'info',
       rateLimit: { max: 100, windowSeconds: 60 },
       trustProxy: 0,
@@ -224,5 +225,55 @@ describe('loadConfig', () => {
       expect(telemetry.otlpEndpoint).toBeUndefined()
       expect(telemetry.appInsightsConnectionString).toBeUndefined()
     })
+  })
+})
+
+describe('loadConfig mail settings', () => {
+  const mailEnv = {
+    ...baseEnv,
+    SMTP_HOST: 'smtp.example.com',
+    SMTP_USER: 'bowling@example.com',
+    SMTP_PASSWORD: 'mailbox-password',
+    MAIL_FROM: 'Tournament Director <bowling@example.com>',
+    WEB_BASE_URL: 'https://example.com/tournament-director/',
+  }
+
+  it('turns mail off when SMTP_HOST is empty', () => {
+    expect(loadConfig({ ...baseEnv, SMTP_HOST: '  ' }).mail).toBeUndefined()
+  })
+
+  it('reads the settings, with STARTTLS on port 587 by default and no trailing slash', () => {
+    expect(loadConfig(mailEnv).mail).toEqual({
+      host: 'smtp.example.com',
+      port: 587,
+      secure: false,
+      user: 'bowling@example.com',
+      password: 'mailbox-password',
+      from: 'Tournament Director <bowling@example.com>',
+      webBaseUrl: 'https://example.com/tournament-director',
+    })
+  })
+
+  it('reads a TLS-from-the-start port', () => {
+    const { mail } = loadConfig({ ...mailEnv, SMTP_PORT: '465', SMTP_SECURE: 'true' })
+
+    expect(mail).toMatchObject({ port: 465, secure: true })
+  })
+
+  it.each(['SMTP_USER', 'SMTP_PASSWORD', 'MAIL_FROM', 'WEB_BASE_URL'])(
+    'names %s when a host is set without it',
+    (name) => {
+      expect(() => loadConfig({ ...mailEnv, [name]: '' })).toThrow(
+        new RegExp(`${name} required when SMTP_HOST is set`),
+      )
+    },
+  )
+
+  it.each(['example.com', 'ftp://example.com'])('rejects WEB_BASE_URL=%s', (web) => {
+    expect(() => loadConfig({ ...mailEnv, WEB_BASE_URL: web })).toThrow(/WEB_BASE_URL/)
+  })
+
+  it('rejects SMTP_SECURE other than true or false', () => {
+    expect(() => loadConfig({ ...mailEnv, SMTP_SECURE: 'yes' })).toThrow(/SMTP_SECURE/)
   })
 })

@@ -15,6 +15,7 @@ import { RegistrationsPage } from './features/registrations/RegistrationsPage'
 import { SquadsPage } from './features/squads/SquadsPage'
 import { SweepersPage } from './features/sweepers/SweepersPage'
 import { HomePage } from './features/home/HomePage'
+import { NewUserPage } from './features/users/NewUserPage'
 import { TournamentLayout } from './features/tournaments/TournamentLayout'
 import { TournamentOverview } from './features/tournaments/TournamentOverview'
 import { TournamentsPage } from './features/tournaments/TournamentsPage'
@@ -71,6 +72,14 @@ export default function App() {
           <Route path="at-large" element={<AtLargePage />} />
           <Route path="seeding" element={<SeedingPage />} />
         </Route>
+        <Route
+          path="users/new"
+          element={
+            <RequirePermission permission="users.manage">
+              <NewUserPage />
+            </RequirePermission>
+          }
+        />
         {signInEnabled() && <Route path="login" element={<LoginPage />} />}
         <Route path="*" element={<NotFoundPage />} />
       </Route>

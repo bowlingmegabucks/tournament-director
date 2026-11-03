@@ -1,0 +1,40 @@
+# User management
+
+Stage 3 of security (D-94, D-101). Built on branch `registerUser`. This slice is the admin-only add-user page and the invite email. The set-password page (where the invite link lands), the users list, edit, and disable come next. No legacy twin (`SEC-01`).
+
+## Rules
+
+| ID     | Requirement                                                                                                                                                                                                                                                                                                                         | Differs from legacy | Tests                                                                                             |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------- |
+| USR-01 | New. `POST /v1/users` and `GET /v1/users/options` need `users.manage`, which only the admin role holds (D-96, D-97). Signed out is 401; a director, a score keeper, and the API key are 403.                                                                                                                                        | New                 | `api/src/features/users/routes.test.ts`                                                           |
+| USR-02 | New. `POST /v1/users` takes `{ email, name, roles }`. The email is trimmed and lowercased; the name is 1 to 100 characters; `roles` holds at least one name from `roles.ts` (D-103), repeats dropped. A bad body is 400; a body that is not JSON is 400.                                                                            | New                 | `routes.test.ts`                                                                                  |
+| USR-03 | New. The API makes the user with a random password nobody sees, then asks Better Auth for a reset token and emails the link `WEB_BASE_URL/set-password?token=…` (D-101). The link works 3 days (`resetLinkSeconds`). The answer is 201 with `{ id, email, name, roles }`: no password, no token.                                    | New                 | `routes.test.ts`, `inviteMail.test.ts`                                                            |
+| USR-04 | New. An email already in use is 409 "A user with this email already exists." and sends nothing.                                                                                                                                                                                                                                     | New                 | `routes.test.ts`                                                                                  |
+| USR-05 | New. If the invite cannot be sent, the API removes the user again and answers 502, so the admin can fix the mail settings and retry. If the removal fails too, the answer is 502 with that fact, and the log holds the user id.                                                                                                     | New                 | `routes.test.ts`, `inviteMail.test.ts`                                                            |
+| USR-06 | New. With no `SMTP_HOST`, `POST /v1/users` answers 503 and adds no one. `GET /v1/users/options` says `inviteEmail: false`.                                                                                                                                                                                                          | New                 | `routes.test.ts`, `config.test.ts`                                                                |
+| USR-07 | New. Mail uses SMTP through `nodemailer` (Q-34). On the plain port STARTTLS is required, so a server that cannot upgrade fails the send. Timeouts are 15 s.                                                                                                                                                                         | New (Q-34)          | `api/src/shared/mail/mailer.test.ts`                                                              |
+| USR-08 | New. Logs name the user id and roles, never the email, the link, or the token. A failed send logs the cause (`Invite email failed`) without the link.                                                                                                                                                                               | New                 | `routes.test.ts`, `inviteMail.test.ts`                                                            |
+| USR-09 | New. The web page `/users/new` sits behind `<RequirePermission permission="users.manage">` and shows an "Add user" link in the top bar to an admin only (`<Can>`). Fields: Name, Email, and a Roles group of checkboxes drawn from `GET /v1/users/options` (labels from `roleLabels.ts`, an unknown role shows under its own name). | New (D-102, D-103)  | `web/src/features/users/NewUserPage.test.tsx`, `AppShell.test.tsx`, `web/e2e/addUser.spec.ts`     |
+| USR-10 | New. With no role ticked, Add user shows "Pick at least one role." and sends nothing. On success a toast says "Invite sent to <email>." and the form empties. An error stays above the form with the fields kept. When `inviteEmail` is false the page says email is not set up and disables the button.                            | New                 | `NewUserPage.test.tsx`, `api.test.ts`, `web/e2e/addUser.spec.ts`, `web/e2e/accessibility.spec.ts` |
+
+## Settings
+
+API (App Service application settings in production, `api/.env` locally; see `api/.env.example`). Leave `SMTP_HOST` empty to turn email off. With a host set, the next four are required, or the API does not start.
+
+| Setting         | Example                                            | Notes                                                       |
+| --------------- | -------------------------------------------------- | ----------------------------------------------------------- |
+| `SMTP_HOST`     | `mail.example.com`                                 | The mail server. Empty turns email off.                     |
+| `SMTP_PORT`     | `587`                                              | 587 is STARTTLS; 465 is TLS from the start. Default 587.    |
+| `SMTP_SECURE`   | `false`                                            | `true` for port 465. Default `false`.                       |
+| `SMTP_USER`     | `bowling@example.com`                              | The mailbox login.                                          |
+| `SMTP_PASSWORD` | (secret)                                           | Never log it.                                               |
+| `MAIL_FROM`     | `Tournament Director <bowling@example.com>`        | The From address. Most hosts require it to be the mailbox.  |
+| `WEB_BASE_URL`  | `https://bowlingmegabucks.com/tournament-director` | The web app, no trailing slash. Invite links start with it. |
+
+The web app needs no new GitHub secret or variable: it sends no mail and holds no mail setting.
+
+## Still to build
+
+- The set-password page at `WEB_BASE_URL/set-password?token=…`. It posts the new password to Better Auth's `POST /v1/auth/reset-password`, which is closed today and opens with it. Open it together with the token redaction in OpenTelemetry spans (see [better-auth-routes.md](../better-auth-routes.md)). Until then, an invite link leads to a page that does not exist.
+- Users list, edit roles, disable and enable, forgot password.
+- Add SPF and DKIM records for the sending domain so invites reach the inbox (Q-34).

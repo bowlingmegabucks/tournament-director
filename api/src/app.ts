@@ -31,6 +31,8 @@ import { createReadyRouter } from './shared/readyRoutes.ts'
 import { createRootRouter } from './shared/rootRoutes.ts'
 import { createOpenApiRouter } from './openapi/openapi.ts'
 import { createAuthRouter } from './features/auth/routes.ts'
+import type { InviteMailer } from './features/users/inviteMail.ts'
+import { createUserRouter } from './features/users/routes.ts'
 import type { Auth } from './shared/auth/createAuth.ts'
 import { identifyCaller } from './shared/auth/caller.ts'
 import { mountRoutes } from './shared/mountRoutes.ts'
@@ -40,6 +42,8 @@ export interface AppDependencies {
   logger: Logger
   /** Sign-in (Better Auth). Built in `server.ts`; tests pass one on a memory database. */
   auth: Auth
+  /** Mails the set-password link to a new user. `undefined` when the API has no mail settings. */
+  invites?: InviteMailer
   tournaments: TournamentRepository
   divisions: DivisionRepository
   registrations: RegistrationRepository
@@ -60,6 +64,7 @@ export function createApp({
   config,
   logger,
   auth,
+  invites,
   tournaments,
   divisions,
   registrations,
@@ -117,6 +122,11 @@ export function createApp({
       // Public: this is how someone proves who they are. Better Auth reads the body itself, so no
       // express.json() may run before it.
       { path: '/v1/auth', access: 'public', router: createAuthRouter(auth, meter, logger) },
+      {
+        path: '/v1/users',
+        access: { permission: 'users.manage' }, // D-101, D-103: admins only; the API key cannot reach it
+        router: createUserRouter({ auth, invites, logger }),
+      },
       {
         path: '/v1/tournaments/:id/divisions',
         access: 'public',

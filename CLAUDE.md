@@ -38,6 +38,8 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 
 23. Registration site routes, slice 3. **Done on branch `migrate-registration-create`:** `DELETE /v1/registrations/{id}` (`API-08`, `REG-19`): `204`, a `404` problem for an unknown id, and a `400` when the bowler has any score in the tournament. It removes the squad entries and payments and keeps the bowler. All the legacy registration routes now exist (D-112). See [docs/requirements/registration-api.md](docs/requirements/registration-api.md).
 
+24. Security, stage 3, slice 1: add a user. **Done on branch `registerUser`:** the admin-only `/users/new` page (name, email, roles) and `POST /v1/users` plus `GET /v1/users/options` (`users.manage`). The API makes the user with a random password and emails a set-password link through SMTP (`nodemailer`; `SMTP_*`, `MAIL_FROM`, `WEB_BASE_URL`, all optional: no `SMTP_HOST`, no email, no new users). A failed send removes the user again. **Not built yet:** the set-password page the link opens, the users list, edit, disable, and forgot password. See [docs/requirements/user-management.md](docs/requirements/user-management.md).
+
 Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, TypeScript, testing, composition) and stricter ESLint rules.
 
 **Legacy migration.** We are porting the WinForms Tournament Manager feature by feature. [docs/migration/](docs/migration/README.md) documents every legacy rule with an ID (`REG-04`); use it instead of the old code. Before building a feature, check [decisions-and-questions.md](docs/migration/decisions-and-questions.md) for its open questions. Cite rule IDs in tests and PRs.

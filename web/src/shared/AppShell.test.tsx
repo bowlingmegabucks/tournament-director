@@ -3,6 +3,8 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../mocks/server'
+import { createSignedInUser } from '../mocks/data'
+import { setMockUser } from '../mocks/authHandlers'
 import { renderApp } from '../test/renderApp'
 
 const mainMenu = () => screen.getByRole('navigation', { name: 'Main' })
@@ -63,5 +65,27 @@ describe('AppShell', () => {
 
     await screen.findByText('No tournaments yet.')
     expect(document.title).toBe('Tournaments · Tournament Director')
+  })
+
+  it('shows Add user to an admin only', async () => {
+    setMockUser(createSignedInUser({ roles: ['admin'] }))
+    renderApp('/')
+
+    expect(await within(mainMenu()).findByRole('link', { name: 'Add user' })).toHaveAttribute(
+      'href',
+      '/users/new',
+    )
+    await screen.findByRole('link', { name: 'All tournaments' })
+  })
+
+  it('hides Add user from a director', async () => {
+    const director = createSignedInUser({ roles: ['director'] })
+    setMockUser(director)
+    renderApp('/')
+
+    // The name shows once the sign-in check is done, so the link has had its chance to appear.
+    await screen.findByText(director.name)
+    await screen.findByRole('link', { name: 'All tournaments' })
+    expect(within(mainMenu()).queryByRole('link', { name: 'Add user' })).not.toBeInTheDocument()
   })
 })

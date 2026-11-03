@@ -639,6 +639,14 @@ describe('PATCH /v1/users/:id', () => {
     expect(response.body.message).toContain('no enabled admin')
   })
 
+  it('lets the only admin add roles while keeping admin', async () => {
+    const { patch, caller } = await setup()
+
+    const response = await patch(caller.id, { roles: ['admin', 'director'] })
+
+    expect(response.status).toBe(200)
+  })
+
   it('lets an admin drop their own admin role when another enabled admin exists', async () => {
     const { add, patch, caller } = await setup()
     await add({ ...newUser, email: 'sam@example.com', roles: ['admin'] })
@@ -654,6 +662,28 @@ describe('PATCH /v1/users/:id', () => {
     await disable(sam.body.id as string)
 
     expect((await patch(caller.id, { roles: ['director'] })).status).toBe(409)
+  })
+
+  it('lets an admin take any role from another user, even the admin role from a disabled admin', async () => {
+    const { add, patch, disable } = await setup()
+    const sam = await add({ ...newUser, email: 'sam@example.com', roles: ['admin'] })
+    await disable(sam.body.id as string)
+
+    const response = await patch(sam.body.id as string, { roles: ['scoreKeeper'] })
+
+    expect(response.status).toBe(200)
+  })
+
+  it('counts up to 200 users when it looks for another admin', async () => {
+    const { add, patch, auth, caller } = await setup()
+    await add({ ...newUser, email: 'sam@example.com', roles: ['admin'] })
+    const listUsers = vi.spyOn(auth.api, 'listUsers')
+
+    await patch(caller.id, { roles: ['director'] })
+
+    expect(listUsers).toHaveBeenCalledWith(
+      expect.objectContaining({ query: expect.objectContaining({ limit: 200 }) as object }),
+    )
   })
 
   it('logs who did it and the new roles, never an email', async () => {

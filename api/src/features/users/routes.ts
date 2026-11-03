@@ -101,8 +101,7 @@ export function createUserRouter({ auth, invites, logger }: UserRouterDependenci
     return found
   }
 
-  // Would this change leave the API with no enabled admin? Counts the others, so the target's
-  // current state does not matter. (Two admins demoting each other at once could still slip past;
+  // Is an enabled admin left besides this user? (Two admins demoting each other at once could still slip past;
   // with about five users and one admin screen, that race is not worth a lock.)
   const othersAreEnabledAdmins = async (req: Request, id: string): Promise<boolean> => {
     const { users } = await auth.api.listUsers({
@@ -167,12 +166,9 @@ export function createUserRouter({ auth, invites, logger }: UserRouterDependenci
     const log = requestLogger(res, logger)
     const updated = await withDatabaseErrors(log, async () => {
       const found = await findUser(req, id)
-      if (
-        found.banned !== true &&
-        rolesOf(found.role).includes('admin') &&
-        !roles.includes('admin') &&
-        !(await othersAreEnabledAdmins(req, id))
-      ) {
+      // The caller is an enabled admin, so changing anyone else always leaves one. Only taking
+      // `admin` from themselves can empty the list, and this check then finds no one else.
+      if (!roles.includes('admin') && !(await othersAreEnabledAdmins(req, id))) {
         throw new HttpError(409, lastAdminMessage)
       }
       await auth.api.setRole({

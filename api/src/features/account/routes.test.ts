@@ -1,5 +1,12 @@
+import {
+  AggregationTemporality,
+  InMemoryMetricExporter,
+  MeterProvider,
+  PeriodicExportingMetricReader,
+} from '@opentelemetry/sdk-metrics'
+import { APIError } from 'better-auth/api'
 import request from 'supertest'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { apiKeyHeader } from '../../shared/auth/caller.ts'
 import { passwordChangeAttempts } from '../../shared/auth/signInLimit.ts'
 import { testApiKey } from '../../test/factories.ts'
@@ -10,11 +17,29 @@ import { createTestAuth, createTestUser, signInCookie, testPassword } from '../.
 const newPassword = 'a brand new passphrase'
 
 async function setup({ role }: { role?: 'admin' | 'director' | 'scoreKeeper' } = {}) {
+  const exporter = new InMemoryMetricExporter(AggregationTemporality.CUMULATIVE)
+  const provider = new MeterProvider({
+    readers: [new PeriodicExportingMetricReader({ exporter, exportIntervalMillis: 60_000 })],
+  })
+  /** Count per reason, from `tournament_director.auth.failures`. */
+  const failures = async (): Promise<Record<string, number>> => {
+    await provider.forceFlush()
+    const metric = exporter
+      .getMetrics()
+      .flatMap((data) => data.scopeMetrics)
+      .flatMap((scope) => scope.metrics)
+      .findLast((m) => m.descriptor.name === 'tournament_director.auth.failures')
+    const counts: Record<string, number> = {}
+    for (const point of metric?.dataPoints ?? []) {
+      counts[String(point.attributes['reason'])] = Number(point.value)
+    }
+    return counts
+  }
   const captured = createCapturedLogger()
   const { auth, outage } = createTestAuth({ logger: captured.logger })
   const user = await createTestUser(auth, { role, name: 'Dee Director' })
   const cookie = await signInCookie(auth, user.email)
-  const app = createTestApp({ auth, logger: captured.logger })
+  const app = createTestApp({ auth, logger: captured.logger, meter: provider.getMeter('test') })
   const change = (body: unknown, as: string = cookie) =>
     request(app)
       .post('/v1/account/password')
@@ -26,7 +51,18 @@ async function setup({ role }: { role?: 'admin' | 'director' | 'scoreKeeper' } =
       .set('Cookie', cookie)
       .send(body as object)
   const me = (as: string = cookie) => request(app).get('/v1/me').set('Cookie', as)
-  return { app, auth, outage, user, cookie, change, rename, me, records: captured.records }
+  return {
+    app,
+    auth,
+    outage,
+    user,
+    cookie,
+    change,
+    rename,
+    me,
+    failures,
+    records: captured.records,
+  }
 }
 
 describe('access to /v1/account', () => {
@@ -116,6 +152,37 @@ describe('POST /v1/account/password', () => {
     const response = await change({ currentPassword: testPassword, newPassword: testPassword })
 
     expect(response.status).toBe(400)
+    expect(response.body).toEqual({ message: 'Choose a password you have not used just now.' })
+  })
+
+  it('counts a wrong current password as a failure, and a throttled call as another', async () => {
+    const { change, failures } = await setup()
+    for (let i = 0; i < passwordChangeAttempts; i++) {
+      await change({ currentPassword: 'wrong', newPassword })
+    }
+    await change({ currentPassword: 'wrong', newPassword })
+
+    expect(await failures()).toEqual({ bad_password_change: 10, password_change_throttled: 1 })
+  })
+
+  it('does not call another Better Auth refusal a wrong password', async () => {
+    const { change, auth, failures } = await setup()
+    vi.spyOn(auth.api, 'changePassword').mockRejectedValue(
+      new APIError('BAD_REQUEST', { message: 'Something else', code: 'SOMETHING_ELSE' }),
+    )
+
+    const response = await change({ currentPassword: testPassword, newPassword })
+
+    expect(response.body).not.toEqual({ message: 'The current password is wrong.' })
+    expect(await failures()).toEqual({})
+  })
+
+  it('never lets a browser or proxy keep the answer', async () => {
+    const { change } = await setup()
+
+    const response = await change({ currentPassword: testPassword, newPassword })
+
+    expect(response.headers['cache-control']).toBe('no-store')
   })
 
   it.each([
@@ -142,6 +209,9 @@ describe('POST /v1/account/password', () => {
     const response = await change({ currentPassword: testPassword, newPassword })
 
     expect(response.status).toBe(429)
+    expect(response.body).toEqual({
+      message: 'Too many attempts to change the password. Try again later.',
+    })
   })
 
   it('counts attempts per user, not per address', async () => {

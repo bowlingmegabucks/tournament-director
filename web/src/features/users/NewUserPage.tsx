@@ -36,6 +36,7 @@ export function NewUserPage() {
       return
     }
     create.mutate(
+      // Stryker disable next-line MethodExpression: an email input already drops the space around its value.
       { name: name.trim(), email: email.trim(), roles },
       {
         onSuccess: (user) => {

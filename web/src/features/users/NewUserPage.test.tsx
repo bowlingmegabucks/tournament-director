@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fireEvent, screen } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
@@ -82,6 +82,19 @@ describe('NewUserPage', () => {
     expect(screen.getByRole('checkbox', { name: 'Tournament director' })).not.toBeChecked()
   })
 
+  it('asks for a role again for the next user, after one was added', async () => {
+    await openPage()
+    await fill('Bea Bowler', 'bea@example.com')
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Tournament director' }))
+    await clickSubmit()
+    await screen.findByText('Invite sent to bea@example.com.')
+
+    await fill('Cy Caller', 'cy@example.com')
+    await clickSubmit()
+
+    expect(await screen.findByText('Pick at least one role.')).toBeVisible()
+  })
+
   it('disables the button and says "Adding…" while it saves', async () => {
     server.use(
       http.post('/v1/users', async () => {
@@ -146,7 +159,9 @@ describe('NewUserPage', () => {
     setMockUser(createSignedInUser({ roles: ['admin'] }))
     renderApp('/users/new')
 
-    expect(await screen.findByText('Loading…')).toBeVisible()
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('Loading…')
+    })
     await screen.findByRole('group', { name: 'Roles' })
   })
 })
@@ -218,7 +233,7 @@ describe('NewUserPage details', () => {
   it('does not show Loading once the options arrive', async () => {
     await openPage()
 
-    expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
   it('stops the browser submitting the form itself', async () => {

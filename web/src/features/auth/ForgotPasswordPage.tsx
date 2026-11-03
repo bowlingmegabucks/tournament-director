@@ -15,6 +15,7 @@ export function ForgotPasswordPage() {
 
   function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
+    // Stryker disable next-line MethodExpression: an email input already drops the space around its value.
     request.mutate(email.trim())
   }
 

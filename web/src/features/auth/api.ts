@@ -45,6 +45,7 @@ function waitMessage(retryAfter: string | null): string {
   return `Too many attempts. Wait ${minutes} ${minutes === 1 ? 'minute' : 'minutes'} and try again.`
 }
 
+// Stryker disable BlockStatement: the `catch` block only returns `undefined`, which falling out of it does too.
 async function errorCode(response: Response): Promise<unknown> {
   try {
     return field(await response.json(), 'code')
@@ -52,6 +53,7 @@ async function errorCode(response: Response): Promise<unknown> {
     return undefined
   }
 }
+// Stryker restore BlockStatement
 
 async function signInFailure(response: Response): Promise<SignInError> {
   if (response.status === 401) return new SignInError('Email or password is wrong.')

@@ -42,7 +42,7 @@ export function SetPasswordPage() {
           This link is not valid. Ask an admin for a new one.
         </p>
       )}
-      {token !== '' && passwordRequest.isSuccess && (
+      {passwordRequest.isSuccess && (
         <>
           <output>Your password is set.</output>
           <p>

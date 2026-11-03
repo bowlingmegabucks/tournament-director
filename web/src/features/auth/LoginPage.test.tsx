@@ -1,14 +1,19 @@
-import { describe, expect, it } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter, Route, Routes } from 'react-router'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import { createSignedInUser } from '../../mocks/data'
 import { setMockUser } from '../../mocks/authHandlers'
 import { renderApp } from '../../test/renderApp'
 import { LoginPage } from './LoginPage'
+
+function Secret() {
+  const { pathname, search, hash } = useLocation()
+  return <p>{`Secret page at [${pathname}] [${search}] [${hash}]`}</p>
+}
 
 function renderLogin(entry: string | { pathname: string; state: unknown } = '/login') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -18,7 +23,7 @@ function renderLogin(entry: string | { pathname: string; state: unknown } = '/lo
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={<p>Home page</p>} />
-          <Route path="/secret" element={<p>Secret page</p>} />
+          <Route path="/secret" element={<Secret />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -61,7 +66,37 @@ describe('LoginPage', () => {
 
     await submit()
 
-    expect(await screen.findByText('Secret page')).toBeVisible()
+    expect(await screen.findByText('Secret page at [/secret] [?a=1] [#top]')).toBeVisible()
+  })
+
+  it.each([
+    ['no query or hash', { from: { pathname: '/secret' } }, '[/secret] [] []'],
+    ['only a query', { from: { pathname: '/secret', search: '?a=1' } }, '[/secret] [?a=1] []'],
+    ['only a hash', { from: { pathname: '/secret', hash: '#top' } }, '[/secret] [] [#top]'],
+  ])('returns to the page it came from with %s', async (_label, state, shown) => {
+    renderLogin({ pathname: '/login', state })
+    await fill('director@example.com', 'directorP4sswordLocal')
+
+    await submit()
+
+    expect(await screen.findByText(`Secret page at ${shown}`)).toBeVisible()
+  })
+
+  it('stops the browser submitting the form itself', async () => {
+    renderLogin()
+
+    const notStopped = fireEvent.submit(await screen.findByRole('button', { name: 'Sign in' }))
+
+    expect(notStopped).toBe(false)
+  })
+
+  it('says it is checking while /v1/me loads, and stops saying so after', async () => {
+    renderLogin()
+
+    expect(screen.getByRole('status')).toHaveTextContent('Checking sign-in…')
+    await vi.waitFor(() => {
+      expect(screen.queryByText('Checking sign-in…')).not.toBeInTheDocument()
+    })
   })
 
   it.each([

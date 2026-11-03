@@ -89,7 +89,45 @@ describe('changePassword', () => {
   })
 })
 
+describe('failures the page must not echo', () => {
+  it('ignores the API message unless the status is 400', async () => {
+    server.use(
+      http.post('/v1/account/password', () =>
+        HttpResponse.json({ message: 'internal detail' }, { status: 500 }),
+      ),
+    )
+
+    expect(await rejects(changePassword('a', 'b'))).toBe(
+      'The password could not be changed. Try again.',
+    )
+  })
+})
+
 describe('updateName', () => {
+  it('sends JSON', async () => {
+    let type: string | null = null
+    server.use(
+      http.patch('/v1/account', ({ request }) => {
+        type = request.headers.get('Content-Type')
+        return HttpResponse.json({ name: 'x' })
+      }),
+    )
+
+    await updateName('x')
+
+    expect(type).toBe('application/json')
+  })
+
+  it('says the answer could not be read when a 200 is not JSON', async () => {
+    server.use(http.patch('/v1/account', () => new HttpResponse('saved', { status: 200 })))
+
+    const error = await updateName('x').catch((caught: unknown) => caught)
+
+    expect(error).toEqual(
+      new Error('The name was saved, but the answer could not be read (response is not JSON)'),
+    )
+  })
+
   it('patches the name and returns the saved one', async () => {
     let sent: unknown
     let method = ''

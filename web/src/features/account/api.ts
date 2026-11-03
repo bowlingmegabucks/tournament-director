@@ -2,7 +2,7 @@ import { apiFetch } from '../../shared/apiFetch'
 import { apiUrl } from '../../shared/apiUrl'
 import { field } from '../../shared/field'
 import { readJson } from '../../shared/readJson'
-import { waitMessage } from '../auth/api'
+import { waitMessage } from '../../shared/waitMessage'
 
 /** A failed account change. The message is what the page shows. */
 export class AccountError extends Error {}

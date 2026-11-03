@@ -33,6 +33,8 @@ Built as `USR-19` to `USR-22`. One change from the plan below: the last-admin ch
 
 ## 2. `userChecks`: real database and mutation tests
 
+**Built, except the link lifetime split.** `features/users/routes.db.test.ts` runs the user routes on MariaDB (list order and columns, add, duplicate email, mail failure rollback, one-use set-password token, admin reset, disable, enable, roles, the last-admin guard, the 3-day link). Mutation: no survivors remain in `features/users`, `features/auth/routes.ts`, `shared/mail`, or the auth and users pages in `web/`. Two real gaps surfaced: a body over 10 KB to forgot-password gave a 500 (now a 400, through the shared `jsonBody`), and `RequirePermission`, `AuthMenu`, and the loading states in `LoginPage` and `NewUserPage` had no test that could fail. Survivors that cannot be killed carry a `// Stryker disable` comment with the reason. Survivors remain in `web/` lanes, recap sheets, scores, and the tournament layout (other features).
+
 Nothing in `registerUser` has run against real MariaDB; the user tests use Better Auth's in-memory database.
 
 - Add `*.db.test.ts` tests (Testcontainers, Docker) for `GET /v1/users` (sort by name, `banned` and `role` columns), `POST /v1/users` (create, duplicate email, rollback when the invite mail fails), reset-password (token used once), and `POST /v1/users/:id/password-reset`. Use the Better Auth tables from `api/prisma/auth-tables.sql`.

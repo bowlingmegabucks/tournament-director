@@ -80,6 +80,7 @@ export function createUserRouter({ auth, invites, logger }: UserRouterDependenci
 
     const created = await withDatabaseErrors(log, async () => {
       const user = await addUser()
+      invites.expectInvite(email)
       await auth.api.requestPasswordReset({ body: { email } })
       if (invites.take(email) === true) return user
       // The invite did not go out. Take the user back, so the admin can fix the mail and retry.

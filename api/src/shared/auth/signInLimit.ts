@@ -33,17 +33,36 @@ export function createResetLimiter(meter: Meter): RequestHandler {
   })
 }
 
+/** Forgot-password requests one address may make in one window. Each one can send an email. */
+export const forgotAttempts = 5
+
+/**
+ * Stop someone using the forgot-password form to flood an inbox. Unlike the limiters above, every
+ * request counts, not only refused ones: the answer is always the same, whoever has an account.
+ */
+export function createForgotLimiter(meter: Meter): RequestHandler {
+  return createFailureLimiter(
+    meter,
+    {
+      reason: 'forgot_throttled',
+      message: 'Too many password reset requests. Try again later.',
+    },
+    { limit: forgotAttempts, countSuccesses: true },
+  )
+}
+
 function createFailureLimiter(
   meter: Meter,
   { reason, message }: { reason: AuthFailureReason; message: string },
+  { limit = signInAttempts, countSuccesses = false } = {},
 ): RequestHandler {
   const failures = createAuthFailureCounter(meter)
   return rateLimit({
-    limit: signInAttempts,
+    limit,
     windowMs: signInWindowMinutes * 60 * 1000,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
-    skipSuccessfulRequests: true,
+    skipSuccessfulRequests: !countSuccesses,
     // A 5xx is our fault, not a wrong password, so it does not use up anyone's attempts.
     requestWasSuccessful: (_req, res) => res.statusCode < 400 || res.statusCode >= 500,
     // Stryker disable next-line StringLiteral: unreachable, a live socket always has an address.

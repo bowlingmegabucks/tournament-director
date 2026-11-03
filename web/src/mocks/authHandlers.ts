@@ -59,6 +59,7 @@ export const authHandlers = [
     current = user
     return HttpResponse.json({ redirect: false, user: { id: user.id, email: user.email } })
   }),
+  http.post('/v1/auth/request-password-reset', () => HttpResponse.json({ status: true })),
   http.post('/v1/auth/reset-password', async ({ request }) => {
     const body: unknown = await request.json()
     const token = typeof body === 'object' && body !== null ? Reflect.get(body, 'token') : undefined

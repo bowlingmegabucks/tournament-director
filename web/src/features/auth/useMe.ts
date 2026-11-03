@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchMe, setPassword, signIn, signOut } from './api'
+import { fetchMe, requestPasswordReset, setPassword, signIn, signOut } from './api'
 import type { Me } from './types'
 
 export const meKeys = { all: ['me'] as const }
@@ -44,4 +44,8 @@ export function useSetPassword() {
     mutationFn: ({ token, newPassword }: { token: string; newPassword: string }) =>
       setPassword(token, newPassword),
   })
+}
+
+export function useRequestPasswordReset() {
+  return useMutation({ mutationFn: (email: string) => requestPasswordReset(email) })
 }

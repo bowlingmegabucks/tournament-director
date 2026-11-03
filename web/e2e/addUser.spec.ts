@@ -45,3 +45,13 @@ test('a new user follows the invite link and sets a password', async ({ page }) 
   await page.getByRole('link', { name: 'Go to sign in' }).click()
   await expect(page.getByRole('heading', { name: 'Sign in', level: 1 })).toBeVisible()
 })
+
+test('a user who forgot their password asks for a link', async ({ page }) => {
+  await page.goto('/login')
+
+  await page.getByRole('link', { name: 'Forgot your password?' }).click()
+  await page.getByLabel('Email').fill('bea@example.com')
+  await page.getByRole('button', { name: 'Send link' }).click()
+
+  await expect(page.getByText('If that address has an account')).toBeVisible()
+})

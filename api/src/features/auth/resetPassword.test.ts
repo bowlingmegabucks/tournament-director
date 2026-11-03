@@ -141,10 +141,10 @@ describe('POST /v1/auth/reset-password', () => {
     expect(logged).not.toContain(newPassword)
   })
 
-  it('stays closed for the paths that start a reset', async () => {
+  it('keeps the callback and verification paths closed', async () => {
     const { app, user } = await setup()
 
-    for (const path of ['/v1/auth/request-password-reset', '/v1/auth/reset-password/abc']) {
+    for (const path of ['/v1/auth/reset-password/abc', '/v1/auth/send-verification-email']) {
       const response = await request(app).post(path).send({ email: user.email })
       expect(response.status).toBe(404)
     }

@@ -121,7 +121,11 @@ export function createApp({
       { path: '/v1/me', access: 'public', router: createMeRouter() },
       // Public: this is how someone proves who they are. Better Auth reads the body itself, so no
       // express.json() may run before it.
-      { path: '/v1/auth', access: 'public', router: createAuthRouter(auth, meter, logger) },
+      {
+        path: '/v1/auth',
+        access: 'public',
+        router: createAuthRouter(auth, meter, logger, invites),
+      },
       {
         path: '/v1/users',
         access: { permission: 'users.manage' }, // D-101, D-103: admins only; the API key cannot reach it

@@ -9,6 +9,7 @@ export type AuthFailureReason =
   | 'sign_in_throttled'
   | 'bad_reset'
   | 'reset_throttled'
+  | 'forgot_throttled'
 
 // Three places count failures; they share one instrument per meter.
 const counters = new WeakMap<Meter, Counter>()

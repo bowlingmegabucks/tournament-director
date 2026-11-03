@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createCapturedLogger } from '../../test/logger.ts'
 import type { Mailer } from '../../shared/mail/mailer.ts'
-import { buildInvite, createInviteMailer, inviteLink } from './inviteMail.ts'
+import { buildInvite, buildPasswordReset, createInviteMailer, inviteLink } from './inviteMail.ts'
 
 const webBaseUrl = 'https://example.com/tournament-director'
 
@@ -33,6 +33,24 @@ describe('buildInvite', () => {
   })
 })
 
+describe('buildPasswordReset', () => {
+  it('says someone asked for a reset, with the link and the lifetime', () => {
+    const message = buildPasswordReset('Ada', 'https://example.com/x?token=t')
+
+    expect(message.subject).toBe('Reset your Tournament Director password')
+    expect(message.text).toContain('asked to reset your Tournament Director password')
+    expect(message.text).toContain('https://example.com/x?token=t')
+    expect(message.text).toContain('72 hours')
+    expect(message.html).toContain('<a href="https://example.com/x?token=t">')
+  })
+
+  it('escapes the name in the HTML', () => {
+    expect(buildPasswordReset('<i>Ada</i>', 'https://example.com/').html).toContain(
+      '&lt;i&gt;Ada&lt;/i&gt;',
+    )
+  })
+})
+
 describe('createInviteMailer', () => {
   const user = { email: 'ada@example.com', name: 'Ada' }
 
@@ -40,6 +58,7 @@ describe('createInviteMailer', () => {
     const send = vi.fn<Mailer['send']>().mockResolvedValue(undefined)
     const invites = createInviteMailer({ send }, webBaseUrl, createCapturedLogger().logger)
 
+    invites.expectInvite(user.email)
     await invites.deliver({ user, token: 'tok' })
 
     expect(send).toHaveBeenCalledWith(
@@ -57,6 +76,7 @@ describe('createInviteMailer', () => {
     const send = vi.fn<Mailer['send']>().mockRejectedValue(new Error('535 bad login'))
     const invites = createInviteMailer({ send }, webBaseUrl, logger)
 
+    invites.expectInvite(user.email)
     await expect(invites.deliver({ user, token: 'secret-token' })).resolves.toBeUndefined()
 
     expect(invites.take(user.email)).toBe(false)
@@ -69,5 +89,45 @@ describe('createInviteMailer', () => {
     const invites = createInviteMailer({ send: vi.fn() }, webBaseUrl, createCapturedLogger().logger)
 
     expect(invites.take('nobody@example.com')).toBeUndefined()
+  })
+
+  it('sends a reset, not an invite, when no invite was expected, and does not wait for it', async () => {
+    const send = vi.fn<Mailer['send']>().mockReturnValue(new Promise(() => undefined))
+    const invites = createInviteMailer({ send }, webBaseUrl, createCapturedLogger().logger)
+
+    await invites.deliver({ user, token: 'tok' })
+
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ subject: 'Reset your Tournament Director password' }),
+    )
+    expect(invites.take(user.email)).toBeUndefined()
+  })
+
+  it('logs a failed reset mail and keeps quiet to the caller', async () => {
+    const { logger, records } = createCapturedLogger()
+    const send = vi.fn<Mailer['send']>().mockRejectedValue(new Error('535 bad login'))
+    const invites = createInviteMailer({ send }, webBaseUrl, logger)
+
+    await invites.deliver({ user, token: 'secret-token' })
+    await new Promise((resolve) => setTimeout(resolve, 5))
+
+    const logged = JSON.stringify(records())
+    expect(logged).toContain('Password reset email failed')
+    expect(logged).not.toContain('secret-token')
+    expect(invites.take(user.email)).toBeUndefined()
+  })
+
+  it('treats only the next token after expectInvite as an invite', async () => {
+    const send = vi.fn<Mailer['send']>().mockResolvedValue(undefined)
+    const invites = createInviteMailer({ send }, webBaseUrl, createCapturedLogger().logger)
+
+    invites.expectInvite(user.email)
+    await invites.deliver({ user, token: 'one' })
+    await invites.deliver({ user, token: 'two' })
+
+    expect(send.mock.calls.map(([message]) => message.subject)).toEqual([
+      'Your Tournament Director account',
+      'Reset your Tournament Director password',
+    ])
   })
 })

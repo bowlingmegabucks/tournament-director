@@ -51,6 +51,15 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('forgot-password page (sent) has no WCAG 2.2 AA violations', async ({ page }) => {
+      await page.goto('/forgot-password')
+      await page.getByLabel('Email').fill('bea@example.com')
+      await page.getByRole('button', { name: 'Send link' }).click()
+      await expect(page.getByRole('status')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
     test('set-password page (with an error) has no WCAG 2.2 AA violations', async ({ page }) => {
       await page.goto('/set-password?token=abc')
       await page.getByLabel('New password').fill('a long enough password')

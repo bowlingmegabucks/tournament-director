@@ -2,7 +2,7 @@ import express from 'express'
 import request from 'supertest'
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
-import { HttpError } from './errors.ts'
+import { FieldErrorsError, HttpError } from './errors.ts'
 import { createCapturedLogger } from '../test/logger.ts'
 import { createErrorHandler } from './middleware.ts'
 import type { Logger } from './logger.ts'
@@ -24,6 +24,15 @@ describe('errorHandler', () => {
 
     expect(response.status).toBe(409)
     expect(response.body).toEqual({ message: 'Already registered' })
+  })
+
+  it('sends the message and the field messages of a FieldErrorsError', async () => {
+    const error = new FieldErrorsError(409, 'Already there', { name: 'Taken' })
+
+    const response = await request(appThatThrows(error)).get('/boom')
+
+    expect(response.status).toBe(409)
+    expect(response.body).toEqual({ message: 'Already there', errors: { name: 'Taken' } })
   })
 
   it('hides the message of any other error', async () => {

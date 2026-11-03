@@ -104,6 +104,31 @@ describe('Prisma tournament writer', () => {
     expect(Number(count?.n)).toBe(1)
   })
 
+  it('refuses a name that a legacy row stored with a time of day (TRN-20, D-123)', async () => {
+    const { writer } = setup()
+    await client.$executeRawUnsafe(
+      `INSERT INTO Tournaments
+         (Id, Name, Start, End, EntryFee, Games, FinalsRatio, CashRatio, BowlingCenter, Completed)
+       VALUES (?, 'Spring Classic', '2027-03-12 19:00:00', '2027-03-14 00:00:00', 50, 6, 7.0, 5.0, 'Lanes', 0)`,
+      crypto.randomUUID(),
+    )
+
+    expect(await writer.create(input)).toEqual({ duplicate: true })
+  })
+
+  it('lets one of two identical requests made at the same time create it (TRN-20, D-123)', async () => {
+    const { writer } = setup()
+
+    const outcomes = await Promise.all([writer.create(input), writer.create(input)])
+
+    expect(outcomes.filter((outcome) => 'created' in outcome)).toHaveLength(1)
+    expect(outcomes.filter((outcome) => 'duplicate' in outcome)).toHaveLength(1)
+    const [count] = await client.$queryRawUnsafe<{ n: bigint }[]>(
+      'SELECT COUNT(*) AS n FROM Tournaments',
+    )
+    expect(Number(count?.n)).toBe(1)
+  })
+
   it('accepts the same name on another start date (TRN-20)', async () => {
     const { writer } = setup()
     await writer.create(input)

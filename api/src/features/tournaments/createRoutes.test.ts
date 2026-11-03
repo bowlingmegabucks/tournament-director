@@ -45,7 +45,7 @@ describe('POST /v1/tournaments', () => {
     expect(stored[0]).toMatchObject({ name: 'Spring Classic', bowlingCenter: 'Bowl-O-Rama' })
   })
 
-  it('logs the id and nothing else about the tournament (TRN-19)', async () => {
+  it('logs who created it and the id, and nothing else about the tournament (TRN-19)', async () => {
     const captured = createCapturedLogger()
     const app = createSignedInTestApp({ logger: captured.logger })
 
@@ -55,6 +55,7 @@ describe('POST /v1/tournaments', () => {
     expect(line).toMatchObject({
       tournamentId: (response.body as { tournament: { id: string } }).tournament.id,
     })
+    expect(line?.['actorId']).toEqual(expect.any(String))
     expect(JSON.stringify(line)).not.toContain('Spring Classic')
   })
 
@@ -94,16 +95,16 @@ describe('POST /v1/tournaments', () => {
       .send('{not json')
 
     expect(response.status).toBe(400)
-    expect(response.body).toEqual({ message: 'The request body is not valid JSON.', errors: {} })
+    expect(response.body).toEqual({ message: 'The request body is not valid JSON.' })
   })
 
-  it('answers 413 for a body over the limit (D-121)', async () => {
+  it('answers 400 for a body over the limit, as the other routes do (D-121)', async () => {
     const response = await request(createSignedInTestApp())
       .post('/v1/tournaments')
       .send({ ...body, name: 'x'.repeat(11_000) })
 
-    expect(response.status).toBe(413)
-    expect(response.body).toEqual({ message: 'The request body is too large.', errors: {} })
+    expect(response.status).toBe(400)
+    expect(response.body).toEqual({ message: 'The request body is too large.' })
   })
 
   it('answers 400 for a missing body (D-121)', async () => {

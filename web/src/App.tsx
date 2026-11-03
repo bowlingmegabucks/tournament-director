@@ -1,4 +1,5 @@
 import { Route, Routes } from 'react-router'
+import { AccountPage } from './features/account/AccountPage'
 import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage'
 import { LoginPage } from './features/auth/LoginPage'
 import { SetPasswordPage } from './features/auth/SetPasswordPage'
@@ -75,6 +76,14 @@ export default function App() {
           <Route path="at-large" element={<AtLargePage />} />
           <Route path="seeding" element={<SeedingPage />} />
         </Route>
+        <Route
+          path="account"
+          element={
+            <RequirePermission>
+              <AccountPage />
+            </RequirePermission>
+          }
+        />
         <Route
           path="users"
           element={

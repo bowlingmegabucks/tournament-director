@@ -8,13 +8,15 @@ import { HttpError } from './errors.ts'
 /**
  * Who may call a route group (D-27, D-96).
  * - `public`: anyone.
+ * - `signedIn`: any signed-in user, whatever their roles (a user with none can still change their own
+ *   password). The API key does not count.
  * - `{ permission }`: a signed-in user whose roles hold the permission (roles.ts).
  * - `{ permission, apiKey: true }`: the same, and a valid API key gets in too, with no permission
  *   check. Only routes the registration site needs accept the key; it cannot reach the rest.
  *
  * The API enforces this on the server; the web app only hides what a user cannot use (D-19).
  */
-export type Access = 'public' | { permission: Permission; apiKey?: boolean }
+export type Access = 'public' | 'signedIn' | { permission: Permission; apiKey?: boolean }
 
 export interface RouteGroup {
   path: string
@@ -29,7 +31,7 @@ export interface RouteGroup {
 }
 
 function isAccess(value: unknown): value is Access {
-  if (value === 'public') return true
+  if (value === 'public' || value === 'signedIn') return true
   if (typeof value !== 'object' || value === null || !('permission' in value)) return false
   const apiKey = 'apiKey' in value ? value.apiKey : undefined
   return isPermission(value.permission) && (apiKey === undefined || typeof apiKey === 'boolean')
@@ -61,14 +63,18 @@ export function mountRoutes(app: Express, groups: RouteGroup[], meter: Meter): v
     }
     const check: RequestHandler = (_req, res, next) => {
       const caller = callerOf(res)
-      // A signed-in user passes when their roles hold the permission. A wrong key sent beside a
-      // good sign-in is ignored, as it is on a public route (D-95).
-      if (caller.user?.permissions.includes(access.permission)) {
+      // A signed-in user passes when their roles hold the permission, or when the route asks only
+      // for a sign-in. A wrong key sent beside a good sign-in is ignored, as it is on a public
+      // route (D-95).
+      if (
+        caller.user &&
+        (access === 'signedIn' || caller.user.permissions.includes(access.permission))
+      ) {
         next()
         return
       }
       // The API key passes only where the route accepts it, with no permission check (D-96).
-      if (caller.apiKey && access.apiKey === true) {
+      if (caller.apiKey && access !== 'signedIn' && access.apiKey === true) {
         next()
         return
       }

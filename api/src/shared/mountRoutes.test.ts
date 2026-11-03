@@ -43,6 +43,32 @@ function appWith(
   return app
 }
 
+describe('a signedIn group', () => {
+  it('lets a user in who holds no role', async () => {
+    const { auth } = createTestAuth()
+    await auth.api.createUser({
+      body: { email: 'n@example.com', password: testPassword, name: 'N', role: [] },
+    })
+    const cookie = await signInCookie(auth, 'n@example.com')
+
+    const response = await request(appWith('signedIn', noMeter, true, auth))
+      .get('/ping')
+      .set('Cookie', cookie)
+
+    expect(response.status).toBe(200)
+  })
+
+  it('answers 401 to a signed-out caller', async () => {
+    expect((await request(appWith('signedIn')).get('/ping')).status).toBe(401)
+  })
+
+  it('answers 403 to the API key', async () => {
+    const response = await request(appWith('signedIn')).get('/ping').set(apiKeyHeader, apiKey)
+
+    expect(response.status).toBe(403)
+  })
+})
+
 describe('mountRoutes', () => {
   afterEach(() => {
     vi.restoreAllMocks()

@@ -2,9 +2,8 @@ import { apiFetch } from '../../shared/apiFetch'
 import { apiUrl } from '../../shared/apiUrl'
 import { field } from '../../shared/field'
 import { readJson } from '../../shared/readJson'
+import { waitMessage } from '../../shared/waitMessage'
 import type { Me, SignedInUser } from './types'
-
-const SECONDS_PER_MINUTE = 60
 
 /** A failed sign-in. The message is what the page shows. */
 export class SignInError extends Error {}
@@ -34,15 +33,6 @@ export async function fetchMe(): Promise<Me> {
   if (user === null) return { user: null }
   if (!isSignedInUser(user)) throw new Error('Sign-in could not be checked. Try again.')
   return { user }
-}
-
-function waitMessage(retryAfter: string | null): string {
-  const seconds = Number(retryAfter)
-  if (!retryAfter || !Number.isFinite(seconds) || seconds <= 0) {
-    return 'Too many attempts. Try again later.'
-  }
-  const minutes = Math.ceil(seconds / SECONDS_PER_MINUTE)
-  return `Too many attempts. Wait ${minutes} ${minutes === 1 ? 'minute' : 'minutes'} and try again.`
 }
 
 // Stryker disable BlockStatement: the `catch` block only returns `undefined`, which falling out of it does too.

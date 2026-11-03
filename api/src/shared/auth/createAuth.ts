@@ -81,6 +81,8 @@ export function createAuth({
       // The reset token doubles as the invite token, so it outlives Better Auth's one hour.
       resetPasswordTokenExpiresIn: resetLinkSeconds,
       sendResetPassword,
+      // Setting a password ends the user's other sessions: a stolen one dies with the old password.
+      revokeSessionsOnPasswordReset: true,
     },
     session: { expiresIn: sessionSeconds, updateAge: sessionRenewSeconds },
     // Every way we make users names a role. A user made with none gets `none`, which is not a role,

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import { createSignedInUser } from '../../mocks/data'
-import { fetchMe, signIn, signOut } from './api'
+import { fetchMe, setPassword, SetPasswordError, signIn, signOut } from './api'
 
 describe('fetchMe', () => {
   it('returns the user with roles and permissions', async () => {
@@ -187,5 +187,64 @@ describe('signOut', () => {
     server.use(http.post('/v1/auth/sign-out', () => new HttpResponse(null, { status: 403 })))
 
     await expect(signOut()).rejects.toThrow('Could not sign out. Try again.')
+  })
+})
+
+describe('setPassword', () => {
+  const reply = (status: number, body: object = {}, headers: Record<string, string> = {}) =>
+    server.use(
+      http.post('/v1/auth/reset-password', () => HttpResponse.json(body, { status, headers })),
+    )
+
+  it('resolves when the API accepts the password', async () => {
+    reply(200, { status: true })
+
+    await expect(setPassword('t', 'a long enough password')).resolves.toBeUndefined()
+  })
+
+  it('names an expired or used token', async () => {
+    reply(400, { code: 'INVALID_TOKEN' })
+
+    await expect(setPassword('t', 'x')).rejects.toThrow(
+      new SetPasswordError(
+        'This link has expired or was already used. Ask an admin for a new one.',
+      ),
+    )
+  })
+
+  it('names a password the API refuses', async () => {
+    reply(400, { code: 'PASSWORD_TOO_SHORT' })
+
+    await expect(setPassword('t', 'x')).rejects.toThrow(
+      'That password is not allowed. Use 12 to 128 characters.',
+    )
+  })
+
+  it('tells how long to wait after a 429', async () => {
+    reply(429, {}, { 'Retry-After': '120' })
+
+    await expect(setPassword('t', 'x')).rejects.toThrow(
+      'Too many attempts. Wait 2 minutes and try again.',
+    )
+  })
+
+  it('says the service is down on a 500', async () => {
+    reply(503)
+
+    await expect(setPassword('t', 'x')).rejects.toThrow(
+      'Setting the password is not working right now. Try again.',
+    )
+  })
+
+  it('uses a general message for any other status', async () => {
+    reply(403)
+
+    await expect(setPassword('t', 'x')).rejects.toThrow('Could not set the password. Try again.')
+  })
+
+  it('says so when the server cannot be reached', async () => {
+    server.use(http.post('/v1/auth/reset-password', () => HttpResponse.error()))
+
+    await expect(setPassword('t', 'x')).rejects.toThrow('Could not reach the server. Try again.')
   })
 })

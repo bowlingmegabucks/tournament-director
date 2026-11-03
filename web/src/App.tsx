@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router'
 import { LoginPage } from './features/auth/LoginPage'
+import { SetPasswordPage } from './features/auth/SetPasswordPage'
 import { RequirePermission } from './features/auth/RequirePermission'
 import { signInEnabled } from './features/auth/signInEnabled'
 import { DivisionsPage } from './features/divisions/DivisionsPage'
@@ -81,6 +82,7 @@ export default function App() {
           }
         />
         {signInEnabled() && <Route path="login" element={<LoginPage />} />}
+        {signInEnabled() && <Route path="set-password" element={<SetPasswordPage />} />}
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

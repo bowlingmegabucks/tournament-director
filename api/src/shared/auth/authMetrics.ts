@@ -2,7 +2,13 @@ import type { Counter, Meter } from '@opentelemetry/api'
 
 /** Why a caller was turned away. Each value is a `reason` attribute on the failure counter. */
 export type AuthFailureReason =
-  'missing_credentials' | 'invalid_key' | 'forbidden' | 'bad_sign_in' | 'sign_in_throttled'
+  | 'missing_credentials'
+  | 'invalid_key'
+  | 'forbidden'
+  | 'bad_sign_in'
+  | 'sign_in_throttled'
+  | 'bad_reset'
+  | 'reset_throttled'
 
 // Three places count failures; they share one instrument per meter.
 const counters = new WeakMap<Meter, Counter>()

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchMe, signIn, signOut } from './api'
+import { fetchMe, setPassword, signIn, signOut } from './api'
 import type { Me } from './types'
 
 export const meKeys = { all: ['me'] as const }
@@ -36,5 +36,12 @@ export function useSignOut() {
       // Drop what the user could see, so a signed-out browser keeps none of it. Pages on screen refetch.
       await queryClient.resetQueries({ predicate: (query) => query.queryKey[0] !== meKeys.all[0] })
     },
+  })
+}
+
+export function useSetPassword() {
+  return useMutation({
+    mutationFn: ({ token, newPassword }: { token: string; newPassword: string }) =>
+      setPassword(token, newPassword),
   })
 }

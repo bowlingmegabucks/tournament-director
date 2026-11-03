@@ -3,21 +3,28 @@ import { toNodeHandler } from 'better-auth/node'
 import { Router, type RequestHandler } from 'express'
 import type { Auth } from '../../shared/auth/createAuth.ts'
 import { createAuthFailureCounter } from '../../shared/auth/authMetrics.ts'
-import { createSignInLimiter } from '../../shared/auth/signInLimit.ts'
+import { createResetLimiter, createSignInLimiter } from '../../shared/auth/signInLimit.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { withDatabaseErrors } from '../../shared/database.ts'
+import { HttpError } from '../../shared/errors.ts'
 import { requestLogger } from '../../shared/requestLogging.ts'
 
 /**
  * Sign-in and sign-out, served by Better Auth (D-98). Only these two paths are open. Better Auth
  * has dozens more (change email, delete account, list sessions, impersonate), and none is wanted:
- * a path not listed here answers 404 from the app. Stage 3 adds the admin paths it needs, one at
- * a time.
+ * a path not listed here answers 404 from the app. Stage 3 adds the paths it needs, one at a
+ * time.
  *
  * - `POST /v1/auth/sign-in/email`: body `{ email, password }`. 200 sets the session cookie and
  *   returns `{ user }`. A wrong password and an unknown email both answer 401 with the same
  *   message, so a caller cannot tell which emails exist.
  * - `POST /v1/auth/sign-out`: ends the session and clears the cookie.
+ * - `POST /v1/auth/reset-password`: body `{ newPassword, token }`. The set-password page calls it
+ *   with the token from the invite email (D-101). 200 `{ status: true }` sets the password, uses
+ *   up the token, and signs out the user's other sessions. A bad or used token, or a password
+ *   outside 12 to 128 characters, is a 400. The token goes in the body only: one in the query
+ *   string would reach request logs, so that is a 400 too. Refused calls are throttled like
+ *   sign-in, apart from it.
  *
  * If the database cannot be reached, either path answers 503 `{ message: "Database unavailable" }`.
  *
@@ -53,5 +60,28 @@ export function createAuthRouter(auth: Auth, meter: Meter, logger: Logger): Rout
     handle,
   )
   router.post('/sign-out', handle)
+
+  router.post(
+    '/reset-password',
+    (req, _res, next) => {
+      // Better Auth also reads `?token=`. A token in the URL would reach logs and traces.
+      if (req.query['token'] !== undefined) {
+        next(new HttpError(400, 'Send the token in the request body, not the address.'))
+        return
+      }
+      next()
+    },
+    createResetLimiter(meter),
+    (_req, res, next) => {
+      res.on('finish', () => {
+        if (res.statusCode < 400 || res.statusCode >= 500) return
+        failures.add(1, { reason: 'bad_reset' })
+        // No token, no user: a bad token could be a guess.
+        requestLogger(res, logger).warn({ status: res.statusCode }, 'Set-password failed')
+      })
+      next()
+    },
+    handle,
+  )
   return router
 }

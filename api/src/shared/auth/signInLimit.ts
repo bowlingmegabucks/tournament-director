@@ -2,7 +2,7 @@ import { rateLimit } from 'express-rate-limit'
 import type { Meter } from '@opentelemetry/api'
 import type { RequestHandler } from 'express'
 import { HttpError } from '../errors.ts'
-import { createAuthFailureCounter } from './authMetrics.ts'
+import { createAuthFailureCounter, type AuthFailureReason } from './authMetrics.ts'
 import { clientKey } from '../rateLimit.ts'
 
 /** Failed sign-ins one address may make in one window before it must wait. */
@@ -16,6 +16,27 @@ export const signInWindowMinutes = 15
  * caller can set. Over the limit answers 429 through the error handler.
  */
 export function createSignInLimiter(meter: Meter): RequestHandler {
+  return createFailureLimiter(meter, {
+    reason: 'sign_in_throttled',
+    message: 'Too many sign-in attempts. Try again later.',
+  })
+}
+
+/**
+ * The same limit for a set-password call, which a guessed token would also abuse. It has its own
+ * count, apart from sign-in, so one cannot lock out the other.
+ */
+export function createResetLimiter(meter: Meter): RequestHandler {
+  return createFailureLimiter(meter, {
+    reason: 'reset_throttled',
+    message: 'Too many attempts to set a password. Try again later.',
+  })
+}
+
+function createFailureLimiter(
+  meter: Meter,
+  { reason, message }: { reason: AuthFailureReason; message: string },
+): RequestHandler {
   const failures = createAuthFailureCounter(meter)
   return rateLimit({
     limit: signInAttempts,
@@ -29,8 +50,8 @@ export function createSignInLimiter(meter: Meter): RequestHandler {
     keyGenerator: (req) => clientKey(req.ip ?? req.socket.remoteAddress ?? 'unknown'),
     validate: { keyGeneratorIpFallback: false },
     handler: (_req, _res, next) => {
-      failures.add(1, { reason: 'sign_in_throttled' })
-      next(new HttpError(429, 'Too many sign-in attempts. Try again later.'))
+      failures.add(1, { reason })
+      next(new HttpError(429, message))
     },
   })
 }

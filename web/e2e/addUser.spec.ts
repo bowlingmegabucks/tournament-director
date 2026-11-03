@@ -33,3 +33,15 @@ test('a signed-out visitor is sent to sign in', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'Sign in', level: 1 })).toBeVisible()
 })
+
+test('a new user follows the invite link and sets a password', async ({ page }) => {
+  await page.goto('/set-password?token=abc')
+
+  await page.getByLabel('New password').fill('a long enough password')
+  await page.getByLabel('Confirm password').fill('a long enough password')
+  await page.getByRole('button', { name: 'Set password' }).click()
+
+  await expect(page.getByText('Your password is set.')).toBeVisible()
+  await page.getByRole('link', { name: 'Go to sign in' }).click()
+  await expect(page.getByRole('heading', { name: 'Sign in', level: 1 })).toBeVisible()
+})

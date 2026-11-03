@@ -101,11 +101,18 @@ export function createUserRouter({ auth, invites, logger }: UserRouterDependenci
     return found
   }
 
-  // Is an enabled admin left besides this user? (Two admins demoting each other at once could still slip past;
-  // with about five users and one admin screen, that race is not worth a lock.)
+  // Is an enabled admin left besides this user? Asks only for users whose role holds `admin`, so
+  // the cap counts admins, not every user. (Two admins removing each other's access at once, by
+  // demotion or disable, could both pass; with about five users and one admin screen, that race
+  // is not worth a lock.)
   const othersAreEnabledAdmins = async (req: Request, id: string): Promise<boolean> => {
     const { users } = await auth.api.listUsers({
-      query: { limit: maxListed },
+      query: {
+        filterField: 'role',
+        filterOperator: 'contains',
+        filterValue: 'admin',
+        limit: maxListed,
+      },
       headers: fromNodeHeaders(req.headers),
     })
     return users.some(
@@ -165,17 +172,18 @@ export function createUserRouter({ auth, invites, logger }: UserRouterDependenci
     const actorId = callerOf(res).user?.id
     const log = requestLogger(res, logger)
     const updated = await withDatabaseErrors(log, async () => {
-      const found = await findUser(req, id)
+      await findUser(req, id)
       // The caller is an enabled admin, so changing anyone else always leaves one. Only taking
       // `admin` from themselves can empty the list, and this check then finds no one else.
       if (!roles.includes('admin') && !(await othersAreEnabledAdmins(req, id))) {
         throw new HttpError(409, lastAdminMessage)
       }
-      await auth.api.setRole({
+      // Answer with what was stored, not with what was asked for.
+      const { user } = await auth.api.setRole({
         body: { userId: id, role: roles },
         headers: fromNodeHeaders(req.headers),
       })
-      return { ...found, role: roles.join(',') }
+      return user
     })
     log.info({ actorId, userId: id, roles }, 'User roles changed')
     res.json(listed(updated))

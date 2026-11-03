@@ -674,7 +674,7 @@ describe('PATCH /v1/users/:id', () => {
     expect(response.status).toBe(200)
   })
 
-  it('counts up to 200 users when it looks for another admin', async () => {
+  it('asks only for admins, up to 200, when it looks for another admin', async () => {
     const { add, patch, auth, caller } = await setup()
     await add({ ...newUser, email: 'sam@example.com', roles: ['admin'] })
     const listUsers = vi.spyOn(auth.api, 'listUsers')
@@ -682,7 +682,13 @@ describe('PATCH /v1/users/:id', () => {
     await patch(caller.id, { roles: ['director'] })
 
     expect(listUsers).toHaveBeenCalledWith(
-      expect.objectContaining({ query: expect.objectContaining({ limit: 200 }) as object }),
+      expect.objectContaining({
+        query: expect.objectContaining({
+          limit: 200,
+          filterField: 'role',
+          filterValue: 'admin',
+        }) as object,
+      }),
     )
   })
 

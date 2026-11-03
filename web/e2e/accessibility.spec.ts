@@ -32,6 +32,62 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('add-user page has no WCAG 2.2 AA violations', async ({ page }) => {
+      await page.goto('/login')
+      await page.getByLabel('Email').fill('admin@example.com')
+      await page.getByLabel('Password').fill('adminP4sswordLocal')
+      await page.getByRole('button', { name: 'Sign in' }).click()
+      await page
+        .getByRole('navigation', { name: 'Main' })
+        .getByRole('link', { name: 'Users' })
+        .click()
+      await page.getByRole('link', { name: 'Add user' }).click()
+      await expect(page.getByRole('group', { name: 'Roles' })).toBeVisible()
+      // Show the error state too, so axe scans the message colors.
+      await page.getByLabel('Name', { exact: true }).fill('Bea Bowler')
+      await page.getByLabel('Email').fill('bea@example.com')
+      await page.getByRole('button', { name: 'Add user' }).click()
+      await expect(page.getByText('Pick at least one role.')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
+    test('users page has no WCAG 2.2 AA violations', async ({ page }) => {
+      await page.goto('/login')
+      await page.getByLabel('Email').fill('admin@example.com')
+      await page.getByLabel('Password').fill('adminP4sswordLocal')
+      await page.getByRole('button', { name: 'Sign in' }).click()
+      await page
+        .getByRole('navigation', { name: 'Main' })
+        .getByRole('link', { name: 'Users' })
+        .click()
+      await expect(page.getByRole('table', { name: 'Users' })).toBeVisible()
+      // Show a toast too, so axe scans its colors.
+      await page.getByRole('button', { name: 'Send reset link to Local Director' }).click()
+      await expect(page.getByText('Reset link sent to director@example.com.')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
+    test('forgot-password page (sent) has no WCAG 2.2 AA violations', async ({ page }) => {
+      await page.goto('/forgot-password')
+      await page.getByLabel('Email').fill('bea@example.com')
+      await page.getByRole('button', { name: 'Send link' }).click()
+      await expect(page.getByRole('status')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
+    test('set-password page (with an error) has no WCAG 2.2 AA violations', async ({ page }) => {
+      await page.goto('/set-password?token=abc')
+      await page.getByLabel('New password').fill('a long enough password')
+      await page.getByLabel('Confirm password').fill('a long enough password!')
+      await page.getByRole('button', { name: 'Set password' }).click()
+      await expect(page.getByRole('alert')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
     test('sign-in page with an error has no WCAG 2.2 AA violations', async ({ page }) => {
       await page.goto('/login')
       await page.getByLabel('Email').fill('director@example.com')

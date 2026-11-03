@@ -58,7 +58,11 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 
 - [x] Auth approach decided and the API built (0.3.0): Better Auth, database sessions in a cookie, roles and permissions, `GET /v1/me` (D-98 to D-103, `API-16` to `API-21`).
 - [x] Web sign-in (`WEB-01` to `WEB-08`): `/login`, `useMe`, `<Can>`, the top bar, and the dev-only quick-login buttons with the production-build check (D-102, D-104).
-- [ ] User management: admin-only create-user page, email invites, roles, disable, forgot password (stage 3, D-101, Q-34).
+- [ ] User management (stage 3, D-101, Q-34). Done on `registerUser`: the admin-only add-user page, the invite email, the set-password page, forgot password, and the admin users list with password reset (`USR-01` to `USR-18`). Left, planned in [user-management-followups.md](plans/user-management-followups.md) as 0.4.1 work:
+  - [ ] Disable, enable, and edit roles, with a last-admin guard and the acting admin in the logs (`userEdit`).
+  - [ ] Real-database tests, mutation tests, and shorter forgot-password links (`userChecks`).
+  - [ ] Production setup: tables, first admin, mail settings, SPF and DKIM, first real send (`userGoLive`).
+  - [ ] Change my own password (`userSelfService`, optional).
 - [x] API key for the registration site: `API_KEY` in `x-api-key`, permission-based access labels, and `GET /v1/me` (stage 1, D-94 to D-97, `API-16`, `API-17`).
 - [x] Every route declares its access; undeclared routes deny (`API-15`, D-27). Permission labels now work for users and the API key (`API-16`); the lock-down release (`API-22`) now uses them.
 - [ ] Roles and permissions reviewed against [security.md](migration/security.md).

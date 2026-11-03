@@ -45,6 +45,20 @@ const envSchema = z.object({
   OTEL_EXPORTER_OTLP_ENDPOINT: optionalText,
   // Set by Azure when Application Insights is on. Unset means no Azure export.
   APPLICATIONINSIGHTS_CONNECTION_STRING: optionalText,
+  // Email, for the invite sent when an admin adds a user. Leave SMTP_HOST empty to turn email off:
+  // the create-user route then answers 503 and creates no one. With a host set, the rest are required.
+  SMTP_HOST: optionalText,
+  // 587 is STARTTLS (SMTP_SECURE false); 465 is TLS from the start (SMTP_SECURE true).
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
+  SMTP_SECURE: z.enum(['true', 'false']).default('false'),
+  // Local only: trust a self-signed certificate (the Mailpit container). Refused in production.
+  SMTP_ALLOW_SELF_SIGNED: z.enum(['true', 'false']).default('false'),
+  SMTP_USER: optionalText,
+  SMTP_PASSWORD: optionalText,
+  // The From address: `bowling@example.com` or `Tournament Director <bowling@example.com>`.
+  MAIL_FROM: optionalText,
+  // Where the web app lives, so an invite can link to it: https://bowlingmegabucks.com/tournament-director
+  WEB_BASE_URL: optionalText,
   // Set by npm when it runs a script (`npm start`, `npm run dev`).
   npm_package_version: z.string().default('unknown'),
 })
@@ -66,6 +80,21 @@ export interface AuthConfig {
   baseUrl: string
 }
 
+export interface MailConfig {
+  host: string
+  port: number
+  /** `true` is TLS from the start (port 465). `false` upgrades with STARTTLS, which is required. */
+  secure: boolean
+  /** Trust a self-signed certificate. Local use only: never `true` in production. */
+  allowSelfSigned: boolean
+  user: string
+  /** A secret: never log it. */
+  password: string
+  from: string
+  /** The web app's address with no trailing slash. Invite links start with it. */
+  webBaseUrl: string
+}
+
 export interface RateLimitConfig {
   /** Requests allowed per client in one window. */
   max: number
@@ -81,6 +110,8 @@ export interface Config {
   /** The key callers send in `x-api-key` (D-95). A secret: never log it. */
   apiKey: string
   auth: AuthConfig
+  /** `undefined` when `SMTP_HOST` is empty: the API cannot send email. */
+  mail: MailConfig | undefined
   logLevel: LogLevel
   rateLimit: RateLimitConfig
   trustProxy: number
@@ -96,6 +127,48 @@ function parseEnv<T>(schema: z.ZodType<T>, env: NodeJS.ProcessEnv): T {
   return result.data
 }
 
+type Env = z.infer<typeof envSchema>
+
+function mailConfigOf(data: Env): MailConfig | undefined {
+  if (data.SMTP_HOST === undefined) return undefined
+  const { SMTP_USER: user, SMTP_PASSWORD: password, MAIL_FROM: from, WEB_BASE_URL: web } = data
+  const missing = [
+    ['SMTP_USER', user],
+    ['SMTP_PASSWORD', password],
+    ['MAIL_FROM', from],
+    ['WEB_BASE_URL', web],
+  ].filter(([, value]) => value === undefined)
+  if (user === undefined || password === undefined || from === undefined || web === undefined) {
+    throw new Error(
+      `Invalid environment: ${missing.map(([name]) => name).join(', ')} required when SMTP_HOST is set`,
+    )
+  }
+  if (!URL.canParse(web) || !/^https?:$/.test(new URL(web).protocol)) {
+    throw new Error('Invalid environment: WEB_BASE_URL must be an http(s) address')
+  }
+  const allowSelfSigned = data.SMTP_ALLOW_SELF_SIGNED === 'true'
+  if (allowSelfSigned && data.NODE_ENV === 'production') {
+    throw new Error('Invalid environment: SMTP_ALLOW_SELF_SIGNED must not be true in production')
+  }
+  return {
+    host: data.SMTP_HOST,
+    port: data.SMTP_PORT,
+    secure: data.SMTP_SECURE === 'true',
+    allowSelfSigned,
+    user,
+    password,
+    from,
+    webBaseUrl: trimTrailingSlashes(web),
+  }
+}
+
+/** Drops trailing slashes. A loop, not `/\/+$/`, which backtracks badly on long runs of slashes. */
+function trimTrailingSlashes(value: string): string {
+  let end = value.length
+  while (end > 0 && value[end - 1] === '/') end--
+  return value.slice(0, end)
+}
+
 /** Only the database URL, for scripts such as `db:seed` that do not serve requests. */
 export function loadDatabaseUrl(env: NodeJS.ProcessEnv = process.env): string {
   return parseEnv(envSchema.pick({ DATABASE_URL: true }), env).DATABASE_URL
@@ -109,6 +182,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     databaseUrl: data.DATABASE_URL,
     apiKey: data.API_KEY,
     auth: { secret: data.AUTH_SECRET, baseUrl: data.AUTH_BASE_URL },
+    mail: mailConfigOf(data),
     logLevel: data.LOG_LEVEL,
     rateLimit: { max: data.RATE_LIMIT_MAX, windowSeconds: data.RATE_LIMIT_WINDOW_SECONDS },
     trustProxy: data.TRUST_PROXY,

@@ -12,6 +12,9 @@ export const sessionSeconds = 12 * 60 * 60
 /** Use inside the window renews it, at most once an hour, so a busy day never signs anyone out. */
 const sessionRenewSeconds = 60 * 60
 
+/** A set-password link works for 3 days: it is the invite, and an invitee may not read mail at once. */
+export const resetLinkSeconds = 3 * 24 * 60 * 60
+
 export const minPasswordLength = 12
 /** Better Auth's own ceiling. A longer one is refused at sign-in, so we refuse it up front. */
 export const maxPasswordLength = 128
@@ -34,6 +37,14 @@ export interface AuthDependencies {
   /** Pages allowed to call sign-in from a browser. Better Auth refuses a POST from any other. */
   trustedOrigins: string[]
   logger: Logger
+  /**
+   * Mails a set-password link (the invite an admin starts). Without it, Better Auth refuses to make
+   * reset tokens, so no invite can go out. Only `server.ts` and the tests that send mail pass it.
+   */
+  sendResetPassword?: (data: {
+    user: { email: string; name: string }
+    token: string
+  }) => Promise<void>
 }
 
 /**
@@ -49,7 +60,13 @@ export interface AuthDependencies {
  * - The `admin` plugin adds the `role` and ban columns. It stores a role name from `roles.ts`; the
  *   permissions that go with it live in our own table (D-96).
  */
-export function createAuth({ config, database, trustedOrigins, logger }: AuthDependencies) {
+export function createAuth({
+  config,
+  database,
+  trustedOrigins,
+  logger,
+  sendResetPassword,
+}: AuthDependencies) {
   return betterAuth({
     database,
     secret: config.secret,
@@ -61,6 +78,11 @@ export function createAuth({ config, database, trustedOrigins, logger }: AuthDep
       disableSignUp: true,
       minPasswordLength,
       maxPasswordLength,
+      // The reset token doubles as the invite token, so it outlives Better Auth's one hour.
+      resetPasswordTokenExpiresIn: resetLinkSeconds,
+      sendResetPassword,
+      // Setting a password ends the user's other sessions: a stolen one dies with the old password.
+      revokeSessionsOnPasswordReset: true,
     },
     session: { expiresIn: sessionSeconds, updateAge: sessionRenewSeconds },
     // Every way we make users names a role. A user made with none gets `none`, which is not a role,

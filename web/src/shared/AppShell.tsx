@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router'
+import { Can } from '../features/auth/Can'
 import { AuthMenu } from '../features/auth/AuthMenu'
 import logo from '../assets/logo.png'
 import styles from './AppShell.module.css'
@@ -23,6 +24,11 @@ export function AppShell() {
             <li>
               <NavLink to="/tournaments">Tournaments</NavLink>
             </li>
+            <Can permission="users.manage">
+              <li>
+                <NavLink to="/users">Users</NavLink>
+              </li>
+            </Can>
           </ul>
           <AuthMenu />
         </div>

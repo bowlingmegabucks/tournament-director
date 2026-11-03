@@ -149,6 +149,7 @@ export function createConfig(overrides: Partial<Config> = {}): Config {
       secret: 'test-auth-secret-at-least-32-characters-long',
       baseUrl: 'http://localhost:3000',
     },
+    mail: undefined,
     logLevel: 'silent',
     // High enough that no test hits it by accident. Tests of the limit set their own.
     rateLimit: { max: 1000, windowSeconds: 60 },

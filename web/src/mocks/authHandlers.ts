@@ -24,6 +24,9 @@ const accounts = [
   },
 ]
 
+/** A set-password token the mock API treats as expired. Any other token works. */
+export const expiredInviteToken = 'expired-token'
+
 // Who is signed in, so a sign-in changes what /v1/me returns, as the real cookie does.
 let current: SignedInUser | null = null
 
@@ -55,6 +58,15 @@ export const authHandlers = [
     })
     current = user
     return HttpResponse.json({ redirect: false, user: { id: user.id, email: user.email } })
+  }),
+  http.post('/v1/auth/request-password-reset', () => HttpResponse.json({ status: true })),
+  http.post('/v1/auth/reset-password', async ({ request }) => {
+    const body: unknown = await request.json()
+    const token = typeof body === 'object' && body !== null ? Reflect.get(body, 'token') : undefined
+    if (token === expiredInviteToken) {
+      return HttpResponse.json({ message: 'Invalid token', code: 'INVALID_TOKEN' }, { status: 400 })
+    }
+    return HttpResponse.json({ status: true })
   }),
   http.post('/v1/auth/sign-out', () => {
     current = null

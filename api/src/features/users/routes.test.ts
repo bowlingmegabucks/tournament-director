@@ -1,0 +1,446 @@
+import { APIError } from 'better-auth/api'
+import request from 'supertest'
+import { describe, expect, it, vi, type Mock } from 'vitest'
+import { apiKeyHeader } from '../../shared/auth/caller.ts'
+import { roleNames } from '../../shared/auth/roles.ts'
+import type { Mailer } from '../../shared/mail/mailer.ts'
+import { testApiKey } from '../../test/factories.ts'
+import { createCapturedLogger } from '../../test/logger.ts'
+import { createTestApp } from '../../test/testApp.ts'
+import {
+  createTestAuth,
+  createTestUser,
+  databaseUnavailableError,
+  signInCookie,
+} from '../../test/testAuth.ts'
+import type { RoleName } from '../../shared/auth/roles.ts'
+import { createInviteMailer } from './inviteMail.ts'
+
+const webBaseUrl = 'https://example.com/tournament-director'
+const newUser = { email: 'Bea@Example.com', name: 'Bea Bowler', roles: ['scoreKeeper'] }
+
+async function setup({
+  role = 'admin',
+  mail = true,
+  send = vi.fn<Mailer['send']>().mockResolvedValue(undefined),
+}: { role?: RoleName; mail?: boolean; send?: Mock<Mailer['send']> } = {}) {
+  const captured = createCapturedLogger()
+  const invites = createInviteMailer({ send }, webBaseUrl, captured.logger)
+  const { auth, database, outage } = createTestAuth({
+    logger: captured.logger,
+    sendResetPassword: invites.deliver,
+  })
+  const caller = await createTestUser(auth, { role })
+  const cookie = await signInCookie(auth, caller.email)
+  const app = createTestApp({
+    auth,
+    logger: captured.logger,
+    invites: mail ? invites : undefined,
+  })
+  const add = (body: unknown = newUser) =>
+    request(app)
+      .post('/v1/users')
+      .set('Cookie', cookie)
+      .send(body as object)
+  const list = () => request(app).get('/v1/users').set('Cookie', cookie)
+  const reset = (id: string) =>
+    request(app).post(`/v1/users/${id}/password-reset`).set('Cookie', cookie)
+  return { app, auth, database, outage, send, cookie, add, list, reset, records: captured.records }
+}
+
+describe('access to /v1/users', () => {
+  it('answers 401 to someone who is signed out', async () => {
+    const { app } = await setup()
+
+    expect((await request(app).post('/v1/users').send(newUser)).status).toBe(401)
+    expect((await request(app).get('/v1/users/options')).status).toBe(401)
+  })
+
+  it.each<RoleName>(['director', 'scoreKeeper'])('answers 403 to a %s', async (role) => {
+    const { add, send } = await setup({ role })
+
+    const response = await add()
+
+    expect(response.status).toBe(403)
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('answers 401 to a signed-out caller on the list and the reset', async () => {
+    const { app } = await setup()
+
+    expect((await request(app).get('/v1/users')).status).toBe(401)
+    expect((await request(app).post('/v1/users/abc/password-reset')).status).toBe(401)
+  })
+
+  it.each<RoleName>(['director', 'scoreKeeper'])(
+    'answers 403 to a %s on the list and the reset',
+    async (role) => {
+      const { list, reset, send } = await setup({ role })
+
+      expect((await list()).status).toBe(403)
+      expect((await reset('abc')).status).toBe(403)
+      expect(send).not.toHaveBeenCalled()
+    },
+  )
+
+  it('answers 403 to the API key, which holds no permission here (D-96)', async () => {
+    const { app, send } = await setup()
+
+    const response = await request(app)
+      .post('/v1/users')
+      .set(apiKeyHeader, testApiKey)
+      .send(newUser)
+
+    expect(response.status).toBe(403)
+    expect(send).not.toHaveBeenCalled()
+  })
+})
+
+describe('GET /v1/users/options', () => {
+  it('lists every role and says email is on, without caching', async () => {
+    const { app, cookie } = await setup()
+
+    const response = await request(app).get('/v1/users/options').set('Cookie', cookie)
+
+    expect(response.status).toBe(200)
+    expect(response.body).toEqual({ roles: roleNames, inviteEmail: true })
+    expect(response.headers['cache-control']).toBe('no-store')
+  })
+
+  it('says email is off when the API has no mail settings', async () => {
+    const { app, cookie } = await setup({ mail: false })
+
+    const response = await request(app).get('/v1/users/options').set('Cookie', cookie)
+
+    expect(response.body).toEqual({ roles: roleNames, inviteEmail: false })
+  })
+})
+
+describe('POST /v1/users', () => {
+  it('adds the user, emails a set-password link, and answers 201 with no password or token', async () => {
+    const { add, send, database } = await setup()
+
+    const response = await add({ ...newUser, roles: ['director', 'scoreKeeper'] })
+
+    expect(response.status).toBe(201)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.body).toEqual({
+      id: expect.any(String) as string,
+      email: 'bea@example.com',
+      name: 'Bea Bowler',
+      roles: ['director', 'scoreKeeper'],
+    })
+    expect(send).toHaveBeenCalledTimes(1)
+    const message = send.mock.calls[0]?.[0]
+    expect(message?.to).toBe('bea@example.com')
+    expect(message?.text).toMatch(
+      new RegExp(`${webBaseUrl}/set-password\\?token=[\\w-]+`.replaceAll('/', '\\/')),
+    )
+    const stored = database.user.find((user) => user.email === 'bea@example.com')
+    expect(stored?.role).toBe('director,scoreKeeper')
+    expect(JSON.stringify(response.body)).not.toMatch(/password|token/i)
+  })
+
+  it('gives the user a credential account the invite can replace', async () => {
+    const { add, database } = await setup()
+
+    await add()
+
+    expect(database.account.filter((account) => account.providerId === 'credential')).toHaveLength(
+      2,
+    )
+  })
+
+  it('drops a repeated role', async () => {
+    const { add } = await setup()
+
+    const response = await add({ ...newUser, roles: ['director', 'director'] })
+
+    expect(response.body).toMatchObject({ roles: ['director'] })
+  })
+
+  it('answers 409 for an email already in use, and sends nothing', async () => {
+    const { add, send } = await setup()
+    await add()
+    send.mockClear()
+
+    const response = await add({ ...newUser, email: 'BEA@example.com' })
+
+    expect(response.status).toBe(409)
+    expect(response.body).toEqual({ message: 'A user with this email already exists.' })
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['no roles (D-103)', { ...newUser, roles: [] }],
+    ['a role that does not exist', { ...newUser, roles: ['owner'] }],
+    ['no roles field', { email: 'a@b.co', name: 'A' }],
+    ['a bad email', { ...newUser, email: 'not-an-email' }],
+    ['a blank name', { ...newUser, name: '   ' }],
+    ['an empty object', {}],
+  ])('answers 400 for %s, and adds no one', async (_label, body) => {
+    const { add, send, database } = await setup()
+
+    const response = await add(body)
+
+    expect(response.status).toBe(400)
+    expect(send).not.toHaveBeenCalled()
+    expect(database.user).toHaveLength(1)
+  })
+
+  it('trims the email before it is stored', async () => {
+    const { add } = await setup()
+
+    const response = await add({ ...newUser, email: '  Bea@Example.com  ' })
+
+    expect(response.status).toBe(201)
+    expect(response.body.email).toBe('bea@example.com')
+  })
+
+  it('says which rule an empty role list breaks', async () => {
+    const { add } = await setup()
+
+    const response = await add({ ...newUser, roles: [] })
+
+    expect(response.status).toBe(400)
+    expect(response.body.message).toContain('pick at least one role')
+  })
+
+  it('answers 400 for a body that is not JSON', async () => {
+    const { app, cookie } = await setup()
+
+    const response = await request(app)
+      .post('/v1/users')
+      .set('Cookie', cookie)
+      .set('Content-Type', 'application/json')
+      .send('{nope')
+
+    expect(response.status).toBe(400)
+    expect(response.body).toEqual({ message: 'The request body is not valid JSON.' })
+  })
+
+  it('refuses a body over 10 KB as not valid JSON', async () => {
+    const { app, cookie } = await setup()
+
+    const response = await request(app)
+      .post('/v1/users')
+      .set('Cookie', cookie)
+      .send({ ...newUser, name: 'x'.repeat(11_000) })
+
+    expect(response.status).toBe(400)
+    expect(response.body).toEqual({ message: 'The request body is not valid JSON.' })
+  })
+
+  it('answers 409 only for the duplicate-email error, not another refusal', async () => {
+    const { add, auth } = await setup()
+    vi.spyOn(auth.api, 'createUser').mockRejectedValueOnce(
+      new APIError('BAD_REQUEST', { message: 'Other', code: 'SOMETHING_ELSE' }),
+    )
+
+    const response = await add()
+
+    expect(response.status).not.toBe(409)
+  })
+
+  it('answers 503 and adds no one when the API has no mail settings', async () => {
+    const { add, database } = await setup({ mail: false })
+
+    const response = await add()
+
+    expect(response.status).toBe(503)
+    expect(response.body).toEqual({
+      message: 'Email is not set up on the server, so no invite can be sent.',
+    })
+    expect(database.user).toHaveLength(1)
+  })
+
+  it('removes the user and answers 502 when the email fails, so a retry works', async () => {
+    const send = vi.fn<Mailer['send']>().mockRejectedValueOnce(new Error('535 bad login'))
+    const { add, database } = await setup({ send })
+
+    const failed = await add()
+
+    expect(failed.status).toBe(502)
+    expect(failed.body).toEqual({
+      message: 'The invite email could not be sent, so the user was not added. Try again.',
+    })
+    expect(database.user).toHaveLength(1)
+    expect((await add()).status).toBe(201)
+  })
+
+  it('answers 502 and logs the user id when the failed invite cannot be undone', async () => {
+    const send = vi.fn<Mailer['send']>().mockRejectedValue(new Error('535 bad login'))
+    const { add, auth, records } = await setup({ send })
+    vi.spyOn(auth.api, 'removeUser').mockRejectedValue(new Error('boom'))
+
+    const response = await add()
+
+    expect(response.status).toBe(502)
+    expect(response.body.message).toContain('the user could not be removed')
+    expect(records()).toContainEqual(
+      expect.objectContaining({
+        msg: 'Could not remove a user whose invite failed',
+        userId: expect.any(String) as string,
+      }),
+    )
+  })
+
+  it('answers 503 when the database is down', async () => {
+    const { add, outage } = await setup()
+    outage.start(databaseUnavailableError())
+
+    const response = await add()
+
+    expect(response.status).toBe(503)
+  })
+
+  it('logs the new user id and roles, never the email or the link', async () => {
+    const { add, records } = await setup()
+
+    await add()
+
+    const line = records().find((record) => record.msg === 'User added')
+    expect(line).toMatchObject({ roles: ['scoreKeeper'] })
+    const logged = JSON.stringify(records())
+    expect(logged).not.toContain('bea@example.com')
+    expect(logged).not.toContain('set-password')
+  })
+})
+
+describe('GET /v1/users', () => {
+  it('lists every user by name with roles and status, and nothing else', async () => {
+    const { add, list, auth, database, cookie } = await setup()
+    await add({
+      ...newUser,
+      name: 'Zed Last',
+      email: 'zed@example.com',
+      roles: ['director', 'scoreKeeper'],
+    })
+    await add({ ...newUser, name: 'Bea Bowler' })
+    const zed = database.user.find((user) => user['email'] === 'zed@example.com')
+    await auth.api.banUser({
+      body: { userId: String(zed?.['id']) },
+      headers: new Headers({ cookie }),
+    })
+
+    const response = await list()
+
+    expect(response.status).toBe(200)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.body.users.map((user: { name: string }) => user.name)).toEqual([
+      'Ada Admin',
+      'Bea Bowler',
+      'Zed Last',
+    ])
+    expect(response.body.users[2]).toEqual({
+      id: expect.any(String) as string,
+      email: 'zed@example.com',
+      name: 'Zed Last',
+      roles: ['director', 'scoreKeeper'],
+      disabled: true,
+    })
+    expect(response.body.users[0]).toMatchObject({ roles: ['admin'], disabled: false })
+    expect(JSON.stringify(response.body)).not.toMatch(/password|token|session|account/i)
+  })
+
+  it('answers 503 when the database is down', async () => {
+    const { list, outage } = await setup()
+    outage.start(databaseUnavailableError())
+
+    expect((await list()).status).toBe(503)
+  })
+})
+
+describe('POST /v1/users/:id/password-reset', () => {
+  async function withUser() {
+    const context = await setup()
+    const created = await context.add()
+    context.send.mockClear()
+    return { ...context, id: created.body.id as string }
+  }
+
+  it('emails the user a link to choose a new password, in the admin wording', async () => {
+    const { reset, send, id } = await withUser()
+
+    const response = await reset(id)
+
+    expect(response.status).toBe(204)
+    expect(send).toHaveBeenCalledTimes(1)
+    const message = send.mock.calls[0]?.[0]
+    expect(message?.to).toBe('bea@example.com')
+    expect(message?.text).toContain('An admin started a password reset')
+    expect(message?.text).toContain(`${webBaseUrl}/set-password?token=`)
+  })
+
+  it('lets the link set a password, without the admin ever seeing one', async () => {
+    const { app, reset, send, id } = await withUser()
+    await reset(id)
+    const token = /token=([\w-]+)/.exec(send.mock.calls[0]?.[0].text ?? '')?.[1]
+
+    const set = await request(app)
+      .post('/v1/auth/reset-password')
+      .send({ token, newPassword: 'a brand new password 42' })
+    const signIn = await request(app)
+      .post('/v1/auth/sign-in/email')
+      .send({ email: 'bea@example.com', password: 'a brand new password 42' })
+
+    expect(set.status).toBe(200)
+    expect(signIn.status).toBe(200)
+  })
+
+  it('answers 404 for an unknown user, and sends nothing', async () => {
+    const { reset, send } = await setup()
+
+    const response = await reset('no-such-user')
+
+    expect(response.status).toBe(404)
+    expect(response.body).toEqual({ message: 'User not found.' })
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('answers 502 when the mail fails, and says so', async () => {
+    const { reset, send, id } = await withUser()
+    send.mockRejectedValueOnce(new Error('535 bad login'))
+
+    const response = await reset(id)
+
+    expect(response.status).toBe(502)
+    expect(response.body).toEqual({
+      message: 'The reset email could not be sent. Check the mail settings and try again.',
+    })
+  })
+
+  it('answers 503 when the API has no mail settings', async () => {
+    const { id } = await withUser()
+    const none = await setup({ mail: false })
+
+    const response = await none.reset(id)
+
+    expect(response.status).toBe(503)
+    expect(response.body).toEqual({
+      message: 'Email is not set up on the server, so no link can be sent.',
+    })
+  })
+
+  it('answers 404 only when the user is not found, not for another failure', async () => {
+    const { reset, auth, send } = await setup()
+    vi.spyOn(auth.api, 'getUser').mockRejectedValueOnce(
+      new APIError('FORBIDDEN', { message: 'No' }),
+    )
+
+    const response = await reset('some-id')
+
+    expect(response.status).not.toBe(404)
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('logs the user id, never the email or the link', async () => {
+    const { reset, id, records } = await withUser()
+
+    await reset(id)
+
+    const line = records().find((record) => record.msg === 'Password reset sent')
+    expect(line).toMatchObject({ userId: id })
+    expect(JSON.stringify(records())).not.toContain('set-password')
+  })
+})

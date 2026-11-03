@@ -46,6 +46,26 @@ services:
       timeout: 5s
       retries: 5
 
+  mail:
+    container_name: tournament-director-mail
+    # Mailpit catches every email the API sends, so local runs mail no one. It plays the part of
+    # the .NET MailKit/smtp4dev tools: a fake SMTP server with an inbox in the browser.
+    image: axllent/mailpit:v1.32
+    restart: unless-stopped
+    environment:
+      # Local only. STARTTLS is required with a self-signed certificate, like a real mail host, so
+      # the API's mailer runs the same way. api/.env.example sets SMTP_ALLOW_SELF_SIGNED to match.
+      MP_SMTP_TLS_CERT: "sans:localhost"
+      MP_SMTP_TLS_KEY: "sans:localhost"
+      MP_SMTP_REQUIRE_STARTTLS: "true"
+      # Any login works.
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+    ports:
+      # Inbox: http://localhost:15325
+      - "15325:8025"
+      # SMTP: localhost:15025
+      - "15025:1025"
+
 volumes:
   seq-data:
     name: tournament-director-seq-data

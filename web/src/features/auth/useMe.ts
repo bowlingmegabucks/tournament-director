@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchMe, signIn, signOut } from './api'
+import { fetchMe, requestPasswordReset, setPassword, signIn, signOut } from './api'
 import type { Me } from './types'
 
 export const meKeys = { all: ['me'] as const }
@@ -37,4 +37,15 @@ export function useSignOut() {
       await queryClient.resetQueries({ predicate: (query) => query.queryKey[0] !== meKeys.all[0] })
     },
   })
+}
+
+export function useSetPassword() {
+  return useMutation({
+    mutationFn: ({ token, newPassword }: { token: string; newPassword: string }) =>
+      setPassword(token, newPassword),
+  })
+}
+
+export function useRequestPasswordReset() {
+  return useMutation({ mutationFn: (email: string) => requestPasswordReset(email) })
 }

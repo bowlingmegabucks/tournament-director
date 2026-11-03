@@ -15,6 +15,7 @@ import {
   createDemoTournaments,
 } from './data'
 import { authHandlers } from './authHandlers'
+import { userHandlers } from './userHandlers'
 
 // Built once so refetches return the same list, as a real API would.
 const tournaments = createDemoTournaments()
@@ -27,6 +28,7 @@ const notFound = () => HttpResponse.json({ message: 'Tournament not found' }, { 
 
 export const handlers = [
   ...authHandlers,
+  ...userHandlers,
   http.get('/v1/tournaments', () => HttpResponse.json({ tournaments })),
   http.get('/v1/tournaments/:id', ({ params }) => {
     const tournament = tournaments.find((candidate) => candidate.id === params.id)

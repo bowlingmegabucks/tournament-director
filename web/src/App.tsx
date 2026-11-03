@@ -1,5 +1,7 @@
 import { Route, Routes } from 'react-router'
+import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage'
 import { LoginPage } from './features/auth/LoginPage'
+import { SetPasswordPage } from './features/auth/SetPasswordPage'
 import { RequirePermission } from './features/auth/RequirePermission'
 import { signInEnabled } from './features/auth/signInEnabled'
 import { DivisionsPage } from './features/divisions/DivisionsPage'
@@ -15,6 +17,8 @@ import { RegistrationsPage } from './features/registrations/RegistrationsPage'
 import { SquadsPage } from './features/squads/SquadsPage'
 import { SweepersPage } from './features/sweepers/SweepersPage'
 import { HomePage } from './features/home/HomePage'
+import { UsersPage } from './features/users/UsersPage'
+import { NewUserPage } from './features/users/NewUserPage'
 import { TournamentLayout } from './features/tournaments/TournamentLayout'
 import { TournamentOverview } from './features/tournaments/TournamentOverview'
 import { TournamentsPage } from './features/tournaments/TournamentsPage'
@@ -71,7 +75,25 @@ export default function App() {
           <Route path="at-large" element={<AtLargePage />} />
           <Route path="seeding" element={<SeedingPage />} />
         </Route>
+        <Route
+          path="users"
+          element={
+            <RequirePermission permission="users.manage">
+              <UsersPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="users/new"
+          element={
+            <RequirePermission permission="users.manage">
+              <NewUserPage />
+            </RequirePermission>
+          }
+        />
         {signInEnabled() && <Route path="login" element={<LoginPage />} />}
+        {signInEnabled() && <Route path="forgot-password" element={<ForgotPasswordPage />} />}
+        {signInEnabled() && <Route path="set-password" element={<SetPasswordPage />} />}
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { SubmitEvent } from 'react'
-import { Navigate, useLocation } from 'react-router'
+import { Link, Navigate, useLocation } from 'react-router'
 import { field } from '../../shared/field'
 import { Loading } from '../../shared/Loading'
 import { Page } from '../../shared/Page'
@@ -86,6 +86,9 @@ export function LoginPage() {
         <button type="submit" disabled={signIn.isPending}>
           {signIn.isPending ? 'Signing in…' : 'Sign in'}
         </button>
+        <p>
+          <Link to="/forgot-password">Forgot your password?</Link>
+        </p>
         {import.meta.env.DEV && (
           <QuickLogin
             disabled={signIn.isPending}

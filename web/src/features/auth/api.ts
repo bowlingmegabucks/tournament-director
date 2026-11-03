@@ -99,3 +99,75 @@ export async function signOut(): Promise<void> {
   }
   if (!response.ok) throw new Error('Could not sign out. Try again.')
 }
+
+/** A failed set-password call. The message is what the page shows. */
+export class SetPasswordError extends Error {}
+
+async function setPasswordFailure(response: Response): Promise<SetPasswordError> {
+  if (response.status === 429) {
+    return new SetPasswordError(waitMessage(response.headers.get('Retry-After')))
+  }
+  if (response.status === 400) {
+    const code = await errorCode(response)
+    if (code === 'INVALID_TOKEN') {
+      return new SetPasswordError(
+        'This link has expired or was already used. Ask an admin for a new one.',
+      )
+    }
+    return new SetPasswordError('That password is not allowed. Use 12 to 128 characters.')
+  }
+  if (response.status >= 500) {
+    return new SetPasswordError('Setting the password is not working right now. Try again.')
+  }
+  return new SetPasswordError('Could not set the password. Try again.')
+}
+
+/**
+ * Choose a password with the token from an invite email (D-101). The token goes in the body, never
+ * the address, so it stays out of logs. It works once.
+ */
+export async function setPassword(token: string, newPassword: string): Promise<void> {
+  let response: Response
+  try {
+    response = await apiFetch(apiUrl('/v1/auth/reset-password'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, newPassword }),
+    })
+  } catch {
+    throw new SetPasswordError('Could not reach the server. Try again.')
+  }
+  if (!response.ok) throw await setPasswordFailure(response)
+}
+
+/** A failed forgot-password request. The message is what the page shows. */
+export class ForgotPasswordError extends Error {}
+
+function forgotFailure(response: Response): ForgotPasswordError {
+  if (response.status === 429) {
+    return new ForgotPasswordError(waitMessage(response.headers.get('Retry-After')))
+  }
+  if (response.status === 400) return new ForgotPasswordError('Enter a valid email address.')
+  if (response.status === 503) {
+    return new ForgotPasswordError('Password reset is not available right now. Ask an admin.')
+  }
+  return new ForgotPasswordError('Could not send the link. Try again.')
+}
+
+/**
+ * Ask for a set-password link. The API answers the same whether or not the email has an account,
+ * so a success here says nothing about the account (and the page must not either).
+ */
+export async function requestPasswordReset(email: string): Promise<void> {
+  let response: Response
+  try {
+    response = await apiFetch(apiUrl('/v1/auth/request-password-reset'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+  } catch {
+    throw new ForgotPasswordError('Could not reach the server. Try again.')
+  }
+  if (!response.ok) throw forgotFailure(response)
+}

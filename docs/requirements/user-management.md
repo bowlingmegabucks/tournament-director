@@ -46,5 +46,4 @@ The web app needs no new GitHub secret or variable: it sends no mail and holds n
 
 ## Still to build
 
-- Edit roles, and disable and enable a user (Better Auth's `setRole` and `banUser`, behind our own routes; D-103 asks for at least one role).
-- Add SPF and DKIM records for the sending domain so invites reach the inbox (Q-34).
+The remaining work is planned in [user-management-followups.md](../plans/user-management-followups.md), one branch each, as 0.4.1 work: disable, enable, and edit roles with a last-admin guard (`userEdit`); real-database and mutation tests (`userChecks`); production setup including SPF and DKIM (`userGoLive`); and optionally change-my-password (`userSelfService`).

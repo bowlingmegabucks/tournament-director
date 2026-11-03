@@ -50,6 +50,7 @@ test('a user who forgot their password asks for a link', async ({ page }) => {
   await page.goto('/login')
 
   await page.getByRole('link', { name: 'Forgot your password?' }).click()
+  await expect(page.getByRole('heading', { name: 'Forgot password', level: 1 })).toBeVisible()
   await page.getByLabel('Email').fill('bea@example.com')
   await page.getByRole('button', { name: 'Send link' }).click()
 

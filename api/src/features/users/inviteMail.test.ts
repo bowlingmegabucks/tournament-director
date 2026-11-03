@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createCapturedLogger } from '../../test/logger.ts'
 import type { Mailer } from '../../shared/mail/mailer.ts'
-import { buildInvite, buildPasswordReset, createInviteMailer, inviteLink } from './inviteMail.ts'
+import {
+  buildAdminReset,
+  buildInvite,
+  buildPasswordReset,
+  createInviteMailer,
+  inviteLink,
+} from './inviteMail.ts'
 
 const webBaseUrl = 'https://example.com/tournament-director'
 
@@ -46,6 +52,24 @@ describe('buildPasswordReset', () => {
 
   it('escapes the name in the HTML', () => {
     expect(buildPasswordReset('<i>Ada</i>', 'https://example.com/').html).toContain(
+      '&lt;i&gt;Ada&lt;/i&gt;',
+    )
+  })
+})
+
+describe('buildAdminReset', () => {
+  it('says an admin started the reset, with the link and the lifetime', () => {
+    const message = buildAdminReset('Ada', 'https://example.com/x?token=t')
+
+    expect(message.subject).toBe('Reset your Tournament Director password')
+    expect(message.text).toContain('An admin started a password reset')
+    expect(message.text).toContain('https://example.com/x?token=t')
+    expect(message.text).toContain('72 hours')
+    expect(message.html).toContain('<a href="https://example.com/x?token=t">')
+  })
+
+  it('escapes the name in the HTML', () => {
+    expect(buildAdminReset('<i>Ada</i>', 'https://example.com/').html).toContain(
       '&lt;i&gt;Ada&lt;/i&gt;',
     )
   })
@@ -129,5 +153,26 @@ describe('createInviteMailer', () => {
       'Your Tournament Director account',
       'Reset your Tournament Director password',
     ])
+  })
+
+  it('waits for an admin-started reset, reports it, and logs a failure', async () => {
+    const { logger, records } = createCapturedLogger()
+    const send = vi
+      .fn<Mailer['send']>()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('535 bad login'))
+    const invites = createInviteMailer({ send }, webBaseUrl, logger)
+
+    invites.expectAdminReset(user.email)
+    await invites.deliver({ user, token: 'one' })
+    const sent = invites.take(user.email)
+    invites.expectAdminReset(user.email)
+    await invites.deliver({ user, token: 'secret-token' })
+
+    expect(sent).toBe(true)
+    expect(send.mock.calls[0]?.[0].text).toContain('An admin started a password reset')
+    expect(invites.take(user.email)).toBe(false)
+    expect(JSON.stringify(records())).toContain('Admin reset email failed')
+    expect(JSON.stringify(records())).not.toContain('secret-token')
   })
 })

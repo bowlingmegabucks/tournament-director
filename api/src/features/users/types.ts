@@ -31,3 +31,13 @@ export interface CreatedUser {
   name: string
   roles: string[]
 }
+
+/** One row of `GET /v1/users`. Named field by field: nothing else about a user is sent. */
+export interface ListedUser {
+  id: string
+  email: string
+  name: string
+  roles: string[]
+  /** True when an admin has disabled the account. */
+  disabled: boolean
+}

@@ -26,7 +26,7 @@ export function AppShell() {
             </li>
             <Can permission="users.manage">
               <li>
-                <NavLink to="/users/new">Add user</NavLink>
+                <NavLink to="/users">Users</NavLink>
               </li>
             </Can>
           </ul>

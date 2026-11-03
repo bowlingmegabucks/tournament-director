@@ -39,14 +39,32 @@ for (const colorScheme of colorSchemes) {
       await page.getByRole('button', { name: 'Sign in' }).click()
       await page
         .getByRole('navigation', { name: 'Main' })
-        .getByRole('link', { name: 'Add user' })
+        .getByRole('link', { name: 'Users' })
         .click()
+      await page.getByRole('link', { name: 'Add user' }).click()
       await expect(page.getByRole('group', { name: 'Roles' })).toBeVisible()
       // Show the error state too, so axe scans the message colors.
       await page.getByLabel('Name', { exact: true }).fill('Bea Bowler')
       await page.getByLabel('Email').fill('bea@example.com')
       await page.getByRole('button', { name: 'Add user' }).click()
       await expect(page.getByText('Pick at least one role.')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
+    test('users page has no WCAG 2.2 AA violations', async ({ page }) => {
+      await page.goto('/login')
+      await page.getByLabel('Email').fill('admin@example.com')
+      await page.getByLabel('Password').fill('adminP4sswordLocal')
+      await page.getByRole('button', { name: 'Sign in' }).click()
+      await page
+        .getByRole('navigation', { name: 'Main' })
+        .getByRole('link', { name: 'Users' })
+        .click()
+      await expect(page.getByRole('table', { name: 'Users' })).toBeVisible()
+      // Show a toast too, so axe scans its colors.
+      await page.getByRole('button', { name: 'Send reset link to Local Director' }).click()
+      await expect(page.getByText('Reset link sent to director@example.com.')).toBeVisible()
 
       await expectNoViolations(page)
     })

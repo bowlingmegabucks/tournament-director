@@ -67,18 +67,18 @@ describe('AppShell', () => {
     expect(document.title).toBe('Tournaments · Tournament Director')
   })
 
-  it('shows Add user to an admin only', async () => {
+  it('shows Users to an admin only', async () => {
     setMockUser(createSignedInUser({ roles: ['admin'] }))
     renderApp('/')
 
-    expect(await within(mainMenu()).findByRole('link', { name: 'Add user' })).toHaveAttribute(
+    expect(await within(mainMenu()).findByRole('link', { name: 'Users' })).toHaveAttribute(
       'href',
-      '/users/new',
+      '/users',
     )
     await screen.findByRole('link', { name: 'All tournaments' })
   })
 
-  it('hides Add user from a director', async () => {
+  it('hides Users from a director', async () => {
     const director = createSignedInUser({ roles: ['director'] })
     setMockUser(director)
     renderApp('/')
@@ -86,6 +86,6 @@ describe('AppShell', () => {
     // The name shows once the sign-in check is done, so the link has had its chance to appear.
     await screen.findByText(director.name)
     await screen.findByRole('link', { name: 'All tournaments' })
-    expect(within(mainMenu()).queryByRole('link', { name: 'Add user' })).not.toBeInTheDocument()
+    expect(within(mainMenu()).queryByRole('link', { name: 'Users' })).not.toBeInTheDocument()
   })
 })

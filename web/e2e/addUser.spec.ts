@@ -13,10 +13,8 @@ async function signInAsAdmin(page: import('@playwright/test').Page) {
 test('an admin adds a user from the menu', async ({ page }) => {
   await signInAsAdmin(page)
 
-  await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('link', { name: 'Add user' })
-    .click()
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Users' }).click()
+  await page.getByRole('link', { name: 'Add user' }).click()
   await expect(page.getByRole('heading', { name: 'Add user', level: 1 })).toBeVisible()
   await page.getByLabel('Name', { exact: true }).fill('Bea Bowler')
   await page.getByLabel('Email').fill('bea@example.com')
@@ -55,4 +53,27 @@ test('a user who forgot their password asks for a link', async ({ page }) => {
   await page.getByRole('button', { name: 'Send link' }).click()
 
   await expect(page.getByText('If that address has an account')).toBeVisible()
+})
+
+test('an admin sends a user a password reset link', async ({ page }) => {
+  await signInAsAdmin(page)
+
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Users' }).click()
+  await expect(page.getByRole('heading', { name: 'Users', level: 1 })).toBeVisible()
+  await page.getByRole('button', { name: 'Send reset link to Local Director' }).click()
+
+  await expect(page.getByText('Reset link sent to director@example.com.')).toBeVisible()
+})
+
+test('the users list does not scroll sideways on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 700 })
+  await signInAsAdmin(page)
+
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Users' }).click()
+  await expect(page.getByRole('table', { name: 'Users' })).toBeVisible()
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  )
+  expect(overflow).toBe(false)
 })

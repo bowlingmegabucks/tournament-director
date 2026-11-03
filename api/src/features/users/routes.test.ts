@@ -41,7 +41,10 @@ async function setup({
       .post('/v1/users')
       .set('Cookie', cookie)
       .send(body as object)
-  return { app, auth, database, outage, send, cookie, add, records: captured.records }
+  const list = () => request(app).get('/v1/users').set('Cookie', cookie)
+  const reset = (id: string) =>
+    request(app).post(`/v1/users/${id}/password-reset`).set('Cookie', cookie)
+  return { app, auth, database, outage, send, cookie, add, list, reset, records: captured.records }
 }
 
 describe('access to /v1/users', () => {
@@ -60,6 +63,24 @@ describe('access to /v1/users', () => {
     expect(response.status).toBe(403)
     expect(send).not.toHaveBeenCalled()
   })
+
+  it('answers 401 to a signed-out caller on the list and the reset', async () => {
+    const { app } = await setup()
+
+    expect((await request(app).get('/v1/users')).status).toBe(401)
+    expect((await request(app).post('/v1/users/abc/password-reset')).status).toBe(401)
+  })
+
+  it.each<RoleName>(['director', 'scoreKeeper'])(
+    'answers 403 to a %s on the list and the reset',
+    async (role) => {
+      const { list, reset, send } = await setup({ role })
+
+      expect((await list()).status).toBe(403)
+      expect((await reset('abc')).status).toBe(403)
+      expect(send).not.toHaveBeenCalled()
+    },
+  )
 
   it('answers 403 to the API key, which holds no permission here (D-96)', async () => {
     const { app, send } = await setup()
@@ -241,5 +262,126 @@ describe('POST /v1/users', () => {
     const logged = JSON.stringify(records())
     expect(logged).not.toContain('bea@example.com')
     expect(logged).not.toContain('set-password')
+  })
+})
+
+describe('GET /v1/users', () => {
+  it('lists every user by name with roles and status, and nothing else', async () => {
+    const { add, list, auth, database, cookie } = await setup()
+    await add({
+      ...newUser,
+      name: 'Zed Last',
+      email: 'zed@example.com',
+      roles: ['director', 'scoreKeeper'],
+    })
+    await add({ ...newUser, name: 'Bea Bowler' })
+    const zed = database.user.find((user) => user['email'] === 'zed@example.com')
+    await auth.api.banUser({
+      body: { userId: String(zed?.['id']) },
+      headers: new Headers({ cookie }),
+    })
+
+    const response = await list()
+
+    expect(response.status).toBe(200)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.body.users.map((user: { name: string }) => user.name)).toEqual([
+      'Ada Admin',
+      'Bea Bowler',
+      'Zed Last',
+    ])
+    expect(response.body.users[2]).toEqual({
+      id: expect.any(String) as string,
+      email: 'zed@example.com',
+      name: 'Zed Last',
+      roles: ['director', 'scoreKeeper'],
+      disabled: true,
+    })
+    expect(response.body.users[0]).toMatchObject({ roles: ['admin'], disabled: false })
+    expect(JSON.stringify(response.body)).not.toMatch(/password|token|session|account/i)
+  })
+
+  it('answers 503 when the database is down', async () => {
+    const { list, outage } = await setup()
+    outage.start(databaseUnavailableError())
+
+    expect((await list()).status).toBe(503)
+  })
+})
+
+describe('POST /v1/users/:id/password-reset', () => {
+  async function withUser() {
+    const context = await setup()
+    const created = await context.add()
+    context.send.mockClear()
+    return { ...context, id: created.body.id as string }
+  }
+
+  it('emails the user a link to choose a new password, in the admin wording', async () => {
+    const { reset, send, id } = await withUser()
+
+    const response = await reset(id)
+
+    expect(response.status).toBe(204)
+    expect(send).toHaveBeenCalledTimes(1)
+    const message = send.mock.calls[0]?.[0]
+    expect(message?.to).toBe('bea@example.com')
+    expect(message?.text).toContain('An admin started a password reset')
+    expect(message?.text).toContain(`${webBaseUrl}/set-password?token=`)
+  })
+
+  it('lets the link set a password, without the admin ever seeing one', async () => {
+    const { app, reset, send, id } = await withUser()
+    await reset(id)
+    const token = /token=([\w-]+)/.exec(send.mock.calls[0]?.[0].text ?? '')?.[1]
+
+    const set = await request(app)
+      .post('/v1/auth/reset-password')
+      .send({ token, newPassword: 'a brand new password 42' })
+    const signIn = await request(app)
+      .post('/v1/auth/sign-in/email')
+      .send({ email: 'bea@example.com', password: 'a brand new password 42' })
+
+    expect(set.status).toBe(200)
+    expect(signIn.status).toBe(200)
+  })
+
+  it('answers 404 for an unknown user, and sends nothing', async () => {
+    const { reset, send } = await setup()
+
+    const response = await reset('no-such-user')
+
+    expect(response.status).toBe(404)
+    expect(response.body).toEqual({ message: 'User not found.' })
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('answers 502 when the mail fails, and says so', async () => {
+    const { reset, send, id } = await withUser()
+    send.mockRejectedValueOnce(new Error('535 bad login'))
+
+    const response = await reset(id)
+
+    expect(response.status).toBe(502)
+    expect(response.body).toEqual({
+      message: 'The reset email could not be sent. Check the mail settings and try again.',
+    })
+  })
+
+  it('answers 503 when the API has no mail settings', async () => {
+    const { id } = await withUser()
+    const none = await setup({ mail: false })
+
+    expect((await none.reset(id)).status).toBe(503)
+  })
+
+  it('logs the user id, never the email or the link', async () => {
+    const { reset, id, records } = await withUser()
+
+    await reset(id)
+
+    const line = records().find((record) => record.msg === 'Password reset sent')
+    expect(line).toMatchObject({ userId: id })
+    expect(JSON.stringify(records())).not.toContain('set-password')
   })
 })

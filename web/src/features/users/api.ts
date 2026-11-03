@@ -2,7 +2,7 @@ import { apiFetch } from '../../shared/apiFetch'
 import { apiUrl } from '../../shared/apiUrl'
 import { field } from '../../shared/field'
 import { readJson } from '../../shared/readJson'
-import type { CreatedUser, NewUser, UserOptions } from './types'
+import type { CreatedUser, ListedUser, NewUser, UserOptions } from './types'
 
 /** A failed add. The message is what the page shows. */
 export class CreateUserError extends Error {}
@@ -71,4 +71,60 @@ export async function createUser(input: NewUser): Promise<CreatedUser> {
     throw new CreateUserError('The user was added, but the answer could not be read.')
   }
   return body
+}
+
+function isListedUser(value: unknown): value is ListedUser {
+  return (
+    typeof field(value, 'id') === 'string' &&
+    typeof field(value, 'email') === 'string' &&
+    typeof field(value, 'name') === 'string' &&
+    isTextList(field(value, 'roles')) &&
+    typeof field(value, 'disabled') === 'boolean'
+  )
+}
+
+export async function fetchUsers(): Promise<ListedUser[]> {
+  const failure = 'The users could not be loaded'
+  const response = await apiFetch(apiUrl('/v1/users'))
+  if (!response.ok) throw new Error(`${failure}. Try again.`)
+  const users = field(await readJson(response, failure), 'users')
+  if (!Array.isArray(users) || !users.every(isListedUser)) {
+    throw new Error(`${failure} (unexpected response)`)
+  }
+  return users
+}
+
+/** A failed reset. The message is what the page shows. */
+export class ResetPasswordError extends Error {}
+
+async function resetFailure(response: Response): Promise<ResetPasswordError> {
+  if (response.status === 401) {
+    return new ResetPasswordError('You are signed out. Sign in again and retry.')
+  }
+  if (response.status === 403) return new ResetPasswordError('Only an admin can reset passwords.')
+  if (response.status === 404) {
+    return new ResetPasswordError('That user no longer exists. Reload the list.')
+  }
+  if (response.status === 502 || response.status === 503) {
+    try {
+      const message = field(await response.json(), 'message')
+      if (typeof message === 'string' && message !== '') return new ResetPasswordError(message)
+    } catch {
+      // Not JSON: fall through to the general message.
+    }
+  }
+  return new ResetPasswordError('The reset link could not be sent. Try again.')
+}
+
+/** Email the user a link to choose a new password. The admin never sees a password. */
+export async function sendPasswordReset(userId: string): Promise<void> {
+  let response: Response
+  try {
+    response = await apiFetch(apiUrl(`/v1/users/${encodeURIComponent(userId)}/password-reset`), {
+      method: 'POST',
+    })
+  } catch {
+    throw new ResetPasswordError('Could not reach the server. Try again.')
+  }
+  if (!response.ok) throw await resetFailure(response)
 }

@@ -9,7 +9,8 @@ import { HttpError } from '../../shared/errors.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { requestLogger } from '../../shared/requestLogging.ts'
 import type { InviteMailer } from './inviteMail.ts'
-import { createUserSchema, type CreatedUser, type UserOptions } from './types.ts'
+import { z } from 'zod'
+import { createUserSchema, type CreatedUser, type ListedUser, type UserOptions } from './types.ts'
 
 export interface UserRouterDependencies {
   auth: Auth
@@ -25,6 +26,10 @@ const jsonBody: RequestHandler = (req, res, next) => {
   })
 }
 
+const idParams = z.object({ id: z.string().min(1).max(64) })
+/** More users than this cannot exist in practice (about five). A cap keeps the list bounded. */
+const maxListed = 200
+
 const duplicateEmail = 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL'
 
 function isDuplicateEmail(err: unknown): boolean {
@@ -36,6 +41,10 @@ function isDuplicateEmail(err: unknown): boolean {
  * Web only, not part of the vendor contract.
  *
  * - `GET /options`: the roles to pick from and whether email is set up.
+ * - `GET /`: every user, by name: `{ users: [{ id, email, name, roles, disabled }] }`.
+ * - `POST /:id/password-reset`: emails the user a link to choose a new password. The admin never
+ *   sees or sets a password (D-101). 204; 404 for an unknown id; 502 when the mail fails; 503
+ *   without mail settings.
  * - `POST /`: body `{ email, name, roles }`. Makes the user with a random password nobody sees, then
  *   emails a link where they choose their own (D-101). 201 with the user; 409 when the email is in
  *   use; 503 when the API has no mail settings (no one is added). If the mail fails, the user is
@@ -51,6 +60,56 @@ export function createUserRouter({ auth, invites, logger }: UserRouterDependenci
   router.get('/options', (_req, res) => {
     const body: UserOptions = { roles: roleNames, inviteEmail: invites !== undefined }
     res.json(body)
+  })
+
+  router.get('/', async (req, res) => {
+    const log = requestLogger(res, logger)
+    const { users } = await withDatabaseErrors(log, () =>
+      auth.api.listUsers({
+        query: { sortBy: 'name', sortDirection: 'asc', limit: maxListed },
+        headers: fromNodeHeaders(req.headers),
+      }),
+    )
+    const body: { users: ListedUser[] } = {
+      users: users.map((user) => ({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        roles: rolesOf(user.role),
+        disabled: user.banned === true,
+      })),
+    }
+    res.json(body)
+  })
+
+  router.post('/:id/password-reset', async (req, res) => {
+    if (!invites) {
+      throw new HttpError(503, 'Email is not set up on the server, so no link can be sent.')
+    }
+    const { id } = idParams.parse(req.params)
+    const log = requestLogger(res, logger)
+    await withDatabaseErrors(log, async () => {
+      const found = await auth.api
+        .getUser({
+          query: { id },
+          headers: fromNodeHeaders(req.headers),
+        })
+        .catch((err: unknown) => {
+          if (err instanceof APIError && err.statusCode === 404) return null
+          throw err
+        })
+      if (!found) throw new HttpError(404, 'User not found.')
+      invites.expectAdminReset(found.email)
+      await auth.api.requestPasswordReset({ body: { email: found.email } })
+      if (invites.take(found.email) !== true) {
+        throw new HttpError(
+          502,
+          'The reset email could not be sent. Check the mail settings and try again.',
+        )
+      }
+    })
+    log.info({ userId: id }, 'Password reset sent')
+    res.status(204).end()
   })
 
   router.post('/', jsonBody, async (req, res) => {

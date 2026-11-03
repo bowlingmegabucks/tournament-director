@@ -50,6 +50,25 @@ export function buildPasswordReset(name: string, link: string) {
   return { subject: 'Reset your Tournament Director password', text, html }
 }
 
+/** The message when an admin starts a reset for a user. The link opens the same page. */
+export function buildAdminReset(name: string, link: string) {
+  const text = [
+    `Hi ${name},`,
+    '',
+    'An admin started a password reset for your Tournament Director account. Choose a new password with this link:',
+    link,
+    '',
+    `The link works for ${hours} hours. Your password stays as it is until you use it.`,
+  ].join('\n')
+  const html = [
+    `<p>Hi ${escapeHtml(name)},</p>`,
+    '<p>An admin started a password reset for your Tournament Director account. Choose a new password with this link:</p>',
+    `<p><a href="${escapeHtml(link)}">Choose a new password</a></p>`,
+    `<p>The link works for ${hours} hours. Your password stays as it is until you use it.</p>`,
+  ].join('\n')
+  return { subject: 'Reset your Tournament Director password', text, html }
+}
+
 /** The page the invite link opens. The token is a secret: it goes in the email and nowhere else. */
 export function inviteLink(webBaseUrl: string, token: string): string {
   return `${webBaseUrl}/set-password?token=${encodeURIComponent(token)}`
@@ -62,6 +81,12 @@ export interface InviteMailer {
    * is a forgotten-password request.
    */
   expectInvite: (email: string) => void
+  /**
+   * Say that the next token for this email is a reset an admin started. Like an invite, `deliver`
+   * waits for the mail and `take` reports it: an admin is signed in, so there is no one to hide
+   * the outcome from.
+   */
+  expectAdminReset: (email: string) => void
   /**
    * Hand this to Better Auth as `sendResetPassword`. It never throws: Better Auth would log the
    * error and carry on, so an invite's outcome goes to `take` instead. A forgotten-password mail
@@ -80,14 +105,19 @@ export function createInviteMailer(
   logger: Logger,
 ): InviteMailer {
   const outcomes = new Map<string, boolean>()
-  const invited = new Set<string>()
+  const expected = new Map<string, 'invite' | 'adminReset'>()
   return {
     expectInvite: (email) => {
-      invited.add(email)
+      expected.set(email, 'invite')
+    },
+    expectAdminReset: (email) => {
+      expected.set(email, 'adminReset')
     },
     deliver: async ({ user, token }) => {
       const link = inviteLink(webBaseUrl, token)
-      if (!invited.delete(user.email)) {
+      const kind = expected.get(user.email)
+      expected.delete(user.email)
+      if (kind === undefined) {
         mailer
           .send({ to: user.email, ...buildPasswordReset(user.name, link) })
           .catch((err: unknown) => {
@@ -98,12 +128,15 @@ export function createInviteMailer(
       try {
         await mailer.send({
           to: user.email,
-          ...buildInvite(user.name, link),
+          ...(kind === 'invite' ? buildInvite(user.name, link) : buildAdminReset(user.name, link)),
         })
         outcomes.set(user.email, true)
       } catch (err) {
         // The cause may name the mail server or the mailbox. It stays in the log.
-        logger.error({ err }, 'Invite email failed')
+        logger.error(
+          { err },
+          kind === 'invite' ? 'Invite email failed' : 'Admin reset email failed',
+        )
         outcomes.set(user.email, false)
       }
     },

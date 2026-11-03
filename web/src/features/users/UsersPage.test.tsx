@@ -451,6 +451,7 @@ describe('UsersPage: disable, enable, edit roles', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save roles' }))
 
     expect(within(dialog).getByRole('button', { name: 'Saving…' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Disable Local Admin' })).toBeDisabled()
     await screen.findByText('Roles saved for Local Director.')
   })
 

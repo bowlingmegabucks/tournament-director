@@ -21,8 +21,8 @@ interface Notice {
 /**
  * The admin-only list of users (`users.manage`, D-101). Each row can send the user a link to
  * choose a new password: the admin never sees or sets one. It can also disable or enable a user
- * and change their roles; the API refuses a change that would leave no enabled admin. `App.tsx` wraps this page in
- * `RequirePermission`.
+ * and change their roles; the API refuses a change that would leave no enabled admin. `App.tsx`
+ * wraps this page in `RequirePermission`.
  */
 export function UsersPage() {
   const { data, isPending, error, refetch } = useUsers()
@@ -76,7 +76,7 @@ export function UsersPage() {
     )
   }
 
-  const busy = send.isPending || setDisabled.isPending
+  const busy = send.isPending || setDisabled.isPending || updateRoles.isPending
   const sending = (id: string) => send.isPending && send.variables === id
 
   return (

@@ -4,7 +4,7 @@ import { Loading } from '../../shared/Loading'
 import { Page } from '../../shared/Page'
 import { QueryError } from '../../shared/QueryError'
 import { Toast } from '../../shared/Toast'
-import { roleLabel } from './roleLabels'
+import { RolePicker } from './RolePicker'
 import { useCreateUser, useUserOptions } from './useUsers'
 import styles from './NewUserPage.module.css'
 
@@ -107,39 +107,13 @@ export function NewUserPage() {
               }}
             />
           </div>
-          <fieldset
-            className={styles.roles}
-            aria-describedby={rolesMissing ? 'new-user-roles-error' : undefined}
-          >
-            <legend>Roles</legend>
-            {options.data.roles.map((role) => {
-              const { label, hint } = roleLabel(role)
-              return (
-                <div key={role} className={styles.role}>
-                  <input
-                    id={`new-user-role-${role}`}
-                    type="checkbox"
-                    checked={roles.includes(role)}
-                    aria-describedby={hint ? `new-user-role-${role}-hint` : undefined}
-                    onChange={(event) => {
-                      toggle(role, event.target.checked)
-                    }}
-                  />
-                  <label htmlFor={`new-user-role-${role}`}>{label}</label>
-                  {hint && (
-                    <span id={`new-user-role-${role}-hint`} className={styles.hint}>
-                      {hint}
-                    </span>
-                  )}
-                </div>
-              )
-            })}
-            {rolesMissing && (
-              <p id="new-user-roles-error" role="alert" className={styles.error}>
-                Pick at least one role.
-              </p>
-            )}
-          </fieldset>
+          <RolePicker
+            idPrefix="new-user"
+            roles={options.data.roles}
+            selected={roles}
+            onToggle={toggle}
+            error={rolesMissing ? 'Pick at least one role.' : undefined}
+          />
           <button type="submit" disabled={create.isPending || !options.data.inviteEmail}>
             {create.isPending ? 'Adding…' : 'Add user'}
           </button>

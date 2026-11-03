@@ -32,6 +32,7 @@ import { createRootRouter } from './shared/rootRoutes.ts'
 import { createOpenApiRouter } from './openapi/openapi.ts'
 import { createAuthRouter } from './features/auth/routes.ts'
 import type { InviteMailer } from './features/users/inviteMail.ts'
+import { createAccountRouter } from './features/account/routes.ts'
 import { createUserRouter } from './features/users/routes.ts'
 import type { Auth } from './shared/auth/createAuth.ts'
 import { identifyCaller } from './shared/auth/caller.ts'
@@ -126,6 +127,11 @@ export function createApp({
         path: '/v1/auth',
         access: 'public',
         router: createAuthRouter(auth, meter, logger, invites),
+      },
+      {
+        path: '/v1/account',
+        access: 'signedIn', // any signed-in user, even with no role; the API key cannot reach it
+        router: createAccountRouter({ auth, meter, logger }),
       },
       {
         path: '/v1/users',

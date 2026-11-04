@@ -174,6 +174,7 @@ describe('when storage fails', () => {
       get: () => Promise.reject(error),
       getRatios: () => Promise.reject(error),
       getSettings: () => Promise.reject(error),
+      getEditInfo: () => Promise.reject(error),
     }
   }
 
@@ -219,7 +220,22 @@ describe('GET /v1/tournaments/:id/settings', () => {
     const response = await request(app).get(`/v1/tournaments/${tournament.id}/settings`)
 
     expect(response.status).toBe(200)
-    expect(response.body).toEqual({ settings })
+    expect(response.body).toEqual({ settings: { ...settings, completed: false } })
+  })
+
+  it('says when the tournament is complete (TRN-21, D-131)', async () => {
+    const tournament = createTournament()
+    const app = createTestApp({
+      tournaments: createInMemoryTournamentRepository(
+        [tournament],
+        {},
+        { [tournament.id]: { ...settings, completed: true } },
+      ),
+    })
+
+    const response = await request(app).get(`/v1/tournaments/${tournament.id}/settings`)
+
+    expect(response.body).toEqual({ settings: { ...settings, completed: true } })
   })
 
   it('answers 404 for an unknown tournament (TRN-21)', async () => {

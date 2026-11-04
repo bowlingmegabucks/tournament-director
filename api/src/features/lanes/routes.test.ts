@@ -239,6 +239,7 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/lanes', () => {
         get: () => Promise.reject(new Error('Stored tournament x breaks the vendor shape')),
         getRatios: () => Promise.reject(new Error('Stored tournament x breaks the vendor shape')),
         getSettings: () => Promise.reject(new Error('Stored tournament x breaks the vendor shape')),
+        getEditInfo: () => Promise.reject(new Error('Stored tournament x breaks the vendor shape')),
       },
     })
 

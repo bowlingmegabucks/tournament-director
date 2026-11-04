@@ -51,5 +51,22 @@ export const tournamentSettingsSchema = z.object({
 
 export type TournamentSettings = z.infer<typeof tournamentSettingsSchema>
 
+/**
+ * What the settings route sends: the settings plus whether the tournament is complete (D-131). A
+ * complete tournament is frozen (D-130). Nothing in the new app sets the flag yet.
+ */
+export const tournamentSettingsViewSchema = tournamentSettingsSchema.extend({
+  completed: z.boolean(),
+})
+
+export type TournamentSettingsView = z.infer<typeof tournamentSettingsViewSchema>
+
 /** What `POST /v1/tournaments` sends back: the summary plus the settings (D-121). */
 export type CreatedTournament = Tournament & TournamentSettings
+
+/** What `GET /v1/tournaments/{id}/edit-info` sends: the counts behind the edit page's locks (D-131). */
+export const editInfoSchema = z.object({
+  registrationCount: z.number().int().min(0),
+  hasScores: z.boolean(),
+  hasSweeperScores: z.boolean(),
+})

@@ -89,6 +89,7 @@ describe('server errors', () => {
         get: () => Promise.reject(new Error('db password is hunter2')),
         getRatios: () => Promise.reject(new Error('db password is hunter2')),
         getSettings: () => Promise.reject(new Error('db password is hunter2')),
+        getEditInfo: () => Promise.reject(new Error('db password is hunter2')),
       },
     })
 

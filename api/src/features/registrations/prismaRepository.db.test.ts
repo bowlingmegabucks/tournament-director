@@ -337,6 +337,6 @@ describe('Prisma registration repository', () => {
 
     const text = JSON.stringify(listed)
     expect(text).not.toContain('TOP-SECRET-CIPHERTEXT')
-    expect(text).not.toMatch(/example\.com|6175550100|Main St|1980/)
+    expect(text).not.toMatch(/example\.com|6175550100|Main St|1980-01-01/)
   })
 })

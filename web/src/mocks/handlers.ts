@@ -64,8 +64,9 @@ export const handlers = [
   http.patch('/v1/tournaments/:id', async ({ params, request }) => {
     const found = tournaments.find((candidate) => candidate.id === params.id)
     if (!found) return notFound()
-    const { confirmWarnings, ...changes } = (await request.json()) as TournamentChanges
-    void confirmWarnings // The mock never warns, so there is nothing to confirm.
+    // The mock never warns, so it ignores `confirmWarnings`.
+    const changes = (await request.json()) as TournamentChanges
+    delete changes.confirmWarnings
     const { games, finalsRatio, cashRatio, superSweeperCashRatio, ...summary } = changes
     const next = { ...found, ...summary }
     const duplicate = tournaments.some(

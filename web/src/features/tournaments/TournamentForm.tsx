@@ -14,7 +14,7 @@ import {
 import { endBeforeStartMessage, validateChanges, validateTournament } from './validateTournament'
 
 const isTournamentField = (name: string): name is TournamentField =>
-  tournamentFields.some((candidate) => candidate === name)
+  (tournamentFields as readonly string[]).includes(name)
 
 const labels: Record<TournamentField, string> = {
   name: 'Name',

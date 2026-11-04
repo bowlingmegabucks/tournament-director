@@ -5,7 +5,7 @@ import { QueryError } from '../../shared/QueryError'
 import { Toast } from '../../shared/Toast'
 import { TournamentRejectedError, TournamentWarningsError } from './api'
 import { editNotes } from './editNotes'
-import { TournamentForm } from './TournamentForm'
+import { TournamentForm, type FieldNotes } from './TournamentForm'
 import type { EditInfo, Tournament, TournamentSettingsView } from './types'
 import { useEditInfo } from './useEditInfo'
 import { useTournamentSettings } from './useTournamentSettings'
@@ -51,6 +51,20 @@ interface EditFormProps {
   info: EditInfo
 }
 
+/** Replace the create form's hints: none on a frozen tournament, a note on an unset ratio (D-17). */
+function hintsFor(settings: TournamentSettingsView): FieldNotes {
+  if (settings.completed) {
+    return { entryFee: '', games: '', finalsRatio: '', cashRatio: '', superSweeperCashRatio: '' }
+  }
+  if (settings.superSweeperCashRatio === 0) {
+    return {
+      superSweeperCashRatio:
+        'Stored as 0 (not set). Super sweeper results cannot be worked out until you set this. At least 1.',
+    }
+  }
+  return {}
+}
+
 function EditForm({ tournament, settings, info }: Readonly<EditFormProps>) {
   const navigate = useNavigate()
   const update = useUpdateTournament(tournament.id)
@@ -82,16 +96,7 @@ function EditForm({ tournament, settings, info }: Readonly<EditFormProps>) {
         }
         locks={locks}
         confirms={confirms}
-        hints={
-          settings.completed
-            ? { entryFee: '', games: '', finalsRatio: '', cashRatio: '', superSweeperCashRatio: '' }
-            : settings.superSweeperCashRatio === 0
-              ? {
-                  superSweeperCashRatio:
-                    'Stored as 0 (not set). Super sweeper results cannot be worked out until you set this. At least 1.',
-                }
-              : {}
-        }
+        hints={hintsFor(settings)}
         onAttempt={() => {
           setFailure(undefined)
         }}

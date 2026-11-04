@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { emptyTournamentForm, toNewTournament, validateTournament } from './validateTournament'
+import { createSettings, createTournament } from '../../mocks/data'
+import {
+  emptyTournamentForm,
+  toChanges,
+  toFormValues,
+  toNewTournament,
+  validateChanges,
+  validateTournament,
+} from './validateTournament'
 import type { TournamentFormValues } from './types'
 
 const valid: TournamentFormValues = {
@@ -178,6 +186,117 @@ describe('validateTournament', () => {
       finalsRatio: 8,
       cashRatio: 5,
       superSweeperCashRatio: 4.5,
+    })
+  })
+})
+
+describe('toFormValues (TRN-29, D-17)', () => {
+  it('turns a stored tournament into the text the form shows', () => {
+    const tournament = createTournament({
+      name: 'Spring Open',
+      startDate: '2027-03-12',
+      endDate: '2027-03-14',
+      bowlingCenter: 'Bowl-O-Rama',
+      entryFee: 47.5,
+    })
+    const settings = createSettings({
+      games: 6,
+      finalsRatio: 7.5,
+      cashRatio: 5,
+      superSweeperCashRatio: 4,
+    })
+
+    expect(toFormValues(tournament, settings)).toEqual({
+      name: 'Spring Open',
+      startDate: '2027-03-12',
+      endDate: '2027-03-14',
+      bowlingCenter: 'Bowl-O-Rama',
+      entryFee: '47.5',
+      games: '6',
+      finalsRatio: '7.5',
+      cashRatio: '5',
+      superSweeperCashRatio: '4',
+    })
+  })
+
+  it('shows a stored super sweeper ratio of 0 as empty', () => {
+    const values = toFormValues(createTournament(), createSettings({ superSweeperCashRatio: 0 }))
+
+    expect(values.superSweeperCashRatio).toBe('')
+  })
+})
+
+describe('validateChanges (TRN-24, D-127, D-17)', () => {
+  const initial: TournamentFormValues = { ...valid, superSweeperCashRatio: '' }
+
+  it('says nothing about a field the director left alone, even when it would fail', () => {
+    expect(validateChanges(initial, initial)).toEqual({})
+  })
+
+  it('checks a field that changed', () => {
+    expect(validateChanges(initial, { ...initial, name: '', games: '0' })).toEqual({
+      name: 'Name is required',
+      games: 'Must have at least one game',
+    })
+  })
+
+  it('checks the super sweeper ratio once the director types in it (D-13)', () => {
+    expect(validateChanges(initial, { ...initial, superSweeperCashRatio: '0' })).toEqual({
+      superSweeperCashRatio: 'Super sweeper cash ratio must be at least 1',
+    })
+    expect(validateChanges(initial, { ...initial, superSweeperCashRatio: '3' })).toEqual({})
+  })
+
+  it('checks the end date when only the start date moved past it', () => {
+    expect(validateChanges(valid, { ...valid, startDate: '2027-03-20' })).toEqual({
+      endDate: 'End date must be on or after start date',
+    })
+  })
+
+  it('checks the end date when only the end date moved before the start', () => {
+    expect(validateChanges(valid, { ...valid, endDate: '2027-03-01' })).toEqual({
+      endDate: 'End date must be on or after start date',
+    })
+  })
+
+  it('does not check other untouched fields when the start date moves', () => {
+    expect(validateChanges(initial, { ...initial, startDate: '2027-03-11' })).toEqual({})
+  })
+
+  it('leaves an end date alone when neither date changed', () => {
+    const odd = { ...valid, endDate: '2027-03-01' }
+
+    expect(validateChanges(odd, { ...odd, name: 'Renamed' })).toEqual({})
+  })
+})
+
+describe('toChanges (TRN-24, D-127)', () => {
+  it('sends nothing when nothing changed', () => {
+    expect(toChanges(valid, valid)).toEqual({})
+  })
+
+  it('sends only the fields that changed, as numbers and trimmed text', () => {
+    expect(
+      toChanges(valid, {
+        ...valid,
+        name: ' Renamed ',
+        entryFee: '75.5',
+        games: '6',
+        cashRatio: '4.5',
+      }),
+    ).toEqual({ name: 'Renamed', entryFee: 75.5, games: 6, cashRatio: 4.5 })
+  })
+
+  it('never sends an untouched empty super sweeper ratio as 0', () => {
+    const initial = { ...valid, superSweeperCashRatio: '' }
+
+    expect(toChanges(initial, { ...initial, name: 'Renamed' })).toEqual({ name: 'Renamed' })
+  })
+
+  it('sends dates as typed', () => {
+    expect(toChanges(valid, { ...valid, startDate: '2027-03-11', endDate: '2027-03-15' })).toEqual({
+      startDate: '2027-03-11',
+      endDate: '2027-03-15',
     })
   })
 })

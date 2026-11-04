@@ -192,11 +192,35 @@ describe('planEdit: start date (TRN-25, TRN-26, D-128)', () => {
 
   it('allows a squad on the new start day itself', async () => {
     const result = await plan(
-      { startDate: '2027-03-12' },
-      { facts: { firstSession: squadAt('2027-03-12T00:00:00Z') } },
+      { startDate: '2027-03-13' },
+      { facts: { firstSession: squadAt('2027-03-13T00:00:00Z') } },
     )
 
-    expect(result.kind).toBe('save')
+    expect(result).toEqual({ kind: 'save', changes: { startDate: '2027-03-13' } })
+  })
+
+  it('refuses the start date with the exact words when scores exist (D-128)', async () => {
+    const result = await plan({ startDate: '2027-03-13' }, { facts: { hasScores: true } })
+
+    expect(result).toEqual({
+      kind: 'refused',
+      errors: { startDate: 'Scores are saved, so the start date cannot change.' },
+    })
+  })
+
+  it('does not look at squads for a date that did not change', async () => {
+    // Old data may already hold a squad outside the dates. Changing the fee must not trip over it.
+    const result = await plan(
+      { entryFee: 70 },
+      {
+        facts: {
+          firstSession: squadAt('2027-03-01T09:00:00Z'),
+          lastSession: squadAt('2027-03-30T09:00:00Z'),
+        },
+      },
+    )
+
+    expect(result).toEqual({ kind: 'save', changes: { entryFee: 70 } })
   })
 
   it('moving the start earlier is never blocked by a squad', async () => {

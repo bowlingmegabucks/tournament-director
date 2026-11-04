@@ -6,7 +6,8 @@ import { MemoryRouter } from 'react-router'
 import { http, HttpResponse } from 'msw'
 import App from '../../App'
 import { server } from '../../mocks/server'
-import { createSettings, createTournament } from '../../mocks/data'
+import { createSettings, createSignedInUser, createTournament } from '../../mocks/data'
+import { setMockUser } from '../../mocks/authHandlers'
 import { renderApp } from '../../test/renderApp'
 
 const tournament = createTournament({ name: 'Spring Open' })
@@ -120,5 +121,87 @@ describe('TournamentOverview created toast (TRN-22, D-120)', () => {
 
     await screen.findByText('Games per squad')
     expect(screen.queryByText('Tournament created')).not.toBeInTheDocument()
+  })
+})
+
+describe('TournamentOverview saved toast (TRN-31)', () => {
+  it('shows "Tournament saved" after the edit page returns here, and lets the director dismiss it', async () => {
+    serve()
+    const user = userEvent.setup()
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter
+          initialEntries={[{ pathname: `/tournaments/${tournament.id}`, state: { saved: true } }]}
+        >
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+
+    expect(await screen.findByText('Tournament saved')).toBeVisible()
+    expect(screen.queryByText('Tournament created')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
+
+    expect(screen.queryByText('Tournament saved')).not.toBeInTheDocument()
+  })
+})
+
+describe('TournamentOverview edit link and completed badge (TRN-31, D-19, D-130)', () => {
+  const editLink = () => screen.queryByRole('link', { name: 'Edit tournament' })
+
+  it('shows an Edit link to a director', async () => {
+    setMockUser(createSignedInUser({ roles: ['director'] }))
+    serve()
+
+    renderApp(`/tournaments/${tournament.id}`)
+
+    expect(await screen.findByRole('link', { name: 'Edit tournament' })).toHaveAttribute(
+      'href',
+      `/tournaments/${tournament.id}/edit`,
+    )
+    expect(screen.queryByText('Completed')).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ['a score keeper', createSignedInUser({ roles: ['scoreKeeper'] })],
+    ['a signed-out visitor', null],
+  ])('hides the Edit link from %s', async (_who, user) => {
+    setMockUser(user)
+    serve()
+
+    renderApp(`/tournaments/${tournament.id}`)
+
+    await screen.findByText('Games per squad')
+    expect(editLink()).not.toBeInTheDocument()
+  })
+
+  it('shows a Completed badge, and no Edit link even for a director', async () => {
+    setMockUser(createSignedInUser({ roles: ['director'] }))
+    serve(createSettings({ completed: true }))
+
+    renderApp(`/tournaments/${tournament.id}`)
+
+    expect(await screen.findByText('Completed')).toBeVisible()
+    expect(screen.getByRole('heading', { name: /Spring Open/, level: 1 })).toHaveTextContent(
+      'Completed',
+    )
+    expect(editLink()).not.toBeInTheDocument()
+  })
+
+  it('shows no Edit link until the settings are known', async () => {
+    setMockUser(createSignedInUser({ roles: ['director'] }))
+    serve()
+    server.use(
+      http.get(
+        `/v1/tournaments/${tournament.id}/settings`,
+        () => new HttpResponse(null, { status: 500 }),
+      ),
+    )
+
+    renderApp(`/tournaments/${tournament.id}`)
+
+    await screen.findByRole('heading', { name: 'Spring Open', level: 1 })
+    expect(editLink()).not.toBeInTheDocument()
   })
 })

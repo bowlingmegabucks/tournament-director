@@ -1,5 +1,5 @@
 import { useId, useState } from 'react'
-import type { ChangeEvent, ReactNode, SubmitEvent } from 'react'
+import type { ChangeEvent, MouseEvent, ReactNode, SubmitEvent } from 'react'
 import { Link } from 'react-router'
 import { ConfirmChangesDialog } from './ConfirmChangesDialog'
 import { describeChange } from './describeChange'
@@ -47,6 +47,15 @@ const inputModes: Partial<Record<TournamentField, 'decimal' | 'numeric'>> = {
   finalsRatio: 'decimal',
   cashRatio: 'decimal',
   superSweeperCashRatio: 'decimal',
+}
+
+/**
+ * A mouse press on Save or Cancel must not take focus from the field being typed in. Leaving the
+ * field puts its message under it, which moves the buttons down before the mouse is released, and
+ * the browser then drops the click. Keyboard focus is not affected.
+ */
+const keepFocus = (event: MouseEvent) => {
+  event.preventDefault()
 }
 
 /** A line of text under a field, by field name. */
@@ -111,14 +120,12 @@ function Field({
       )}
       {lock && (
         <p id={`${id}-lock`} className={styles.note}>
-          <span className={styles.noteLabel}>Locked: </span>
-          {lock}
+          <span className={styles.noteLabel}>Locked:</span> {lock}
         </p>
       )}
       {confirm && (
         <p id={`${id}-confirm`} className={styles.note}>
-          <span className={styles.noteLabel}>Asks you to confirm: </span>
-          {confirm}
+          <span className={styles.noteLabel}>Asks you to confirm:</span> {confirm}
         </p>
       )}
       {error && (
@@ -329,11 +336,11 @@ export function TournamentForm({
       {field('superSweeperCashRatio')}
       <div className={styles.actions}>
         {!frozen && (
-          <button type="submit" disabled={pending}>
+          <button type="submit" disabled={pending} onMouseDown={keepFocus}>
             {pending ? 'Saving…' : submitLabel}
           </button>
         )}
-        <Link className={styles.cancel} to={cancelTo}>
+        <Link className={styles.cancel} to={cancelTo} onMouseDown={keepFocus}>
           {cancelLabel}
         </Link>
       </div>

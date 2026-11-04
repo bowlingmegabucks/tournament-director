@@ -37,7 +37,7 @@ export function EditTournamentPage() {
             }}
           />
         ) : (
-          <Loading label="Loading tournament…" rows={3} />
+          <Loading label="Loading the form…" rows={3} />
         )}
       </>
     )
@@ -109,9 +109,9 @@ function EditForm({ tournament, settings, info }: Readonly<EditFormProps>) {
             if (error instanceof TournamentRejectedError && Object.keys(error.errors).length > 0) {
               return { errors: error.errors }
             }
-            return {
-              failure: error instanceof Error ? error.message : 'Failed to save the tournament',
-            }
+            // Stryker disable next-line StringLiteral: a failed request always throws an Error; this only satisfies the type.
+            const message = error instanceof Error ? error.message : 'Failed to save the tournament'
+            return { failure: message }
           }
           return undefined
         }}

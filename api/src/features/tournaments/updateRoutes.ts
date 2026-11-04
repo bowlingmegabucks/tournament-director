@@ -14,6 +14,7 @@ const duplicateMessage = 'A tournament with this name and start date already exi
 const confirmMessage = 'Confirm these changes to save them.'
 
 /** The first message, for clients that show only one line. */
+// Stryker disable next-line StringLiteral: a refusal always carries a message, so the fallback never shows.
 const firstOf = (errors: Record<string, string>) => Object.values(errors)[0] ?? ''
 
 /**

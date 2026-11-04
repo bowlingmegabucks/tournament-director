@@ -54,17 +54,9 @@ export async function applyEdit(
       const changed = Object.keys(plan.changes) as (keyof NewTournament)[]
       if (changed.length > 0) await persist(plan.changes)
       // The flag is not part of what the web app sees (D-131 sends it with the settings).
-      const fields: NewTournament = {
-        name: state.stored.name,
-        startDate: state.stored.startDate,
-        endDate: state.stored.endDate,
-        bowlingCenter: state.stored.bowlingCenter,
-        entryFee: state.stored.entryFee,
-        games: state.stored.games,
-        finalsRatio: state.stored.finalsRatio,
-        cashRatio: state.stored.cashRatio,
-        superSweeperCashRatio: state.stored.superSweeperCashRatio,
-      }
+      // Left out on purpose: the flag is not part of what the web app sees here.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { completed, ...fields } = state.stored
       return { updated: { id, ...fields, ...plan.changes }, changed }
     }
   }

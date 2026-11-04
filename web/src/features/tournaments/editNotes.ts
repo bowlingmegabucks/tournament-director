@@ -1,19 +1,7 @@
 import type { FieldNotes } from './TournamentForm'
-import type { EditInfo, TournamentField, TournamentSettingsView } from './types'
+import { tournamentFields, type EditInfo, type TournamentSettingsView } from './types'
 
 export const completedLock = 'This tournament is complete. Nothing can change.'
-
-const allFields: readonly TournamentField[] = [
-  'name',
-  'startDate',
-  'endDate',
-  'bowlingCenter',
-  'entryFee',
-  'games',
-  'finalsRatio',
-  'cashRatio',
-  'superSweeperCashRatio',
-]
 
 const bowlers = (count: number) =>
   count === 1 ? '1 bowler is registered.' : `${count} bowlers are registered.`
@@ -29,7 +17,7 @@ export function editNotes(
 ): { locks: FieldNotes; confirms: FieldNotes } {
   if (settings.completed) {
     return {
-      locks: Object.fromEntries(allFields.map((name) => [name, completedLock])),
+      locks: Object.fromEntries(tournamentFields.map((name) => [name, completedLock])),
       confirms: {},
     }
   }

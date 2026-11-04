@@ -41,8 +41,12 @@ export function ConfirmChangesDialog({
           {items.map((item) => (
             <li key={item.field}>
               {item.message}
-              <br />
-              <small>{item.change}</small>
+              {item.change && (
+                <>
+                  <br />
+                  <small>{item.change}</small>
+                </>
+              )}
             </li>
           ))}
         </ul>

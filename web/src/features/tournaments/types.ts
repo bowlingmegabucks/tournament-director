@@ -50,6 +50,19 @@ export interface TournamentFormValues {
 
 export type TournamentField = keyof TournamentFormValues
 
+/** Every form field, in the order the form lists them. The one list the rest of the feature uses. */
+export const tournamentFields: readonly TournamentField[] = [
+  'name',
+  'startDate',
+  'endDate',
+  'bowlingCenter',
+  'entryFee',
+  'games',
+  'finalsRatio',
+  'cashRatio',
+  'superSweeperCashRatio',
+]
+
 /** One message per field (D-121). */
 export type FieldErrors = Partial<Record<TournamentField, string>>
 
@@ -65,6 +78,7 @@ export type TournamentChanges = Partial<NewTournament> & { confirmWarnings?: boo
 
 /** One thing the director must confirm before a change saves (D-129). */
 export interface TournamentWarning {
-  field: TournamentField
+  /** A form field, or a name this app does not know yet (the API may add one). */
+  field: string
   message: string
 }

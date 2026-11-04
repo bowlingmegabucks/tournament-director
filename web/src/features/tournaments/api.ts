@@ -9,10 +9,10 @@ import type {
   NewTournament,
   Tournament,
   TournamentChanges,
-  TournamentField,
   TournamentSettingsView,
   TournamentWarning,
 } from './types'
+import { tournamentFields } from './types'
 
 function isTournament(value: unknown): value is Tournament {
   return (
@@ -76,18 +76,6 @@ export async function fetchTournamentSettings(id: string): Promise<TournamentSet
   return settings
 }
 
-const formFields: readonly TournamentField[] = [
-  'name',
-  'startDate',
-  'endDate',
-  'bowlingCenter',
-  'entryFee',
-  'games',
-  'finalsRatio',
-  'cashRatio',
-  'superSweeperCashRatio',
-]
-
 /** The API refused the tournament (400 or 409). `errors` holds one message per form field (D-121). */
 export class TournamentRejectedError extends Error {
   readonly errors: FieldErrors
@@ -100,7 +88,7 @@ export class TournamentRejectedError extends Error {
 
 function fieldErrors(value: unknown): FieldErrors {
   const errors: FieldErrors = {}
-  for (const name of formFields) {
+  for (const name of tournamentFields) {
     const message = field(value, name)
     if (typeof message === 'string') errors[name] = message
   }
@@ -174,9 +162,9 @@ function warningsOf(value: unknown): TournamentWarning[] | undefined {
   for (const item of value as unknown[]) {
     const name = field(item, 'field')
     const message = field(item, 'message')
-    const known = formFields.find((candidate) => candidate === name)
-    if (known === undefined || typeof message !== 'string') return undefined
-    warnings.push({ field: known, message })
+    // An unknown field still counts: the director must see every warning before confirming.
+    if (typeof name !== 'string' || typeof message !== 'string') return undefined
+    warnings.push({ field: name, message })
   }
   return warnings
 }

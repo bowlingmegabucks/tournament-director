@@ -62,7 +62,7 @@ How a stored row becomes those fields:
 | `EntryFee`      | `entryFee`             | `decimal(5,2)` to a number                                  |
 | `BowlingCenter` | `bowlingCenter`        |                                                             |
 
-`Games`, the three ratios, and `SuperSweperCashRatio` are read by the settings route (`TRN-21`). `Completed` is written false on create and never read.
+`Games`, the three ratios, and `SuperSweperCashRatio` are read by the settings route (`TRN-21`). `Completed` is written false on create. The settings route sends it, and the edit rules freeze a tournament that has it set (D-130, D-131).
 
 ## Rules
 

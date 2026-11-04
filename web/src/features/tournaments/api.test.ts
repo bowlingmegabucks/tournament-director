@@ -398,7 +398,6 @@ describe('updateTournament (TRN-24, D-129)', () => {
   })
 
   it.each([
-    ['an unknown field', [{ field: 'completed', message: 'x' }]],
     ['no message', [{ field: 'entryFee' }]],
     ['an empty list', []],
   ])('does not treat warnings with %s as warnings', async (_label, warnings) => {
@@ -407,6 +406,20 @@ describe('updateTournament (TRN-24, D-129)', () => {
     const error = await updateTournament(stored.id, {}).catch((caught: unknown) => caught)
 
     expect(error).toBeInstanceOf(TournamentRejectedError)
+  })
+
+  it('keeps a warning for a field this app does not know, so the director still sees it', async () => {
+    patch(() =>
+      HttpResponse.json(
+        { message: 'Confirm.', warnings: [{ field: 'completed', message: 'Heads up' }] },
+        { status: 409 },
+      ),
+    )
+
+    const error = await updateTournament(stored.id, {}).catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(TournamentWarningsError)
+    expect(error).toMatchObject({ warnings: [{ field: 'completed', message: 'Heads up' }] })
   })
 
   it('gives a rejection without a message a default one', async () => {

@@ -1,10 +1,10 @@
-import type {
-  FieldErrors,
-  NewTournament,
-  Tournament,
-  TournamentField,
-  TournamentFormValues,
-  TournamentSettings,
+import {
+  tournamentFields,
+  type FieldErrors,
+  type NewTournament,
+  type Tournament,
+  type TournamentFormValues,
+  type TournamentSettings,
 } from './types'
 
 /**
@@ -167,18 +167,6 @@ export const emptyTournamentForm: TournamentFormValues = {
   superSweeperCashRatio: '',
 }
 
-const fields: readonly TournamentField[] = [
-  'name',
-  'startDate',
-  'endDate',
-  'bowlingCenter',
-  'entryFee',
-  'games',
-  'finalsRatio',
-  'cashRatio',
-  'superSweeperCashRatio',
-]
-
 /**
  * The form's starting values for an edit (TRN-29). A stored super sweeper ratio of 0 shows empty:
  * 0 is "not set" (D-17), and the field only has to be filled in when the director changes it.
@@ -212,7 +200,7 @@ export function validateChanges(
 ): FieldErrors {
   const all = validateTournament(values)
   const errors: FieldErrors = {}
-  for (const name of fields) {
+  for (const name of tournamentFields) {
     const message = all[name]
     if (message === undefined) continue
     const changed =
@@ -230,7 +218,7 @@ export function toChanges(
 ): Partial<NewTournament> {
   const all = toNewTournament(values)
   const changes: Partial<NewTournament> = {}
-  for (const name of fields) {
+  for (const name of tournamentFields) {
     if (values[name] !== initial[name]) Object.assign(changes, { [name]: all[name] })
   }
   return changes

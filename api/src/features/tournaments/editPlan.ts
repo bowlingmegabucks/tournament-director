@@ -71,8 +71,10 @@ function changesIn(stored: StoredTournament, input: UpdateTournament): Partial<N
   const changes: Partial<NewTournament> = {}
   for (const field of fieldOrder) {
     const value = input[field]
+    // Legacy text may carry stray spaces; the request's text is trimmed, so compare trimmed to trimmed.
+    const current = typeof stored[field] === 'string' ? stored[field].trim() : stored[field]
     // The type of each field follows from its name, which TypeScript cannot see across the loop.
-    if (value !== undefined && value !== stored[field]) Object.assign(changes, { [field]: value })
+    if (value !== undefined && value !== current) Object.assign(changes, { [field]: value })
   }
   return changes
 }
@@ -143,8 +145,10 @@ export async function planEdit(state: EditState, input: UpdateTournament): Promi
     startDate: changes.startDate ?? stored.startDate,
     endDate: changes.endDate ?? stored.endDate,
   }
-  // ISO dates compare as text. The stored dates are valid, and the request's passed their own rule.
-  if (effective.endDate < effective.startDate) {
+  // ISO dates compare as text. Check only when a date changes: a stored pair that is already out of
+  // order must not block an edit to some other field (D-17).
+  const datesChanged = changes.startDate !== undefined || changes.endDate !== undefined
+  if (datesChanged && effective.endDate < effective.startDate) {
     return { kind: 'invalid', errors: { endDate: endBeforeStartMessage } }
   }
 

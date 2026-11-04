@@ -496,3 +496,34 @@ describe('planEdit: warnings and confirmation (TRN-26, D-129)', () => {
     })
   })
 })
+
+describe('planEdit: stored data that legacy wrote (D-17)', () => {
+  it('lets another field change when the stored dates are already out of order', async () => {
+    const odd = state()
+    odd.stored = { ...odd.stored, startDate: '2027-03-14', endDate: '2027-03-12' }
+
+    expect(await planEdit(odd, { entryFee: 65 })).toEqual({
+      kind: 'save',
+      changes: { entryFee: 65 },
+    })
+  })
+
+  it('still checks the order once a date is sent', async () => {
+    const odd = state()
+    odd.stored = { ...odd.stored, startDate: '2027-03-14', endDate: '2027-03-12' }
+
+    expect(await planEdit(odd, { endDate: '2027-03-13' })).toEqual({
+      kind: 'invalid',
+      errors: { endDate: endBeforeStartMessage },
+    })
+  })
+
+  it('does not count stray spaces in stored text as a change', async () => {
+    const spaced = state()
+    spaced.stored = { ...spaced.stored, name: 'Spring Classic ', bowlingCenter: ' Bowl-O-Rama' }
+
+    expect(
+      await planEdit(spaced, { name: 'Spring Classic', bowlingCenter: 'Bowl-O-Rama' }),
+    ).toEqual({ kind: 'save', changes: {} })
+  })
+})

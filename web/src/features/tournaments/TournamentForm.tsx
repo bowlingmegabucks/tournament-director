@@ -4,21 +4,17 @@ import { Link } from 'react-router'
 import { ConfirmChangesDialog } from './ConfirmChangesDialog'
 import { describeChange } from './describeChange'
 import styles from './TournamentForm.module.css'
-import type { FieldErrors, TournamentField, TournamentFormValues, TournamentWarning } from './types'
+import {
+  tournamentFields,
+  type FieldErrors,
+  type TournamentField,
+  type TournamentFormValues,
+  type TournamentWarning,
+} from './types'
 import { endBeforeStartMessage, validateChanges, validateTournament } from './validateTournament'
 
-// The order on the page, so the summary and the focus start at the top.
-const fieldOrder: readonly TournamentField[] = [
-  'name',
-  'startDate',
-  'endDate',
-  'bowlingCenter',
-  'entryFee',
-  'games',
-  'finalsRatio',
-  'cashRatio',
-  'superSweeperCashRatio',
-]
+const isTournamentField = (name: string): name is TournamentField =>
+  tournamentFields.some((candidate) => candidate === name)
 
 const labels: Record<TournamentField, string> = {
   name: 'Name',
@@ -205,7 +201,7 @@ export function TournamentForm({
   >()
 
   const idOf = (name: TournamentField) => `${base}-${name}`
-  const invalid = fieldOrder.filter((name) => errors[name] !== undefined)
+  const invalid = tournamentFields.filter((name) => errors[name] !== undefined)
   const check = (candidate: TournamentFormValues) =>
     checkChangedOnly ? validateChanges(initialValues, candidate) : validateTournament(candidate)
 
@@ -216,7 +212,7 @@ export function TournamentForm({
   function show(next: FieldErrors) {
     setErrors(next)
     setSummary(true)
-    const first = fieldOrder.find((name) => next[name] !== undefined)
+    const first = tournamentFields.find((name) => next[name] !== undefined)
     if (first) focusField(first)
   }
 
@@ -349,7 +345,9 @@ export function TournamentForm({
           items={confirming.warnings.map((warning) => ({
             field: warning.field,
             message: warning.message,
-            change: describeChange(warning.field, initialValues, values),
+            change: isTournamentField(warning.field)
+              ? describeChange(warning.field, initialValues, values)
+              : '',
           }))}
           pending={pending}
           failure={confirming.failure}

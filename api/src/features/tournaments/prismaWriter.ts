@@ -113,8 +113,16 @@ export function createPrismaTournamentWriter(
       { isolationLevel: 'Serializable' },
     )
 
-  const updateOnce = (id: string, input: UpdateTournament): Promise<UpdateTournamentOutcome> =>
-    client.$transaction(
+  const updateOnce = async (
+    id: string,
+    input: UpdateTournament,
+  ): Promise<UpdateTournamentOutcome> => {
+    // Read the counts before the transaction. Under Serializable, MariaDB turns every read into a
+    // locking read, and WinForms writes registrations and scores in these tables; a lock here would
+    // stall a score keeper. The counts need no lock: a score that lands in the next few
+    // milliseconds is the same race as one that lands just after the save.
+    const facts = await loadEditFacts(client, id)
+    return client.$transaction(
       async (tx) => {
         const row = await tx.tournament.findUnique({ where: { id } })
         if (!row) return { notFound: true as const }
@@ -133,7 +141,7 @@ export function createPrismaTournamentWriter(
               superSweeperCashRatio: row.superSweeperCashRatio.toNumber(),
               completed: row.completed,
             },
-            facts: await loadEditFacts(tx, id),
+            facts,
             hasRival: (name, startDate) => hasSameTournament(tx, { name, startDate }, id),
           },
           input,
@@ -144,6 +152,7 @@ export function createPrismaTournamentWriter(
       },
       { isolationLevel: 'Serializable' },
     )
+  }
 
   return {
     create: (input) => withDatabaseErrors(logger, () => withRetry(() => createOnce(input))),

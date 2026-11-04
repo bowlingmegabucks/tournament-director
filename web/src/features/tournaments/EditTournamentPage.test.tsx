@@ -643,5 +643,41 @@ describe('EditTournamentPage (TRN-29)', () => {
       expect(await screen.findByText('You do not have permission to view this page.')).toBeVisible()
       expect(screen.queryByLabelText(/Name/)).not.toBeInTheDocument()
     })
+
+    describe('what the form starts from', () => {
+      it('refetches the settings, so a stale cache from the overview does not fill the form', async () => {
+        signInAs()
+        serve({ settings: { games: 5 } })
+        const user = userEvent.setup()
+        renderApp(`/tournaments/${tournament.id}`)
+        await user.click(await screen.findByRole('link', { name: 'Edit tournament' }))
+        await screen.findByRole('button', { name: 'Save changes' })
+        await user.click(screen.getByRole('link', { name: 'Cancel' }))
+        serve({ settings: { games: 7 } })
+
+        await user.click(await screen.findByRole('link', { name: 'Edit tournament' }))
+
+        await screen.findByRole('button', { name: 'Save changes' })
+        expect(label('Games per squad')).toHaveValue('7')
+      })
+
+      it('lists a warning for a field it does not know, without a change line', async () => {
+        signInAs()
+        const { handler } = recordPatches(
+          () => warnings(['somethingNew', 'A new rule applies.']) as Response,
+        )
+        serve({ patch: handler })
+        const user = userEvent.setup()
+        await openForm()
+        await user.clear(label('Entry fee in dollars'))
+        await user.type(label('Entry fee in dollars'), '75')
+        await user.click(save())
+
+        const dialog = await screen.findByRole('dialog')
+
+        expect(within(dialog).getByText('A new rule applies.')).toBeVisible()
+        expect(within(dialog).getByRole('button', { name: 'Save anyway' })).toBeVisible()
+      })
+    })
   })
 })

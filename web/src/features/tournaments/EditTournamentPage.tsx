@@ -19,10 +19,18 @@ import { toChanges, toFormValues } from './validateTournament'
  */
 export function EditTournamentPage() {
   const tournament = useOutletContext<Tournament>()
-  const settings = useTournamentSettings(tournament.id)
-  const info = useEditInfo(tournament.id)
+  // The form freezes its starting values, so it must start from data fetched after this page
+  // opened, not from whatever an earlier visit left in the cache.
+  const [openedAt] = useState(() => Date.now())
+  const settings = useTournamentSettings(tournament.id, { refetchOnMount: 'always' })
+  const info = useEditInfo(tournament.id, { refetchOnMount: 'always' })
 
-  if (settings.data === undefined || info.data === undefined) {
+  if (
+    settings.data === undefined ||
+    info.data === undefined ||
+    settings.dataUpdatedAt < openedAt ||
+    info.dataUpdatedAt < openedAt
+  ) {
     const error = settings.error ?? info.error
     return (
       <>

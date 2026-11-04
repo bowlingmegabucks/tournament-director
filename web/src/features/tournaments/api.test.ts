@@ -235,7 +235,13 @@ describe('createTournament (TRN-19)', () => {
 
 describe('fetchTournamentSettings (TRN-21)', () => {
   const id = '7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01'
-  const settings = { games: 4, finalsRatio: 7.5, cashRatio: 5, superSweeperCashRatio: 0 }
+  const settings = {
+    games: 4,
+    finalsRatio: 7.5,
+    cashRatio: 5,
+    superSweeperCashRatio: 0,
+    completed: false,
+  }
 
   it('reads the settings', async () => {
     server.use(http.get(`/v1/tournaments/${id}/settings`, () => HttpResponse.json({ settings })))
@@ -261,9 +267,11 @@ describe('fetchTournamentSettings (TRN-21)', () => {
 
   it.each([
     ['no settings key', {}],
-    ['no super sweeper ratio', { settings: { games: 4, finalsRatio: 7, cashRatio: 5 } }],
-    ['no finals ratio', { settings: { games: 4, cashRatio: 5, superSweeperCashRatio: 3 } }],
-    ['no cash ratio', { settings: { games: 4, finalsRatio: 7, superSweeperCashRatio: 3 } }],
+    ['no super sweeper ratio', { settings: { ...settings, superSweeperCashRatio: undefined } }],
+    ['no completed flag', { settings: { ...settings, completed: undefined } }],
+    ['a text completed flag', { settings: { ...settings, completed: 'no' } }],
+    ['no finals ratio', { settings: { ...settings, finalsRatio: undefined } }],
+    ['no cash ratio', { settings: { ...settings, cashRatio: undefined } }],
     ['a text ratio', { settings: { ...settings, cashRatio: '5' } }],
     ['a text game count', { settings: { ...settings, games: '4' } }],
   ])('rejects %s', async (_label, body) => {

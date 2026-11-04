@@ -2,11 +2,11 @@ import { useId, useState } from 'react'
 import type { SubmitEvent } from 'react'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
-import { closeDialogOf, showOnMount } from './dialogParts'
+import { closeDialogOf, showOnMount } from '../../shared/dialogParts'
 import { RolePicker } from './RolePicker'
 import type { ListedUser } from './types'
 import { useUserOptions } from './useUsers'
-import styles from './UserDialog.module.css'
+import styles from '../../shared/Dialog.module.css'
 
 interface EditRolesDialogProps {
   user: ListedUser

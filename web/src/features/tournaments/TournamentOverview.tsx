@@ -1,4 +1,5 @@
-import { useLocation, useNavigate, useOutletContext } from 'react-router'
+import { Link, useLocation, useNavigate, useOutletContext } from 'react-router'
+import { Can } from '../auth/Can'
 import { field } from '../../shared/field'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
@@ -17,11 +18,27 @@ export function TournamentOverview() {
   const navigate = useNavigate()
   // The create form sets this state as it moves here (D-120). Clearing it keeps a reload quiet.
   const justCreated = field(location.state, 'created') === true
+  // The edit page sets this one the same way (TRN-31).
+  const justSaved = field(location.state, 'saved') === true
+  const settings = useTournamentSettings(tournament.id)
+  const completed = settings.data?.completed === true
 
   return (
     <>
       <title>{`${tournament.name} · Tournament Director`}</title>
-      <h1>{tournament.name}</h1>
+      <h1 className={styles.heading}>
+        {tournament.name}
+        {completed && <span className={styles.badge}>Completed</span>}
+      </h1>
+      {settings.data && !completed && (
+        <Can permission="tournaments.write">
+          <p>
+            <Link className={styles.edit} to="edit">
+              Edit tournament
+            </Link>
+          </p>
+        </Can>
+      )}
       <dl className={styles.fields}>
         <dt>Dates</dt>
         <dd>{formatDateRange(tournament.startDate, tournament.endDate)}</dd>
@@ -31,7 +48,7 @@ export function TournamentOverview() {
         <dd>{formatFee(tournament.entryFee)}</dd>
       </dl>
       <Format id={tournament.id} />
-      {justCreated && (
+      {(justCreated || justSaved) && (
         <Toast
           kind="success"
           autoDismissMs={TOAST_MS}
@@ -39,7 +56,7 @@ export function TournamentOverview() {
             void navigate('.', { replace: true, state: null })
           }}
         >
-          Tournament created
+          {justCreated ? 'Tournament created' : 'Tournament saved'}
         </Toast>
       )}
     </>

@@ -20,6 +20,7 @@ import { SweepersPage } from './features/sweepers/SweepersPage'
 import { HomePage } from './features/home/HomePage'
 import { UsersPage } from './features/users/UsersPage'
 import { NewUserPage } from './features/users/NewUserPage'
+import { EditTournamentPage } from './features/tournaments/EditTournamentPage'
 import { NewTournamentPage } from './features/tournaments/NewTournamentPage'
 import { TournamentLayout } from './features/tournaments/TournamentLayout'
 import { TournamentOverview } from './features/tournaments/TournamentOverview'
@@ -44,6 +45,14 @@ export default function App() {
         />
         <Route path="tournaments/:id" element={<TournamentLayout />}>
           <Route index element={<TournamentOverview />} />
+          <Route
+            path="edit"
+            element={
+              <RequirePermission permission="tournaments.write">
+                <EditTournamentPage />
+              </RequirePermission>
+            }
+          />
           <Route path="divisions" element={<DivisionsPage />} />
           <Route path="squads" element={<SquadsPage />} />
           <Route path="squads/:sessionId" element={<SquadPortal />}>

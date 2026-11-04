@@ -1,7 +1,7 @@
 import { useId } from 'react'
-import { closeDialogOf, showOnMount } from './dialogParts'
+import { closeDialogOf, showOnMount } from '../../shared/dialogParts'
 import type { ListedUser } from './types'
-import styles from './UserDialog.module.css'
+import styles from '../../shared/Dialog.module.css'
 
 interface DisableUserDialogProps {
   user: ListedUser

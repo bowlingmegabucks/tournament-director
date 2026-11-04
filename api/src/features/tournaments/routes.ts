@@ -46,5 +46,13 @@ export function createTournamentRouter(
     })
   })
 
+  // D-126: games and the three ratios, for the overview. Web only (D-09).
+  router.get('/:id/settings', async (req, res) => {
+    const { id } = idParams.parse(req.params)
+    const settings = await repository.getSettings(id)
+    if (!settings) throw new HttpError(404, 'Tournament not found')
+    res.json({ settings })
+  })
+
   return router
 }

@@ -37,3 +37,19 @@ export interface TournamentRatios {
   finalsRatio: number
   superSweeperCashRatio: number
 }
+
+/**
+ * What the director typed beyond the summary: games and the three ratios (D-126). Web only (D-09).
+ * The super sweeper ratio may hold the legacy 0 (D-17).
+ */
+export const tournamentSettingsSchema = z.object({
+  games: z.number().int().min(1),
+  finalsRatio: z.number(),
+  cashRatio: z.number(),
+  superSweeperCashRatio: z.number(),
+})
+
+export type TournamentSettings = z.infer<typeof tournamentSettingsSchema>
+
+/** What `POST /v1/tournaments` sends back: the summary plus the settings (D-121). */
+export type CreatedTournament = Tournament & TournamentSettings

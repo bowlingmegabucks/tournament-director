@@ -20,6 +20,7 @@ import { SweepersPage } from './features/sweepers/SweepersPage'
 import { HomePage } from './features/home/HomePage'
 import { UsersPage } from './features/users/UsersPage'
 import { NewUserPage } from './features/users/NewUserPage'
+import { NewTournamentPage } from './features/tournaments/NewTournamentPage'
 import { TournamentLayout } from './features/tournaments/TournamentLayout'
 import { TournamentOverview } from './features/tournaments/TournamentOverview'
 import { TournamentsPage } from './features/tournaments/TournamentsPage'
@@ -33,6 +34,14 @@ export default function App() {
       <Route element={<AppShell />}>
         <Route index element={<HomePage />} />
         <Route path="tournaments" element={<TournamentsPage />} />
+        <Route
+          path="tournaments/new"
+          element={
+            <RequirePermission permission="tournaments.write">
+              <NewTournamentPage />
+            </RequirePermission>
+          }
+        />
         <Route path="tournaments/:id" element={<TournamentLayout />}>
           <Route index element={<TournamentOverview />} />
           <Route path="divisions" element={<DivisionsPage />} />

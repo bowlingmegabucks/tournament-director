@@ -23,3 +23,8 @@ export function formatFee(fee: number): string {
   // Stryker disable next-line StringLiteral: '' falls back to the default locale, en-US here.
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(fee)
 }
+
+/** "1 in 8". A stored 0 (a legacy super sweeper ratio, D-17) is not a ratio. */
+export function formatRatio(ratio: number): string {
+  return ratio === 0 ? '0 (not set)' : `1 in ${ratio}`
+}

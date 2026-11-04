@@ -1,6 +1,6 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express'
 import { ZodError } from 'zod'
-import { HttpError } from './errors.ts'
+import { FieldErrorsError, HttpError } from './errors.ts'
 import type { Logger } from './logger.ts'
 import { requestLogger } from './requestLogging.ts'
 
@@ -14,6 +14,10 @@ export function createErrorHandler(logger: Logger): ErrorRequestHandler {
     // Too late for a JSON body. Let Express close the connection.
     if (res.headersSent) {
       next(err)
+      return
+    }
+    if (err instanceof FieldErrorsError) {
+      res.status(err.status).json({ message: err.message, errors: err.errors })
       return
     }
     if (err instanceof HttpError) {

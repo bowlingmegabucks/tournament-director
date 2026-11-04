@@ -12,6 +12,7 @@ Feature-level work (ports of legacy rules) lives in [docs/migration/](migration/
 | 0.2.0   | Read-only views on the existing database. Public routes only.                                    |
 | 0.3.0   | Sign-in and permission checks (Better Auth, D-98) and signed-in UI rules (D-102).                |
 | 0.4.0   | Lock-down of public read routes, vendor routes (API key), cutover to `api.bowlingmegabucks.com`. |
+| 0.5.0   | Commands begin: create tournament.                                                               |
 | Then    | Commands, one feature area per release.                                                          |
 | 1.0.0   | Every item below is checked.                                                                     |
 

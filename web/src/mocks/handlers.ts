@@ -13,9 +13,12 @@ import {
   createDemoSquads,
   createDemoSweepers,
   createDemoTournaments,
+  createSettings,
+  createTournament,
 } from './data'
 import { authHandlers } from './authHandlers'
 import { userHandlers } from './userHandlers'
+import type { NewTournament, TournamentSettings } from '../features/tournaments/types'
 
 // Built once so refetches return the same list, as a real API would.
 const tournaments = createDemoTournaments()
@@ -24,12 +27,39 @@ const squads = createDemoSquads()
 const sweepers = createDemoSweepers(divisions)
 const registrations = createDemoRegistrationList(divisions, squads, sweepers)
 
+const demoSettings = createSettings()
+// What each tournament made through the form was given, so the overview shows what was typed.
+const createdSettings = new Map<string, TournamentSettings>()
+
 const notFound = () => HttpResponse.json({ message: 'Tournament not found' }, { status: 404 })
 
 export const handlers = [
   ...authHandlers,
   ...userHandlers,
   http.get('/v1/tournaments', () => HttpResponse.json({ tournaments })),
+  // TRN-19: the browser has checked the rules; the mock only refuses a duplicate, as the API does.
+  http.post('/v1/tournaments', async ({ request }) => {
+    const body = (await request.json()) as NewTournament
+    const duplicate = tournaments.some(
+      (candidate) =>
+        candidate.startDate === body.startDate &&
+        candidate.name.trim().toLowerCase() === body.name.trim().toLowerCase(),
+    )
+    if (duplicate) {
+      const message = 'A tournament with this name and start date already exists'
+      return HttpResponse.json({ message, errors: { name: message } }, { status: 409 })
+    }
+    const { games, finalsRatio, cashRatio, superSweeperCashRatio, ...summary } = body
+    const created = createTournament(summary)
+    tournaments.push(created)
+    createdSettings.set(created.id, { games, finalsRatio, cashRatio, superSweeperCashRatio })
+    return HttpResponse.json({ tournament: created }, { status: 201 })
+  }),
+  http.get('/v1/tournaments/:id/settings', ({ params }) =>
+    tournaments.some((candidate) => candidate.id === params.id)
+      ? HttpResponse.json({ settings: createdSettings.get(String(params.id)) ?? demoSettings })
+      : notFound(),
+  ),
   http.get('/v1/tournaments/:id', ({ params }) => {
     const tournament = tournaments.find((candidate) => candidate.id === params.id)
     return tournament

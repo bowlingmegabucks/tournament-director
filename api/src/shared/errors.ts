@@ -7,3 +7,16 @@ export class HttpError extends Error {
     this.status = status
   }
 }
+
+/**
+ * An HttpError that also names what is wrong with each field, for a form to show under the right
+ * input (D-121). The error handler sends `{ message, errors }`.
+ */
+export class FieldErrorsError extends HttpError {
+  readonly errors: Record<string, string>
+
+  constructor(status: number, message: string, errors: Record<string, string>) {
+    super(status, message)
+    this.errors = errors
+  }
+}

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { tournamentDetailSchema, tournamentListSchema, tournamentSchema } from './types.ts'
+import {
+  tournamentDetailSchema,
+  tournamentListSchema,
+  tournamentSchema,
+  tournamentSettingsSchema,
+} from './types.ts'
 import { createTournament } from '../../test/factories.ts'
 
 describe('tournament schema', () => {
@@ -36,5 +41,21 @@ describe('tournament schema', () => {
     expect(tournamentDetailSchema.safeParse(tournament).success).toBe(false)
     expect(tournamentListSchema.safeParse({}).success).toBe(false)
     expect(tournamentDetailSchema.safeParse({}).success).toBe(false)
+  })
+})
+
+describe('tournament settings schema (TRN-21)', () => {
+  const settings = { games: 5, finalsRatio: 8, cashRatio: 5, superSweeperCashRatio: 0 }
+
+  it('accepts games and ratios, including a legacy super sweeper ratio of 0 (D-17)', () => {
+    expect(tournamentSettingsSchema.safeParse(settings).success).toBe(true)
+  })
+
+  it.each([0, 2.5, '5'])('rejects games of %j', (games) => {
+    expect(tournamentSettingsSchema.safeParse({ ...settings, games }).success).toBe(false)
+  })
+
+  it('accepts one game', () => {
+    expect(tournamentSettingsSchema.safeParse({ ...settings, games: 1 }).success).toBe(true)
   })
 })

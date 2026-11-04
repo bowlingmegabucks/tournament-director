@@ -1,11 +1,22 @@
-import { useOutletContext } from 'react-router'
-import { formatDateRange, formatFee } from './format'
+import { useLocation, useNavigate, useOutletContext } from 'react-router'
+import { field } from '../../shared/field'
+import { Loading } from '../../shared/Loading'
+import { QueryError } from '../../shared/QueryError'
+import { Toast } from '../../shared/Toast'
+import { formatDateRange, formatFee, formatRatio } from './format'
 import styles from './TournamentOverview.module.css'
 import type { Tournament } from './types'
+import { useTournamentSettings } from './useTournamentSettings'
 
-/** What the vendor detail route returns for one tournament (TRN-15, D-24). */
+const TOAST_MS = 5000
+
+/** What the vendor detail route returns for one tournament (TRN-15, D-24), and its format (TRN-23). */
 export function TournamentOverview() {
   const tournament = useOutletContext<Tournament>()
+  const location = useLocation()
+  const navigate = useNavigate()
+  // The create form sets this state as it moves here (D-120). Clearing it keeps a reload quiet.
+  const justCreated = field(location.state, 'created') === true
 
   return (
     <>
@@ -19,6 +30,49 @@ export function TournamentOverview() {
         <dt>Entry fee</dt>
         <dd>{formatFee(tournament.entryFee)}</dd>
       </dl>
+      <Format id={tournament.id} />
+      {justCreated && (
+        <Toast
+          kind="success"
+          autoDismissMs={TOAST_MS}
+          onDismiss={() => {
+            void navigate('.', { replace: true, state: null })
+          }}
+        >
+          Tournament created
+        </Toast>
+      )}
+    </>
+  )
+}
+
+function Format({ id }: Readonly<{ id: string }>) {
+  const { data, isPending, error, refetch } = useTournamentSettings(id)
+
+  return (
+    <>
+      <h2>Format</h2>
+      {isPending && <Loading label="Loading format…" />}
+      {error && (
+        <QueryError
+          error={error}
+          onRetry={() => {
+            void refetch()
+          }}
+        />
+      )}
+      {data && (
+        <dl className={styles.fields}>
+          <dt>Games per squad</dt>
+          <dd>{data.games}</dd>
+          <dt>Finals ratio</dt>
+          <dd>{formatRatio(data.finalsRatio)}</dd>
+          <dt>Cash ratio</dt>
+          <dd>{formatRatio(data.cashRatio)}</dd>
+          <dt>Super sweeper cash ratio</dt>
+          <dd>{formatRatio(data.superSweeperCashRatio)}</dd>
+        </dl>
+      )}
     </>
   )
 }

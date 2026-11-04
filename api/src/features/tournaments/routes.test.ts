@@ -173,6 +173,7 @@ describe('when storage fails', () => {
       list: () => Promise.reject(error),
       get: () => Promise.reject(error),
       getRatios: () => Promise.reject(error),
+      getSettings: () => Promise.reject(error),
     }
   }
 
@@ -199,5 +200,67 @@ describe('when storage fails', () => {
 
     expect(response.status).toBe(500)
     expect(response.body).toEqual({ message: 'Internal server error' })
+  })
+})
+
+describe('GET /v1/tournaments/:id/settings', () => {
+  const settings = { games: 4, finalsRatio: 7.5, cashRatio: 5, superSweeperCashRatio: 0 }
+
+  it('returns games and the three ratios, as stored, without sign-in (TRN-21, D-17)', async () => {
+    const tournament = createTournament()
+    const app = createTestApp({
+      tournaments: createInMemoryTournamentRepository(
+        [tournament],
+        {},
+        { [tournament.id]: settings },
+      ),
+    })
+
+    const response = await request(app).get(`/v1/tournaments/${tournament.id}/settings`)
+
+    expect(response.status).toBe(200)
+    expect(response.body).toEqual({ settings })
+  })
+
+  it('answers 404 for an unknown tournament (TRN-21)', async () => {
+    const response = await request(createTestApp()).get(
+      '/v1/tournaments/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01/settings',
+    )
+
+    expect(response.status).toBe(404)
+    expect(response.body).toEqual({ message: 'Tournament not found' })
+  })
+
+  it('answers 400 for an id that is not a UUID (TRN-21)', async () => {
+    const response = await request(createTestApp()).get('/v1/tournaments/nope/settings')
+
+    expect(response.status).toBe(400)
+  })
+
+  it('answers 500 without detail when the stored row breaks the shape (TRN-21, D-31)', async () => {
+    const repository = {
+      ...createInMemoryTournamentRepository([]),
+      getSettings: () => Promise.reject(new Error('Stored tournament breaks the settings shape')),
+    }
+
+    const response = await request(createTestApp({ tournaments: repository })).get(
+      '/v1/tournaments/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01/settings',
+    )
+
+    expect(response.status).toBe(500)
+    expect(response.body).toEqual({ message: 'Internal server error' })
+  })
+
+  it('answers 503 while the database is down (TRN-21, D-32)', async () => {
+    const repository = {
+      ...createInMemoryTournamentRepository([]),
+      getSettings: () => Promise.reject(new HttpError(503, 'Database unavailable')),
+    }
+
+    const response = await request(createTestApp({ tournaments: repository })).get(
+      '/v1/tournaments/7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01/settings',
+    )
+
+    expect(response.status).toBe(503)
   })
 })

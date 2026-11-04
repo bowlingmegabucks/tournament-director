@@ -68,3 +68,33 @@ describe('in-memory tournament repository', () => {
     expect(await repository.getRatios('7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01')).toBeUndefined()
   })
 })
+
+describe('in-memory tournament repository settings (TRN-21)', () => {
+  it('gets the settings it was seeded with', async () => {
+    const tournament = createTournament()
+    const settings = { games: 4, finalsRatio: 7, cashRatio: 4.5, superSweeperCashRatio: 0 }
+    const repository = createInMemoryTournamentRepository(
+      [tournament],
+      {},
+      { [tournament.id]: settings },
+    )
+
+    expect(await repository.getSettings(tournament.id)).toEqual(settings)
+  })
+
+  it('falls back to defaults for a known tournament with none seeded', async () => {
+    const tournament = createTournament()
+
+    expect(
+      await createInMemoryTournamentRepository([tournament]).getSettings(tournament.id),
+    ).toEqual({ games: 5, finalsRatio: 8, cashRatio: 5, superSweeperCashRatio: 8 })
+  })
+
+  it('gets nothing for an unknown id, even when others are stored', async () => {
+    expect(
+      await createInMemoryTournamentRepository([createTournament()]).getSettings(
+        '7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01',
+      ),
+    ).toBeUndefined()
+  })
+})

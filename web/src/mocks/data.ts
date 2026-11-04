@@ -23,7 +23,7 @@ import type {
 import type { ScoreBowler, ScorePage, ScorePair } from '../features/scores/types'
 import type { Squad } from '../features/squads/types'
 import type { Sweeper } from '../features/sweepers/types'
-import type { Tournament } from '../features/tournaments/types'
+import type { Tournament, TournamentSettings } from '../features/tournaments/types'
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
 
@@ -37,6 +37,10 @@ export function createTournament(overrides: Partial<Tournament> = {}): Tournamen
     bowlingCenter: `${faker.company.name()} Lanes`,
     ...overrides,
   }
+}
+
+export function createSettings(overrides: Partial<TournamentSettings> = {}): TournamentSettings {
+  return { games: 5, finalsRatio: 8, cashRatio: 5, superSweeperCashRatio: 4, ...overrides }
 }
 
 export function createDivision(overrides: Partial<Division> = {}): Division {

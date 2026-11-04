@@ -1,8 +1,11 @@
+import { Link } from 'react-router'
+import { Can } from '../auth/Can'
 import { Loading } from '../../shared/Loading'
 import { Page } from '../../shared/Page'
 import { QueryError } from '../../shared/QueryError'
 import { todayLocal } from '../../shared/today'
 import { groupTournaments } from './groupTournaments'
+import styles from './TournamentsPage.module.css'
 import { TournamentList } from './TournamentList'
 import { useTournaments } from './useTournaments'
 
@@ -11,7 +14,14 @@ export function TournamentsPage() {
   return (
     <Page>
       <title>Tournaments · Tournament Director</title>
-      <h1>Tournaments</h1>
+      <div className={styles.titlebar}>
+        <h1>Tournaments</h1>
+        <Can permission="tournaments.write">
+          <Link className={styles.newButton} to="/tournaments/new">
+            New tournament
+          </Link>
+        </Can>
+      </div>
       <TournamentGroups />
     </Page>
   )

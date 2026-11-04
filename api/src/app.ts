@@ -23,7 +23,9 @@ import { createSquadRouter } from './features/squads/routes.ts'
 import type { SquadRepository } from './features/squads/repository.ts'
 import { createSweeperRouter } from './features/sweepers/routes.ts'
 import type { SweeperRepository } from './features/sweepers/repository.ts'
+import { createTournamentCreateRouter } from './features/tournaments/createRoutes.ts'
 import { createTournamentRouter } from './features/tournaments/routes.ts'
+import type { TournamentWriter } from './features/tournaments/writer.ts'
 import type { TournamentRepository } from './features/tournaments/repository.ts'
 import { createErrorHandler, notFound } from './shared/middleware.ts'
 import { createHealthRouter } from './shared/healthRoutes.ts'
@@ -46,6 +48,8 @@ export interface AppDependencies {
   /** Mails the set-password link to a new user. `undefined` when the API has no mail settings. */
   invites?: InviteMailer
   tournaments: TournamentRepository
+  /** Creates tournaments for the web app (TRN-19). */
+  tournamentWriter: TournamentWriter
   divisions: DivisionRepository
   registrations: RegistrationRepository
   /** Creates registrations for the registration site and the desk (API-05, D-112). */
@@ -67,6 +71,7 @@ export function createApp({
   auth,
   invites,
   tournaments,
+  tournamentWriter,
   divisions,
   registrations,
   registrationWriter,
@@ -254,6 +259,12 @@ export function createApp({
         access: { permission: 'registrations.read', apiKey: true }, // API-06, D-105
         methods: ['GET'],
         router: vendorRegistrations,
+      },
+      {
+        path: '/v1/tournaments',
+        access: { permission: 'tournaments.write' }, // TRN-19, D-121: the API key cannot reach it
+        methods: ['POST'],
+        router: createTournamentCreateRouter(tournamentWriter, logger),
       },
       {
         path: '/v1/tournaments',

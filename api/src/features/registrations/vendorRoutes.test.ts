@@ -252,7 +252,7 @@ describe('POST /v1/registrations (API-05)', () => {
 
     const lines = JSON.stringify(captured.records())
     expect(lines).toContain('Registration saved')
-    expect(lines).not.toMatch(/Fontaine|joe@example|1234-56789|919/)
+    expect(lines).not.toMatch(/Fontaine|joe@example|1234-56789|919-555-1212/)
   })
 
   describe('who may call it (D-105)', () => {

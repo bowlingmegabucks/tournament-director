@@ -61,39 +61,45 @@ function ratio(label: string, minimum: { value: number; message: string; inclusi
 }
 
 /**
+ * The rule for each field (TRN-01 to TRN-07, TRN-09, D-125). Create asks for all of them; edit
+ * accepts any of them (TRN-24).
+ */
+export const tournamentFields = {
+  name: text('Name'),
+  startDate: date('Start date'),
+  endDate: date('End date'),
+  entryFee: amount('Entry fee')
+    .refine((value) => value > 0, { error: 'Entry fee must be greater than $0' })
+    .refine((value) => value <= 999.99, { error: 'Entry fee cannot be more than $999.99' })
+    .refine((value) => hasAtMostDecimals(value, 2), { error: 'Use at most two decimal places' }),
+  games: amount('Games')
+    .refine((value) => value >= 1, { error: 'Must have at least one game' })
+    .refine((value) => value <= 99, { error: 'Games cannot be more than 99' })
+    .refine((value) => Number.isInteger(value), { error: 'Enter a whole number' }),
+  finalsRatio: ratio('Finals ratio', {
+    value: 1,
+    inclusive: false,
+    message: 'Finals ratio must be greater than 1',
+  }),
+  cashRatio: ratio('Cash ratio', {
+    value: 1,
+    inclusive: false,
+    message: 'Cash ratio must be greater than 1',
+  }),
+  superSweeperCashRatio: ratio('Super sweeper cash ratio', {
+    value: 1,
+    inclusive: true,
+    message: 'Super sweeper cash ratio must be at least 1',
+  }),
+  bowlingCenter: text('Bowling center'),
+}
+
+/**
  * The create body (TRN-01 to TRN-07, TRN-09, D-125). Strict: a key we do not know, such as
  * `completed`, is refused (D-119). Dates may be in the past (D-124).
  */
 export const createTournamentSchema = z
-  .strictObject({
-    name: text('Name'),
-    startDate: date('Start date'),
-    endDate: date('End date'),
-    entryFee: amount('Entry fee')
-      .refine((value) => value > 0, { error: 'Entry fee must be greater than $0' })
-      .refine((value) => value <= 999.99, { error: 'Entry fee cannot be more than $999.99' })
-      .refine((value) => hasAtMostDecimals(value, 2), { error: 'Use at most two decimal places' }),
-    games: amount('Games')
-      .refine((value) => value >= 1, { error: 'Must have at least one game' })
-      .refine((value) => value <= 99, { error: 'Games cannot be more than 99' })
-      .refine((value) => Number.isInteger(value), { error: 'Enter a whole number' }),
-    finalsRatio: ratio('Finals ratio', {
-      value: 1,
-      inclusive: false,
-      message: 'Finals ratio must be greater than 1',
-    }),
-    cashRatio: ratio('Cash ratio', {
-      value: 1,
-      inclusive: false,
-      message: 'Cash ratio must be greater than 1',
-    }),
-    superSweeperCashRatio: ratio('Super sweeper cash ratio', {
-      value: 1,
-      inclusive: true,
-      message: 'Super sweeper cash ratio must be at least 1',
-    }),
-    bowlingCenter: text('Bowling center'),
-  })
+  .strictObject(tournamentFields)
   // ISO dates compare as text. The check also runs when a date failed its own rule, so skip those.
   .refine(
     (body) => !isDate(body.startDate) || !isDate(body.endDate) || body.endDate >= body.startDate,
@@ -107,16 +113,14 @@ export type CreateTournamentResult =
   { success: true; data: NewTournament } | { success: false; message: string; errors: FieldErrors }
 
 /**
- * Run the create rules (D-121). A failure carries one message per field and a summary line for
- * clients that show only one. The first problem a field has wins.
+ * Turn a failed parse into one message per field and a summary line for clients that show only one
+ * (D-121). The first problem a field has wins. Create and edit share it, so the two never word a
+ * problem differently.
  */
-export function parseCreateTournament(body: unknown): CreateTournamentResult {
-  const parsed = createTournamentSchema.safeParse(body)
-  if (parsed.success) return { success: true, data: parsed.data }
-
+export function describeFailure(error: z.ZodError): { message: string; errors: FieldErrors } {
   const errors: FieldErrors = {}
   let general: string | undefined
-  for (const issue of parsed.error.issues) {
+  for (const issue of error.issues) {
     if (issue.code === 'unrecognized_keys') {
       for (const key of issue.keys) errors[key] ??= 'This field is not accepted'
       continue
@@ -127,9 +131,12 @@ export function parseCreateTournament(body: unknown): CreateTournamentResult {
   }
   const first = Object.values(errors)[0]
   const summary = 'Check the highlighted fields.'
-  return {
-    success: false,
-    message: general ?? (first ? `${summary} ${first}` : summary),
-    errors,
-  }
+  return { message: general ?? (first ? `${summary} ${first}` : summary), errors }
+}
+
+/** Run the create rules (D-121). */
+export function parseCreateTournament(body: unknown): CreateTournamentResult {
+  const parsed = createTournamentSchema.safeParse(body)
+  if (parsed.success) return { success: true, data: parsed.data }
+  return { success: false, ...describeFailure(parsed.error) }
 }

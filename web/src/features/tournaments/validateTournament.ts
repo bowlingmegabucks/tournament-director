@@ -43,7 +43,7 @@ type Parsed = { error: string } | { value: number }
 function parseNumber(label: string, text: string): Parsed {
   const trimmed = text.trim()
   if (trimmed === '') return { error: `${label} is required` }
-  if (!/^-?(\d+\.?\d*|\.\d+)$/.test(trimmed)) return { error: 'Enter a number' }
+  if (!/^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(trimmed)) return { error: 'Enter a number' }
   return { value: Number(trimmed) }
 }
 

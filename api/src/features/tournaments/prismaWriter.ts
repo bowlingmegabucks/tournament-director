@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import type { Logger } from '../../shared/logger.ts'
 import type { NewTournament } from './createRequest.ts'
-import { sameTournament, type TournamentWriter } from './writer.ts'
+import { sameTournament, type CreateTournamentOutcome, type TournamentWriter } from './writer.ts'
 
 // Legacy stores a date as midnight in a `datetime(6)`; the read side cuts the same way (TRN-11).
 const midnight = (isoDate: string) => new Date(`${isoDate}T00:00:00.000Z`)
@@ -67,16 +67,20 @@ export function createPrismaTournamentWriter(
       { isolationLevel: 'Serializable' },
     )
 
+  // One try after another, never together: a retry has to see what the first try's rival wrote.
+  const attemptWithRetry = async (
+    input: NewTournament,
+    tries: number,
+  ): Promise<CreateTournamentOutcome> => {
+    try {
+      return await attempt(input)
+    } catch (error) {
+      if (!isWriteConflict(error) || tries >= MAX_ATTEMPTS) throw error
+      return attemptWithRetry(input, tries + 1)
+    }
+  }
+
   return {
-    create: (input) =>
-      withDatabaseErrors(logger, async () => {
-        for (let tries = 1; ; tries++) {
-          try {
-            return await attempt(input)
-          } catch (error) {
-            if (!isWriteConflict(error) || tries >= MAX_ATTEMPTS) throw error
-          }
-        }
-      }),
+    create: (input) => withDatabaseErrors(logger, () => attemptWithRetry(input, 1)),
   }
 }

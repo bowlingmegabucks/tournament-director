@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confirm dialog mockup</title>
+<link rel="stylesheet" href="../../../web/src/styles/tokens.css">
+<link rel="stylesheet" href="../../../web/src/styles/base.css">
+<link rel="stylesheet" href="mockup.css">
+</head>
+<body>
+<main>
+<p><a href="index.html">All mockups</a></p>
+<h1>Edit tournament: the confirm dialog</h1>
+<p class="note">Opens when the API answers 409 with <code>warnings</code> and saved nothing (D-129). It lists each warning with the change that caused it. <strong>Go back</strong> takes focus first (the safe choice) and closes the dialog with Escape; <strong>Save anyway</strong> sends the same body with <code>confirmWarnings: true</code>. In the app this is a <code>&lt;dialog&gt;</code> opened with <code>showModal()</code>, like the recap sheets modal.</p>
+<section class="state"><h2>1. One warning (entry fee)</h2><p class="note"></p><div class="frame"><div class="backdrop"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="t819" aria-describedby="d819"><h3 id="t819">Save these changes?</h3><ul id="d819"><li>38 bowlers are registered. They keep what they paid. New entries pay the new fee.<span class="change">Entry fee: $60.00 → $75.00</span></li></ul><div class="actions"><button type="button" class="secondary">Go back</button><button type="button">Save anyway</button></div></div></div></div></section>
+<section class="state"><h2>2. Start date, registrations exist</h2><p class="note"></p><div class="frame"><div class="backdrop"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="t819" aria-describedby="d819"><h3 id="t819">Save these changes?</h3><ul id="d819"><li>38 bowlers are registered. Ages are measured on the start date, so the change is not retroactive. Some bowlers may no longer fit their division. Review them by hand.<span class="change">Start date: 2026-11-14 → 2026-11-13</span></li></ul><div class="actions"><button type="button" class="secondary">Go back</button><button type="button">Save anyway</button></div></div></div></div></section>
+<section class="state"><h2>3. Several warnings, scores exist</h2><p class="note">One item per changed field. Fields that did not change add no warning.</p><div class="frame"><div class="backdrop"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="t819" aria-describedby="d819"><h3 id="t819">Save these changes?</h3><ul id="d819"><li>Scores are saved. Posted results change at once.<span class="change">Finals ratio: 8 → 7</span></li><li>Scores are saved. Posted results change at once.<span class="change">Cash ratio: 5 → 4</span></li><li>Sweeper scores are saved. Posted results change at once.<span class="change">Super sweeper cash ratio: 8 → 6</span></li></ul><div class="actions"><button type="button" class="secondary">Go back</button><button type="button">Save anyway</button></div></div></div></div></section>
+<section class="state"><h2>4. Saving after confirm</h2><p class="note">Both buttons are disabled.</p><div class="frame"><div class="backdrop"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="t819" aria-describedby="d819"><h3 id="t819">Save these changes?</h3><ul id="d819"><li>38 bowlers are registered. They keep what they paid. New entries pay the new fee.<span class="change">Entry fee: $60.00 → $75.00</span></li></ul><div class="actions"><button type="button" class="secondary" disabled>Go back</button><button type="button" disabled>Saving…</button></div></div></div></div></section>
+<section class="state"><h2>5. The second request is refused</h2><p class="note">Something changed between the two requests, so the confirmed save now hits a refusal. The dialog closes and the form shows the refusal (edit-form, state 9). Shown here is the case where the network fails instead: the dialog stays and says why.</p><div class="frame"><div class="backdrop"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="t819" aria-describedby="d819"><h3 id="t819">Save these changes?</h3><ul id="d819"><li>38 bowlers are registered. They keep what they paid. New entries pay the new fee.<span class="change">Entry fee: $60.00 → $75.00</span></li></ul><p role="alert" class="fieldError">Could not save. The database is unavailable. Try again in a moment.</p><div class="actions"><button type="button" class="secondary">Go back</button><button type="button">Save anyway</button></div></div></div></div></section>
+</main>
+</body>
+</html>

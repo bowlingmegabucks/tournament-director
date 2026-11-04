@@ -20,3 +20,16 @@ export class FieldErrorsError extends HttpError {
     this.errors = errors
   }
 }
+
+/**
+ * An HttpError that carries warnings: the change is allowed, but nothing was saved until the caller
+ * confirms (D-129). The error handler sends `{ message, warnings }`.
+ */
+export class WarningsError extends HttpError {
+  readonly warnings: { field: string; message: string }[]
+
+  constructor(status: number, message: string, warnings: { field: string; message: string }[]) {
+    super(status, message)
+    this.warnings = warnings
+  }
+}

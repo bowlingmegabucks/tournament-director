@@ -2,7 +2,7 @@ import express from 'express'
 import request from 'supertest'
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
-import { FieldErrorsError, HttpError } from './errors.ts'
+import { FieldErrorsError, HttpError, WarningsError } from './errors.ts'
 import { createCapturedLogger } from '../test/logger.ts'
 import { createErrorHandler } from './middleware.ts'
 import type { Logger } from './logger.ts'
@@ -33,6 +33,20 @@ describe('errorHandler', () => {
 
     expect(response.status).toBe(409)
     expect(response.body).toEqual({ message: 'Already there', errors: { name: 'Taken' } })
+  })
+
+  it('sends the message and the warnings of a WarningsError', async () => {
+    const error = new WarningsError(409, 'Confirm to save', [
+      { field: 'entryFee', message: 'Heads up' },
+    ])
+
+    const response = await request(appThatThrows(error)).get('/boom')
+
+    expect(response.status).toBe(409)
+    expect(response.body).toEqual({
+      message: 'Confirm to save',
+      warnings: [{ field: 'entryFee', message: 'Heads up' }],
+    })
   })
 
   it('hides the message of any other error', async () => {

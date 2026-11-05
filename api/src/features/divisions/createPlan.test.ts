@@ -91,6 +91,11 @@ describe('planCreate', () => {
     expect(planCreate(open, clash, false)).toMatchObject({ kind: 'refused' })
   })
 
+  it('refuses a name that matches a stored one with spaces around it (D-140)', () => {
+    const facts = { completed: false, divisions: [{ number: 1, name: '  Open ' }] }
+    expect(planCreate(facts, { ...input, name: 'Open' }, false)).toMatchObject({ kind: 'refused' })
+  })
+
   it('accepts a name that only contains a stored one (D-140)', () => {
     expect(planCreate(open, { ...input, name: 'Open Seniors' }, false)).toMatchObject({
       kind: 'create',

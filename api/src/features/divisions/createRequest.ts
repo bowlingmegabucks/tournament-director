@@ -31,7 +31,8 @@ function limit(range: { min: number; max: number; message: string }) {
   )
 }
 
-const missing = (value: unknown) => value === undefined || value === null || value === ''
+// A string, even an empty one, is text: the "required" message for it comes from `.min(1)`.
+const missing = (value: unknown) => value === undefined || value === null
 
 /** The rule for each field (D-141). Refused, never rounded (D-125). */
 const divisionFields = {

@@ -77,6 +77,7 @@ describe('parseCreateDivision', () => {
     ['a missing name', {}, 'Name is required'],
     ['an empty name', { name: '' }, 'Name is required'],
     ['a name of spaces', { name: '   ' }, 'Name is required'],
+    ['a name that is null', { name: null }, 'Name is required'],
     ['a name that is not text', { name: 5 }, 'Enter text'],
     [
       'a name over 100 characters',

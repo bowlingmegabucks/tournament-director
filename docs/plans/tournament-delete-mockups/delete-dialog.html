@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Delete dialog mockup</title>
+<link rel="stylesheet" href="../../../web/src/styles/tokens.css">
+<link rel="stylesheet" href="../../../web/src/styles/base.css">
+<link rel="stylesheet" href="mockup.css">
+</head>
+<body>
+<main>
+<p><a href="index.html">All mockups</a></p>
+<h1>Delete tournament: the dialog</h1>
+<p class="note">Opens from the Delete button on the overview (D-136). A native <code>&lt;dialog&gt;</code> opened with <code>showModal()</code>, like the edit confirm dialog. <strong>Cancel</strong> has focus first and Escape closes it. Delete stays disabled until the typed name matches (trimmed, any case). The request is <code>DELETE /v1/tournaments/{id}</code>.</p>
+
+<section class="state"><h2>1. Opened: name not typed</h2><p class="note">Delete is disabled. The name is shown under the box to copy by eye.</p>
+<div class="frame"><div class="backdrop"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="t1" aria-describedby="d1"><h3 id="t1">Delete this tournament?</h3><p id="d1">This deletes <strong>Northeast MegaBuck$ Open 2026</strong> for good. It cannot be undone.</p><div class="confirm-field"><label class="label" for="n1">Type the tournament name to confirm</label><input id="n1" class="input" value="" autocomplete="off"><p class="hint">Northeast MegaBuck$ Open 2026</p></div><div class="actions"><button type="button" class="secondary">Cancel</button><button type="button" class="destructive" disabled>Delete tournament</button></div></div></div></div>
+</section>
+
+<section class="state"><h2>2. Name typed</h2><p class="note">Delete is enabled. Typing is checked as you go; nothing is sent until you press Delete.</p>
+<div class="frame"><div class="backdrop"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="t2" aria-describedby="d2"><h3 id="t2">Delete this tournament?</h3><p id="d2">This deletes <strong>Northeast MegaBuck$ Open 2026</strong> for good. It cannot be undone.</p><div class="confirm-field"><label class="label" for="n2">Type the tournament name to confirm</label><input id="n2" class="input" value="northeast megabuck$ open 2026" autocomplete="off"><p class="hint">Northeast MegaBuck$ Open 2026</p></div><div class="actions"><button type="button" class="secondary">Cancel</button><button type="button" class="destructive">Delete tournament</button></div></div></div></div>
+</section>
+
+<section class="state"><h2>3. The API asks first: registrations exist (D-134)</h2><p class="note">The API answered 409 with a warning and deleted nothing. The text is replaced with what will go; the typed name stays. The button now says "Delete anyway" and sends <code>?confirmWarnings=true</code>.</p>
+<div class="frame"><div class="backdrop"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="t3" aria-describedby="d3"><h3 id="t3">Delete this tournament?</h3><p id="d3">12 registrations, 4 divisions, 3 squads, and 1 sweeper will be deleted, with their lane assignments and payment records. The bowlers stay.</p><p>This cannot be undone.</p><div class="actions"><button type="button" class="secondary">Cancel</button><button type="button" class="destructive">Delete anyway</button></div></div></div></div>
+</section>
+
+<section class="state"><h2>4. Only divisions and squads (no registrations)</h2><p class="note">No API warning, so state 2 is all there is. Nothing else to confirm.</p>
+</section>
+
+<section class="state"><h2>5. Deleting</h2><p class="note">Both buttons are disabled while the request runs.</p>
+<div class="frame"><div class="backdrop"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="t5" aria-describedby="d5"><h3 id="t5">Delete this tournament?</h3><p id="d5">This deletes <strong>Northeast MegaBuck$ Open 2026</strong> for good. It cannot be undone.</p><div class="confirm-field"><label class="label" for="n5">Type the tournament name to confirm</label><input id="n5" class="input" value="Northeast MegaBuck$ Open 2026" autocomplete="off"><p class="hint">Northeast MegaBuck$ Open 2026</p></div><div class="actions"><button type="button" class="secondary" disabled>Cancel</button><button type="button" class="destructive" disabled>Deleting…</button></div></div></div></div>
+</section>
+
+<section class="state"><h2>6. Refused (D-133)</h2><p class="note">The API answered 409 with <code>errors</code>. The dialog closes and an error toast stays until dismissed, with the API's reason. The tournament is still there. Three possible messages (several can show together):</p>
+<div class="frame"><p class="toast-error" role="alert">3 bowlers paid online. Remove their registrations first. <button type="button" class="secondary">Dismiss</button></p></div>
+<div class="frame"><p class="toast-error" role="alert">Scores are saved, so this tournament cannot be deleted. <button type="button" class="secondary">Dismiss</button></p></div>
+<div class="frame"><p class="toast-error" role="alert">This tournament is complete and cannot be deleted. <button type="button" class="secondary">Dismiss</button></p></div>
+<p class="note">With more than one reason, the toast lists each on its own line.</p>
+<div class="frame"><div class="toast-error" role="alert"><ul class="warn-list"><li>Scores are saved, so this tournament cannot be deleted.</li><li>3 bowlers paid online. Remove their registrations first.</li></ul><button type="button" class="secondary">Dismiss</button></div></div>
+</section>
+
+<section class="state"><h2>7. Any other failure</h2><p class="note">The dialog stays open and says why, so you can try again.</p>
+<div class="frame"><div class="backdrop"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="t7" aria-describedby="d7"><h3 id="t7">Delete this tournament?</h3><p id="d7">This deletes <strong>Northeast MegaBuck$ Open 2026</strong> for good. It cannot be undone.</p><div class="confirm-field"><label class="label" for="n7">Type the tournament name to confirm</label><input id="n7" class="input" value="Northeast MegaBuck$ Open 2026" autocomplete="off"><p class="hint">Northeast MegaBuck$ Open 2026</p></div><p role="alert" class="fieldError">Could not delete. The database is unavailable. Try again in a moment.</p><div class="actions"><button type="button" class="secondary">Cancel</button><button type="button" class="destructive">Delete tournament</button></div></div></div></div>
+</section>
+
+<section class="state"><h2>8. Already gone</h2><p class="note">Someone else deleted it first (404). The app goes to the Tournaments list with an info toast, "That tournament was already deleted."</p>
+</section>
+</main>
+</body>
+</html>

@@ -11,6 +11,10 @@ export interface LegacyRows {
   session(tournamentId: string, kind: 'squad' | 'sweeper', at: string): Promise<string>
   registration(divisionId: string): Promise<{ registrationId: string; bowlerId: string }>
   score(bowlerId: string, sessionId: string, game?: number): Promise<void>
+  /** A payment on a registration. `code` is `<ProcessingSystem>_<code>`, such as `Manual_abc` (PAY-03). */
+  payment(registrationId: string, code: string, amount: number): Promise<void>
+  /** Put a registration into a squad or sweeper (REG-24). */
+  squadEntry(registrationId: string, sessionId: string): Promise<void>
 }
 
 export function legacyRows(client: PrismaClient): LegacyRows {
@@ -71,6 +75,24 @@ export function legacyRows(client: PrismaClient): LegacyRows {
         divisionId,
       )
       return { registrationId, bowlerId }
+    },
+    async payment(registrationId, code, amount) {
+      await run(
+        `INSERT INTO Payments (Id, CreatedAtUtc, RegistrationId, ConfirmationCode, Amount)
+         VALUES (?, UTC_TIMESTAMP(6), ?, ?, ?)`,
+        crypto.randomUUID(),
+        registrationId,
+        code,
+        amount,
+      )
+    },
+    async squadEntry(registrationId, sessionId) {
+      await run(
+        'INSERT INTO SquadRegistration (RegistrationId, SquadId, LaneAssignment) VALUES (?, ?, ?)',
+        registrationId,
+        sessionId,
+        '',
+      )
     },
     async score(bowlerId, sessionId, game = 1) {
       await run(

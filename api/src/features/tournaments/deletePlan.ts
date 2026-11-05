@@ -55,13 +55,14 @@ export type DeletePlan =
 export const completeMessage = 'This tournament is complete and cannot be deleted.'
 export const scoresMessage = 'Scores are saved, so this tournament cannot be deleted.'
 
-export const paidMessage = (count: number) =>
-  `${count === 1 ? '1 bowler paid' : `${count} bowlers paid`} online. Remove ${
-    count === 1 ? 'their registration' : 'their registrations'
-  } first.`
-
 const noun = (count: number, singular: string, plural: string) =>
   `${count} ${count === 1 ? singular : plural}`
+
+export function paidMessage(count: number): string {
+  const paid = noun(count, 'bowler paid', 'bowlers paid')
+  const registrations = count === 1 ? 'their registration' : 'their registrations'
+  return `${paid} online. Remove ${registrations} first.`
+}
 
 /** "a", "a and b", "a, b, and c". */
 function joinList(items: string[]): string {

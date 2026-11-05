@@ -10,7 +10,7 @@ const SWEEPER = 1
 export const manualPrefix = 'Manual_'
 
 /** `startsWith` becomes `LIKE 'x%'` and Prisma does not escape `_` or `%`: escape them here. */
-const likeEscaped = (text: string) => text.replace(/[\\%_]/g, '\\$&')
+const likeEscaped = (text: string) => text.replace(/[\\%_]/g, String.raw`\$&`)
 
 /**
  * Count what a delete depends on (D-133, D-134). Scores and registrations come from the same reads

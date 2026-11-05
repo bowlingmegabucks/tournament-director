@@ -41,6 +41,8 @@ export function DeleteTournamentDialog({
     if (node) cancelRef.current?.focus()
   })
   const matches = nameMatches(typed, tournamentName)
+  const idleLabel = warning === undefined ? 'Delete tournament' : 'Delete anyway'
+  const submitLabel = pending ? 'Deleting…' : idleLabel
 
   return (
     <dialog ref={open} className={styles.dialog} aria-labelledby={titleId} onClose={onClose}>
@@ -100,7 +102,7 @@ export function DeleteTournamentDialog({
             Cancel
           </button>
           <button type="submit" className={own.destructive} disabled={!matches || pending}>
-            {pending ? 'Deleting…' : warning === undefined ? 'Delete tournament' : 'Delete anyway'}
+            {submitLabel}
           </button>
         </div>
       </form>

@@ -9,6 +9,9 @@ const SWEEPER = 1
 /** The desk's $0 placeholder payment code starts with this (PAY-01a). */
 export const manualPrefix = 'Manual_'
 
+/** `startsWith` becomes `LIKE 'x%'` and Prisma does not escape `_` or `%`: escape them here. */
+const likeEscaped = (text: string) => text.replace(/[\\%_]/g, '\\$&')
+
 /**
  * Count what a delete depends on (D-133, D-134). Scores and registrations come from the same reads
  * the edit page uses. A real payment is one the registration site took: a code that does not start
@@ -26,7 +29,10 @@ export async function loadDeleteFacts(
     where: {
       ...inTournament,
       payments: {
-        some: { amount: { gt: 0 }, NOT: { confirmationCode: { startsWith: manualPrefix } } },
+        some: {
+          amount: { gt: 0 },
+          NOT: { confirmationCode: { startsWith: likeEscaped(manualPrefix) } },
+        },
       },
     },
   })

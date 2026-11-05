@@ -97,6 +97,17 @@ describe('Prisma tournament writer: delete (TRN-32 to TRN-35, D-132 to D-135)', 
     expect(await count('Tournaments')).toBe(1)
   })
 
+  it('counts a code that only starts like Manual_ as a real payment (TRN-33, D-106)', async () => {
+    const id = await rows.tournament()
+    const division = await rows.division(id)
+    const { registrationId } = await rows.registration(division)
+    // `_` is a wildcard in SQL LIKE. 'ManualX' must not pass for the desk's 'Manual_' prefix.
+    await rows.payment(registrationId, 'ManualX0004', 25)
+
+    expect(await remove(id)).toMatchObject({ refused: [expect.stringContaining('paid online')] })
+    expect(await count('Tournaments')).toBe(1)
+  })
+
   it('warns when registrations exist and deletes nothing until confirmed (TRN-34)', async () => {
     const id = await rows.tournament()
     const division = await rows.division(id)

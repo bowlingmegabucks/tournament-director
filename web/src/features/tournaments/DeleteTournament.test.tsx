@@ -239,6 +239,44 @@ describe('the delete dialog (TRN-36, D-136)', () => {
     expect(await screen.findByText('Tournament deleted')).toBeVisible()
   })
 
+  it('ignores a warning that arrives after the dialog closed, so the next open starts clean', async () => {
+    const user = admin()
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    server.use(
+      http.delete(`/v1/tournaments/${id}`, async () => {
+        await gate
+        return HttpResponse.json(
+          {
+            message: 'Confirm.',
+            warnings: [{ field: 'tournament', message: '3 registrations go.' }],
+          },
+          { status: 409 },
+        )
+      }),
+    )
+    renderApp(`/tournaments/${id}`)
+    const dialog = await openDialog(user)
+    await typeNameAndDelete(user, dialog)
+    await within(dialog).findByRole('button', { name: 'Deleting…' })
+
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+    fireEvent(dialog, new Event('close'))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+    release()
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Delete tournament' })).toBeEnabled()
+    })
+
+    const next = await openDialog(user)
+    expect(within(next).getByLabelText('Type the tournament name to confirm')).toBeVisible()
+    expect(within(next).queryByText('3 registrations go.')).not.toBeInTheDocument()
+  })
+
   describe('the registrations warning (TRN-34, D-134)', () => {
     const warn = () =>
       HttpResponse.json(

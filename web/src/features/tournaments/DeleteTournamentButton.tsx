@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Toast } from '../../shared/Toast'
 import { TournamentNotFoundError, tournamentKeys } from '../../shared/tournamentQuery'
@@ -25,7 +25,12 @@ export function DeleteTournamentButton({ tournament }: Readonly<{ tournament: To
   // Set when the API refused (TRN-33): shown in a toast after the dialog closes.
   const [refusal, setRefusal] = useState<string[] | undefined>()
 
+  // Counts each time the dialog closes. A reply that lands after a close belongs to a dialog that
+  // is gone, so it must not set state for the next one.
+  const closes = useRef(0)
+
   function close() {
+    closes.current += 1
     setOpen(false)
     setWarning(undefined)
     setFailure(undefined)
@@ -41,10 +46,12 @@ export function DeleteTournamentButton({ tournament }: Readonly<{ tournament: To
 
   async function confirm() {
     setFailure(undefined)
+    const closesAtStart = closes.current
     try {
       await remove.mutateAsync({ confirmWarnings: warning !== undefined })
       await leave({ deleted: true })
     } catch (error) {
+      if (closes.current !== closesAtStart) return
       if (error instanceof TournamentWarningsError) {
         setWarning(error.warnings.map((item) => item.message).join(' '))
       } else if (error instanceof TournamentDeleteRefusedError) {

@@ -1,6 +1,6 @@
 import { useId } from 'react'
-import { closeDialogOf, showOnMount } from '../../shared/dialogParts'
-import styles from '../../shared/Dialog.module.css'
+import { closeDialogOf, showOnMount } from './dialogParts'
+import styles from './Dialog.module.css'
 
 export interface ConfirmItem {
   /** Also the React key: one warning per field. */
@@ -12,6 +12,10 @@ export interface ConfirmItem {
 
 interface ConfirmChangesDialogProps {
   items: ConfirmItem[]
+  /** Defaults to "Save these changes?" */
+  title?: string
+  /** The button that goes ahead. Defaults to "Save anyway"; while `pending` it says "Saving…". */
+  confirmLabel?: string
   pending: boolean
   /** Why the confirmed save did not go through, when it did not. */
   failure?: string
@@ -25,6 +29,8 @@ interface ConfirmChangesDialogProps {
  */
 export function ConfirmChangesDialog({
   items,
+  title = 'Save these changes?',
+  confirmLabel = 'Save anyway',
   pending,
   failure,
   onConfirm,
@@ -35,7 +41,7 @@ export function ConfirmChangesDialog({
     <dialog ref={showOnMount} className={styles.dialog} aria-labelledby={titleId} onClose={onClose}>
       <div className={styles.content}>
         <h2 id={titleId} className={styles.title}>
-          Save these changes?
+          {title}
         </h2>
         <ul>
           {items.map((item) => (
@@ -65,7 +71,7 @@ export function ConfirmChangesDialog({
             Go back
           </button>
           <button type="button" disabled={pending} onClick={onConfirm}>
-            {pending ? 'Saving…' : 'Save anyway'}
+            {pending ? 'Saving…' : confirmLabel}
           </button>
         </div>
       </div>

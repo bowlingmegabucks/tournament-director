@@ -96,10 +96,11 @@ export function validateDivision(values: DivisionFormValues): DivisionFieldError
   }
   const hasPercent = !('blank' in parsed.handicapPercentage)
   const hasBase = !('blank' in parsed.handicapBase)
-  if (hasPercent && !hasBase && errors.handicapBase === undefined) {
+  // A blank box has no message of its own, so these two never overwrite one.
+  if (hasPercent && !hasBase) {
     errors.handicapBase = 'Handicap base is required with a handicap percentage'
   }
-  if (hasBase && !hasPercent && errors.handicapPercentage === undefined) {
+  if (hasBase && !hasPercent) {
     errors.handicapPercentage = 'Handicap percentage is required with a handicap base'
   }
   if (

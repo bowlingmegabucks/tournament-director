@@ -58,6 +58,34 @@ describe('validateDivision', () => {
     expect(validateDivision(form({ minimumAge: '1.5' })).minimumAge).toBe('Enter a whole number')
   })
 
+  it.each([
+    ['5x', 'Enter a number'],
+    ['x5', 'Enter a number'],
+    ['5 5', 'Enter a number'],
+    ['1.25', 'Enter a whole number'],
+    ['.55', 'Enter a whole number'],
+    ['-1.5', 'Enter a whole number'],
+  ])('says what is wrong with %j (D-125)', (value, message) => {
+    expect(validateDivision(form({ minimumAge: value })).minimumAge).toBe(message)
+  })
+
+  it('ignores spaces around a number, and reads "5." as 5 (D-125)', () => {
+    expect(validateDivision(form({ minimumAge: ' 12 ', maximumAge: '30.' }))).toEqual({})
+    expect(toNewDivision(form({ minimumAge: ' 12 ', maximumAge: '30.' }))).toMatchObject({
+      minimumAge: 12,
+      maximumAge: 30,
+    })
+  })
+
+  it('keeps the range message when the limit is also above the maximum (DIV-04, DIV-05, DIV-06, DIV-07)', () => {
+    expect(validateDivision(form({ minimumAge: '130', maximumAge: '40' })).minimumAge).toBe(
+      'Minimum age must be between 1 and 120',
+    )
+    expect(
+      validateDivision(form({ minimumAverage: '350', maximumAverage: '100' })).minimumAverage,
+    ).toBe('Minimum average must be between 1 and 300')
+  })
+
   it('refuses a minimum age above the maximum, on the minimum (DIV-05)', () => {
     expect(validateDivision(form({ minimumAge: '60', maximumAge: '40' }))).toEqual({
       minimumAge: 'Minimum age must be less than or equal to maximum age',
@@ -134,6 +162,12 @@ describe('validateDivision', () => {
       })
       expect(validateDivision(values)).toEqual({})
     }
+  })
+
+  it('keeps the cap range message when there is no base and percentage (DIV-11)', () => {
+    expect(validateDivision(form({ maximumHandicapPerGame: '0' }))).toEqual({
+      maximumHandicapPerGame: 'Maximum handicap per game must be between 1 and 300',
+    })
   })
 
   it('refuses a cap with no base and percentage (DIV-11)', () => {

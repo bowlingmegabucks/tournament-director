@@ -278,4 +278,43 @@ describe('createDivision (the API call)', () => {
       'Failed to save the division (unexpected response)',
     )
   })
+
+  it('names the failure when a 400 body is not JSON', async () => {
+    server.use(http.post(postPath, () => new HttpResponse('nope', { status: 400 })))
+
+    await expect(postDivision('t1', input)).rejects.toThrow(
+      'Failed to save the division (response is not JSON)',
+    )
+  })
+
+  it('names the failure when a 201 body is not JSON', async () => {
+    server.use(http.post(postPath, () => new HttpResponse('nope', { status: 201 })))
+
+    await expect(postDivision('t1', input)).rejects.toThrow(
+      'Failed to save the division (response is not JSON)',
+    )
+  })
+
+  it('uses its own words when a refusal carries no message', async () => {
+    server.use(
+      http.post(postPath, () => HttpResponse.json({ errors: { name: 'Taken' } }, { status: 409 })),
+    )
+
+    await expect(postDivision('t1', input)).rejects.toThrow('The division was not accepted.')
+  })
+
+  it('treats warnings with a missing field or message as a plain refusal', async () => {
+    server.use(
+      http.post(postPath, () =>
+        HttpResponse.json(
+          { message: 'Hm', warnings: [{ field: 'x' }], errors: {} },
+          { status: 409 },
+        ),
+      ),
+    )
+
+    const failure = await postDivision('t1', input).catch((error: unknown) => error)
+
+    expect(failure).toBeInstanceOf(DivisionRejectedError)
+  })
 })

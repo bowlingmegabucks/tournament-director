@@ -92,6 +92,7 @@ export function NewDivisionPage() {
               if (Object.keys(error.errors).length > 0) return { errors: error.errors }
             }
             return {
+              // Stryker disable next-line StringLiteral: every failure the API call throws is an Error; the text only satisfies the type.
               failure: error instanceof Error ? error.message : 'Failed to save the division',
             }
           }

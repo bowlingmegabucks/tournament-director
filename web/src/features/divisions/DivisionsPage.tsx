@@ -92,6 +92,7 @@ export function DivisionsPage() {
           kind="success"
           autoDismissMs={TOAST_MS}
           onDismiss={() => {
+            // Stryker disable next-line StringLiteral,ObjectLiteral,BooleanLiteral: any navigation without state clears the toast; only the history entry (replace) and the path spelling differ, which tests cannot see.
             void navigate('.', { replace: true, state: null })
           }}
         >

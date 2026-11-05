@@ -405,6 +405,44 @@ describe('NewDivisionPage', () => {
       expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     })
 
+    it('drops the old toast as soon as the director presses Add again, even when a check fails (DIV-02)', async () => {
+      signIn()
+      serve({ post: () => new HttpResponse(null, { status: 503 }) })
+      const user = userEvent.setup()
+      await openForm()
+      await user.type(screen.getByLabelText('Name (required)'), 'Juniors')
+      await user.click(add())
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Failed to save the division (503)',
+      )
+
+      await user.clear(screen.getByLabelText('Name (required)'))
+      await user.click(add())
+
+      expect(screen.queryByText('Failed to save the division (503)')).not.toBeInTheDocument()
+      expect(await screen.findByRole('alert')).toHaveTextContent('Fix 1 field to save.')
+    })
+
+    it('shows the API message when a 400 names no field (DIV-12)', async () => {
+      signIn()
+      serve({
+        post: () =>
+          HttpResponse.json(
+            { message: 'Send the division as a JSON object.', errors: {} },
+            { status: 400 },
+          ),
+      })
+      const user = userEvent.setup()
+      await openForm()
+      await user.type(screen.getByLabelText('Name (required)'), 'Juniors')
+
+      await user.click(add())
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Send the division as a JSON object.',
+      )
+    })
+
     it('shows the complete-tournament refusal as a toast, not under a box (D-143)', async () => {
       signIn()
       const reason = 'This tournament is complete and cannot be changed'

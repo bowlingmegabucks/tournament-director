@@ -1,0 +1,43 @@
+/* The outline version of the danger color: the trigger on the page. */
+.trigger {
+  background: transparent;
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+/* The filled version: the button that cannot be undone. Text, not color alone, says what it does. */
+.destructive {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  color: var(--color-on-status);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.label {
+  font-weight: 600;
+}
+
+.input {
+  min-block-size: var(--target-min);
+  padding-inline: var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.reasons {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}

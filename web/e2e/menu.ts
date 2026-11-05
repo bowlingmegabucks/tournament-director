@@ -35,3 +35,16 @@ export async function openTournamentsSignedIn(page: Page) {
     .getByRole('link', { name: 'Tournaments' })
     .click()
 }
+
+/** Sign in as the seeded admin, then follow the Tournaments link (only an admin can delete, D-132). */
+export async function openTournamentsAsAdmin(page: Page) {
+  await page.goto('/login')
+  await page.getByLabel('Email').fill('admin@example.com')
+  await page.getByLabel('Password').fill('adminP4sswordLocal')
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page.getByRole('heading', { name: 'Tournament Management' })).toBeVisible()
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('link', { name: 'Tournaments' })
+    .click()
+}

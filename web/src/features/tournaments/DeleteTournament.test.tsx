@@ -1,0 +1,369 @@
+import { describe, expect, it } from 'vitest'
+import { screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
+import { server } from '../../mocks/server'
+import { createSettings, createSignedInUser, createTournament } from '../../mocks/data'
+import { setMockUser } from '../../mocks/authHandlers'
+import { renderApp } from '../../test/renderApp'
+
+const tournament = createTournament({ name: 'Spring Open' })
+const id = tournament.id
+
+function serve(options: { completed?: boolean } = {}) {
+  server.use(
+    http.get(`/v1/tournaments/${id}`, () => HttpResponse.json({ tournament })),
+    http.get(`/v1/tournaments/${id}/settings`, () =>
+      HttpResponse.json({ settings: createSettings({ completed: options.completed === true }) }),
+    ),
+    http.get(`/v1/tournaments/${id}/edit-info`, () =>
+      HttpResponse.json({
+        editInfo: { registrationCount: 0, hasScores: false, hasSweeperScores: false },
+      }),
+    ),
+  )
+}
+
+/** Record each DELETE and answer with `answer`, which may differ per call. */
+function serveDelete(...answers: (() => Response)[]) {
+  const urls: string[] = []
+  server.use(
+    http.delete(`/v1/tournaments/${id}`, ({ request }) => {
+      urls.push(new URL(request.url).search)
+      const answer = answers[Math.min(urls.length, answers.length) - 1]
+      return answer ? answer() : new HttpResponse(null, { status: 204 })
+    }),
+  )
+  return urls
+}
+
+const gone = () => new HttpResponse(null, { status: 204 })
+const deleteButton = () => screen.queryByRole('button', { name: 'Delete tournament' })
+
+async function openDialog(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: 'Delete tournament' }))
+  return screen.findByRole('dialog', { name: 'Delete this tournament?' })
+}
+
+async function typeNameAndDelete(
+  user: ReturnType<typeof userEvent.setup>,
+  dialog: HTMLElement,
+  name = 'Spring Open',
+) {
+  await user.type(within(dialog).getByLabelText('Type the tournament name to confirm'), name)
+  await user.click(within(dialog).getByRole('button', { name: /^Delete/ }))
+}
+
+describe('who sees Delete (TRN-37, D-132, D-136, D-19)', () => {
+  it.each([
+    ['the overview', `/tournaments/${id}`],
+    ['the edit page', `/tournaments/${id}/edit`],
+  ])('shows an admin a Delete button on %s', async (_page, route) => {
+    setMockUser(createSignedInUser({ roles: ['admin'] }))
+    serve()
+
+    renderApp(route)
+
+    expect(await screen.findByRole('button', { name: 'Delete tournament' })).toBeVisible()
+  })
+
+  it.each([
+    ['a director', createSignedInUser({ roles: ['director'] })],
+    ['a score keeper', createSignedInUser({ roles: ['scoreKeeper'] })],
+    ['a signed-out visitor', null],
+  ])('hides it from %s on the overview', async (_who, user) => {
+    setMockUser(user)
+    serve()
+
+    renderApp(`/tournaments/${id}`)
+
+    await screen.findByText('Games per squad')
+    expect(deleteButton()).not.toBeInTheDocument()
+  })
+
+  it('hides it from a director on the edit page, who can still edit', async () => {
+    setMockUser(createSignedInUser({ roles: ['director'] }))
+    serve()
+
+    renderApp(`/tournaments/${id}/edit`)
+
+    expect(await screen.findByRole('button', { name: 'Save changes' })).toBeVisible()
+    expect(deleteButton()).not.toBeInTheDocument()
+  })
+
+  it('hides it on a complete tournament, even from an admin', async () => {
+    setMockUser(createSignedInUser({ roles: ['admin'] }))
+    serve({ completed: true })
+
+    renderApp(`/tournaments/${id}`)
+
+    await screen.findByText('Completed')
+    expect(deleteButton()).not.toBeInTheDocument()
+  })
+
+  it('hides it on the edit page of a complete tournament', async () => {
+    setMockUser(createSignedInUser({ roles: ['admin'] }))
+    serve({ completed: true })
+
+    renderApp(`/tournaments/${id}/edit`)
+
+    await screen.findByRole('link', { name: 'Back to tournament' })
+    expect(deleteButton()).not.toBeInTheDocument()
+  })
+
+  it('shows no button until the settings are known', async () => {
+    setMockUser(createSignedInUser({ roles: ['admin'] }))
+    serve()
+    server.use(
+      http.get(`/v1/tournaments/${id}/settings`, () => new HttpResponse(null, { status: 500 })),
+    )
+
+    renderApp(`/tournaments/${id}`)
+
+    await screen.findByRole('heading', { name: 'Spring Open', level: 1 })
+    expect(deleteButton()).not.toBeInTheDocument()
+  })
+})
+
+describe('the delete dialog (TRN-36, D-136)', () => {
+  function admin() {
+    setMockUser(createSignedInUser({ roles: ['admin'] }))
+    serve()
+    return userEvent.setup()
+  }
+
+  it('says the delete is permanent, names the tournament, and puts focus on Cancel', async () => {
+    const user = admin()
+    renderApp(`/tournaments/${id}`)
+
+    const dialog = await openDialog(user)
+
+    expect(dialog).toHaveTextContent('This deletes Spring Open for good. It cannot be undone.')
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus()
+  })
+
+  it('keeps Delete off until the typed name matches, ignoring case and outer spaces', async () => {
+    const user = admin()
+    renderApp(`/tournaments/${id}`)
+    const dialog = await openDialog(user)
+    const box = within(dialog).getByLabelText('Type the tournament name to confirm')
+    const button = within(dialog).getByRole('button', { name: 'Delete tournament' })
+    expect(button).toBeDisabled()
+
+    await user.type(box, 'Spring Ope')
+    expect(button).toBeDisabled()
+
+    await user.type(box, 'n')
+    expect(button).toBeEnabled()
+
+    await user.clear(box)
+    await user.type(box, '  spring OPEN ')
+    expect(button).toBeEnabled()
+  })
+
+  it('does not send anything for a wrong name, even on Enter', async () => {
+    const user = admin()
+    const urls = serveDelete(gone)
+    renderApp(`/tournaments/${id}`)
+    const dialog = await openDialog(user)
+
+    await user.type(
+      within(dialog).getByLabelText('Type the tournament name to confirm'),
+      'Spring{Enter}',
+    )
+
+    expect(urls).toEqual([])
+  })
+
+  it('closes with Cancel, sending nothing (Escape is checked in e2e)', async () => {
+    const user = admin()
+    const urls = serveDelete(gone)
+    renderApp(`/tournaments/${id}`)
+
+    await openDialog(user)
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(urls).toEqual([])
+  })
+
+  it('starts clean each time it opens', async () => {
+    const user = admin()
+    renderApp(`/tournaments/${id}`)
+    const first = await openDialog(user)
+    await user.type(within(first).getByLabelText('Type the tournament name to confirm'), 'Spring')
+    await user.click(within(first).getByRole('button', { name: 'Cancel' }))
+
+    const second = await openDialog(user)
+
+    expect(within(second).getByLabelText('Type the tournament name to confirm')).toHaveValue('')
+  })
+
+  it('goes to the list with a "Tournament deleted" toast, sending no confirmation first (TRN-37)', async () => {
+    const user = admin()
+    const urls = serveDelete(gone)
+    renderApp(`/tournaments/${id}`)
+    const dialog = await openDialog(user)
+
+    await typeNameAndDelete(user, dialog)
+
+    expect(await screen.findByRole('heading', { name: 'Tournaments', level: 1 })).toBeVisible()
+    expect(await screen.findByText('Tournament deleted')).toBeVisible()
+    expect(urls).toEqual([''])
+    expect(screen.queryByText('Tournament not found')).not.toBeInTheDocument()
+  })
+
+  it('shows Deleting… with both buttons off while the request runs', async () => {
+    const user = admin()
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    server.use(
+      http.delete(`/v1/tournaments/${id}`, async () => {
+        await gate
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+    renderApp(`/tournaments/${id}`)
+    const dialog = await openDialog(user)
+
+    await typeNameAndDelete(user, dialog)
+
+    expect(await within(dialog).findByRole('button', { name: 'Deleting…' })).toBeDisabled()
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeDisabled()
+    release()
+    expect(await screen.findByText('Tournament deleted')).toBeVisible()
+  })
+
+  describe('the registrations warning (TRN-34, D-134)', () => {
+    const warn = () =>
+      HttpResponse.json(
+        {
+          message: 'Confirm to delete this tournament.',
+          warnings: [
+            {
+              field: 'tournament',
+              message:
+                '12 registrations and 4 divisions will be deleted, with their lane assignments and payment records. The bowlers stay.',
+            },
+          ],
+        },
+        { status: 409 },
+      )
+
+    it('shows what will go, then deletes with confirmWarnings=true', async () => {
+      const user = admin()
+      const urls = serveDelete(warn, gone)
+      renderApp(`/tournaments/${id}`)
+      const dialog = await openDialog(user)
+
+      await typeNameAndDelete(user, dialog)
+
+      expect(await within(dialog).findByText(/12 registrations and 4 divisions/)).toBeVisible()
+      expect(within(dialog).getByText('This cannot be undone.')).toBeVisible()
+      expect(
+        within(dialog).queryByLabelText('Type the tournament name to confirm'),
+      ).not.toBeInTheDocument()
+      await user.click(within(dialog).getByRole('button', { name: 'Delete anyway' }))
+
+      expect(await screen.findByText('Tournament deleted')).toBeVisible()
+      expect(urls).toEqual(['', '?confirmWarnings=true'])
+    })
+
+    it('forgets the warning when the dialog is closed and opened again', async () => {
+      const user = admin()
+      serveDelete(warn)
+      renderApp(`/tournaments/${id}`)
+      const dialog = await openDialog(user)
+      await typeNameAndDelete(user, dialog)
+      await within(dialog).findByText(/12 registrations/)
+      await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+
+      const again = await openDialog(user)
+
+      expect(within(again).getByLabelText('Type the tournament name to confirm')).toBeVisible()
+      expect(within(again).queryByText(/12 registrations/)).not.toBeInTheDocument()
+    })
+  })
+
+  describe('a refusal (TRN-33, D-133)', () => {
+    it('closes the dialog and keeps an error toast with every reason', async () => {
+      const user = admin()
+      serveDelete(() =>
+        HttpResponse.json(
+          {
+            message: 'Scores are saved, so this tournament cannot be deleted.',
+            errors: {
+              tournament:
+                'Scores are saved, so this tournament cannot be deleted.\n3 bowlers paid online. Remove their registrations first.',
+            },
+          },
+          { status: 409 },
+        ),
+      )
+      renderApp(`/tournaments/${id}`)
+      const dialog = await openDialog(user)
+
+      await typeNameAndDelete(user, dialog)
+
+      const alert = await screen.findByRole('alert')
+      expect(
+        within(alert)
+          .getAllByRole('listitem')
+          .map((item) => item.textContent),
+      ).toEqual([
+        'Scores are saved, so this tournament cannot be deleted.',
+        '3 bowlers paid online. Remove their registrations first.',
+      ])
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Spring Open', level: 1 })).toBeVisible()
+      await user.click(within(alert).getByRole('button', { name: 'Dismiss' }))
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    })
+  })
+
+  it('goes to the list with an info toast when the tournament is already gone (D-136)', async () => {
+    const user = admin()
+    serveDelete(() => new HttpResponse(null, { status: 404 }))
+    renderApp(`/tournaments/${id}`)
+    const dialog = await openDialog(user)
+
+    await typeNameAndDelete(user, dialog)
+
+    expect(await screen.findByRole('heading', { name: 'Tournaments', level: 1 })).toBeVisible()
+    expect(await screen.findByText('That tournament was already deleted.')).toBeVisible()
+    expect(screen.queryByText('Tournament deleted')).not.toBeInTheDocument()
+  })
+
+  it('stays open and says why for any other failure, so the admin can try again', async () => {
+    const user = admin()
+    const urls = serveDelete(() => new HttpResponse(null, { status: 503 }), gone)
+    renderApp(`/tournaments/${id}`)
+    const dialog = await openDialog(user)
+
+    await typeNameAndDelete(user, dialog)
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      'Failed to delete the tournament (503)',
+    )
+    expect(dialog).toBeVisible()
+    await user.click(within(dialog).getByRole('button', { name: 'Delete tournament' }))
+
+    expect(await screen.findByText('Tournament deleted')).toBeVisible()
+    await waitFor(() => {
+      expect(urls).toEqual(['', ''])
+    })
+  })
+
+  it('works from the edit page too (D-136)', async () => {
+    const user = admin()
+    serveDelete(gone)
+    renderApp(`/tournaments/${id}/edit`)
+    const dialog = await openDialog(user)
+
+    await typeNameAndDelete(user, dialog)
+
+    expect(await screen.findByText('Tournament deleted')).toBeVisible()
+  })
+})

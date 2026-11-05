@@ -4,6 +4,7 @@ import { field } from '../../shared/field'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { Toast } from '../../shared/Toast'
+import { DeleteTournamentButton } from './DeleteTournamentButton'
 import { formatDateRange, formatFee, formatRatio } from './format'
 import styles from './TournamentOverview.module.css'
 import type { Tournament } from './types'
@@ -31,13 +32,16 @@ export function TournamentOverview() {
         {completed && <span className={styles.badge}>Completed</span>}
       </h1>
       {settings.data && !completed && (
-        <Can permission="tournaments.write">
-          <p>
+        <div className={styles.actions}>
+          <Can permission="tournaments.write">
             <Link className={styles.edit} to="edit">
               Edit tournament
             </Link>
-          </p>
-        </Can>
+          </Can>
+          <Can permission="tournaments.delete">
+            <DeleteTournamentButton tournament={tournament} />
+          </Can>
+        </div>
       )}
       <dl className={styles.fields}>
         <dt>Dates</dt>

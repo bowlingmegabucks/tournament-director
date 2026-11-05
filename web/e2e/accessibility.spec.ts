@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
-import { openTournamentsSignedIn } from './menu'
+import { openTournamentsAsAdmin, openTournamentsSignedIn } from './menu'
 
 const wcagAA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 const colorSchemes = ['dark', 'light'] as const
@@ -178,6 +178,15 @@ for (const colorScheme of colorSchemes) {
       await page.getByLabel('Name (required)', { exact: true }).fill('')
       await page.getByRole('button', { name: 'Save changes' }).click()
       await expect(page.getByRole('alert')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
+    test('delete tournament dialog has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsAsAdmin(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await page.getByRole('button', { name: 'Delete tournament' }).click()
+      await expect(page.getByRole('dialog', { name: 'Delete this tournament?' })).toBeVisible()
 
       await expectNoViolations(page)
     })

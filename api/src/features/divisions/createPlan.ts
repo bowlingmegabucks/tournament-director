@@ -2,6 +2,7 @@ import type { FieldErrors, NewDivision } from './createRequest.ts'
 
 export const completeMessage = 'This tournament is complete and cannot be changed'
 export const duplicateNameMessage = 'A division with this name already exists in this tournament'
+export const fullMessage = 'This tournament has no division numbers left'
 export const unusualPercentMessage =
   'A handicap percentage above 100 is unusual. Check that it is right.'
 
@@ -22,6 +23,8 @@ export type CreatePlan =
   | { kind: 'refused'; errors: FieldErrors }
   | { kind: 'warn'; warnings: DivisionWarning[] }
   | { kind: 'create'; number: number }
+
+const MAX_NUMBER = 32767
 
 // D-143, D-140 compare the name trimmed and ignoring case; the database collation must not decide.
 const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
@@ -47,6 +50,8 @@ export function planCreate(
       warnings: [{ field: 'handicapPercentage', message: unusualPercentMessage }],
     }
   }
-  const highest = Math.max(0, ...facts.divisions.map((stored) => stored.number))
-  return { kind: 'create', number: highest + 1 }
+  const next = Math.max(0, ...facts.divisions.map((stored) => stored.number)) + 1
+  // The legacy `Number` column is a smallint: a larger value would fail in the database.
+  if (next > MAX_NUMBER) return { kind: 'refused', errors: { tournament: fullMessage } }
+  return { kind: 'create', number: next }
 }

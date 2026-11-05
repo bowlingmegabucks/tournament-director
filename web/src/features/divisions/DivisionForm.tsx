@@ -10,7 +10,7 @@ import {
   type DivisionFormValues,
   type DivisionWarning,
 } from './types'
-import { emptyDivisionForm, isDivisionField, validateDivision } from './validateDivision'
+import { emptyDivisionForm, validateDivision } from './validateDivision'
 
 interface BoxSpec {
   label: string
@@ -312,7 +312,7 @@ export function DivisionForm({
             field: warning.field,
             message: warning.message,
             change:
-              isDivisionField(warning.field) && warning.field === 'handicapPercentage'
+              warning.field === 'handicapPercentage'
                 ? `Handicap percent: ${values.handicapPercentage.trim()}%`
                 : '',
           }))}

@@ -14,11 +14,13 @@ const TOAST_MS = 5000
 
 /**
  * The "New division" link. It sits inside `<Can>`, so a visitor without the permission never reads
- * the settings. A complete tournament has no link (D-143, D-19).
+ * the settings. A complete tournament has no link (D-143, D-19). While the settings load the link
+ * waits, so a complete tournament never shows it. If they fail it shows anyway: the API refuses a
+ * complete tournament, and a slow start must not take the link away.
  */
 function NewDivisionLink({ id }: Readonly<{ id: string }>) {
   const settings = useTournamentSettings(id)
-  if (settings.data?.completed !== false) return null
+  if (settings.isPending || settings.data?.completed === true) return null
   return (
     <Link className={styles.newButton} to={`/tournaments/${id}/divisions/new`}>
       New division

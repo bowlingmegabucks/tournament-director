@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   completeMessage,
   duplicateNameMessage,
+  fullMessage,
   planCreate,
   unusualPercentMessage,
   type CreateFacts,
@@ -31,6 +32,16 @@ const open: CreateFacts = {
 describe('planCreate', () => {
   it('numbers the division one more than the highest stored number (DIV-01, D-139)', () => {
     expect(planCreate(open, input, false)).toEqual({ kind: 'create', number: 3 })
+  })
+
+  it('numbers up to the smallint limit and refuses the next one', () => {
+    const at = (number: number) => ({ completed: false, divisions: [{ number, name: 'A' }] })
+
+    expect(planCreate(at(32766), input, false)).toEqual({ kind: 'create', number: 32767 })
+    expect(planCreate(at(32767), input, false)).toEqual({
+      kind: 'refused',
+      errors: { tournament: fullMessage },
+    })
   })
 
   it('uses the highest number, not the count, when numbers have gaps (D-139)', () => {

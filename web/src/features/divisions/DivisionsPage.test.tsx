@@ -241,7 +241,7 @@ describe('DivisionsPage', () => {
       expect(link()).not.toBeInTheDocument()
     })
 
-    it('keeps the table when the settings cannot be read', async () => {
+    it('keeps the table and still shows the link when the settings cannot be read', async () => {
       setMockUser(createSignedInUser({ roles: ['director'] }))
       serve([createDivision({ name: 'Open' })])
       server.use(
@@ -251,7 +251,7 @@ describe('DivisionsPage', () => {
       open()
 
       expect(await screen.findByRole('rowheader', { name: 'Open' })).toBeVisible()
-      expect(link()).not.toBeInTheDocument()
+      expect(await screen.findByRole('link', { name: 'New division' })).toBeVisible()
     })
   })
 

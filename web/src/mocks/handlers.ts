@@ -124,7 +124,9 @@ export const handlers = [
       : HttpResponse.json({ message: 'Tournament not found' }, { status: 404 })
   }),
   // DIV-12: the browser has checked the rules; the mock numbers the division, refuses a used name,
-  // and asks to confirm a percent over 100, as the API does (D-139, D-140, D-142).
+  // and asks to confirm a percent over 100, as the API does (D-139, D-140, D-142). The mock keeps
+  // one list of divisions for every tournament and never completes one, so it cannot scope the name
+  // check to a tournament or refuse a complete one (D-140, D-143): the API tests cover those.
   http.post('/v1/tournaments/:id/divisions', async ({ params, request }) => {
     if (!tournaments.some((candidate) => candidate.id === params['id'])) return notFound()
     const body = (await request.json()) as NewDivision & { confirmWarnings?: boolean }

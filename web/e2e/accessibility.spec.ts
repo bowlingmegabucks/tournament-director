@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
-import { openTournamentsAsAdmin, openTournamentsSignedIn } from './menu'
+import { menuLink, openTournamentsAsAdmin, openTournamentsSignedIn } from './menu'
 
 const wcagAA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 const colorSchemes = ['dark', 'light'] as const
@@ -157,6 +157,42 @@ for (const colorScheme of colorSchemes) {
       await page.getByRole('link', { name: 'New tournament' }).click()
       await page.getByRole('button', { name: 'Save tournament' }).click()
       await expect(page.getByRole('alert')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
+    test('new division form has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Divisions')
+      await page.getByRole('link', { name: 'New division' }).click()
+      await expect(page.getByRole('heading', { name: 'New division', level: 1 })).toBeVisible()
+      await expect(page.getByLabel('Name (required)', { exact: true })).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
+    test('new division form with errors has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Divisions')
+      await page.getByRole('link', { name: 'New division' }).click()
+      await page.getByRole('button', { name: 'Add division' }).click()
+      await expect(page.getByRole('alert')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
+    test('new division confirm dialog has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Divisions')
+      await page.getByRole('link', { name: 'New division' }).click()
+      await page.getByLabel('Name (required)', { exact: true }).fill('Bonus')
+      await page.getByLabel('Handicap percent').fill('110')
+      await page.getByLabel('Handicap base').fill('220')
+      await page.getByRole('button', { name: 'Add division' }).click()
+      await expect(page.getByRole('dialog', { name: 'Add this division?' })).toBeVisible()
 
       await expectNoViolations(page)
     })

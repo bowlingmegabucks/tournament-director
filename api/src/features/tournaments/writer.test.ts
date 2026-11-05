@@ -144,4 +144,68 @@ describe('in-memory tournament writer: update (TRN-24, TRN-27)', () => {
       updated: { entryFee: 99 },
     })
   })
+
+  describe('remove (TRN-32 to TRN-34)', () => {
+    it('answers notFound for an unknown id', async () => {
+      const { writer } = createInMemoryTournamentWriter([{ ...first }])
+
+      expect(await writer.remove(crypto.randomUUID(), { confirmWarnings: false })).toEqual({
+        notFound: true,
+      })
+    })
+
+    it('deletes a tournament with nothing under it', async () => {
+      const { writer, stored, deleted } = createInMemoryTournamentWriter([{ ...first }])
+
+      const outcome = await writer.remove(first.id, { confirmWarnings: false })
+
+      expect(outcome).toMatchObject({ deleted: { registrations: 0 } })
+      expect(stored).toEqual([])
+      expect(deleted).toEqual([first.id])
+    })
+
+    it('refuses a complete tournament and keeps it (TRN-33, D-130)', async () => {
+      const { writer, stored } = createInMemoryTournamentWriter([{ ...first }], {
+        completed: [first.id],
+      })
+
+      expect(await writer.remove(first.id, { confirmWarnings: true })).toMatchObject({
+        refused: [expect.any(String) as string],
+      })
+      expect(stored).toHaveLength(1)
+    })
+
+    it('stops at the registrations warning until confirmed (TRN-34)', async () => {
+      const { writer, stored } = createInMemoryTournamentWriter([{ ...first }], {
+        deleteFacts: { [first.id]: { registrations: 3 } },
+      })
+
+      expect(await writer.remove(first.id, { confirmWarnings: false })).toMatchObject({
+        warnings: [{ field: 'tournament' }],
+      })
+      expect(stored).toHaveLength(1)
+      expect(await writer.remove(first.id, { confirmWarnings: true })).toMatchObject({
+        deleted: { registrations: 3 },
+      })
+      expect(stored).toEqual([])
+    })
+
+    it('warns again when the counts the caller saw are out of date (D-137)', async () => {
+      const { writer, stored } = createInMemoryTournamentWriter([{ ...first }], {
+        deleteFacts: { [first.id]: { registrations: 3 } },
+      })
+      const stale = { registrations: 2, divisions: 0, squads: 0, sweepers: 0 }
+
+      expect(await writer.remove(first.id, { confirmWarnings: true, seen: stale })).toMatchObject({
+        counts: { registrations: 3 },
+      })
+      expect(stored).toHaveLength(1)
+      expect(
+        await writer.remove(first.id, {
+          confirmWarnings: true,
+          seen: { ...stale, registrations: 3 },
+        }),
+      ).toMatchObject({ deleted: { registrations: 3 } })
+    })
+  })
 })

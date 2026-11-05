@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router'
+import { Can } from '../auth/Can'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { Toast } from '../../shared/Toast'
 import { TournamentRejectedError, TournamentWarningsError } from './api'
+import { DeleteTournamentButton } from './DeleteTournamentButton'
 import { editNotes } from './editNotes'
 import { TournamentForm, type FieldNotes } from './TournamentForm'
 import type { EditInfo, Tournament, TournamentSettingsView } from './types'
@@ -101,6 +103,13 @@ function EditForm({ tournament, settings, info }: Readonly<EditFormProps>) {
               change.
             </>
           ) : undefined
+        }
+        endActions={
+          settings.completed ? undefined : (
+            <Can permission="tournaments.delete">
+              <DeleteTournamentButton tournament={tournament} />
+            </Can>
+          )
         }
         locks={locks}
         confirms={confirms}

@@ -49,6 +49,14 @@ describe('errorHandler', () => {
     })
   })
 
+  it('adds the extra fields of a WarningsError to the body', async () => {
+    const error = new WarningsError(409, 'Confirm', [], { counts: { divisions: 2 } })
+
+    const response = await request(appThatThrows(error)).get('/boom')
+
+    expect(response.body).toEqual({ message: 'Confirm', warnings: [], counts: { divisions: 2 } })
+  })
+
   it('hides the message of any other error', async () => {
     const response = await request(appThatThrows(new Error('secret detail'))).get('/boom')
 

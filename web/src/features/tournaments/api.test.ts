@@ -5,10 +5,12 @@ import { createTournament } from '../../mocks/data'
 import { TournamentNotFoundError } from '../../shared/tournamentQuery'
 import {
   createTournament as postTournament,
+  deleteTournament,
   fetchEditInfo,
   fetchTournament,
   fetchTournaments,
   fetchTournamentSettings,
+  TournamentDeleteRefusedError,
   TournamentRejectedError,
   TournamentWarningsError,
   updateTournament,
@@ -456,6 +458,177 @@ describe('updateTournament (TRN-24, D-129)', () => {
     await expect(updateTournament(stored.id, {})).rejects.toThrow(
       'Failed to save the tournament (unexpected response)',
     )
+  })
+})
+
+describe('deleteTournament (TRN-32, D-133, D-134)', () => {
+  const stored = createTournament()
+  const url = `/v1/tournaments/${stored.id}`
+
+  function remove(handler: Parameters<typeof http.delete>[1]) {
+    server.use(http.delete(url, handler))
+  }
+
+  it('sends a DELETE with no query on the first try', async () => {
+    let received: URL | undefined
+    remove(({ request }) => {
+      received = new URL(request.url)
+      return new HttpResponse(null, { status: 204 })
+    })
+
+    await expect(deleteTournament(stored.id)).resolves.toBeUndefined()
+    expect(received?.search).toBe('')
+  })
+
+  it('sends confirmWarnings=true with the counts the warning showed (D-137)', async () => {
+    let received: URL | undefined
+    remove(({ request }) => {
+      received = new URL(request.url)
+      return new HttpResponse(null, { status: 204 })
+    })
+
+    await deleteTournament(stored.id, {
+      confirm: { registrations: 12, divisions: 4, squads: 3, sweepers: 1 },
+    })
+
+    expect(received?.search).toBe(
+      '?confirmWarnings=true&registrations=12&divisions=4&squads=3&sweepers=1',
+    )
+  })
+
+  it('turns a 409 with errors into a refusal with one reason per line', async () => {
+    remove(() =>
+      HttpResponse.json(
+        {
+          message: 'Scores are saved.',
+          errors: {
+            tournament:
+              'Scores are saved.\n3 bowlers paid online. Remove their registrations first.',
+          },
+        },
+        { status: 409 },
+      ),
+    )
+
+    const error = await deleteTournament(stored.id).catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(TournamentDeleteRefusedError)
+    expect(error).toMatchObject({
+      message: 'Scores are saved.',
+      reasons: ['Scores are saved.', '3 bowlers paid online. Remove their registrations first.'],
+    })
+  })
+
+  it('falls back to the message when errors has no reason', async () => {
+    remove(() => HttpResponse.json({ message: 'No.' }, { status: 409 }))
+
+    await expect(deleteTournament(stored.id)).rejects.toMatchObject({
+      message: 'No.',
+      reasons: ['No.'],
+    })
+  })
+
+  it('skips blank lines in the reasons', async () => {
+    remove(() =>
+      HttpResponse.json(
+        { message: 'A', errors: { tournament: 'First reason\n\nSecond reason\n' } },
+        { status: 409 },
+      ),
+    )
+
+    await expect(deleteTournament(stored.id)).rejects.toMatchObject({
+      reasons: ['First reason', 'Second reason'],
+    })
+  })
+
+  it('does not treat an empty warnings list as warnings', async () => {
+    remove(() =>
+      HttpResponse.json(
+        { message: 'No.', warnings: [], errors: { tournament: 'Scores are saved.' } },
+        { status: 409 },
+      ),
+    )
+
+    const error = await deleteTournament(stored.id).catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(TournamentDeleteRefusedError)
+    expect(error).toMatchObject({ reasons: ['Scores are saved.'] })
+  })
+
+  it('names the delete when a 409 body is not JSON', async () => {
+    remove(() => new HttpResponse('<html></html>', { status: 409 }))
+
+    await expect(deleteTournament(stored.id)).rejects.toThrow(
+      'Failed to delete the tournament (response is not JSON)',
+    )
+  })
+
+  it('gives a refusal without a message a default one', async () => {
+    remove(() => HttpResponse.json({}, { status: 409 }))
+
+    await expect(deleteTournament(stored.id)).rejects.toMatchObject({
+      message: 'The tournament cannot be deleted.',
+      reasons: ['The tournament cannot be deleted.'],
+    })
+  })
+
+  it('turns a 409 with warnings into a warnings error', async () => {
+    remove(() =>
+      HttpResponse.json(
+        {
+          message: 'Confirm to delete this tournament.',
+          warnings: [{ field: 'tournament', message: '12 registrations will be deleted.' }],
+          counts: { registrations: 12, divisions: 4, squads: 3, sweepers: 1 },
+        },
+        { status: 409 },
+      ),
+    )
+
+    const error = await deleteTournament(stored.id).catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(TournamentWarningsError)
+    expect(error).toMatchObject({
+      warnings: [{ field: 'tournament', message: '12 registrations will be deleted.' }],
+      counts: { registrations: 12, divisions: 4, squads: 3, sweepers: 1 },
+    })
+  })
+
+  it.each([
+    ['no counts', undefined],
+    ['a count that is not a number', { registrations: '12', divisions: 4, squads: 3, sweepers: 1 }],
+    ['a count left out', { registrations: 12, divisions: 4, squads: 3 }],
+  ])('fails on a warning with %s, since it could not be confirmed', async (_label, counts) => {
+    remove(() =>
+      HttpResponse.json(
+        {
+          message: 'Confirm.',
+          warnings: [{ field: 'tournament', message: '12 registrations will be deleted.' }],
+          counts,
+        },
+        { status: 409 },
+      ),
+    )
+
+    await expect(deleteTournament(stored.id)).rejects.toThrow(
+      'Failed to delete the tournament (unexpected response)',
+    )
+  })
+
+  it('treats a 404 as a tournament that is already gone', async () => {
+    remove(() => new HttpResponse(null, { status: 404 }))
+
+    await expect(deleteTournament(stored.id)).rejects.toBeInstanceOf(TournamentNotFoundError)
+  })
+
+  it.each([
+    [401, 'Sign in to delete a tournament.'],
+    [403, 'You do not have permission to delete a tournament.'],
+    [400, 'Failed to delete the tournament (400)'],
+    [503, 'Failed to delete the tournament (503)'],
+  ])('reports a %i', async (status, message) => {
+    remove(() => new HttpResponse(null, { status }))
+
+    await expect(deleteTournament(stored.id)).rejects.toThrow(message)
   })
 })
 

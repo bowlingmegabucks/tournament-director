@@ -21,7 +21,7 @@ export function createErrorHandler(logger: Logger): ErrorRequestHandler {
       return
     }
     if (err instanceof WarningsError) {
-      res.status(err.status).json({ message: err.message, warnings: err.warnings })
+      res.status(err.status).json({ message: err.message, warnings: err.warnings, ...err.extra })
       return
     }
     if (err instanceof HttpError) {

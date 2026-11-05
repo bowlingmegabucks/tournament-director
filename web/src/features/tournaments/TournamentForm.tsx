@@ -165,6 +165,8 @@ interface TournamentFormProps {
   banner?: ReactNode
   /** Nothing can be saved: no Save button (a complete tournament, D-130). */
   frozen?: boolean
+  /** After Save and Cancel, set apart from them: the Delete button on the edit page (D-136). */
+  endActions?: ReactNode
 }
 
 /**
@@ -187,6 +189,7 @@ export function TournamentForm({
   hints = {},
   banner,
   frozen = false,
+  endActions,
 }: Readonly<TournamentFormProps>) {
   const base = useId()
   const [values, setValues] = useState<TournamentFormValues>(initialValues)
@@ -339,6 +342,7 @@ export function TournamentForm({
         <Link className={styles.cancel} to={cancelTo} onMouseDown={keepFocus}>
           {cancelLabel}
         </Link>
+        {endActions && <span className={styles.endActions}>{endActions}</span>}
       </div>
       {confirming && (
         <ConfirmChangesDialog

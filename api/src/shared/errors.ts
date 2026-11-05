@@ -27,9 +27,17 @@ export class FieldErrorsError extends HttpError {
  */
 export class WarningsError extends HttpError {
   readonly warnings: { field: string; message: string }[]
+  /** More fields for the response body, next to `message` and `warnings`. */
+  readonly extra: Record<string, unknown>
 
-  constructor(status: number, message: string, warnings: { field: string; message: string }[]) {
+  constructor(
+    status: number,
+    message: string,
+    warnings: { field: string; message: string }[],
+    extra: Record<string, unknown> = {},
+  ) {
     super(status, message)
     this.warnings = warnings
+    this.extra = extra
   }
 }

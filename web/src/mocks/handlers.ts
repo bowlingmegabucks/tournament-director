@@ -90,6 +90,14 @@ export const handlers = [
     createdSettings.set(found.id, settings)
     return HttpResponse.json({ tournament: { ...found, ...settings } })
   }),
+  // TRN-32: the API decides refusals and warnings (D-133, D-134); the mock deletes at once so
+  // `dev:mocks` shows the dialog working.
+  http.delete('/v1/tournaments/:id', ({ params }) => {
+    const index = tournaments.findIndex((candidate) => candidate.id === params.id)
+    if (index === -1) return notFound()
+    tournaments.splice(index, 1)
+    return new HttpResponse(null, { status: 204 })
+  }),
   http.get('/v1/tournaments/:id/edit-info', ({ params }) =>
     tournaments.some((candidate) => candidate.id === params.id)
       ? HttpResponse.json({

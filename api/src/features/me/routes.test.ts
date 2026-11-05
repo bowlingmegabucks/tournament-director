@@ -86,7 +86,9 @@ describe('GET /v1/me when someone is signed in', () => {
         email: 'ada@example.com',
         name: 'Dee Director',
         roles: ['director'],
-        permissions: permissions.filter((p) => p !== 'users.manage' && p !== 'bowlers.ssn'),
+        permissions: permissions.filter(
+          (p) => p !== 'users.manage' && p !== 'bowlers.ssn' && p !== 'tournaments.delete',
+        ),
       },
     })
     expect(meSchema.parse(response.body)).toEqual(response.body)

@@ -203,3 +203,93 @@ export async function updateTournament(
   }
   return tournament
 }
+
+/** The API refused the delete (409 with `errors`): one reason per line, nothing deleted (D-133). */
+export class TournamentDeleteRefusedError extends Error {
+  readonly reasons: string[]
+
+  constructor(message: string, reasons: string[]) {
+    super(message)
+    this.reasons = reasons
+  }
+}
+
+/** What a delete removes besides the tournament. The confirming request sends it back (D-137). */
+export interface DeleteCounts {
+  registrations: number
+  divisions: number
+  squads: number
+  sweepers: number
+}
+
+/** The delete needs a confirmation. `counts` is what the warning showed; send it back to confirm. */
+export class TournamentDeleteWarningError extends TournamentWarningsError {
+  readonly counts: DeleteCounts
+
+  constructor(message: string, warnings: TournamentWarning[], counts: DeleteCounts) {
+    super(message, warnings)
+    this.counts = counts
+  }
+}
+
+function countsOf(value: unknown): DeleteCounts | undefined {
+  const registrations = field(value, 'registrations')
+  const divisions = field(value, 'divisions')
+  const squads = field(value, 'squads')
+  const sweepers = field(value, 'sweepers')
+  if (
+    typeof registrations === 'number' &&
+    typeof divisions === 'number' &&
+    typeof squads === 'number' &&
+    typeof sweepers === 'number'
+  ) {
+    return { registrations, divisions, squads, sweepers }
+  }
+  return undefined
+}
+
+/** The API puts one reason per line under `errors.tournament`. */
+function reasonsOf(value: unknown, fallback: string): string[] {
+  const text = field(value, 'tournament')
+  const lines = typeof text === 'string' ? text.split('\n').filter((line) => line !== '') : []
+  return lines.length > 0 ? lines : [fallback]
+}
+
+/**
+ * Delete a tournament (TRN-32, D-132 to D-134). Throws `TournamentDeleteRefusedError` when
+ * something forbids it (409 with `errors`), `TournamentWarningsError` when the director must
+ * confirm first (409 with `warnings`), and `TournamentNotFoundError` when it is already gone (404).
+ * To go ahead after a warning, send `confirm` with the counts that warning carried: the API deletes
+ * only if they still match, and otherwise warns again with the new counts (D-137).
+ */
+export async function deleteTournament(
+  id: string,
+  options: { confirm?: DeleteCounts } = {},
+): Promise<void> {
+  const { confirm } = options
+  const query =
+    confirm === undefined
+      ? ''
+      : `?confirmWarnings=true&registrations=${confirm.registrations}&divisions=${confirm.divisions}&squads=${confirm.squads}&sweepers=${confirm.sweepers}`
+  const response = await apiFetch(apiUrl(`/v1/tournaments/${encodeURIComponent(id)}${query}`), {
+    method: 'DELETE',
+  })
+  if (response.status === 409) {
+    const body = await readJson(response, 'Failed to delete the tournament')
+    const message = field(body, 'message')
+    const text = typeof message === 'string' ? message : 'The tournament cannot be deleted.'
+    const warnings = warningsOf(field(body, 'warnings'))
+    if (warnings !== undefined && warnings.length > 0) {
+      const counts = countsOf(field(body, 'counts'))
+      // Without the counts the director cannot confirm, so a warning with none is a bad reply.
+      if (counts === undefined)
+        throw new Error('Failed to delete the tournament (unexpected response)')
+      throw new TournamentDeleteWarningError(text, warnings, counts)
+    }
+    throw new TournamentDeleteRefusedError(text, reasonsOf(field(body, 'errors'), text))
+  }
+  if (response.status === 404) throw new TournamentNotFoundError()
+  if (response.status === 401) throw new Error('Sign in to delete a tournament.')
+  if (response.status === 403) throw new Error('You do not have permission to delete a tournament.')
+  if (!response.ok) throw new Error(`Failed to delete the tournament (${response.status})`)
+}

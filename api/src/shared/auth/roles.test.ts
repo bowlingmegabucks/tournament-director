@@ -22,6 +22,7 @@ describe('roles (D-97)', () => {
       'lanes.assign',
       'sessions.complete',
       'tournaments.write',
+      'tournaments.delete',
       'bowlers.ssn',
       'users.manage',
     ] as const) {
@@ -29,18 +30,30 @@ describe('roles (D-97)', () => {
     }
   })
 
-  it('gives a director everything except user management and SSN checks', () => {
+  it('gives a director everything except user management, SSN checks, and deleting tournaments (D-132)', () => {
     const held = permissionsOf('director')
 
-    expect(held).toEqual(permissions.filter((p) => p !== 'users.manage' && p !== 'bowlers.ssn'))
+    expect(held).toEqual(
+      permissions.filter(
+        (p) => p !== 'users.manage' && p !== 'bowlers.ssn' && p !== 'tournaments.delete',
+      ),
+    )
     expect(held).toContain('tournaments.write')
     expect(held).toContain('scores.write')
     expect(held).not.toContain('users.manage')
     expect(held).not.toContain('bowlers.ssn')
+    expect(held).not.toContain('tournaments.delete')
   })
 
   it('gives an admin every permission', () => {
     expect(permissionsOf('admin')).toEqual([...permissions])
+  })
+
+  it('lets no one but the admin delete a tournament (D-132)', () => {
+    for (const role of ['scoreKeeper', 'director']) {
+      expect(permissionsOf(role)).not.toContain('tournaments.delete')
+    }
+    expect(permissionsOf('admin')).toContain('tournaments.delete')
   })
 
   it('lets no one but the admin manage users or check SSNs', () => {

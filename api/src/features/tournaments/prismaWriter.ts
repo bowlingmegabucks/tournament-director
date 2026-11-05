@@ -2,12 +2,16 @@ import { randomUUID } from 'node:crypto'
 import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import type { Logger } from '../../shared/logger.ts'
 import type { NewTournament } from './createRequest.ts'
+import type { DeleteCounts } from './deletePlan.ts'
+import { loadDeleteFacts } from './prismaDeleteFacts.ts'
 import { loadEditFacts } from './prismaEditFacts.ts'
 import type { UpdateTournament } from './updateRequest.ts'
 import {
+  applyDelete,
   applyEdit,
   sameTournament,
   type CreateTournamentOutcome,
+  type DeleteTournamentOutcome,
   type TournamentWriter,
   type UpdateTournamentOutcome,
 } from './writer.ts'
@@ -154,8 +158,41 @@ export function createPrismaTournamentWriter(
     )
   }
 
+  const removeOnce = (
+    id: string,
+    confirmWarnings: boolean,
+    seen: DeleteCounts | undefined,
+  ): Promise<DeleteTournamentOutcome> =>
+    client.$transaction(
+      async (tx) => {
+        const row = await tx.tournament.findUnique({ where: { id }, select: { completed: true } })
+        if (!row) return { notFound: true as const }
+        // Read inside the transaction on purpose (D-135): a score or payment saved after this read
+        // must not slip past the refusal. Deletes are rare, so the short lock is fine.
+        const facts = await loadDeleteFacts(tx, id, row.completed)
+        return applyDelete(
+          facts,
+          confirmWarnings,
+          async () => {
+            // These tables have no cascade (database.md, quirk 9): clear them in code, as REG-19
+            // does. Payments, divisions, squads, and sweeper pins cascade from the rows below.
+            const registrations = { division: { tournamentId: id } }
+            await tx.squadRegistration.deleteMany({
+              where: { OR: [{ registration: registrations }, { squad: { tournamentId: id } }] },
+            })
+            await tx.registration.deleteMany({ where: registrations })
+            await tx.tournament.delete({ where: { id } })
+          },
+          seen,
+        )
+      },
+      { isolationLevel: 'Serializable' },
+    )
+
   return {
     create: (input) => withDatabaseErrors(logger, () => withRetry(() => createOnce(input))),
     update: (id, input) => withDatabaseErrors(logger, () => withRetry(() => updateOnce(id, input))),
+    remove: (id, { confirmWarnings, seen }) =>
+      withDatabaseErrors(logger, () => withRetry(() => removeOnce(id, confirmWarnings, seen))),
   }
 }

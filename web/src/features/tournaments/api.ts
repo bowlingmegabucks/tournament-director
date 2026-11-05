@@ -203,3 +203,50 @@ export async function updateTournament(
   }
   return tournament
 }
+
+/** The API refused the delete (409 with `errors`): one reason per line, nothing deleted (D-133). */
+export class TournamentDeleteRefusedError extends Error {
+  readonly reasons: string[]
+
+  constructor(message: string, reasons: string[]) {
+    super(message)
+    this.reasons = reasons
+  }
+}
+
+/** The API puts one reason per line under `errors.tournament`. */
+function reasonsOf(value: unknown, fallback: string): string[] {
+  const text = field(value, 'tournament')
+  const lines = typeof text === 'string' ? text.split('\n').filter((line) => line !== '') : []
+  return lines.length > 0 ? lines : [fallback]
+}
+
+/**
+ * Delete a tournament (TRN-32, D-132 to D-134). Throws `TournamentDeleteRefusedError` when
+ * something forbids it (409 with `errors`), `TournamentWarningsError` when the director must
+ * confirm first (409 with `warnings`), and `TournamentNotFoundError` when it is already gone (404).
+ * Send `confirmWarnings` to go ahead after a warning.
+ */
+export async function deleteTournament(
+  id: string,
+  options: { confirmWarnings?: boolean } = {},
+): Promise<void> {
+  const query = options.confirmWarnings === true ? '?confirmWarnings=true' : ''
+  const response = await apiFetch(apiUrl(`/v1/tournaments/${encodeURIComponent(id)}${query}`), {
+    method: 'DELETE',
+  })
+  if (response.status === 409) {
+    const body = await readJson(response, 'Failed to delete the tournament')
+    const message = field(body, 'message')
+    const text = typeof message === 'string' ? message : 'The tournament cannot be deleted.'
+    const warnings = warningsOf(field(body, 'warnings'))
+    if (warnings !== undefined && warnings.length > 0) {
+      throw new TournamentWarningsError(text, warnings)
+    }
+    throw new TournamentDeleteRefusedError(text, reasonsOf(field(body, 'errors'), text))
+  }
+  if (response.status === 404) throw new TournamentNotFoundError()
+  if (response.status === 401) throw new Error('Sign in to delete a tournament.')
+  if (response.status === 403) throw new Error('You do not have permission to delete a tournament.')
+  if (!response.ok) throw new Error(`Failed to delete the tournament (${response.status})`)
+}

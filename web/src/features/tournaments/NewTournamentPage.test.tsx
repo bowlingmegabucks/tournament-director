@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { screen } from '@testing-library/react'
+import { fireEvent, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
@@ -380,6 +380,16 @@ describe('NewTournamentPage', () => {
     await user.click(save())
 
     expect(screen.queryByText('Failed to save the tournament (503)')).not.toBeInTheDocument()
+  })
+
+  it('keeps focus in the field when the mouse presses Save or Cancel (TRN-22)', async () => {
+    signInAs('director')
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+
+    // A message appearing under the field would move the buttons and lose the click.
+    expect(fireEvent.mouseDown(save())).toBe(false)
+    expect(fireEvent.mouseDown(screen.getByRole('link', { name: 'Cancel' }))).toBe(false)
   })
 
   it('says nothing about a field the director only tabbed through (TRN-22)', async () => {

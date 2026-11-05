@@ -161,6 +161,27 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('edit tournament form has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await page.getByRole('link', { name: 'Edit tournament' }).click()
+      await expect(page.getByRole('heading', { name: 'Edit tournament', level: 1 })).toBeVisible()
+      await expect(page.getByLabel('Name (required)', { exact: true })).not.toHaveValue('')
+
+      await expectNoViolations(page)
+    })
+
+    test('edit tournament form with errors has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await page.getByRole('link', { name: 'Edit tournament' }).click()
+      await page.getByLabel('Name (required)', { exact: true }).fill('')
+      await page.getByRole('button', { name: 'Save changes' }).click()
+      await expect(page.getByRole('alert')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
     test('tournament overview has no WCAG 2.2 AA violations', async ({ page }) => {
       await page.goto('/tournaments')
       await page.getByRole('article').first().getByRole('link').click()

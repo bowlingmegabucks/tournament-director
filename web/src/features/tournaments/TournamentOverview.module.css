@@ -12,3 +12,31 @@
 .fields dd {
   margin: 0;
 }
+
+.heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Meaning comes from the word, not the border (WCAG 1.4.1). */
+.badge {
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.edit {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--target-min);
+  padding: var(--space-2) var(--space-4);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius);
+  color: var(--color-accent);
+  font-weight: 600;
+  text-decoration: none;
+}

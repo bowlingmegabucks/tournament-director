@@ -4,6 +4,7 @@ import {
   tournamentListSchema,
   tournamentSchema,
   tournamentSettingsSchema,
+  tournamentSettingsViewSchema,
 } from './types.ts'
 import { createTournament } from '../../test/factories.ts'
 
@@ -57,5 +58,20 @@ describe('tournament settings schema (TRN-21)', () => {
 
   it('accepts one game', () => {
     expect(tournamentSettingsSchema.safeParse({ ...settings, games: 1 }).success).toBe(true)
+  })
+})
+
+describe('tournament settings view schema (D-131)', () => {
+  const settings = { games: 5, finalsRatio: 8, cashRatio: 5, superSweeperCashRatio: 0 }
+
+  it.each([true, false])('accepts completed %j', (completed) => {
+    expect(tournamentSettingsViewSchema.safeParse({ ...settings, completed }).success).toBe(true)
+  })
+
+  it('needs the flag to be a boolean', () => {
+    expect(tournamentSettingsViewSchema.safeParse({ ...settings, completed: 'yes' }).success).toBe(
+      false,
+    )
+    expect(tournamentSettingsViewSchema.safeParse(settings).success).toBe(false)
   })
 })

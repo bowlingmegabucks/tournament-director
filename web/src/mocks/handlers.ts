@@ -18,7 +18,11 @@ import {
 } from './data'
 import { authHandlers } from './authHandlers'
 import { userHandlers } from './userHandlers'
-import type { NewTournament, TournamentSettings } from '../features/tournaments/types'
+import type {
+  NewTournament,
+  TournamentChanges,
+  TournamentSettings,
+} from '../features/tournaments/types'
 
 // Built once so refetches return the same list, as a real API would.
 const tournaments = createDemoTournaments()
@@ -55,9 +59,52 @@ export const handlers = [
     createdSettings.set(created.id, { games, finalsRatio, cashRatio, superSweeperCashRatio })
     return HttpResponse.json({ tournament: created }, { status: 201 })
   }),
+  // TRN-24: the API decides locks and warnings (D-128, D-129); the mock only applies the change
+  // and refuses a duplicate, so `dev:mocks` shows the form working.
+  http.patch('/v1/tournaments/:id', async ({ params, request }) => {
+    const found = tournaments.find((candidate) => candidate.id === params.id)
+    if (!found) return notFound()
+    // The mock never warns, so it ignores `confirmWarnings`.
+    const changes = (await request.json()) as TournamentChanges
+    delete changes.confirmWarnings
+    const { games, finalsRatio, cashRatio, superSweeperCashRatio, ...summary } = changes
+    const next = { ...found, ...summary }
+    const duplicate = tournaments.some(
+      (candidate) =>
+        candidate.id !== found.id &&
+        candidate.startDate === next.startDate &&
+        candidate.name.trim().toLowerCase() === next.name.trim().toLowerCase(),
+    )
+    if (duplicate) {
+      const message = 'A tournament with this name and start date already exists'
+      return HttpResponse.json({ message, errors: { name: message } }, { status: 409 })
+    }
+    Object.assign(found, summary)
+    const settings = {
+      ...(createdSettings.get(found.id) ?? demoSettings),
+      ...(games === undefined ? {} : { games }),
+      ...(finalsRatio === undefined ? {} : { finalsRatio }),
+      ...(cashRatio === undefined ? {} : { cashRatio }),
+      ...(superSweeperCashRatio === undefined ? {} : { superSweeperCashRatio }),
+    }
+    createdSettings.set(found.id, settings)
+    return HttpResponse.json({ tournament: { ...found, ...settings } })
+  }),
+  http.get('/v1/tournaments/:id/edit-info', ({ params }) =>
+    tournaments.some((candidate) => candidate.id === params.id)
+      ? HttpResponse.json({
+          editInfo: { registrationCount: 0, hasScores: false, hasSweeperScores: false },
+        })
+      : notFound(),
+  ),
   http.get('/v1/tournaments/:id/settings', ({ params }) =>
     tournaments.some((candidate) => candidate.id === params.id)
-      ? HttpResponse.json({ settings: createdSettings.get(String(params.id)) ?? demoSettings })
+      ? HttpResponse.json({
+          settings: {
+            ...(createdSettings.get(String(params.id)) ?? demoSettings),
+            completed: false,
+          },
+        })
       : notFound(),
   ),
   http.get('/v1/tournaments/:id', ({ params }) => {

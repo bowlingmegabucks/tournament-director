@@ -76,3 +76,29 @@
   font-weight: 600;
   text-decoration: none;
 }
+
+/* Edit (D-128, D-129): a locked field reads like the others but sits back, with its reason beside it. */
+.input[readonly] {
+  border-style: dashed;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+.note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.noteLabel {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.banner {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}

@@ -21,6 +21,11 @@ export interface TournamentSettings {
   superSweeperCashRatio: number
 }
 
+/** What the settings route sends: the settings and whether the tournament is complete (D-131). */
+export interface TournamentSettingsView extends TournamentSettings {
+  completed: boolean
+}
+
 /** What the create route takes and sends back (TRN-19). */
 export interface NewTournament extends TournamentSettings {
   name: string
@@ -45,5 +50,35 @@ export interface TournamentFormValues {
 
 export type TournamentField = keyof TournamentFormValues
 
+/** Every form field, in the order the form lists them. The one list the rest of the feature uses. */
+export const tournamentFields: readonly TournamentField[] = [
+  'name',
+  'startDate',
+  'endDate',
+  'bowlingCenter',
+  'entryFee',
+  'games',
+  'finalsRatio',
+  'cashRatio',
+  'superSweeperCashRatio',
+]
+
 /** One message per field (D-121). */
 export type FieldErrors = Partial<Record<TournamentField, string>>
+
+/** What the edit page learns from `GET /v1/tournaments/{id}/edit-info` (D-131). */
+export interface EditInfo {
+  registrationCount: number
+  hasScores: boolean
+  hasSweeperScores: boolean
+}
+
+/** The edit route's body: only the fields that changed, and whether the warnings were seen (D-127, D-129). */
+export type TournamentChanges = Partial<NewTournament> & { confirmWarnings?: boolean }
+
+/** One thing the director must confirm before a change saves (D-129). */
+export interface TournamentWarning {
+  /** A form field, or a name this app does not know yet (the API may add one). */
+  field: string
+  message: string
+}

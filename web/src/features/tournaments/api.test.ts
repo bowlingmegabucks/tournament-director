@@ -5,10 +5,13 @@ import { createTournament } from '../../mocks/data'
 import { TournamentNotFoundError } from '../../shared/tournamentQuery'
 import {
   createTournament as postTournament,
+  fetchEditInfo,
   fetchTournament,
   fetchTournaments,
   fetchTournamentSettings,
   TournamentRejectedError,
+  TournamentWarningsError,
+  updateTournament,
 } from './api'
 import type { NewTournament } from './types'
 
@@ -235,7 +238,13 @@ describe('createTournament (TRN-19)', () => {
 
 describe('fetchTournamentSettings (TRN-21)', () => {
   const id = '7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01'
-  const settings = { games: 4, finalsRatio: 7.5, cashRatio: 5, superSweeperCashRatio: 0 }
+  const settings = {
+    games: 4,
+    finalsRatio: 7.5,
+    cashRatio: 5,
+    superSweeperCashRatio: 0,
+    completed: false,
+  }
 
   it('reads the settings', async () => {
     server.use(http.get(`/v1/tournaments/${id}/settings`, () => HttpResponse.json({ settings })))
@@ -261,9 +270,11 @@ describe('fetchTournamentSettings (TRN-21)', () => {
 
   it.each([
     ['no settings key', {}],
-    ['no super sweeper ratio', { settings: { games: 4, finalsRatio: 7, cashRatio: 5 } }],
-    ['no finals ratio', { settings: { games: 4, cashRatio: 5, superSweeperCashRatio: 3 } }],
-    ['no cash ratio', { settings: { games: 4, finalsRatio: 7, superSweeperCashRatio: 3 } }],
+    ['no super sweeper ratio', { settings: { ...settings, superSweeperCashRatio: undefined } }],
+    ['no completed flag', { settings: { ...settings, completed: undefined } }],
+    ['a text completed flag', { settings: { ...settings, completed: 'no' } }],
+    ['no finals ratio', { settings: { ...settings, finalsRatio: undefined } }],
+    ['no cash ratio', { settings: { ...settings, cashRatio: undefined } }],
     ['a text ratio', { settings: { ...settings, cashRatio: '5' } }],
     ['a text game count', { settings: { ...settings, games: '4' } }],
   ])('rejects %s', async (_label, body) => {
@@ -271,6 +282,226 @@ describe('fetchTournamentSettings (TRN-21)', () => {
 
     await expect(fetchTournamentSettings(id)).rejects.toThrow(
       'Failed to load the tournament format (unexpected response)',
+    )
+  })
+})
+
+describe('fetchEditInfo (TRN-28)', () => {
+  const id = '7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01'
+  const editInfo = { registrationCount: 38, hasScores: true, hasSweeperScores: false }
+
+  it('reads the counts', async () => {
+    server.use(http.get(`/v1/tournaments/${id}/edit-info`, () => HttpResponse.json({ editInfo })))
+
+    await expect(fetchEditInfo(id)).resolves.toEqual(editInfo)
+  })
+
+  it.each([400, 404])('treats a %i as a missing tournament', async (status) => {
+    server.use(
+      http.get(`/v1/tournaments/${id}/edit-info`, () => new HttpResponse(null, { status })),
+    )
+
+    await expect(fetchEditInfo(id)).rejects.toBeInstanceOf(TournamentNotFoundError)
+  })
+
+  it.each([
+    [401, 'Sign in to edit a tournament.'],
+    [403, 'You do not have permission to edit a tournament.'],
+    [503, 'Failed to load what depends on the settings (503)'],
+  ])('reports a %i', async (status, message) => {
+    server.use(
+      http.get(`/v1/tournaments/${id}/edit-info`, () => new HttpResponse(null, { status })),
+    )
+
+    await expect(fetchEditInfo(id)).rejects.toThrow(message)
+  })
+
+  it.each([
+    ['no editInfo key', {}],
+    ['a text count', { editInfo: { ...editInfo, registrationCount: '38' } }],
+    ['no scores flag', { editInfo: { ...editInfo, hasScores: undefined } }],
+    ['a text sweeper flag', { editInfo: { ...editInfo, hasSweeperScores: 'no' } }],
+  ])('rejects %s', async (_label, body) => {
+    server.use(http.get(`/v1/tournaments/${id}/edit-info`, () => HttpResponse.json(body)))
+
+    await expect(fetchEditInfo(id)).rejects.toThrow(
+      'Failed to load what depends on the settings (unexpected response)',
+    )
+  })
+})
+
+describe('updateTournament (TRN-24, D-129)', () => {
+  const stored = createTournament()
+
+  function patch(handler: Parameters<typeof http.patch>[1]) {
+    server.use(http.patch(`/v1/tournaments/${stored.id}`, handler))
+  }
+
+  it('sends only the changes, as JSON, and returns the tournament', async () => {
+    let received: unknown
+    patch(async ({ request }) => {
+      received = await request.json()
+      expect(request.headers.get('content-type')).toBe('application/json')
+      return HttpResponse.json({ tournament: stored })
+    })
+
+    await expect(
+      updateTournament(stored.id, { entryFee: 75, confirmWarnings: true }),
+    ).resolves.toEqual(stored)
+    expect(received).toEqual({ entryFee: 75, confirmWarnings: true })
+  })
+
+  it.each([400, 409])('turns a %i with field messages into a rejection', async (status) => {
+    patch(() =>
+      HttpResponse.json(
+        { message: 'Scores are saved.', errors: { games: 'Scores are saved.', other: 'ignored' } },
+        { status },
+      ),
+    )
+
+    const error = await updateTournament(stored.id, { games: 7 }).catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(TournamentRejectedError)
+    expect(error).toMatchObject({
+      message: 'Scores are saved.',
+      errors: { games: 'Scores are saved.' },
+    })
+    expect((error as TournamentRejectedError).errors).not.toHaveProperty('other')
+  })
+
+  it('turns a 409 with warnings into a warnings error and keeps their order', async () => {
+    patch(() =>
+      HttpResponse.json(
+        {
+          message: 'Confirm these changes to save them.',
+          warnings: [
+            { field: 'entryFee', message: 'Fee heads up' },
+            { field: 'cashRatio', message: 'Ratio heads up' },
+          ],
+        },
+        { status: 409 },
+      ),
+    )
+
+    const error = await updateTournament(stored.id, { entryFee: 75 }).catch(
+      (caught: unknown) => caught,
+    )
+
+    expect(error).toBeInstanceOf(TournamentWarningsError)
+    expect(error).toMatchObject({
+      message: 'Confirm these changes to save them.',
+      warnings: [
+        { field: 'entryFee', message: 'Fee heads up' },
+        { field: 'cashRatio', message: 'Ratio heads up' },
+      ],
+    })
+  })
+
+  it.each([
+    ['no message', [{ field: 'entryFee' }]],
+    ['an empty list', []],
+  ])('does not treat warnings with %s as warnings', async (_label, warnings) => {
+    patch(() => HttpResponse.json({ message: 'No.', warnings, errors: {} }, { status: 409 }))
+
+    const error = await updateTournament(stored.id, {}).catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(TournamentRejectedError)
+  })
+
+  it('keeps a warning for a field this app does not know, so the director still sees it', async () => {
+    patch(() =>
+      HttpResponse.json(
+        { message: 'Confirm.', warnings: [{ field: 'completed', message: 'Heads up' }] },
+        { status: 409 },
+      ),
+    )
+
+    const error = await updateTournament(stored.id, {}).catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(TournamentWarningsError)
+    expect(error).toMatchObject({ warnings: [{ field: 'completed', message: 'Heads up' }] })
+  })
+
+  it('gives a rejection without a message a default one', async () => {
+    patch(() => HttpResponse.json({ errors: { name: 'Taken' } }, { status: 409 }))
+
+    await expect(updateTournament(stored.id, {})).rejects.toMatchObject({
+      message: 'The change was not accepted.',
+      errors: { name: 'Taken' },
+    })
+  })
+
+  it('treats a 404 as a missing tournament', async () => {
+    patch(() => new HttpResponse(null, { status: 404 }))
+
+    await expect(updateTournament(stored.id, {})).rejects.toBeInstanceOf(TournamentNotFoundError)
+  })
+
+  it.each([
+    [401, 'Sign in to edit a tournament.'],
+    [403, 'You do not have permission to edit a tournament.'],
+    [503, 'Failed to save the tournament (503)'],
+  ])('reports a %i', async (status, message) => {
+    patch(() => new HttpResponse(null, { status }))
+
+    await expect(updateTournament(stored.id, {})).rejects.toThrow(message)
+  })
+
+  it.each([
+    ['not a tournament', { tournament: { id: 5 } }],
+    ['no tournament key', {}],
+  ])('rejects a 200 with %s', async (_label, body) => {
+    patch(() => HttpResponse.json(body))
+
+    await expect(updateTournament(stored.id, {})).rejects.toThrow(
+      'Failed to save the tournament (unexpected response)',
+    )
+  })
+})
+
+describe('a body that is not JSON (readJson wording)', () => {
+  const id = '7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01'
+  const html = (status: number) => () => new HttpResponse('<html></html>', { status })
+
+  it('names the settings read', async () => {
+    server.use(http.get(`/v1/tournaments/${id}/settings`, html(200)))
+
+    await expect(fetchTournamentSettings(id)).rejects.toThrow(
+      'Failed to load the tournament format (response is not JSON)',
+    )
+  })
+
+  it('names the edit-info read', async () => {
+    server.use(http.get(`/v1/tournaments/${id}/edit-info`, html(200)))
+
+    await expect(fetchEditInfo(id)).rejects.toThrow(
+      'Failed to load what depends on the settings (response is not JSON)',
+    )
+  })
+
+  it.each([201, 400])('names a create answered %i', async (status) => {
+    server.use(http.post('/v1/tournaments', html(status)))
+
+    await expect(
+      postTournament({
+        name: 'x',
+        startDate: '2027-01-01',
+        endDate: '2027-01-02',
+        bowlingCenter: 'y',
+        entryFee: 5,
+        games: 3,
+        finalsRatio: 8,
+        cashRatio: 5,
+        superSweeperCashRatio: 4,
+      }),
+    ).rejects.toThrow('Failed to save the tournament (response is not JSON)')
+  })
+
+  it.each([200, 409])('names an edit answered %i', async (status) => {
+    server.use(http.patch(`/v1/tournaments/${id}`, html(status)))
+
+    await expect(updateTournament(id, {})).rejects.toThrow(
+      'Failed to save the tournament (response is not JSON)',
     )
   })
 })

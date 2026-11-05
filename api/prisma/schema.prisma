@@ -26,7 +26,7 @@ model Tournament {
   /// 1 in N super sweeper bowlers cash (TRN-09). Column name has a typo: "Sweper". May hold the legacy 0 (D-17).
   superSweeperCashRatio Decimal @map("SuperSweperCashRatio") @db.Decimal(3, 1)
   bowlingCenter String   @map("BowlingCenter") @db.LongText
-  /// Nothing in legacy sets this to true, and create writes false (D-119). Never read.
+  /// Nothing in legacy sets this to true, and create writes false (D-119). Read by the settings route and the edit rules, which freeze a complete tournament (D-130, D-131).
   completed     Boolean  @map("Completed")
   squads        Squad[]
 

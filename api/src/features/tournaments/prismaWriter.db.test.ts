@@ -84,6 +84,7 @@ describe('Prisma tournament writer', () => {
       finalsRatio: 7.5,
       cashRatio: 5,
       superSweeperCashRatio: 4,
+      completed: false,
     })
   })
 
@@ -149,6 +150,19 @@ describe('Prisma tournament writer', () => {
     )
 
     expect((await repository.getSettings(id))?.superSweeperCashRatio).toBe(0)
+  })
+
+  it('reads a stored Completed flag (TRN-21, D-131)', async () => {
+    const { repository } = setup()
+    const id = crypto.randomUUID()
+    await client.$executeRawUnsafe(
+      `INSERT INTO Tournaments
+         (Id, Name, Start, End, EntryFee, Games, FinalsRatio, CashRatio, SuperSweperCashRatio, BowlingCenter, Completed)
+       VALUES (?, 'Done', '2020-01-01', '2020-01-03', 50, 6, 7.0, 5.0, 4.0, 'Lanes', 1)`,
+      id,
+    )
+
+    expect((await repository.getSettings(id))?.completed).toBe(true)
   })
 
   it('gets no settings for an unknown id (TRN-21)', async () => {

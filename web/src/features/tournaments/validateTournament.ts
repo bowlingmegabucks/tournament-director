@@ -1,4 +1,11 @@
-import type { FieldErrors, NewTournament, TournamentFormValues } from './types'
+import {
+  tournamentFields,
+  type FieldErrors,
+  type NewTournament,
+  type Tournament,
+  type TournamentFormValues,
+  type TournamentSettings,
+} from './types'
 
 /**
  * The create rules (TRN-01 to TRN-07, TRN-09, D-125), run in the browser for quick feedback. The API
@@ -158,4 +165,61 @@ export const emptyTournamentForm: TournamentFormValues = {
   finalsRatio: '',
   cashRatio: '',
   superSweeperCashRatio: '',
+}
+
+/**
+ * The form's starting values for an edit (TRN-29). A stored super sweeper ratio of 0 shows empty:
+ * 0 is "not set" (D-17), and the field only has to be filled in when the director changes it.
+ */
+export function toFormValues(
+  tournament: Tournament,
+  settings: TournamentSettings,
+): TournamentFormValues {
+  return {
+    name: tournament.name,
+    startDate: tournament.startDate,
+    endDate: tournament.endDate,
+    bowlingCenter: tournament.bowlingCenter,
+    entryFee: String(tournament.entryFee),
+    games: String(settings.games),
+    finalsRatio: String(settings.finalsRatio),
+    cashRatio: String(settings.cashRatio),
+    superSweeperCashRatio:
+      settings.superSweeperCashRatio === 0 ? '' : String(settings.superSweeperCashRatio),
+  }
+}
+
+/**
+ * The rules on an edit (TRN-24, D-127): only a field the director changed is checked, so an old
+ * tournament with a stored super sweeper ratio of 0 can still be renamed (D-17). The end date's
+ * message depends on both dates, so it is checked when either one changed.
+ */
+export function validateChanges(
+  initial: TournamentFormValues,
+  values: TournamentFormValues,
+): FieldErrors {
+  const all = validateTournament(values)
+  const errors: FieldErrors = {}
+  for (const name of tournamentFields) {
+    const message = all[name]
+    if (message === undefined) continue
+    const changed =
+      values[name] !== initial[name] ||
+      (name === 'endDate' && values.startDate !== initial.startDate)
+    if (changed) errors[name] = message
+  }
+  return errors
+}
+
+/** The body of an edit: only the fields that differ from the starting values (D-127). */
+export function toChanges(
+  initial: TournamentFormValues,
+  values: TournamentFormValues,
+): Partial<NewTournament> {
+  const all = toNewTournament(values)
+  const changes: Partial<NewTournament> = {}
+  for (const name of tournamentFields) {
+    if (values[name] !== initial[name]) Object.assign(changes, { [name]: all[name] })
+  }
+  return changes
 }

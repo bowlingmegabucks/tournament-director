@@ -79,7 +79,19 @@ describe('in-memory tournament repository settings (TRN-21)', () => {
       { [tournament.id]: settings },
     )
 
-    expect(await repository.getSettings(tournament.id)).toEqual(settings)
+    expect(await repository.getSettings(tournament.id)).toEqual({ ...settings, completed: false })
+  })
+
+  it('reports a seeded completed flag (D-131)', async () => {
+    const tournament = createTournament()
+    const settings = { games: 4, finalsRatio: 7, cashRatio: 4.5, superSweeperCashRatio: 3 }
+    const repository = createInMemoryTournamentRepository(
+      [tournament],
+      {},
+      { [tournament.id]: { ...settings, completed: true } },
+    )
+
+    expect((await repository.getSettings(tournament.id))?.completed).toBe(true)
   })
 
   it('falls back to defaults for a known tournament with none seeded', async () => {
@@ -87,7 +99,13 @@ describe('in-memory tournament repository settings (TRN-21)', () => {
 
     expect(
       await createInMemoryTournamentRepository([tournament]).getSettings(tournament.id),
-    ).toEqual({ games: 5, finalsRatio: 8, cashRatio: 5, superSweeperCashRatio: 8 })
+    ).toEqual({
+      games: 5,
+      finalsRatio: 8,
+      cashRatio: 5,
+      superSweeperCashRatio: 8,
+      completed: false,
+    })
   })
 
   it('gets nothing for an unknown id, even when others are stored', async () => {

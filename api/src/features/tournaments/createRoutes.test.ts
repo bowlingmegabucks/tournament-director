@@ -142,6 +142,7 @@ describe('POST /v1/tournaments', () => {
 
   it('passes a storage outage on as 503 (TRN-19)', async () => {
     const writer: TournamentWriter = {
+      ...createInMemoryTournamentWriter().writer,
       create: () => Promise.reject(new HttpError(503, 'Database unavailable')),
     }
 

@@ -52,7 +52,10 @@ describe('in-memory tournament writer', () => {
 })
 
 describe('in-memory tournament writer: update (TRN-24, TRN-27)', () => {
-  const first = { id: crypto.randomUUID(), ...createNewTournament({ name: 'Spring Classic' }) }
+  const first = {
+    id: crypto.randomUUID(),
+    ...createNewTournament({ name: 'Spring Classic', entryFee: 50 }),
+  }
   const second = {
     id: crypto.randomUUID(),
     ...createNewTournament({

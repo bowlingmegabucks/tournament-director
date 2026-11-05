@@ -117,7 +117,10 @@ export type CreateTournamentResult =
  * (D-121). The first problem a field has wins. Create and edit share it, so the two never word a
  * problem differently.
  */
-export function describeFailure(error: z.ZodError): { message: string; errors: FieldErrors } {
+export function describeFailure(
+  error: z.ZodError,
+  subject = 'tournament',
+): { message: string; errors: FieldErrors } {
   const errors: FieldErrors = {}
   let general: string | undefined
   for (const issue of error.issues) {
@@ -127,7 +130,7 @@ export function describeFailure(error: z.ZodError): { message: string; errors: F
     }
     const key = issue.path[0]
     if (typeof key === 'string') errors[key] ??= issue.message
-    else general ??= 'Send the tournament as a JSON object.'
+    else general ??= `Send the ${subject} as a JSON object.`
   }
   const first = Object.values(errors)[0]
   const summary = 'Check the highlighted fields.'

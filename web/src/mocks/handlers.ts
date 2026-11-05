@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import {
   createDemoAtLarge,
+  createDivision,
   createDemoDivisions,
   createDemoLanePage,
   createDemoRecapSheets,
@@ -18,6 +19,7 @@ import {
 } from './data'
 import { authHandlers } from './authHandlers'
 import { userHandlers } from './userHandlers'
+import type { NewDivision } from '../features/divisions/types'
 import type {
   NewTournament,
   TournamentChanges,
@@ -120,6 +122,43 @@ export const handlers = [
     return tournament
       ? HttpResponse.json({ tournament })
       : HttpResponse.json({ message: 'Tournament not found' }, { status: 404 })
+  }),
+  // DIV-12: the browser has checked the rules; the mock numbers the division, refuses a used name,
+  // and asks to confirm a percent over 100, as the API does (D-139, D-140, D-142). The mock keeps
+  // one list of divisions for every tournament and never completes one, so it cannot scope the name
+  // check to a tournament or refuse a complete one (D-140, D-143): the API tests cover those.
+  http.post('/v1/tournaments/:id/divisions', async ({ params, request }) => {
+    if (!tournaments.some((candidate) => candidate.id === params['id'])) return notFound()
+    const body = (await request.json()) as NewDivision & { confirmWarnings?: boolean }
+    const { confirmWarnings, ...input } = body
+    if (
+      divisions.some(
+        (stored) => stored.name.trim().toLowerCase() === input.name.trim().toLowerCase(),
+      )
+    ) {
+      const message = 'A division with this name already exists in this tournament'
+      return HttpResponse.json({ message, errors: { name: message } }, { status: 409 })
+    }
+    if ((input.handicapPercentage ?? 0) > 100 && confirmWarnings !== true) {
+      return HttpResponse.json(
+        {
+          message: 'Confirm to add this division.',
+          warnings: [
+            {
+              field: 'handicapPercentage',
+              message: 'A handicap percentage above 100 is unusual. Check that it is right.',
+            },
+          ],
+        },
+        { status: 409 },
+      )
+    }
+    const created = createDivision({
+      ...input,
+      number: Math.max(0, ...divisions.map((stored) => stored.number)) + 1,
+    })
+    divisions.push(created)
+    return HttpResponse.json({ division: created }, { status: 201 })
   }),
   http.get('/v1/tournaments/:id/divisions', ({ params }) =>
     tournaments.some((candidate) => candidate.id === params.id)

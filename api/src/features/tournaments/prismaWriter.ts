@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import type { Logger } from '../../shared/logger.ts'
+import { withRetry } from '../../shared/serializableRetry.ts'
 import type { NewTournament } from './createRequest.ts'
 import type { DeleteCounts } from './deletePlan.ts'
 import { loadDeleteFacts } from './prismaDeleteFacts.ts'
@@ -20,17 +21,6 @@ import {
 const midnight = (isoDate: string) => new Date(`${isoDate}T00:00:00.000Z`)
 const isoDate = (value: Date) => value.toISOString().slice(0, 10)
 const DAY_MS = 24 * 60 * 60 * 1000
-
-// Two writes that read at once and then write deadlock under Serializable; MariaDB rolls one
-// back, and Prisma reports it as P2034. The retry then sees the first write and says "duplicate".
-const writeConflict = 'P2034'
-const MAX_ATTEMPTS = 3
-
-function isWriteConflict(error: unknown): boolean {
-  return (
-    typeof error === 'object' && error !== null && 'code' in error && error.code === writeConflict
-  )
-}
 
 /**
  * Does another tournament hold this name and start date (D-123)? `exceptId` leaves out the one
@@ -54,16 +44,6 @@ async function hasSameTournament(
   return sameDay.some((row) =>
     sameTournament({ name: row.name, startDate: isoDate(row.start) }, input),
   )
-}
-
-// One try after another, never together: a retry has to see what the first try's rival wrote.
-async function withRetry<T>(run: () => Promise<T>, tries = 1): Promise<T> {
-  try {
-    return await run()
-  } catch (error) {
-    if (!isWriteConflict(error) || tries >= MAX_ATTEMPTS) throw error
-    return withRetry(run, tries + 1)
-  }
 }
 
 /** Column values for the fields an edit changed. */

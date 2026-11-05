@@ -11,6 +11,7 @@ export const permissions = [
   'sessions.complete',
   'tournaments.write',
   'tournaments.delete',
+  'divisions.create',
   'bowlers.ssn',
   'users.manage',
 ] as const

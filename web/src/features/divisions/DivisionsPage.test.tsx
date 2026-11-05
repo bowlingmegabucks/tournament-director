@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router'
+import App from '../../App'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
-import { createDivision, createTournament } from '../../mocks/data'
+import { setMockUser } from '../../mocks/authHandlers'
+import {
+  createDivision,
+  createSettings,
+  createSignedInUser,
+  createTournament,
+} from '../../mocks/data'
 import { renderApp } from '../../test/renderApp'
 import type { Division } from './types'
 
@@ -171,12 +180,115 @@ describe('DivisionsPage', () => {
     expect(calls).toBe(1)
   })
 
-  it('has no add, edit, or delete button until sign-in exists (D-40)', async () => {
+  it('has no edit or delete button (D-40)', async () => {
     serve([createDivision()])
 
     open()
 
     await screen.findByRole('table')
     expect(within(screen.getByRole('main')).queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  describe('the New division link (DIV-12, D-19, D-138, D-143)', () => {
+    const settings = (completed: boolean) =>
+      http.get('/v1/tournaments/:id/settings', () =>
+        HttpResponse.json({ settings: createSettings({ completed }) }),
+      )
+    const link = () => screen.queryByRole('link', { name: 'New division' })
+
+    it('shows a director a link to the form for an open tournament', async () => {
+      setMockUser(createSignedInUser({ roles: ['director'] }))
+      serve([createDivision()])
+      server.use(settings(false))
+
+      open()
+
+      expect(await screen.findByRole('link', { name: 'New division' })).toHaveAttribute(
+        'href',
+        `/tournaments/${tournament.id}/divisions/new`,
+      )
+    })
+
+    it('hides it for a complete tournament', async () => {
+      setMockUser(createSignedInUser({ roles: ['director'] }))
+      serve([createDivision()])
+      server.use(settings(true))
+
+      open()
+
+      await screen.findByRole('table')
+      await waitFor(() => {
+        expect(link()).not.toBeInTheDocument()
+      })
+    })
+
+    it('hides it from a score keeper, who never reads the settings', async () => {
+      setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+      serve([createDivision()])
+
+      open()
+
+      await screen.findByRole('table')
+      expect(link()).not.toBeInTheDocument()
+    })
+
+    it('hides it from a signed-out visitor', async () => {
+      serve([createDivision()])
+
+      open()
+
+      await screen.findByRole('table')
+      expect(link()).not.toBeInTheDocument()
+    })
+
+    it('keeps the table and still shows the link when the settings cannot be read', async () => {
+      setMockUser(createSignedInUser({ roles: ['director'] }))
+      serve([createDivision({ name: 'Open' })])
+      server.use(
+        http.get('/v1/tournaments/:id/settings', () => new HttpResponse(null, { status: 500 })),
+      )
+
+      open()
+
+      expect(await screen.findByRole('rowheader', { name: 'Open' })).toBeVisible()
+      expect(await screen.findByRole('link', { name: 'New division' })).toBeVisible()
+    })
+  })
+
+  describe('the toast after an add (D-144)', () => {
+    function openAfterAdd() {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      render(
+        <QueryClientProvider client={client}>
+          <MemoryRouter
+            initialEntries={[
+              { pathname: `/tournaments/${tournament.id}/divisions`, state: { created: true } },
+            ]}
+          >
+            <App />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      )
+    }
+
+    it('says "Division created" and goes away when dismissed', async () => {
+      serve([createDivision()])
+      const user = userEvent.setup()
+
+      openAfterAdd()
+
+      expect(await screen.findByText('Division created')).toBeVisible()
+      await user.click(screen.getByRole('button', { name: 'Dismiss' }))
+      expect(screen.queryByText('Division created')).not.toBeInTheDocument()
+    })
+
+    it('is not there on an ordinary visit', async () => {
+      serve([createDivision()])
+
+      open()
+
+      await screen.findByRole('table')
+      expect(screen.queryByText('Division created')).not.toBeInTheDocument()
+    })
   })
 })

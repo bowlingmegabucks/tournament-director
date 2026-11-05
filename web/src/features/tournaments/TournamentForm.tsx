@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import type { ChangeEvent, MouseEvent, ReactNode, SubmitEvent } from 'react'
 import { Link } from 'react-router'
-import { ConfirmChangesDialog } from './ConfirmChangesDialog'
+import { ConfirmChangesDialog } from '../../shared/ConfirmChangesDialog'
 import { describeChange } from './describeChange'
 import styles from './TournamentForm.module.css'
 import {

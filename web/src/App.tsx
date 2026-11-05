@@ -6,6 +6,7 @@ import { SetPasswordPage } from './features/auth/SetPasswordPage'
 import { RequirePermission } from './features/auth/RequirePermission'
 import { signInEnabled } from './features/auth/signInEnabled'
 import { DivisionsPage } from './features/divisions/DivisionsPage'
+import { NewDivisionPage } from './features/divisions/NewDivisionPage'
 import { LanesPage } from './features/lanes/LanesPage'
 import { AtLargePage } from './features/results/AtLargePage'
 import { SeedingPage } from './features/results/SeedingPage'
@@ -54,6 +55,14 @@ export default function App() {
             }
           />
           <Route path="divisions" element={<DivisionsPage />} />
+          <Route
+            path="divisions/new"
+            element={
+              <RequirePermission permission="divisions.create">
+                <NewDivisionPage />
+              </RequirePermission>
+            }
+          />
           <Route path="squads" element={<SquadsPage />} />
           <Route path="squads/:sessionId" element={<SquadPortal />}>
             <Route index element={<OpenLanes />} />

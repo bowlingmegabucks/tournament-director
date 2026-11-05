@@ -12,7 +12,8 @@ Feature-level work (ports of legacy rules) lives in [docs/migration/](migration/
 | 0.2.0   | Read-only views on the existing database. Public routes only.                                    |
 | 0.3.0   | Sign-in and permission checks (Better Auth, D-98) and signed-in UI rules (D-102).                |
 | 0.4.0   | Lock-down of public read routes, vendor routes (API key), cutover to `api.bowlingmegabucks.com`. |
-| 0.5.0   | Commands begin: create tournament.                                                               |
+| 0.5.0   | Commands begin: create, edit, and delete tournament.                                             |
+| 0.6.0   | Division commands: create first, then edit and delete.                                           |
 | Then    | Commands, one feature area per release.                                                          |
 | 1.0.0   | Every item below is checked.                                                                     |
 
@@ -28,6 +29,10 @@ Version numbers follow content, not a countdown. 0.10.0 is fine.
   - [x] Edit a tournament, with free, confirmed, and refused fields by what depends on them (`editTournament`, `TRN-24` to `TRN-31`, D-127 to D-131).
   - [ ] Complete a tournament: final, completes open squads and sweepers, freezes everything (D-130). Built with Complete squad and Complete sweeper (`SQD-15` to `SQD-18`).
   - [x] Delete a tournament: admin only, refused with scores or a real payment, confirmed with the typed name (`deleteTournament`, `TRN-32` to `TRN-37`, D-132 to D-137).
+- [ ] Division commands (D-12, D-15; [divisions.md](requirements/divisions.md)), 0.6.0:
+  - [x] Create a division: the server numbers it, a name is unique in the tournament, a complete tournament refuses, a percent over 100 confirms (`createDivision`, `DIV-01` to `DIV-11`, `DIV-15`, D-138 to D-145).
+  - [ ] Edit a division, warning when registered bowlers may no longer fit (D-12).
+  - [ ] Delete a division (D-15).
 
 ## Data and cutover
 

@@ -150,11 +150,11 @@ describe('DivisionForm', () => {
     await user.type(box('Minimum age'), '0')
     await user.click(add())
 
-    await user.click(
-      within(await screen.findByRole('alert')).getByRole('link', {
-        name: 'Minimum age must be between 1 and 120',
-      }),
-    )
+    const link = within(await screen.findByRole('alert')).getByRole('link', {
+      name: 'Minimum age must be between 1 and 120',
+    })
+    // The link points at the box; the click moves focus itself and leaves the address alone.
+    expect(fireEvent.click(link)).toBe(false)
 
     expect(box('Minimum age')).toHaveFocus()
   })
@@ -284,7 +284,16 @@ describe('DivisionForm', () => {
 
       const dialog = await screen.findByRole('dialog')
       expect(within(dialog).getByText('Check somethingNew')).toBeVisible()
-      expect(within(dialog).queryByText(/Handicap percent:/)).not.toBeInTheDocument()
+      expect(within(dialog).getByRole('listitem')).toHaveTextContent(/^Check somethingNew$/)
+    })
+
+    it('adds no change line for a warning about a box other than the percent', async () => {
+      const { user } = setup({ onSubmit: warn('maximumAge') })
+
+      await fillAndAdd(user)
+
+      const dialog = await screen.findByRole('dialog')
+      expect(within(dialog).getByRole('listitem')).toHaveTextContent(/^Check maximumAge$/)
     })
 
     it('removes the dialog when the director goes back, and keeps the typing', async () => {

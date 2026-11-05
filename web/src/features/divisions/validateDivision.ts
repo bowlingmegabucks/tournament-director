@@ -88,10 +88,11 @@ export function validateDivision(values: DivisionFormValues): DivisionFieldError
 
   // These need two fields; each says nothing when the other is blank or already wrong.
   const above = (a: Parsed, b: Parsed) => 'value' in a && 'value' in b && a.value > b.value
-  if (errors.minimumAge === undefined && above(parsed.minimumAge, parsed.maximumAge)) {
+  // A limit that failed its own range is not a `value`, so `above` skips it: its message stays.
+  if (above(parsed.minimumAge, parsed.maximumAge)) {
     errors.minimumAge = 'Minimum age must be less than or equal to maximum age'
   }
-  if (errors.minimumAverage === undefined && above(parsed.minimumAverage, parsed.maximumAverage)) {
+  if (above(parsed.minimumAverage, parsed.maximumAverage)) {
     errors.minimumAverage = 'Minimum average must be less than or equal to maximum average'
   }
   const hasPercent = !('blank' in parsed.handicapPercentage)

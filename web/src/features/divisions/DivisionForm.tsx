@@ -134,6 +134,7 @@ export function DivisionForm({
       setErrors((current) => {
         const next = { ...current, [name]: found[name] }
         for (const other of divisionFields) {
+          // Stryker disable next-line ConditionalExpression: skipping `other !== name` only sets the box being left to the value it already has.
           if (other !== name && (edited[other] || summary)) next[other] = found[other]
         }
         return next
@@ -183,6 +184,7 @@ export function DivisionForm({
         autoComplete="off"
         value={values[name]}
         aria-invalid={error ? true : undefined}
+        // Stryker disable next-line MethodExpression: without the filter the list ends in a space, which assistive technology ignores.
         aria-describedby={[`${id}-hint`, error ? `${id}-error` : undefined]
           .filter(Boolean)
           .join(' ')}

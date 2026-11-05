@@ -8,6 +8,7 @@ export type KnownPermission =
   | 'sessions.complete'
   | 'tournaments.write'
   | 'tournaments.delete'
+  | 'divisions.create'
   | 'bowlers.ssn'
   | 'users.manage'
 

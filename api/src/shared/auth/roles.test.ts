@@ -23,6 +23,7 @@ describe('roles (D-97)', () => {
       'sessions.complete',
       'tournaments.write',
       'tournaments.delete',
+      'divisions.create',
       'bowlers.ssn',
       'users.manage',
     ] as const) {
@@ -47,6 +48,12 @@ describe('roles (D-97)', () => {
 
   it('gives an admin every permission', () => {
     expect(permissionsOf('admin')).toEqual([...permissions])
+  })
+
+  it('lets a director and an admin add a division, not a score keeper (D-138)', () => {
+    expect(permissionsOf('scoreKeeper')).not.toContain('divisions.create')
+    expect(permissionsOf('director')).toContain('divisions.create')
+    expect(permissionsOf('admin')).toContain('divisions.create')
   })
 
   it('lets no one but the admin delete a tournament (D-132)', () => {

@@ -1,7 +1,12 @@
 import { randomUUID } from 'node:crypto'
 import type { FieldErrors, NewTournament } from './createRequest.ts'
 import { noEditFacts, type EditFacts } from './editFacts.ts'
-import { planDelete, type DeleteFacts, type DeleteWarning } from './deletePlan.ts'
+import {
+  planDelete,
+  type DeleteCounts,
+  type DeleteFacts,
+  type DeleteWarning,
+} from './deletePlan.ts'
 import { planEdit, type EditState, type EditWarning, type StoredTournament } from './editPlan.ts'
 import type { CreatedTournament } from './types.ts'
 import type { UpdateTournament } from './updateRequest.ts'
@@ -30,7 +35,7 @@ export type DeleteTournamentOutcome =
   /** A fact forbids it: one line per reason (409 with `errors`, D-133). */
   | { refused: string[] }
   /** The caller must confirm first (409 with `warnings`, D-134). */
-  | { warnings: DeleteWarning[] }
+  | { warnings: DeleteWarning[]; counts: DeleteCounts }
   /** What was removed, for the log line. */
   | { deleted: DeleteFacts }
 
@@ -43,7 +48,10 @@ export interface TournamentWriter {
    * Delete the tournament with its divisions, squads, sweepers, registrations, and payments, once
    * `planDelete` allows it (D-132 to D-135). Bowlers stay.
    */
-  remove(id: string, options: { confirmWarnings: boolean }): Promise<DeleteTournamentOutcome>
+  remove(
+    id: string,
+    options: { confirmWarnings: boolean; seen?: DeleteCounts },
+  ): Promise<DeleteTournamentOutcome>
 }
 
 /**
@@ -54,13 +62,14 @@ export async function applyDelete(
   facts: DeleteFacts,
   confirmWarnings: boolean,
   persist: () => Promise<void>,
+  seen?: DeleteCounts,
 ): Promise<DeleteTournamentOutcome> {
-  const plan = planDelete(facts, confirmWarnings)
+  const plan = planDelete(facts, confirmWarnings, seen)
   switch (plan.kind) {
     case 'refused':
       return { refused: plan.reasons }
     case 'warn':
-      return { warnings: plan.warnings }
+      return { warnings: plan.warnings, counts: plan.counts }
     case 'delete':
       await persist()
       return { deleted: facts }
@@ -161,7 +170,7 @@ export function createInMemoryTournamentWriter(
         },
       )
     },
-    remove: (id, { confirmWarnings }) => {
+    remove: (id, { confirmWarnings, seen }) => {
       const index = stored.findIndex((existing) => existing.id === id)
       if (index === -1) return Promise.resolve({ notFound: true })
       const facts: DeleteFacts = {
@@ -174,11 +183,16 @@ export function createInMemoryTournamentWriter(
         sweepers: 0,
         ...options.deleteFacts?.[id],
       }
-      return applyDelete(facts, confirmWarnings, () => {
-        stored.splice(index, 1)
-        deleted.push(id)
-        return Promise.resolve()
-      })
+      return applyDelete(
+        facts,
+        confirmWarnings,
+        () => {
+          stored.splice(index, 1)
+          deleted.push(id)
+          return Promise.resolve()
+        },
+        seen,
+      )
     },
   }
   return { writer, stored, deleted }

@@ -25,9 +25,10 @@ describe('planDelete', () => {
     expect(planDelete(empty, false)).toEqual({ kind: 'delete' })
   })
 
-  it('deletes at once when only divisions, squads, and sweepers exist (TRN-34)', () => {
-    expect(planDelete(facts({ divisions: 4, squads: 3, sweepers: 1 }), false)).toEqual({
-      kind: 'delete',
+  it('warns when only divisions, squads, and sweepers exist (TRN-34, D-134)', () => {
+    expect(planDelete(facts({ divisions: 4, squads: 3, sweepers: 1 }), false)).toMatchObject({
+      kind: 'warn',
+      counts: { registrations: 0, divisions: 4, squads: 3, sweepers: 1 },
     })
   })
 
@@ -97,6 +98,30 @@ describe('planDelete', () => {
               '12 registrations, 4 divisions, 3 squads, and 1 sweeper will be deleted, with their lane assignments and payment records. The bowlers stay.',
           },
         ],
+        counts: { registrations: 12, divisions: 4, squads: 3, sweepers: 1 },
+      })
+    })
+
+    describe('confirming with the counts the caller saw (D-137)', () => {
+      const held = { registrations: 12, divisions: 4, squads: 3, sweepers: 1 }
+      const seen = (overrides: Partial<typeof held>) => ({ ...held, ...overrides })
+
+      it('deletes when every count matches', () => {
+        expect(planDelete(facts(held), true, held)).toEqual({ kind: 'delete' })
+      })
+
+      it.each(['registrations', 'divisions', 'squads', 'sweepers'] as const)(
+        'warns again when the %s count moved',
+        (name) => {
+          expect(planDelete(facts(held), true, seen({ [name]: held[name] - 1 }))).toMatchObject({
+            kind: 'warn',
+            counts: held,
+          })
+        },
+      )
+
+      it('does not let a matching count override a refusal', () => {
+        expect(planDelete(facts({ ...held, hasScores: true }), true, held).kind).toBe('refused')
       })
     })
 

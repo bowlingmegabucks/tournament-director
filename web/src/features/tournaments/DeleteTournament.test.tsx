@@ -252,6 +252,7 @@ describe('the delete dialog (TRN-36, D-136)', () => {
           {
             message: 'Confirm.',
             warnings: [{ field: 'tournament', message: '3 registrations go.' }],
+            counts: { registrations: 3, divisions: 0, squads: 0, sweepers: 0 },
           },
           { status: 409 },
         )
@@ -289,11 +290,12 @@ describe('the delete dialog (TRN-36, D-136)', () => {
                 '12 registrations and 4 divisions will be deleted, with their lane assignments and payment records. The bowlers stay.',
             },
           ],
+          counts: { registrations: 12, divisions: 4, squads: 0, sweepers: 0 },
         },
         { status: 409 },
       )
 
-    it('shows what will go, then deletes with confirmWarnings=true', async () => {
+    it('shows what will go, then deletes with confirmWarnings=true and the counts shown (D-137)', async () => {
       const user = admin()
       const urls = serveDelete(warn, gone)
       renderApp(`/tournaments/${id}`)
@@ -309,7 +311,35 @@ describe('the delete dialog (TRN-36, D-136)', () => {
       await user.click(within(dialog).getByRole('button', { name: 'Delete anyway' }))
 
       expect(await screen.findByText('Tournament deleted')).toBeVisible()
-      expect(urls).toEqual(['', '?confirmWarnings=true'])
+      expect(urls).toEqual([
+        '',
+        '?confirmWarnings=true&registrations=12&divisions=4&squads=0&sweepers=0',
+      ])
+    })
+
+    it('shows the new counts and asks again when they moved since the warning (D-137)', async () => {
+      const user = admin()
+      const moved = () =>
+        HttpResponse.json(
+          {
+            message: 'Confirm to delete this tournament.',
+            warnings: [{ field: 'tournament', message: '14 registrations will be deleted.' }],
+            counts: { registrations: 14, divisions: 4, squads: 0, sweepers: 0 },
+          },
+          { status: 409 },
+        )
+      const urls = serveDelete(warn, moved, gone)
+      renderApp(`/tournaments/${id}`)
+      const dialog = await openDialog(user)
+      await typeNameAndDelete(user, dialog)
+      await user.click(await within(dialog).findByRole('button', { name: 'Delete anyway' }))
+
+      expect(await within(dialog).findByText(/14 registrations will be deleted/)).toBeVisible()
+      expect(screen.queryByText('Tournament deleted')).not.toBeInTheDocument()
+      await user.click(within(dialog).getByRole('button', { name: 'Delete anyway' }))
+
+      expect(await screen.findByText('Tournament deleted')).toBeVisible()
+      expect(urls[2]).toBe('?confirmWarnings=true&registrations=14&divisions=4&squads=0&sweepers=0')
     })
 
     it('forgets the warning when the dialog is closed and opened again', async () => {
@@ -418,6 +448,7 @@ describe('the delete dialog (TRN-36, D-136)', () => {
             { field: 'tournament', message: 'First warning.' },
             { field: 'tournament', message: 'Second warning.' },
           ],
+          counts: { registrations: 1, divisions: 0, squads: 0, sweepers: 0 },
         },
         { status: 409 },
       ),

@@ -3,7 +3,7 @@ import { createDatabaseClient, type PrismaClient } from '../../shared/database.t
 import { legacyRows, type LegacyRows } from '../../test/legacyRows.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { resetDatabase } from '../../test/resetDatabase.ts'
-import { paidMessage, scoresMessage, completeMessage } from './deletePlan.ts'
+import { paidMessage, scoresMessage, completeMessage, type DeleteCounts } from './deletePlan.ts'
 import { createPrismaTournamentWriter } from './prismaWriter.ts'
 
 describe('Prisma tournament writer: delete (TRN-32 to TRN-35, D-132 to D-135)', () => {
@@ -22,7 +22,8 @@ describe('Prisma tournament writer: delete (TRN-32 to TRN-35, D-132 to D-135)', 
   })
 
   const writer = () => createPrismaTournamentWriter(client, createCapturedLogger().logger)
-  const remove = (id: string, confirmWarnings = false) => writer().remove(id, { confirmWarnings })
+  const remove = (id: string, confirmWarnings = false, seen?: DeleteCounts) =>
+    writer().remove(id, { confirmWarnings, seen })
 
   async function count(table: string): Promise<number> {
     const [row] = await client.$queryRawUnsafe<{ n: bigint }[]>(
@@ -35,13 +36,16 @@ describe('Prisma tournament writer: delete (TRN-32 to TRN-35, D-132 to D-135)', 
     expect(await remove(crypto.randomUUID())).toEqual({ notFound: true })
   })
 
-  it('deletes a tournament with divisions and sessions at once, no confirmation (TRN-34)', async () => {
+  it('warns about divisions and sessions alone, then deletes them once confirmed (TRN-34, D-134)', async () => {
     const id = await rows.tournament()
     await rows.division(id)
     await rows.session(id, 'squad', '2026-10-24 09:00:00')
     await rows.session(id, 'sweeper', '2026-10-24 13:00:00')
+    const counts = { registrations: 0, divisions: 1, squads: 1, sweepers: 1 }
 
-    expect(await remove(id)).toMatchObject({
+    expect(await remove(id)).toMatchObject({ warnings: [{ field: 'tournament' }], counts })
+    expect(await count('Tournaments')).toBe(1)
+    expect(await remove(id, true, counts)).toMatchObject({
       deleted: { divisions: 1, squads: 1, sweepers: 1, registrations: 0 },
     })
 
@@ -125,9 +129,24 @@ describe('Prisma tournament writer: delete (TRN-32 to TRN-35, D-132 to D-135)', 
             '1 registration, 1 division, and 1 squad will be deleted, with their lane assignments and payment records. The bowlers stay.',
         },
       ],
+      counts: { registrations: 1, divisions: 1, squads: 1, sweepers: 0 },
     })
     expect(await count('Tournaments')).toBe(1)
     expect(await count('Registrations')).toBe(1)
+  })
+
+  it('warns again and deletes nothing when a bowler registered after the warning (D-137)', async () => {
+    const id = await rows.tournament()
+    const division = await rows.division(id)
+    await rows.registration(division)
+    const shown = { registrations: 1, divisions: 1, squads: 0, sweepers: 0 }
+    await rows.registration(division) // arrives after the director saw the warning
+
+    expect(await remove(id, true, shown)).toMatchObject({
+      counts: { registrations: 2, divisions: 1, squads: 0, sweepers: 0 },
+    })
+    expect(await count('Tournaments')).toBe(1)
+    expect(await count('Registrations')).toBe(2)
   })
 
   it('deletes the tournament, its registrations, entries, and payments, and keeps the bowlers (TRN-35)', async () => {
@@ -168,7 +187,7 @@ describe('Prisma tournament writer: delete (TRN-32 to TRN-35, D-132 to D-135)', 
     await rows.payment(registrationId, 'Stripe_keep', 40)
     await rows.division(doomed)
 
-    expect(await remove(doomed)).toMatchObject({ deleted: { divisions: 1 } })
+    expect(await remove(doomed, true)).toMatchObject({ deleted: { divisions: 1 } })
 
     expect(await count('Tournaments')).toBe(1)
     expect(await count('Divisions')).toBe(1)

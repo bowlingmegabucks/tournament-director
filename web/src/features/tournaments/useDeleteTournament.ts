@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { deleteTournament } from './api'
+import { deleteTournament, type DeleteCounts } from './api'
 
 /**
  * Delete one tournament (TRN-36). It does not touch the cache itself: the page navigates away
@@ -8,6 +8,6 @@ import { deleteTournament } from './api'
  */
 export function useDeleteTournament(id: string) {
   return useMutation({
-    mutationFn: (options: { confirmWarnings: boolean }) => deleteTournament(id, options),
+    mutationFn: (options: { confirm?: DeleteCounts }) => deleteTournament(id, options),
   })
 }

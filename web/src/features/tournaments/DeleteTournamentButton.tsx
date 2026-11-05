@@ -3,7 +3,11 @@ import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Toast } from '../../shared/Toast'
 import { TournamentNotFoundError, tournamentKeys } from '../../shared/tournamentQuery'
-import { TournamentDeleteRefusedError, TournamentWarningsError } from './api'
+import {
+  TournamentDeleteRefusedError,
+  TournamentDeleteWarningError,
+  type DeleteCounts,
+} from './api'
 import { DeleteTournamentDialog } from './DeleteTournamentDialog'
 import styles from './DeleteTournament.module.css'
 import type { Tournament } from './types'
@@ -20,7 +24,7 @@ export function DeleteTournamentButton({ tournament }: Readonly<{ tournament: To
   const remove = useDeleteTournament(tournament.id)
   const [open, setOpen] = useState(false)
   // Set once the API asked the director to confirm (TRN-34).
-  const [warning, setWarning] = useState<string | undefined>()
+  const [warning, setWarning] = useState<{ text: string; counts: DeleteCounts } | undefined>()
   const [failure, setFailure] = useState<string | undefined>()
   // Set when the API refused (TRN-33): shown in a toast after the dialog closes.
   const [refusal, setRefusal] = useState<string[] | undefined>()
@@ -48,12 +52,16 @@ export function DeleteTournamentButton({ tournament }: Readonly<{ tournament: To
     setFailure(undefined)
     const closesAtStart = closes.current
     try {
-      await remove.mutateAsync({ confirmWarnings: warning !== undefined })
+      await remove.mutateAsync({ confirm: warning?.counts })
       await leave({ deleted: true })
     } catch (error) {
       if (closes.current !== closesAtStart) return
-      if (error instanceof TournamentWarningsError) {
-        setWarning(error.warnings.map((item) => item.message).join(' '))
+      if (error instanceof TournamentDeleteWarningError) {
+        // The first warning, or a fresh one because the counts moved: show what goes now.
+        setWarning({
+          text: error.warnings.map((item) => item.message).join(' '),
+          counts: error.counts,
+        })
       } else if (error instanceof TournamentDeleteRefusedError) {
         close()
         setRefusal(error.reasons)
@@ -81,7 +89,7 @@ export function DeleteTournamentButton({ tournament }: Readonly<{ tournament: To
       {open && (
         <DeleteTournamentDialog
           tournamentName={tournament.name}
-          warning={warning}
+          warning={warning?.text}
           pending={remove.isPending}
           failure={failure}
           onConfirm={() => {

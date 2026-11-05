@@ -9,7 +9,29 @@ import type { TournamentWriter } from './writer.ts'
 
 const idParams = z.object({ id: z.uuid() })
 // A `DELETE` takes no body (D-134), so confirming rides in the query string. Only `true` is valid.
-const deleteQuery = z.object({ confirmWarnings: z.literal('true').optional() })
+// Confirming also carries the four counts the warning showed (D-137), so the delete matches what
+// the director saw and not whatever arrived since.
+const count = z
+  .string()
+  .regex(/^\d{1,9}$/)
+  .transform(Number)
+const deleteQuery = z
+  .object({
+    confirmWarnings: z.literal('true').optional(),
+    registrations: count.optional(),
+    divisions: count.optional(),
+    squads: count.optional(),
+    sweepers: count.optional(),
+  })
+  .refine(
+    (query) =>
+      query.confirmWarnings === undefined ||
+      (query.registrations !== undefined &&
+        query.divisions !== undefined &&
+        query.squads !== undefined &&
+        query.sweepers !== undefined),
+    { message: 'Confirming needs the registrations, divisions, squads, and sweepers counts.' },
+  )
 
 const confirmMessage = 'Confirm to delete this tournament.'
 
@@ -23,9 +45,20 @@ export function createTournamentDeleteRouter(writer: TournamentWriter, logger: L
 
   router.delete('/:id', async (req, res) => {
     const { id } = idParams.parse(req.params)
-    const { confirmWarnings } = deleteQuery.parse(req.query)
+    const query = deleteQuery.parse(req.query)
 
-    const outcome = await writer.remove(id, { confirmWarnings: confirmWarnings === 'true' })
+    const confirmed = query.confirmWarnings === 'true'
+    const outcome = await writer.remove(id, {
+      confirmWarnings: confirmed,
+      seen: confirmed
+        ? {
+            registrations: query.registrations ?? 0,
+            divisions: query.divisions ?? 0,
+            squads: query.squads ?? 0,
+            sweepers: query.sweepers ?? 0,
+          }
+        : undefined,
+    })
     if ('notFound' in outcome) throw new HttpError(404, 'Tournament not found')
     if ('refused' in outcome) {
       requestLogger(res, logger).warn(
@@ -38,7 +71,9 @@ export function createTournamentDeleteRouter(writer: TournamentWriter, logger: L
         [deleteField]: outcome.refused.join('\n'),
       })
     }
-    if ('warnings' in outcome) throw new WarningsError(409, confirmMessage, outcome.warnings)
+    if ('warnings' in outcome) {
+      throw new WarningsError(409, confirmMessage, outcome.warnings, { counts: outcome.counts })
+    }
 
     // Who deleted what, in counts. Names and amounts stay out of the log.
     const { registrations, divisions, squads, sweepers } = outcome.deleted

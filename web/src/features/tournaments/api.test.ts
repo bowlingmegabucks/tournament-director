@@ -480,28 +480,20 @@ describe('deleteTournament (TRN-32, D-133, D-134)', () => {
     expect(received?.search).toBe('')
   })
 
-  it('sends confirmWarnings=true once the director confirmed', async () => {
+  it('sends confirmWarnings=true with the counts the warning showed (D-137)', async () => {
     let received: URL | undefined
     remove(({ request }) => {
       received = new URL(request.url)
       return new HttpResponse(null, { status: 204 })
     })
 
-    await deleteTournament(stored.id, { confirmWarnings: true })
-
-    expect(received?.search).toBe('?confirmWarnings=true')
-  })
-
-  it('does not send the query for confirmWarnings: false', async () => {
-    let received: URL | undefined
-    remove(({ request }) => {
-      received = new URL(request.url)
-      return new HttpResponse(null, { status: 204 })
+    await deleteTournament(stored.id, {
+      confirm: { registrations: 12, divisions: 4, squads: 3, sweepers: 1 },
     })
 
-    await deleteTournament(stored.id, { confirmWarnings: false })
-
-    expect(received?.search).toBe('')
+    expect(received?.search).toBe(
+      '?confirmWarnings=true&registrations=12&divisions=4&squads=3&sweepers=1',
+    )
   })
 
   it('turns a 409 with errors into a refusal with one reason per line', async () => {
@@ -586,6 +578,7 @@ describe('deleteTournament (TRN-32, D-133, D-134)', () => {
         {
           message: 'Confirm to delete this tournament.',
           warnings: [{ field: 'tournament', message: '12 registrations will be deleted.' }],
+          counts: { registrations: 12, divisions: 4, squads: 3, sweepers: 1 },
         },
         { status: 409 },
       ),
@@ -596,7 +589,29 @@ describe('deleteTournament (TRN-32, D-133, D-134)', () => {
     expect(error).toBeInstanceOf(TournamentWarningsError)
     expect(error).toMatchObject({
       warnings: [{ field: 'tournament', message: '12 registrations will be deleted.' }],
+      counts: { registrations: 12, divisions: 4, squads: 3, sweepers: 1 },
     })
+  })
+
+  it.each([
+    ['no counts', undefined],
+    ['a count that is not a number', { registrations: '12', divisions: 4, squads: 3, sweepers: 1 }],
+    ['a count left out', { registrations: 12, divisions: 4, squads: 3 }],
+  ])('fails on a warning with %s, since it could not be confirmed', async (_label, counts) => {
+    remove(() =>
+      HttpResponse.json(
+        {
+          message: 'Confirm.',
+          warnings: [{ field: 'tournament', message: '12 registrations will be deleted.' }],
+          counts,
+        },
+        { status: 409 },
+      ),
+    )
+
+    await expect(deleteTournament(stored.id)).rejects.toThrow(
+      'Failed to delete the tournament (unexpected response)',
+    )
   })
 
   it('treats a 404 as a tournament that is already gone', async () => {

@@ -27,7 +27,7 @@ Version numbers follow content, not a countdown. 0.10.0 is fine.
   - [x] Create a tournament (`createTournament`, `TRN-19` to `TRN-22`).
   - [x] Edit a tournament, with free, confirmed, and refused fields by what depends on them (`editTournament`, `TRN-24` to `TRN-31`, D-127 to D-131).
   - [ ] Complete a tournament: final, completes open squads and sweepers, freezes everything (D-130). Built with Complete squad and Complete sweeper (`SQD-15` to `SQD-18`).
-  - [x] Delete a tournament: admin only, refused with scores or a real payment, confirmed with the typed name (`deleteTournament`, `TRN-32` to `TRN-37`, D-132 to D-136).
+  - [x] Delete a tournament: admin only, refused with scores or a real payment, confirmed with the typed name (`deleteTournament`, `TRN-32` to `TRN-37`, D-132 to D-137).
 
 ## Data and cutover
 

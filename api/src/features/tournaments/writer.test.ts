@@ -189,5 +189,23 @@ describe('in-memory tournament writer: update (TRN-24, TRN-27)', () => {
       })
       expect(stored).toEqual([])
     })
+
+    it('warns again when the counts the caller saw are out of date (D-137)', async () => {
+      const { writer, stored } = createInMemoryTournamentWriter([{ ...first }], {
+        deleteFacts: { [first.id]: { registrations: 3 } },
+      })
+      const stale = { registrations: 2, divisions: 0, squads: 0, sweepers: 0 }
+
+      expect(await writer.remove(first.id, { confirmWarnings: true, seen: stale })).toMatchObject({
+        counts: { registrations: 3 },
+      })
+      expect(stored).toHaveLength(1)
+      expect(
+        await writer.remove(first.id, {
+          confirmWarnings: true,
+          seen: { ...stale, registrations: 3 },
+        }),
+      ).toMatchObject({ deleted: { registrations: 3 } })
+    })
   })
 })

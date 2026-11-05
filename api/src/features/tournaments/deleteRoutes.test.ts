@@ -18,6 +18,9 @@ const second = {
   ...createNewTournament({ name: 'Fall Classic', startDate: '2027-10-01', endDate: '2027-10-03' }),
 }
 const path = `/v1/tournaments/${first.id}`
+/** The counts a warning showed, as the confirming request sends them back (D-137). */
+const seen = (registrations: number, divisions: number, squads: number, sweepers: number) =>
+  `registrations=${registrations}&divisions=${divisions}&squads=${squads}&sweepers=${sweepers}`
 
 function setup(options: { facts?: Partial<DeleteFacts>; completed?: boolean } = {}) {
   const captured = createCapturedLogger()
@@ -46,7 +49,7 @@ describe('DELETE /v1/tournaments/:id', () => {
   it('logs who deleted which tournament, in counts and not names (TRN-32)', async () => {
     const { app, captured } = setup({ facts: { divisions: 4, squads: 3, sweepers: 1 } })
 
-    await request(app).delete(path)
+    await request(app).delete(`${path}?confirmWarnings=true&${seen(0, 4, 3, 1)}`)
 
     const line = captured.records().find((record) => record['msg'] === 'Tournament deleted')
     expect(line).toMatchObject({
@@ -135,7 +138,7 @@ describe('DELETE /v1/tournaments/:id', () => {
     it('does not let confirmWarnings override a refusal', async () => {
       const { app, stored } = setup({ facts: { hasScores: true } })
 
-      const response = await request(app).delete(`${path}?confirmWarnings=true`)
+      const response = await request(app).delete(`${path}?confirmWarnings=true&${seen(4, 0, 0, 0)}`)
 
       expect(response.status).toBe(409)
       expect(stored).toHaveLength(2)
@@ -182,6 +185,7 @@ describe('DELETE /v1/tournaments/:id', () => {
               '12 registrations, 4 divisions, 3 squads, and 1 sweeper will be deleted, with their lane assignments and payment records. The bowlers stay.',
           },
         ],
+        counts: { registrations: 12, divisions: 4, squads: 3, sweepers: 1 },
       })
       expect(stored).toHaveLength(2)
       expect(captured.records().some((record) => record['msg'] === 'Tournament deleted')).toBe(
@@ -189,13 +193,68 @@ describe('DELETE /v1/tournaments/:id', () => {
       )
     })
 
-    it('deletes once confirmWarnings=true', async () => {
+    it('deletes once confirmWarnings=true comes with the counts the warning showed (D-137)', async () => {
       const { app, stored } = setup({ facts })
 
-      const response = await request(app).delete(`${path}?confirmWarnings=true`)
+      const response = await request(app).delete(
+        `${path}?confirmWarnings=true&${seen(12, 4, 3, 1)}`,
+      )
 
       expect(response.status).toBe(204)
       expect(stored).toEqual([second])
+    })
+
+    it('warns again, and deletes nothing, when the counts moved since the warning (D-137)', async () => {
+      const { app, stored } = setup({ facts })
+
+      const response = await request(app).delete(`${path}?confirmWarnings=true&${seen(2, 4, 3, 1)}`)
+
+      expect(response.status).toBe(409)
+      expect(response.body).toMatchObject({
+        counts: { registrations: 12, divisions: 4, squads: 3, sweepers: 1 },
+      })
+      expect(stored).toHaveLength(2)
+    })
+
+    it('answers 400 when confirming leaves a count out (D-137)', async () => {
+      const { app, stored } = setup({ facts })
+
+      const response = await request(app).delete(
+        `${path}?confirmWarnings=true&registrations=12&divisions=4&squads=3`,
+      )
+
+      expect(response.status).toBe(400)
+      expect(stored).toHaveLength(2)
+    })
+
+    it.each(['-1', 'x', '1.5', ''])('answers 400 for a count of "%s" (D-137)', async (value) => {
+      const { app, stored } = setup({ facts })
+
+      const response = await request(app).delete(
+        `${path}?confirmWarnings=true&registrations=${value}&divisions=4&squads=3&sweepers=1`,
+      )
+
+      expect(response.status).toBe(400)
+      expect(stored).toHaveLength(2)
+    })
+
+    it('warns about divisions, squads, and sweepers alone, with no registrations (D-134)', async () => {
+      const { app, stored } = setup({ facts: { divisions: 2 } })
+
+      const response = await request(app).delete(path)
+
+      expect(response.status).toBe(409)
+      expect(response.body).toMatchObject({ counts: { registrations: 0, divisions: 2 } })
+      expect(stored).toHaveLength(2)
+    })
+
+    it('ignores counts sent without confirmWarnings', async () => {
+      const { app, stored } = setup({ facts })
+
+      const response = await request(app).delete(`${path}?${seen(12, 4, 3, 1)}`)
+
+      expect(response.status).toBe(409)
+      expect(stored).toHaveLength(2)
     })
   })
 

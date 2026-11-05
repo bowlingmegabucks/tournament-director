@@ -15,6 +15,27 @@ export interface DeleteFacts {
   sweepers: number
 }
 
+/** What a delete would remove besides the tournament row. The confirming request echoes it (D-137). */
+export interface DeleteCounts {
+  registrations: number
+  divisions: number
+  squads: number
+  sweepers: number
+}
+
+export const countsOf = (facts: DeleteFacts): DeleteCounts => ({
+  registrations: facts.registrations,
+  divisions: facts.divisions,
+  squads: facts.squads,
+  sweepers: facts.sweepers,
+})
+
+const sameCounts = (a: DeleteCounts, b: DeleteCounts) =>
+  a.registrations === b.registrations &&
+  a.divisions === b.divisions &&
+  a.squads === b.squads &&
+  a.sweepers === b.sweepers
+
 /** The warning's field name. Delete has no form field, so the one thing it acts on is named. */
 export const deleteField = 'tournament'
 
@@ -27,8 +48,8 @@ export interface DeleteWarning {
 export type DeletePlan =
   /** A fact forbids it. 409 with `errors`; confirming cannot override it. One line per reason. */
   | { kind: 'refused'; reasons: string[] }
-  /** Allowed, but the caller must confirm. 409 with `warnings`. */
-  | { kind: 'warn'; warnings: DeleteWarning[] }
+  /** Allowed, but the caller must confirm what `counts` says goes. 409 with `warnings` and `counts`. */
+  | { kind: 'warn'; warnings: DeleteWarning[]; counts: DeleteCounts }
   | { kind: 'delete' }
 
 export const completeMessage = 'This tournament is complete and cannot be deleted.'
@@ -60,10 +81,17 @@ export function deleteWarningMessage(facts: DeleteFacts): string {
 }
 
 /**
- * Decide a delete (D-133, D-134). Refusals come first and `confirmWarnings` never overrides them.
- * A tournament with registrations asks for a second request; one without goes straight through.
+ * Decide a delete (D-133, D-134, D-137). Refusals come first and `confirmWarnings` never overrides
+ * them. A tournament with anything under it asks for a second request. That request must carry
+ * the counts the caller saw (`seen`): if the tournament changed since, it gets a fresh warning
+ * instead of a delete. The route makes `seen` required; a caller that leaves it out confirms
+ * whatever is there.
  */
-export function planDelete(facts: DeleteFacts, confirmWarnings: boolean): DeletePlan {
+export function planDelete(
+  facts: DeleteFacts,
+  confirmWarnings: boolean,
+  seen?: DeleteCounts,
+): DeletePlan {
   const reasons = [
     facts.completed && completeMessage,
     facts.hasScores && scoresMessage,
@@ -71,10 +99,14 @@ export function planDelete(facts: DeleteFacts, confirmWarnings: boolean): Delete
   ].filter((reason): reason is string => reason !== false)
   if (reasons.length > 0) return { kind: 'refused', reasons }
 
-  if (facts.registrations > 0 && !confirmWarnings) {
+  const counts = countsOf(facts)
+  const holdsSomething = Object.values(counts).some((count) => count > 0)
+  const confirmed = confirmWarnings && (seen === undefined || sameCounts(seen, counts))
+  if (holdsSomething && !confirmed) {
     return {
       kind: 'warn',
       warnings: [{ field: deleteField, message: deleteWarningMessage(facts) }],
+      counts,
     }
   }
   return { kind: 'delete' }

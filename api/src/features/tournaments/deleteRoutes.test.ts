@@ -141,6 +141,18 @@ describe('DELETE /v1/tournaments/:id', () => {
       expect(stored).toHaveLength(2)
     })
 
+    it('logs a refused delete as a warning with the reason count and no names', async () => {
+      const { app, captured } = setup({ facts: { hasScores: true, paidRegistrations: 1 } })
+
+      await request(app).delete(path)
+
+      const record = captured
+        .records()
+        .find((entry) => entry['msg'] === 'Tournament delete refused')
+      expect(record).toMatchObject({ level: 40, tournamentId: first.id, reasons: 2 })
+      expect(JSON.stringify(record)).not.toContain('Spring Classic')
+    })
+
     it('does not log a refused delete as a delete', async () => {
       const { app, captured } = setup({ facts: { hasScores: true } })
 

@@ -1232,6 +1232,7 @@ const allPermissions = [
   'scores.write',
   'sessions.complete',
   'tournaments.write',
+  'tournaments.delete',
   'bowlers.ssn',
   'users.manage',
 ]
@@ -1240,7 +1241,10 @@ const allPermissions = [
 const permissionsByRole: Record<string, string[]> = {
   admin: allPermissions,
   director: allPermissions.filter(
-    (permission) => permission !== 'users.manage' && permission !== 'bowlers.ssn',
+    (permission) =>
+      permission !== 'users.manage' &&
+      permission !== 'bowlers.ssn' &&
+      permission !== 'tournaments.delete',
   ),
   scoreKeeper: ['scores.write', 'registrations.read', 'lanes.read'],
 }

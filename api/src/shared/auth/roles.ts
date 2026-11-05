@@ -14,9 +14,13 @@ export function isRoleName(value: unknown): value is RoleName {
   return typeof value === 'string' && knownRoles.has(value)
 }
 
-// Director holds everything except these two (D-97), so a permission added later reaches the
+// Director holds everything except these three (D-97, D-132), so a permission added later reaches the
 // director without an edit here. When you add a permission only an admin should hold, list it here.
-const withheldFromDirector = new Set<Permission>(['users.manage', 'bowlers.ssn'])
+const withheldFromDirector = new Set<Permission>([
+  'users.manage',
+  'bowlers.ssn',
+  'tournaments.delete',
+])
 
 const rolePermissions: Record<RoleName, readonly Permission[]> = {
   // What collecting scores needs: enter them, and see who is bowling and where (D-97).

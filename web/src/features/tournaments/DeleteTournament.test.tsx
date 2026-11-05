@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router'
+import App from '../../App'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
@@ -365,5 +368,153 @@ describe('the delete dialog (TRN-36, D-136)', () => {
     await typeNameAndDelete(user, dialog)
 
     expect(await screen.findByText('Tournament deleted')).toBeVisible()
+  })
+
+  it('joins several warnings with a space', async () => {
+    const user = admin()
+    serveDelete(() =>
+      HttpResponse.json(
+        {
+          message: 'Confirm.',
+          warnings: [
+            { field: 'tournament', message: 'First warning.' },
+            { field: 'tournament', message: 'Second warning.' },
+          ],
+        },
+        { status: 409 },
+      ),
+    )
+    renderApp(`/tournaments/${id}`)
+    const dialog = await openDialog(user)
+
+    await typeNameAndDelete(user, dialog)
+
+    expect(await within(dialog).findByText('First warning. Second warning.')).toBeVisible()
+  })
+
+  it('clears an old failure when the admin tries again, and when the dialog closes', async () => {
+    const user = admin()
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let calls = 0
+    server.use(
+      http.delete(`/v1/tournaments/${id}`, async () => {
+        calls += 1
+        if (calls === 1) return new HttpResponse(null, { status: 503 })
+        await gate
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+    renderApp(`/tournaments/${id}`)
+    const dialog = await openDialog(user)
+    await typeNameAndDelete(user, dialog)
+    expect(await within(dialog).findByRole('alert')).toBeVisible()
+
+    await user.click(within(dialog).getByRole('button', { name: 'Delete tournament' }))
+
+    await within(dialog).findByRole('button', { name: 'Deleting…' })
+    expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument()
+    release()
+    await screen.findByText('Tournament deleted')
+  })
+
+  it('does not show an old failure when the dialog opens again', async () => {
+    const user = admin()
+    serveDelete(() => new HttpResponse(null, { status: 503 }))
+    renderApp(`/tournaments/${id}`)
+    const dialog = await openDialog(user)
+    await typeNameAndDelete(user, dialog)
+    await within(dialog).findByRole('alert')
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+
+    const again = await openDialog(user)
+
+    expect(within(again).queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('drops the refusal toast when the dialog opens again', async () => {
+    const user = admin()
+    serveDelete(() =>
+      HttpResponse.json(
+        { message: 'Scores are saved.', errors: { tournament: 'Scores are saved.' } },
+        { status: 409 },
+      ),
+    )
+    renderApp(`/tournaments/${id}`)
+    const dialog = await openDialog(user)
+    await typeNameAndDelete(user, dialog)
+    await screen.findByRole('alert')
+
+    await openDialog(user)
+
+    expect(screen.queryByText('Scores are saved.')).not.toBeInTheDocument()
+  })
+
+  it('sends nothing when the form is submitted with the wrong name', async () => {
+    const user = admin()
+    const urls = serveDelete(gone)
+    renderApp(`/tournaments/${id}`)
+    const dialog = await openDialog(user)
+    await user.type(within(dialog).getByLabelText('Type the tournament name to confirm'), 'Spring')
+
+    const form = within(dialog).getByRole('button', { name: 'Delete tournament' }).closest('form')
+    expect(form).not.toBeNull()
+    // Not a click on the disabled button: the form itself is submitted, as Enter would do.
+    const notPrevented = form ? fireEvent.submit(form) : true
+
+    expect(notPrevented).toBe(false)
+    // A request would start a tick later: give it one before saying none was sent.
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(urls).toEqual([])
+    expect(within(dialog).queryByRole('button', { name: 'Deleting…' })).not.toBeInTheDocument()
+  })
+
+  it('drops the deleted tournament from the cache and leaves other queries alone', async () => {
+    setMockUser(createSignedInUser({ roles: ['admin'] }))
+    serve()
+    serveDelete(gone)
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const otherDetail = ['tournaments', crypto.randomUUID()] as const
+    client.setQueryData(otherDetail, 'other tournament')
+    client.setQueryData(['unrelated'], 'unrelated')
+    const user = userEvent.setup()
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={[`/tournaments/${id}`]}>
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    const dialog = await openDialog(user)
+
+    await typeNameAndDelete(user, dialog)
+    await screen.findByText('Tournament deleted')
+
+    expect(client.getQueryData(['tournaments', id])).toBeUndefined()
+    expect(client.getQueryData(otherDetail)).toBe('other tournament')
+    expect(client.getQueryState(['unrelated'])?.isInvalidated).toBe(false)
+    expect(client.getQueryState(otherDetail)?.isInvalidated).toBe(true)
+  })
+
+  it.each([
+    ['deleted', gone, 'Tournament deleted'],
+    [
+      'already deleted',
+      () => new HttpResponse(null, { status: 404 }),
+      'That tournament was already deleted.',
+    ],
+  ])('closes the %s toast with Dismiss', async (_which, answer, text) => {
+    const user = admin()
+    serveDelete(answer)
+    renderApp(`/tournaments/${id}`)
+    const dialog = await openDialog(user)
+    await typeNameAndDelete(user, dialog)
+    expect(await screen.findByText(text)).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
+
+    expect(screen.queryByText(text)).not.toBeInTheDocument()
   })
 })

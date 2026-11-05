@@ -536,6 +536,41 @@ describe('deleteTournament (TRN-32, D-133, D-134)', () => {
     })
   })
 
+  it('skips blank lines in the reasons', async () => {
+    remove(() =>
+      HttpResponse.json(
+        { message: 'A', errors: { tournament: 'First reason\n\nSecond reason\n' } },
+        { status: 409 },
+      ),
+    )
+
+    await expect(deleteTournament(stored.id)).rejects.toMatchObject({
+      reasons: ['First reason', 'Second reason'],
+    })
+  })
+
+  it('does not treat an empty warnings list as warnings', async () => {
+    remove(() =>
+      HttpResponse.json(
+        { message: 'No.', warnings: [], errors: { tournament: 'Scores are saved.' } },
+        { status: 409 },
+      ),
+    )
+
+    const error = await deleteTournament(stored.id).catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(TournamentDeleteRefusedError)
+    expect(error).toMatchObject({ reasons: ['Scores are saved.'] })
+  })
+
+  it('names the delete when a 409 body is not JSON', async () => {
+    remove(() => new HttpResponse('<html></html>', { status: 409 }))
+
+    await expect(deleteTournament(stored.id)).rejects.toThrow(
+      'Failed to delete the tournament (response is not JSON)',
+    )
+  })
+
   it('gives a refusal without a message a default one', async () => {
     remove(() => HttpResponse.json({}, { status: 409 }))
 

@@ -29,6 +29,7 @@ export function createTournamentDeleteRouter(writer: TournamentWriter, logger: L
     if ('notFound' in outcome) throw new HttpError(404, 'Tournament not found')
     if ('refused' in outcome) {
       // `refused` is never empty. The message is the first reason; `errors` holds them all.
+      // Stryker disable next-line StringLiteral: the fallback never shows, since a refusal has a reason.
       throw new FieldErrorsError(409, outcome.refused[0] ?? '', {
         [deleteField]: outcome.refused.join('\n'),
       })

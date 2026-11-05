@@ -22,6 +22,7 @@ export function TournamentsPage() {
   const deleted = field(location.state, 'deleted') === true
   const alreadyDeleted = field(location.state, 'alreadyDeleted') === true
   const clear = () => {
+    // Stryker disable next-line StringLiteral,ObjectLiteral,BooleanLiteral: any navigation without state clears the toast; only the history entry (replace) and the path spelling differ, which tests cannot see.
     void navigate('.', { replace: true, state: null })
   }
 

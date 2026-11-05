@@ -1,4 +1,4 @@
-import { useCallback, useId, useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { closeDialogOf, showOnMount } from '../../shared/dialogParts'
 import styles from '../../shared/Dialog.module.css'
 import own from './DeleteTournament.module.css'
@@ -33,11 +33,13 @@ export function DeleteTournamentDialog({
   const hintId = useId()
   const [typed, setTyped] = useState('')
   const cancelRef = useRef<HTMLButtonElement>(null)
-  // Stable, so it runs when the dialog mounts and never steals focus from the box on a re-render.
-  const open = useCallback((node: HTMLDialogElement | null) => {
+  // A function made once, so React runs it when the dialog mounts and never again: a new function
+  // on each render would take focus back from the box while the admin types.
+  const [open] = useState(() => (node: HTMLDialogElement | null) => {
     showOnMount(node)
+    // Stryker disable next-line ConditionalExpression: on unmount the ref is already null, so the focus call does nothing.
     if (node) cancelRef.current?.focus()
-  }, [])
+  })
   const matches = nameMatches(typed, tournamentName)
 
   return (

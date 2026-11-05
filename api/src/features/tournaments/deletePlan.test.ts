@@ -32,6 +32,11 @@ describe('planDelete', () => {
   })
 
   describe('refusals (TRN-33)', () => {
+    it('words the complete and scores refusals as the API sends them', () => {
+      expect(completeMessage).toBe('This tournament is complete and cannot be deleted.')
+      expect(scoresMessage).toBe('Scores are saved, so this tournament cannot be deleted.')
+    })
+
     it('refuses a complete tournament', () => {
       expect(planDelete(facts({ completed: true }), false)).toEqual({
         kind: 'refused',
@@ -104,6 +109,20 @@ describe('planDelete', () => {
     it('leaves out the parts that are empty and uses singular for one', () => {
       expect(deleteWarningMessage(facts({ registrations: 1, divisions: 1 }))).toBe(
         '1 registration and 1 division will be deleted, with their lane assignments and payment records. The bowlers stay.',
+      )
+    })
+
+    it('leaves out registrations when there are none', () => {
+      expect(deleteWarningMessage(facts({ divisions: 2 }))).toBe(
+        '2 divisions will be deleted, with their lane assignments and payment records. The bowlers stay.',
+      )
+    })
+
+    it('uses the singular for one of each', () => {
+      expect(
+        deleteWarningMessage(facts({ registrations: 1, divisions: 1, squads: 1, sweepers: 1 })),
+      ).toBe(
+        '1 registration, 1 division, 1 squad, and 1 sweeper will be deleted, with their lane assignments and payment records. The bowlers stay.',
       )
     })
 

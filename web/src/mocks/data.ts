@@ -711,7 +711,6 @@ export function createSquadRow(overrides: Partial<SquadRow> = {}): SquadRow {
     place: 1,
     group: 'other',
     total: 600,
-    highGame: 200,
     games: 3,
     handicap: 0,
     scores: [200, 200, 200],
@@ -729,7 +728,6 @@ export function createDivisionResult(overrides: Partial<DivisionResult> = {}): D
     name: 'Open',
     entries: 0,
     showHandicap: false,
-    showGames: false,
     rows: [],
     didNotFinish: [],
     noShows: [],
@@ -764,7 +762,6 @@ export function createSweeperRow(overrides: Partial<SweeperRow> = {}): SweeperRo
     place: 1,
     group: 'other',
     total: 600,
-    highGame: 200,
     games: 3,
     ties: [],
     divisionName: 'Open',
@@ -840,7 +837,6 @@ function demoRows(players: DemoPlayer[], advance: number, cash: number): SquadRo
       place: index + 1,
       group: groupAt(index),
       total,
-      highGame,
       handicap,
       games,
       scores: demoScores(total, highGame, games, handicap),
@@ -871,7 +867,6 @@ export function createDemoSquadResults(
               number: open.number,
               name: open.name,
               entries: 8,
-              showGames: true,
               rows: demoRows(
                 [
                   ['Dave Kowalski', 503, 258, 0, 2],
@@ -939,7 +934,6 @@ export function createDemoSquadResults(
             registrationId: faker.string.uuid(),
             name: 'Bob Whitaker',
             total: 445,
-            highGame: 230,
             games: 2,
             handicap: 0,
             scores: [230, 215],
@@ -1002,7 +996,6 @@ export function createDemoSweeperResults(session: {
         divisionName,
         bonusPins,
         total,
-        highGame,
         place: index + 1,
         group: index < 2 ? 'casher' : 'other',
         games: session.games,
@@ -1089,7 +1082,6 @@ export function createSuperSweeperRow(overrides: Partial<SuperSweeperRow> = {}):
     place: 1,
     group: 'other',
     total: 1200,
-    highGame: 220,
     games: 6,
     ties: [],
     divisionName: 'Open',
@@ -1213,15 +1205,14 @@ export function createDemoSuperSweeper(
 ): SuperSweeperResults {
   const columns = sweepers.map(({ id, date, games, complete }) => ({ id, date, games, complete }))
   const [first, second] = columns
-  const players: [string, string, (number | null)[], number, number, SuperSweeperRow['flags']][] = [
-    ['Dana Whitfield', 'Women/Senior', [712, 698], 1410, 262, []],
-    ['Dave Kowalski', 'Open', [690, 681], 1371, 248, []],
+  const players: [string, string, (number | null)[], number, SuperSweeperRow['flags']][] = [
+    ['Dana Whitfield', 'Women/Senior', [712, 698], 1410, []],
+    ['Dave Kowalski', 'Open', [690, 681], 1371, []],
     [
       'Lee Park',
       'Women/Senior',
       [390, 380],
       770,
-      231,
       first ? [{ kind: 'unfinished', sweeperId: first.id, gamesBowled: 2 }] : [],
     ],
     [
@@ -1229,7 +1220,6 @@ export function createDemoSuperSweeper(
       'Open',
       [605, 0],
       605,
-      220,
       second ? [{ kind: 'missed', sweeperId: second.id, gamesBowled: 0 }] : [],
     ],
     // A no-show holds zero rows (D-06), so every sweeper is missed and the total is 0: last (D-90).
@@ -1237,7 +1227,6 @@ export function createDemoSuperSweeper(
       'Pat Romano',
       'Open',
       [0, 0],
-      0,
       0,
       columns.map((column) => ({ kind: 'missed' as const, sweeperId: column.id, gamesBowled: 0 })),
     ],
@@ -1249,7 +1238,7 @@ export function createDemoSuperSweeper(
     cashers: 2,
     cutScore: 1371,
     sweepers: columns,
-    rows: players.map(([name, divisionName, sweeperTotals, total, highGame, flags], index) => {
+    rows: players.map(([name, divisionName, sweeperTotals, total, flags], index) => {
       const pins = divisionName === 'Open' ? 0 : 10
       const totals = sweeperTotals.slice(0, columns.length)
       return createSuperSweeperRow({
@@ -1267,7 +1256,6 @@ export function createDemoSuperSweeper(
         }),
         sweeperPins: columns.map(() => pins),
         total,
-        highGame,
         flags,
         place: index + 1,
         group: index < 2 ? 'casher' : 'other',

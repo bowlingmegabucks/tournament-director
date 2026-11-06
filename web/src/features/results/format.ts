@@ -161,11 +161,15 @@ export function formatPlusMinus(total: number, games: number): string {
   return difference === 0 ? '±0' : `−${-difference}`
 }
 
-export function sum(scores: readonly number[]): number {
-  return scores.reduce((all, score) => all + score, 0)
+/** The sum of the games with a score. */
+export function sum(scores: readonly (number | null)[]): number {
+  return scores.reduce<number>((all, score) => all + (score ?? 0), 0)
 }
 
 /** How many game columns a table needs: the session's games, or more if a bowler has more scores. */
-export function gameColumnCount(sessionGames: number, scoreLists: readonly (readonly number[])[]) {
+export function gameColumnCount(
+  sessionGames: number,
+  scoreLists: readonly (readonly (number | null)[])[],
+) {
   return Math.max(sessionGames, ...scoreLists.map((scores) => scores.length))
 }

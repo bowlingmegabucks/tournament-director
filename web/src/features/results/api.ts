@@ -41,13 +41,16 @@ function isTie(value: unknown): boolean {
   )
 }
 
+/** The games of a row by game number: a score, or `null` for a game with none saved. */
+const isGameScores = (value: unknown) =>
+  isEvery(value, (score) => score === null || isNumber(score))
+
 function isRankedRow(value: unknown): boolean {
   return (
     isText(field(value, 'registrationId')) &&
     isText(field(value, 'name')) &&
     isNumber(field(value, 'place')) &&
     isNumber(field(value, 'total')) &&
-    isNumber(field(value, 'highGame')) &&
     isNumber(field(value, 'games')) &&
     isEvery(field(value, 'ties'), isTie)
   )
@@ -59,6 +62,7 @@ function isSquadRow(value: unknown): boolean {
     isRankedRow(value) &&
     (group === 'advancer' || group === 'casher' || group === 'other') &&
     isNumber(field(value, 'handicap')) &&
+    isGameScores(field(value, 'scores')) &&
     isBoolean(field(value, 'advancedEarlier'))
   )
 }
@@ -68,9 +72,9 @@ function isUnplacedRow(value: unknown): boolean {
     isText(field(value, 'registrationId')) &&
     isText(field(value, 'name')) &&
     isNumber(field(value, 'total')) &&
-    isNumber(field(value, 'highGame')) &&
     isNumber(field(value, 'games')) &&
-    isNumber(field(value, 'handicap'))
+    isNumber(field(value, 'handicap')) &&
+    isGameScores(field(value, 'scores'))
   )
 }
 
@@ -85,7 +89,6 @@ function isDivision(value: unknown): boolean {
     isText(field(value, 'name')) &&
     isNumber(field(value, 'entries')) &&
     isBoolean(field(value, 'showHandicap')) &&
-    isBoolean(field(value, 'showGames')) &&
     isEvery(field(value, 'rows'), isSquadRow) &&
     isEvery(field(value, 'didNotFinish'), isUnplacedRow) &&
     isEvery(field(value, 'noShows'), isNoShow)
@@ -117,7 +120,8 @@ function isSweeperRow(value: unknown): boolean {
     isRankedRow(value) &&
     (group === 'casher' || group === 'other') &&
     isText(field(value, 'divisionName')) &&
-    isNumber(field(value, 'bonusPins'))
+    isNumber(field(value, 'bonusPins')) &&
+    isGameScores(field(value, 'scores'))
   )
 }
 
@@ -275,6 +279,11 @@ function isSuperSweeperRow(value: unknown): boolean {
     (group === 'casher' || group === 'other') &&
     isText(field(value, 'divisionName')) &&
     isEvery(field(value, 'sweeperTotals'), (total) => total === null || isNumber(total)) &&
+    isEvery(
+      field(value, 'sweeperScores'),
+      (scores) => scores === null || isEvery(scores, isNumber),
+    ) &&
+    isEvery(field(value, 'sweeperPins'), isNumber) &&
     isEvery(field(value, 'flags'), isFlag)
   )
 }

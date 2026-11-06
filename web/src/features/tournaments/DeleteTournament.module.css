@@ -5,13 +5,6 @@
   color: var(--color-danger);
 }
 
-/* The filled version: the button that cannot be undone. Text, not color alone, says what it does. */
-.destructive {
-  background: var(--color-danger);
-  border-color: var(--color-danger);
-  color: var(--color-on-status);
-}
-
 .field {
   display: grid;
   gap: var(--space-1);

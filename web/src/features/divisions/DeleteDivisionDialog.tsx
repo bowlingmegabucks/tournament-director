@@ -1,7 +1,6 @@
 import { useId } from 'react'
 import { closeDialogOf, showOnMount } from '../../shared/dialogParts'
 import styles from '../../shared/Dialog.module.css'
-import own from './DeleteDivision.module.css'
 import type { DivisionDeleteInfo } from './types'
 
 interface DeleteDivisionDialogProps {
@@ -86,7 +85,7 @@ export function DeleteDivisionDialog({
           {!blocked && (
             <button
               type="button"
-              className={own.destructive}
+              className={styles.destructive}
               disabled={loading || pending}
               onClick={onConfirm}
             >

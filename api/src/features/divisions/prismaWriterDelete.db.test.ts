@@ -253,31 +253,37 @@ describe('Prisma division writer: delete (DIV-12, DIV-01, DIV-14, D-151 to D-155
     ])
   })
 
-  it('never leaves a registration behind a deleted division when a bowler registers during the delete (D-155)', async () => {
+  it('lets exactly one of a delete and a new registration win, every time (D-155)', async () => {
     const { writer } = setup()
     const tournamentId = await rows.tournament()
-    const id = await rows.division(tournamentId)
 
-    const settled = await Promise.allSettled([
-      writer.remove(tournamentId, id),
-      rows.registration(id),
-    ])
+    // Which one wins varies from round to round, so run several and check each round on its own:
+    // a registration saved in the division means the delete was refused, and a delete that went
+    // through means the registration failed on the key. Never both, never neither.
+    for (let round = 0; round < 12; round += 1) {
+      const id = await rows.division(tournamentId, { name: `Race ${round}`, number: round + 1 })
 
-    const divisions = await countOf('SELECT COUNT(*) AS n FROM Divisions WHERE Id = ?', id)
+      const [removed, registered] = await Promise.allSettled([
+        writer.remove(tournamentId, id),
+        rows.registration(id),
+      ])
+
+      const registrations = await countOf(
+        'SELECT COUNT(*) AS n FROM Registrations WHERE DivisionId = ?',
+        id,
+      )
+      const divisions = await countOf('SELECT COUNT(*) AS n FROM Divisions WHERE Id = ?', id)
+      expect(removed.status).toBe('fulfilled')
+      const deleted = removed.status === 'fulfilled' && 'deleted' in removed.value
+      expect(deleted).toBe(registered.status === 'rejected')
+      expect(divisions).toBe(deleted ? 0 : 1)
+      expect(registrations).toBe(deleted ? 0 : 1)
+    }
     const orphans = await countOf(
       `SELECT COUNT(*) AS n FROM Registrations r
        LEFT JOIN Divisions d ON d.Id = r.DivisionId WHERE d.Id IS NULL`,
     )
     expect(orphans).toBe(0)
-    // Either the delete won (and the registration failed on the key) or the registration won
-    // (and the delete was refused). Both leave the data whole.
-    const deleteResult = settled[0]
-    expect(deleteResult.status).toBe('fulfilled')
-    if (deleteResult.status === 'fulfilled' && 'deleted' in deleteResult.value) {
-      expect(divisions).toBe(0)
-    } else {
-      expect(divisions).toBe(1)
-    }
   })
 })
 

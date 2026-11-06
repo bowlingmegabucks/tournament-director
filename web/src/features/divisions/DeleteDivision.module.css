@@ -1,15 +1,8 @@
-/* The row button: an outline, so Edit's neighbor does not shout. The filled red one is in the dialog. */
+/* The row button: an outline, so Edit's neighbor does not shout. The filled red one is shared in Dialog.module.css. */
 .trigger {
   background: transparent;
   border-color: var(--color-accent);
   color: var(--color-accent);
-}
-
-/* The filled version: the button that cannot be undone. Text, not color alone, says what it does. */
-.destructive {
-  background: var(--color-danger);
-  border-color: var(--color-danger);
-  color: var(--color-on-status);
 }
 
 .reasons {

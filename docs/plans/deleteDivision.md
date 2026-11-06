@@ -4,16 +4,16 @@ Branch: `deleteDivision` (the third part of 0.6.0). Delete this file when the wo
 
 ## Scope
 
-| Rule | Bucket | Note |
-| --- | --- | --- |
-| DIV-12 (delete) | In | `DELETE` route, `delete-info` read, Delete button per row, dialog |
-| DIV-01 (delete) | In | Later numbers move down by one (D-153, closes Q-36) |
-| DIV-03 (delete) | In | Same URL checks as edit; a complete tournament refuses (D-151) |
-| DIV-14 | In (side effect) | `SweeperDivision` rows cascade (D-152). The read part is already done |
-| DIV-15 | In, no change | Delete removes rows, so uniqueness still holds |
-| Move a bowler to another division (`REG-15`) | Later | Q-37, with registrations edit (D-156) |
-| Edit the number, move up or down | Later | Not asked for (D-146, D-153) |
-| Eligibility at registration, handicap formula | Later | Not part of delete |
+| Rule                                          | Bucket           | Note                                                                  |
+| --------------------------------------------- | ---------------- | --------------------------------------------------------------------- |
+| DIV-12 (delete)                               | In               | `DELETE` route, `delete-info` read, Delete button per row, dialog     |
+| DIV-01 (delete)                               | In               | Later numbers move down by one (D-153, closes Q-36)                   |
+| DIV-03 (delete)                               | In               | Same URL checks as edit; a complete tournament refuses (D-151)        |
+| DIV-14                                        | In (side effect) | `SweeperDivision` rows cascade (D-152). The read part is already done |
+| DIV-15                                        | In, no change    | Delete removes rows, so uniqueness still holds                        |
+| Move a bowler to another division (`REG-15`)  | Later            | Q-37, with registrations edit (D-156)                                 |
+| Edit the number, move up or down              | Later            | Not asked for (D-146, D-153)                                          |
+| Eligibility at registration, handicap formula | Later            | Not part of delete                                                    |
 
 ## Decisions used
 
@@ -32,18 +32,18 @@ Branch: `deleteDivision` (the third part of 0.6.0). Delete this file when the wo
 
 ## Differs from legacy
 
-| Rule | Legacy | New app | Decision |
-| --- | --- | --- | --- |
-| DIV-12 | No delete | Delete with two refusals | D-15, D-151 |
-| DIV-01 | Number typed on add, never changes | A delete closes the gap | D-153 |
+| Rule   | Legacy                             | New app                  | Decision    |
+| ------ | ---------------------------------- | ------------------------ | ----------- |
+| DIV-12 | No delete                          | Delete with two refusals | D-15, D-151 |
+| DIV-01 | Number typed on add, never changes | A delete closes the gap  | D-153       |
 
 ## API
 
 All web only. The vendor detail route (`API-04`) only reads divisions, so a deleted division drops out of its array and nothing else changes (D-09).
 
-| Route | Needs | Answers |
-| --- | --- | --- |
-| `DELETE /v1/tournaments/{id}/divisions/{divisionId}` | `divisions.write` | `204` no body |
+| Route                                                         | Needs             | Answers                                                   |
+| ------------------------------------------------------------- | ----------------- | --------------------------------------------------------- |
+| `DELETE /v1/tournaments/{id}/divisions/{divisionId}`          | `divisions.write` | `204` no body                                             |
 | `GET /v1/tournaments/{id}/divisions/{divisionId}/delete-info` | `divisions.write` | `200 { deleteInfo: { registrationCount, sweeperCount } }` |
 
 Errors, both routes:
@@ -88,27 +88,27 @@ No schema change and no new type in storage. `Divisions.Number` is decremented f
 
 ## Tests
 
-| Rule | Test |
-| --- | --- |
-| DIV-12 delete, `204` and the row is gone | `api/src/features/divisions/deleteRoutes.test.ts` "deletes a division and answers 204"; `prismaWriterDelete.db.test.ts` "removes the row" |
-| DIV-12 refused with bowlers (D-151) | `deletePlan.test.ts` (one, many, zero); `deleteRoutes.test.ts` "refuses a division with bowlers (409)"; `prismaWriterDelete.db.test.ts` "keeps the division and its registration" |
-| DIV-12 refused on a complete tournament (D-143) | `deletePlan.test.ts`; `deleteRoutes.test.ts`; `prismaWriterDelete.db.test.ts` |
-| Both refusals together | `deletePlan.test.ts` "lists both reasons"; `deleteRoutes.test.ts` |
-| DIV-12 access: `401`, API key `403`, score keeper `403`, director `204` | `deleteRoutes.test.ts` (and `api/src/shared/auth/roles.test.ts` is unchanged) |
-| DIV-03 ids: bad UUID `400`, unknown tournament `404`, division of another tournament `404` | `deleteRoutes.test.ts`; `prismaWriterDelete.db.test.ts` |
-| DIV-01 gap closes (D-153) | `prismaWriterDelete.db.test.ts` "moves later numbers down by one", "leaves lower numbers and old odd rows alone", "does not touch another tournament"; `deleteRoutes.test.ts` in-memory |
-| DIV-14 bonus pins removed (D-152) | `prismaWriterDelete.db.test.ts` "removes the sweeper rows" |
-| DIV-15 still unique after a delete and the next add numbers highest + 1 | `prismaWriterDelete.db.test.ts` "next add after a delete" |
-| Race: a registration lands during the delete | `prismaWriterDelete.db.test.ts` (as the tournament delete does) |
-| `delete-info` counts; `0` and above; pins of `NULL` not counted | `deleteRoutes.test.ts`; `prismaDeleteInfo.db.test.ts` |
-| Log line has ids and `number`, no name | `deleteRoutes.test.ts` |
-| Web: Delete button shows for a director, hides for a score keeper, signed out, and a complete tournament | `DivisionsPage.test.tsx` |
-| Web: dialog text with sweepers, with one, with none, while loading, when the info fails | `DeleteDivisionDialog.test.tsx` |
-| Web: dialog shows the refusal and only Close when bowlers are registered (one, many) (D-154) | `DeleteDivisionDialog.test.tsx` |
-| Web: Cancel does nothing; Delete sends the call, shows "Deleting…", closes, shows the toast | `DeleteDivision.test.tsx` (page level), `useDeleteDivision.test.tsx` |
-| Web: a `409` shows the message in a toast that stays | `DeleteDivision.test.tsx` |
-| Web: `api.ts` maps `204`, `409`, `404`, `403`, bad body | `api.test.ts` |
-| E2E journey: delete a division, see it gone and the numbers close | `web/e2e/deleteDivision.spec.ts`; the dialog opened in `web/e2e/accessibility.spec.ts` |
+| Rule                                                                                                     | Test                                                                                                                                                                                    |
+| -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DIV-12 delete, `204` and the row is gone                                                                 | `api/src/features/divisions/deleteRoutes.test.ts` "deletes a division and answers 204"; `prismaWriterDelete.db.test.ts` "removes the row"                                               |
+| DIV-12 refused with bowlers (D-151)                                                                      | `deletePlan.test.ts` (one, many, zero); `deleteRoutes.test.ts` "refuses a division with bowlers (409)"; `prismaWriterDelete.db.test.ts` "keeps the division and its registration"       |
+| DIV-12 refused on a complete tournament (D-143)                                                          | `deletePlan.test.ts`; `deleteRoutes.test.ts`; `prismaWriterDelete.db.test.ts`                                                                                                           |
+| Both refusals together                                                                                   | `deletePlan.test.ts` "lists both reasons"; `deleteRoutes.test.ts`                                                                                                                       |
+| DIV-12 access: `401`, API key `403`, score keeper `403`, director `204`                                  | `deleteRoutes.test.ts` (and `api/src/shared/auth/roles.test.ts` is unchanged)                                                                                                           |
+| DIV-03 ids: bad UUID `400`, unknown tournament `404`, division of another tournament `404`               | `deleteRoutes.test.ts`; `prismaWriterDelete.db.test.ts`                                                                                                                                 |
+| DIV-01 gap closes (D-153)                                                                                | `prismaWriterDelete.db.test.ts` "moves later numbers down by one", "leaves lower numbers and old odd rows alone", "does not touch another tournament"; `deleteRoutes.test.ts` in-memory |
+| DIV-14 bonus pins removed (D-152)                                                                        | `prismaWriterDelete.db.test.ts` "removes the sweeper rows"                                                                                                                              |
+| DIV-15 still unique after a delete and the next add numbers highest + 1                                  | `prismaWriterDelete.db.test.ts` "next add after a delete"                                                                                                                               |
+| Race: a registration lands during the delete                                                             | `prismaWriterDelete.db.test.ts` (as the tournament delete does)                                                                                                                         |
+| `delete-info` counts; `0` and above; pins of `NULL` not counted                                          | `deleteRoutes.test.ts`; `prismaDeleteInfo.db.test.ts`                                                                                                                                   |
+| Log line has ids and `number`, no name                                                                   | `deleteRoutes.test.ts`                                                                                                                                                                  |
+| Web: Delete button shows for a director, hides for a score keeper, signed out, and a complete tournament | `DivisionsPage.test.tsx`                                                                                                                                                                |
+| Web: dialog text with sweepers, with one, with none, while loading, when the info fails                  | `DeleteDivisionDialog.test.tsx`                                                                                                                                                         |
+| Web: dialog shows the refusal and only Close when bowlers are registered (one, many) (D-154)             | `DeleteDivisionDialog.test.tsx`                                                                                                                                                         |
+| Web: Cancel does nothing; Delete sends the call, shows "Deleting…", closes, shows the toast              | `DeleteDivision.test.tsx` (page level), `useDeleteDivision.test.tsx`                                                                                                                    |
+| Web: a `409` shows the message in a toast that stays                                                     | `DeleteDivision.test.tsx`                                                                                                                                                               |
+| Web: `api.ts` maps `204`, `409`, `404`, `403`, bad body                                                  | `api.test.ts`                                                                                                                                                                           |
+| E2E journey: delete a division, see it gone and the numbers close                                        | `web/e2e/deleteDivision.spec.ts`; the dialog opened in `web/e2e/accessibility.spec.ts`                                                                                                  |
 
 Run `npm run test:mutation` for `deletePlan.ts` and the new web logic and fix survivors.
 

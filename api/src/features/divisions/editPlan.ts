@@ -87,28 +87,40 @@ function changedFields(stored: Division, sent: UpdateDivision): UpdateDivision {
   return changes
 }
 
+/** The reasons the percent field needs a confirm: a scratch/handicap switch, or a value over 100. */
+function percentReasons(state: DivisionEditState, next: number | null): string[] {
+  const count = state.facts.registrationCount
+  const switched = (state.stored.handicapPercentage === null) !== (next === null)
+  const reasons: string[] = []
+  if (count > 0 && switched) reasons.push(handicapSwitchMessage(count))
+  if (next !== null && next > 100) reasons.push(unusualPercentMessage)
+  return reasons
+}
+
+/** Every reason one changed field needs a confirm. */
+function reasonsFor(state: DivisionEditState, changes: UpdateDivision, field: Field): string[] {
+  const { facts } = state
+  const reasons: string[] = []
+  if (eligibilityFields.has(field) && facts.registrationCount > 0) {
+    reasons.push(eligibilityMessage(facts.registrationCount))
+  }
+  if (handicapFields.has(field) && facts.hasScores) reasons.push(handicapScoresMessage)
+  if (field === 'handicapPercentage') {
+    reasons.push(...percentReasons(state, changes.handicapPercentage ?? null))
+  }
+  return reasons
+}
+
 function warningsFor(
   state: DivisionEditState,
   changes: UpdateDivision,
   confirmed: boolean,
 ): DivisionWarning[] {
   if (confirmed) return []
-  const { stored, facts } = state
   const warnings: DivisionWarning[] = []
   for (const field of fieldOrder) {
     if (!(field in changes)) continue
-    const reasons: string[] = []
-    if (eligibilityFields.has(field) && facts.registrationCount > 0) {
-      reasons.push(eligibilityMessage(facts.registrationCount))
-    }
-    if (handicapFields.has(field) && facts.hasScores) reasons.push(handicapScoresMessage)
-    if (field === 'handicapPercentage') {
-      const next = changes.handicapPercentage ?? null
-      if (facts.registrationCount > 0 && (stored.handicapPercentage === null) !== (next === null)) {
-        reasons.push(handicapSwitchMessage(facts.registrationCount))
-      }
-      if (next !== null && next > 100) reasons.push(unusualPercentMessage)
-    }
+    const reasons = reasonsFor(state, changes, field)
     if (reasons.length > 0) warnings.push({ field, message: reasons.join(' ') })
   }
   return warnings

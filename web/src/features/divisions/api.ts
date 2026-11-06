@@ -187,7 +187,7 @@ export async function fetchDivisionEditInfo(
   const count = field(info, 'registrationCount')
   const scores = field(info, 'hasScores')
   if (typeof count !== 'number' || typeof scores !== 'boolean') {
-    throw new Error('Failed to load the division (unexpected response)')
+    throw new TypeError('Failed to load the division (unexpected response)')
   }
   return { registrationCount: count, hasScores: scores }
 }

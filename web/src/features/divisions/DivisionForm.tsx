@@ -308,7 +308,9 @@ export function DivisionForm({
           id={genderId}
           name="gender"
           value={values.gender}
-          aria-describedby={`${genderId}-hint${confirms.gender ? ` ${genderId}-confirm` : ''}`}
+          aria-describedby={
+            confirms.gender ? `${genderId}-hint ${genderId}-confirm` : `${genderId}-hint`
+          }
           onChange={change('gender')}
         >
           <option value="">Any gender</option>

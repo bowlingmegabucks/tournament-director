@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto'
 import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
-import { HttpError } from '../../shared/errors.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { withRetry } from '../../shared/serializableRetry.ts'
 import type { NewDivision } from './createRequest.ts'
@@ -96,8 +95,14 @@ export function createPrismaDivisionWriter(client: PrismaClient, logger: Logger)
         if (!row) return { notFound: 'division' as const }
         const stored = toDivision(row)
         if (!stored.success) {
-          logger.error({ divisionId, tournamentId }, 'Stored division breaks the read shape')
-          throw new HttpError(500, 'The stored division cannot be edited')
+          // The list skips such a row, so no Edit link leads here; a stale page or a typed URL can.
+          // Say why, as a refusal, instead of a 500 the director cannot act on.
+          logger.warn({ divisionId, tournamentId }, 'Stored division breaks the read shape')
+          return {
+            refused: {
+              name: 'This division holds values the app cannot read, so it cannot be edited here.',
+            },
+          }
         }
         const others = await tx.division.findMany({
           where: { tournamentId, id: { not: divisionId } },

@@ -12,7 +12,9 @@ export function useUpdateDivision(tournamentId: string, divisionId: string) {
   return useMutation({
     mutationFn: (variables: { changes: DivisionChanges; confirmWarnings: boolean }) =>
       updateDivision(tournamentId, divisionId, variables.changes, variables.confirmWarnings),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: tournamentKeys.detail(tournamentId) }),
+    // Not returned: the save is done, so the page need not wait for the refetches.
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: tournamentKeys.detail(tournamentId) })
+    },
   })
 }

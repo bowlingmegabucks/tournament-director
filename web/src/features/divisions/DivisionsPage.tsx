@@ -14,14 +14,23 @@ import { useDivisions } from './useDivisions'
 const TOAST_MS = 5000
 
 /**
+ * Whether the add and edit links may show: not while the settings load, and not on a complete
+ * tournament (D-143, D-149, D-19). If the settings fail they show anyway: the API refuses a complete
+ * tournament, and a slow start must not take the links away. Every caller shares one cached read.
+ */
+function useTournamentOpen(id: string): boolean {
+  const settings = useTournamentSettings(id)
+  return !settings.isPending && settings.data?.completed !== true
+}
+
+/**
  * The Edit link of one row, in a cell of its own. The cell sits inside `<Can>`, so a visitor without
  * the permission never reads the settings. A complete tournament has no link (D-149, D-19); while
  * the settings load the link waits. If they fail it shows anyway: the API refuses a complete
  * tournament, and a slow start must not take the link away.
  */
 function EditCell({ id, division }: Readonly<{ id: string; division: Division }>) {
-  const settings = useTournamentSettings(id)
-  const show = !settings.isPending && settings.data?.completed !== true
+  const show = useTournamentOpen(id)
   return (
     <td className={styles.actionsCell}>
       {show && (
@@ -44,8 +53,7 @@ function EditCell({ id, division }: Readonly<{ id: string; division: Division }>
  * complete tournament, and a slow start must not take the link away.
  */
 function NewDivisionLink({ id }: Readonly<{ id: string }>) {
-  const settings = useTournamentSettings(id)
-  if (settings.isPending || settings.data?.completed === true) return null
+  if (!useTournamentOpen(id)) return null
   return (
     <Link className={styles.newButton} to={`/tournaments/${id}/divisions/new`}>
       New division

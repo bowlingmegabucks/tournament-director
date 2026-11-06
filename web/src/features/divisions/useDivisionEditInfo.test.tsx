@@ -31,22 +31,24 @@ describe('useDivisionEditInfo', () => {
     })
   })
 
-  it('does not retry an unknown division', async () => {
-    let calls = 0
+  it('reports an unknown division as not found', async () => {
     server.use(
-      http.get('/v1/tournaments/:id/divisions/:divisionId/edit-info', () => {
-        calls += 1
-        return HttpResponse.json({ message: 'Division not found' }, { status: 404 })
-      }),
+      http.get('/v1/tournaments/:id/divisions/:divisionId/edit-info', () =>
+        HttpResponse.json({ message: 'Division not found' }, { status: 404 }),
+      ),
     )
 
     const { result } = renderHook(() => useDivisionEditInfo('t1', 'nope'), {
       wrapper: setup(),
     })
 
-    await waitFor(() => {
-      expect(result.current.isError).toBe(true)
-    })
-    expect(calls).toBe(1)
+    await waitFor(
+      () => {
+        expect(result.current.error?.message).toBe(
+          'This division was not found. It may have been removed.',
+        )
+      },
+      { timeout: 3000 },
+    )
   })
 })

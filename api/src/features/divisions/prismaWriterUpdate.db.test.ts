@@ -222,14 +222,16 @@ describe('Prisma division writer: update (DIV-12, DIV-15, D-147)', () => {
     })
   })
 
-  it('reports a stored division that breaks the read shape instead of editing it', async () => {
+  it('refuses a stored division that breaks the read shape instead of editing it', async () => {
     const { writer } = setup()
     const tournamentId = await rows.tournament()
     const id = await rows.division(tournamentId)
     await client.$executeRawUnsafe('UPDATE Divisions SET Gender = 5 WHERE Id = ?', id)
 
-    await expect(writer.update(tournamentId, id, { name: 'Main' }, go)).rejects.toMatchObject({
-      status: 500,
+    expect(await writer.update(tournamentId, id, { name: 'Main' }, go)).toEqual({
+      refused: {
+        name: 'This division holds values the app cannot read, so it cannot be edited here.',
+      },
     })
   })
 })

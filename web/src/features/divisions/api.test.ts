@@ -484,10 +484,13 @@ describe('fetchDivisionEditInfo', () => {
     )
   })
 
-  it('reports not found for 404', async () => {
+  it('says the division was not found for 404, not that the tournament was', async () => {
     server.use(http.get(infoPath, () => new HttpResponse(null, { status: 404 })))
 
-    await expect(fetchDivisionEditInfo('t1', 'd1')).rejects.toBeInstanceOf(TournamentNotFoundError)
+    const failure = await fetchDivisionEditInfo('t1', 'd1').catch((error: unknown) => error)
+
+    expect(failure).toEqual(new Error('This division was not found. It may have been removed.'))
+    expect(failure).not.toBeInstanceOf(TournamentNotFoundError)
   })
 
   it('reports the status for another failure', async () => {

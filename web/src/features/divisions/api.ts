@@ -179,7 +179,9 @@ export async function fetchDivisionEditInfo(
   divisionId: string,
 ): Promise<DivisionEditInfo> {
   const response = await apiFetch(`${divisionUrl(tournamentId, divisionId)}/edit-info`)
-  if (response.status === 404) throw new TournamentNotFoundError()
+  // The API answers 404 for an unknown tournament and for an unknown division alike.
+  if (response.status === 404)
+    throw new Error('This division was not found. It may have been removed.')
   if (!response.ok) throw new Error(`Failed to load the division (${response.status})`)
   const info = field(await readJson(response, 'Failed to load the division'), 'editInfo')
   const count = field(info, 'registrationCount')

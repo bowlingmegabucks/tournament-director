@@ -62,6 +62,30 @@ describe(`DELETE ${url}`, () => {
     expect(numbersOf(stored, otherTournamentId)).toEqual([['Open', 3]])
   })
 
+  it('closes no gap when another division still holds the deleted number (D-153)', async () => {
+    const twin = createDivision({
+      id: '88888888-8888-4888-8888-888888888888',
+      number: 2,
+      name: 'Twin',
+    })
+    const made = createInMemoryDivisionWriter({
+      seed: [
+        { tournamentId, division: { ...open } },
+        { tournamentId, division: { ...women } },
+        { tournamentId, division: { ...twin } },
+        { tournamentId, division: { ...senior } },
+      ],
+    })
+
+    await request(createSignedInTestApp({ divisionWriter: made.writer })).delete(url)
+
+    expect(numbersOf(made.stored)).toEqual([
+      ['Open', 1],
+      ['Twin', 2],
+      ['Senior', 3],
+    ])
+  })
+
   it('refuses a division with bowlers with 409 and keeps everything (D-151)', async () => {
     const { app, stored } = setup({ deleteInfo: { [womenId]: { registrationCount: 12 } } })
 

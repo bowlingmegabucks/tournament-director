@@ -34,7 +34,7 @@ describe('useDeleteDivision', () => {
     expect(deleted).toEqual({ id: 't1', divisionId: 'd1' })
   })
 
-  it('leaves the lists alone when the delete is refused', async () => {
+  it('refreshes the lists when the delete is refused, since the page was out of date', async () => {
     server.use(
       http.delete('/v1/tournaments/:id/divisions/:divisionId', () =>
         HttpResponse.json({ message: 'No', errors: { division: 'No' } }, { status: 409 }),
@@ -52,6 +52,31 @@ describe('useDeleteDivision', () => {
     await waitFor(() => {
       expect(result.current.isError).toBe(true)
     })
-    expect(client.getQueryState(divisionKeys.list('t1'))?.isInvalidated).toBe(false)
+    await waitFor(() => {
+      expect(client.getQueryState(divisionKeys.list('t1'))?.isInvalidated).toBe(true)
+    })
+  })
+
+  it('refreshes the lists when the division is already gone (404)', async () => {
+    server.use(
+      http.delete('/v1/tournaments/:id/divisions/:divisionId', () =>
+        HttpResponse.json({ message: 'Division not found' }, { status: 404 }),
+      ),
+    )
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    client.setQueryData(divisionKeys.list('t1'), [createDivision()])
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    const { result } = renderHook(() => useDeleteDivision('t1'), { wrapper })
+
+    result.current.mutate('d1')
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true)
+    })
+    await waitFor(() => {
+      expect(client.getQueryState(divisionKeys.list('t1'))?.isInvalidated).toBe(true)
+    })
   })
 })

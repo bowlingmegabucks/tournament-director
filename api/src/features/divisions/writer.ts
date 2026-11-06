@@ -213,7 +213,12 @@ export function createInMemoryDivisionWriter(
         },
         () => {
           stored.splice(stored.indexOf(found.entry), 1)
-          // Later divisions move down by one; an old odd row below the gap stays put (D-153).
+          // Later divisions move down by one, unless another division still holds the number (an
+          // old duplicate), and an old odd row below the gap stays put (D-153).
+          const sharesNumber = stored.some(
+            (entry) => entry.tournamentId === tournamentId && entry.division.number === number,
+          )
+          if (sharesNumber) return Promise.resolve()
           for (const entry of stored) {
             if (entry.tournamentId === tournamentId && entry.division.number > number) {
               entry.division.number -= 1

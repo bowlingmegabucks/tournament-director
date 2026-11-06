@@ -146,13 +146,21 @@ export function createPrismaDivisionWriter(client: PrismaClient, logger: Logger)
         })
         if (!row) return { notFound: 'division' as const }
         const registrationCount = await tx.registration.count({ where: { divisionId } })
+        // Another division with the same number (an old duplicate) keeps the number in use, so
+        // there is no gap to close (D-153).
+        const sharesNumber =
+          (await tx.division.count({
+            where: { tournamentId, number: row.number, id: { not: divisionId } },
+          })) > 0
         const outcome = await applyDelete(
           { completed: tournament.completed, registrationCount },
           async () => {
             // The `SweeperDivision` rows go with it: the database cascades them (D-152).
             await tx.division.delete({ where: { id: divisionId } })
-            // Later divisions move down by one. Rows at or below the gap, an old 0 or a shared
-            // number included, stay as they were (D-153).
+            // Later divisions move down by one, unless another division still holds the number.
+            // Rows at or below the gap, an old 0 or a shared number included, stay as they were
+            // (D-153).
+            if (sharesNumber) return
             await tx.division.updateMany({
               where: { tournamentId, number: { gt: row.number } },
               data: { number: { decrement: 1 } },

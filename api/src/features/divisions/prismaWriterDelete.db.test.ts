@@ -122,6 +122,24 @@ describe('Prisma division writer: delete (DIV-12, DIV-01, DIV-14, D-151 to D-155
     ])
   })
 
+  it('closes no gap when another division still holds the deleted number (D-153)', async () => {
+    const { writer } = setup()
+    const tournamentId = await rows.tournament()
+    await rows.division(tournamentId, { name: 'Open', number: 1 })
+    const gone = await rows.division(tournamentId, { name: 'Twin A', number: 2 })
+    await rows.division(tournamentId, { name: 'Twin B', number: 2 })
+    await rows.division(tournamentId, { name: 'Senior', number: 3 })
+
+    await writer.remove(tournamentId, gone)
+
+    // Twin B still holds 2, so Senior stays 3 and does not collide with it.
+    expect(await numbers(tournamentId)).toEqual([
+      ['Open', 1],
+      ['Twin B', 2],
+      ['Senior', 3],
+    ])
+  })
+
   it('does not touch the numbers of another tournament (D-153)', async () => {
     const { writer } = setup()
     const tournamentId = await rows.tournament()

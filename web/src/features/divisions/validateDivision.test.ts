@@ -304,6 +304,14 @@ describe('validateDivisionChanges (D-147)', () => {
     })
   })
 
+  it('shows the averages message on the minimum when only the maximum was changed (DIV-07)', () => {
+    const averaged = form({ name: 'Open', minimumAverage: '150', maximumAverage: '200' })
+
+    expect(validateDivisionChanges(averaged, { ...averaged, maximumAverage: '100' })).toEqual({
+      minimumAverage: 'Minimum average must be less than or equal to maximum average',
+    })
+  })
+
   it('shows the handicap messages when one of the three boxes was changed (DIV-09, DIV-11)', () => {
     const scratch = form({ name: 'Open' })
 

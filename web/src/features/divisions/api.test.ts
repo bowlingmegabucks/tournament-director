@@ -424,6 +424,32 @@ describe('updateDivision (the API call)', () => {
     await expect(updateDivision('t1', 'd1', {})).rejects.toThrow(message)
   })
 
+  it('sends the body as JSON (DIV-12)', async () => {
+    let type: string | null = null
+    server.use(
+      http.patch(patchPath, ({ request }) => {
+        type = request.headers.get('content-type')
+        return HttpResponse.json({ division: createDivision() })
+      }),
+    )
+
+    await updateDivision('t1', 'd1', { name: 'A' })
+
+    expect(type).toBe('application/json')
+  })
+
+  it('names the failure when a 409 or a 200 body is not JSON', async () => {
+    server.use(http.patch(patchPath, () => new HttpResponse('nope', { status: 409 })))
+    await expect(updateDivision('t1', 'd1', {})).rejects.toThrow(
+      'Failed to save the division (response is not JSON)',
+    )
+
+    server.use(http.patch(patchPath, () => new HttpResponse('nope', { status: 200 })))
+    await expect(updateDivision('t1', 'd1', {})).rejects.toThrow(
+      'Failed to save the division (response is not JSON)',
+    )
+  })
+
   it('rejects a success that is not a division', async () => {
     server.use(http.patch(patchPath, () => HttpResponse.json({ division: { id: 1 } })))
 
@@ -448,6 +474,14 @@ describe('fetchDivisionEditInfo', () => {
       hasScores: true,
     })
     expect(asked).toEqual({ id: 't1', divisionId: 'd1' })
+  })
+
+  it('names the failure when the body is not JSON', async () => {
+    server.use(http.get(infoPath, () => new HttpResponse('nope')))
+
+    await expect(fetchDivisionEditInfo('t1', 'd1')).rejects.toThrow(
+      'Failed to load the division (response is not JSON)',
+    )
   })
 
   it('reports not found for 404', async () => {

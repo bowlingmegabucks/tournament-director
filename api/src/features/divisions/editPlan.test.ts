@@ -35,6 +35,20 @@ const withFacts = (facts: Partial<DivisionEditState['facts']>): DivisionEditStat
   facts: { ...quiet.facts, ...facts },
 })
 
+describe('the wording of the warnings (D-147)', () => {
+  it('is fixed text the web notes repeat', () => {
+    expect(handicapScoresMessage).toBe(
+      'Scores are saved for bowlers in this division. Posted results change at once.',
+    )
+    expect(handicapSwitchMessage(1)).toBe(
+      '1 bowler is registered. Handicap divisions need a USBC ID; review them by hand.',
+    )
+    expect(handicapSwitchMessage(3)).toBe(
+      '3 bowlers are registered. Handicap divisions need a USBC ID; review them by hand.',
+    )
+  })
+})
+
 describe('planEdit', () => {
   it('saves only the fields that differ from what is stored (DIV-12)', () => {
     expect(planEdit(quiet, { name: 'Open', gender: 'Female' }, false)).toEqual({
@@ -79,6 +93,20 @@ describe('planEdit', () => {
       expect(planEdit(quiet, { name: name.trim() }, false)).toEqual({
         kind: 'refused',
         errors: { name: duplicateNameMessage },
+      })
+    })
+
+    it('ignores outer spaces on either side of the comparison', () => {
+      const padded = { ...quiet, otherNames: [' Women '] }
+      expect(planEdit(padded, { name: 'Women' }, false).kind).toBe('refused')
+      expect(planEdit(quiet, { name: ' women ' }, false).kind).toBe('refused')
+    })
+
+    it('does not look at names when the name is not being changed', () => {
+      const blankRival = { ...quiet, otherNames: [''] }
+      expect(planEdit(blankRival, { gender: 'Male' }, false)).toEqual({
+        kind: 'save',
+        changes: { gender: 'Male' },
       })
     })
 

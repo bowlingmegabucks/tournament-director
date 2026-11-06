@@ -94,8 +94,13 @@ describe('parseUpdateDivision', () => {
     expect(parseUpdateDivision({ handicapPercentage: 90 }).success).toBe(true)
   })
 
-  it('refuses a body that is not an object (DIV-12)', () => {
-    expect(parseUpdateDivision('x').success).toBe(false)
-    expect(parseUpdateDivision(null).success).toBe(false)
+  it('refuses a body that is not an object, naming the division (DIV-12)', () => {
+    for (const body of ['x', null]) {
+      const result = parseUpdateDivision(body)
+      expect(result).toMatchObject({
+        success: false,
+        message: 'Send the division as a JSON object.',
+      })
+    }
   })
 })

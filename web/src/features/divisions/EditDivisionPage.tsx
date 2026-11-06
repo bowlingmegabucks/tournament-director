@@ -26,8 +26,11 @@ export function EditDivisionPage() {
   // The form freezes its starting values, so it must start from data fetched after this page
   // opened, not from whatever an earlier visit left in the cache.
   const [openedAt] = useState(() => Date.now())
+  // Stryker disable next-line ObjectLiteral: a query with the default stale time refetches on mount anyway, and `fresh` below waits for that fetch; 'always' only states the intent.
   const settings = useTournamentSettings(id, { refetchOnMount: 'always' })
+  // Stryker disable next-line ObjectLiteral: same as above.
   const divisions = useDivisions(id, { refetchOnMount: 'always' })
+  // Stryker disable next-line ObjectLiteral: same as above.
   const info = useDivisionEditInfo(id, divisionId, { refetchOnMount: 'always' })
   const listUrl = `/tournaments/${id}/divisions`
 
@@ -39,11 +42,13 @@ export function EditDivisionPage() {
   )
 
   const error = settings.error ?? divisions.error ?? info.error
+  // Stryker disable next-line EqualityOperator: a fetch that lands in the very millisecond the page opened cannot be told apart in a test.
   const fresh = (updatedAt: number) => updatedAt >= openedAt
   const division = divisions.data?.find((candidate) => candidate.id === divisionId)
 
   if (
     settings.data === undefined ||
+    // Stryker disable next-line ConditionalExpression: `fresh(divisions.dataUpdatedAt)` is false while there is no data, so this guard only narrows the type.
     divisions.data === undefined ||
     !fresh(settings.dataUpdatedAt) ||
     !fresh(divisions.dataUpdatedAt)

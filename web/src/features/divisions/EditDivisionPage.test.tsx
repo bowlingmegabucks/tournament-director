@@ -272,6 +272,53 @@ describe('EditDivisionPage', () => {
       expect(screen.getByLabelText('Name (required)')).toHaveValue('Open!')
     })
 
+    it('lets the director dismiss the error toast', async () => {
+      signIn()
+      serve({ patch: () => new HttpResponse(null, { status: 503 }) })
+      const user = userEvent.setup()
+      await openForm()
+      await user.type(screen.getByLabelText('Name (required)'), '!')
+      await user.click(save())
+      await screen.findByRole('alert')
+
+      await user.click(screen.getByRole('button', { name: 'Dismiss' }))
+
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    })
+
+    it('drops the old toast as soon as the director presses Save again, even when a check fails', async () => {
+      signIn()
+      serve({ patch: () => new HttpResponse(null, { status: 503 }) })
+      const user = userEvent.setup()
+      await openForm()
+      await user.type(screen.getByLabelText('Name (required)'), '!')
+      await user.click(save())
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Failed to save the division (503)',
+      )
+
+      await user.clear(screen.getByLabelText('Name (required)'))
+      await user.click(save())
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('Fix 1 field to save.')
+      expect(screen.queryByText('Failed to save the division (503)')).not.toBeInTheDocument()
+    })
+
+    it('shows a refusal with no field messages as a toast, not an empty form summary', async () => {
+      signIn()
+      serve({
+        patch: () => HttpResponse.json({ message: 'Refused for a reason.' }, { status: 409 }),
+      })
+      const user = userEvent.setup()
+      await openForm()
+      await user.type(screen.getByLabelText('Name (required)'), '!')
+
+      await user.click(save())
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('Refused for a reason.')
+      expect(screen.queryByText(/Fix \d+ field/)).not.toBeInTheDocument()
+    })
+
     it('shows the complete-tournament refusal as a toast, not under a box (D-149)', async () => {
       signIn()
       const reason = 'This tournament is complete and cannot be changed'
@@ -400,6 +447,29 @@ describe('EditDivisionPage', () => {
         'Failed to save the division (503)',
       )
     })
+  })
+
+  it('starts the form from fresh data, not from what the list left in the cache (D-147)', async () => {
+    signIn()
+    let name = 'Open'
+    serve()
+    server.use(
+      http.get('/v1/tournaments/:id/divisions', () =>
+        HttpResponse.json({ divisions: [{ ...open, name }, women] }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderApp(listUrl)
+    await user.click(await screen.findByRole('link', { name: 'Edit Open' }))
+    await screen.findByLabelText('Name (required)')
+    // Back to the list, then the stored name changes elsewhere before the next visit.
+    await user.click(screen.getByRole('link', { name: 'Cancel' }))
+    await screen.findByRole('link', { name: 'Edit Open' })
+    name = 'Main'
+
+    await user.click(screen.getByRole('link', { name: 'Edit Open' }))
+
+    expect(await screen.findByLabelText('Name (required)')).toHaveValue('Main')
   })
 
   describe('what else the page can show', () => {

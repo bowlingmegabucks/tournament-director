@@ -47,7 +47,15 @@ const squad = createSquadResults({
       entries: 3,
       rows: [row],
       didNotFinish: [
-        { registrationId: 'r2', name: 'Bob', total: 445, highGame: 230, games: 2, handicap: 0 },
+        {
+          registrationId: 'r2',
+          name: 'Bob',
+          total: 445,
+          highGame: 230,
+          games: 2,
+          handicap: 0,
+          scores: [230, 215],
+        },
       ],
       noShows: [{ registrationId: 'r3', name: 'Mike' }],
     }),

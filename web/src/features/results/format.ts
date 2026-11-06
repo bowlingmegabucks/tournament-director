@@ -150,3 +150,22 @@ export function formatFlagNote(
 export function formatSweeperTotal(total: number | null): string {
   return total === null ? '\u2013' : String(total)
 }
+
+/** The score a bowler is measured against: 200 a game. */
+export const PAR_PER_GAME = 200
+
+/** "+192", "−12", or "±0": the total against 200 a game for the games bowled (the "+/−" column). */
+export function formatPlusMinus(total: number, games: number): string {
+  const difference = total - PAR_PER_GAME * games
+  if (difference > 0) return `+${difference}`
+  return difference === 0 ? '±0' : `−${-difference}`
+}
+
+export function sum(scores: readonly number[]): number {
+  return scores.reduce((all, score) => all + score, 0)
+}
+
+/** How many game columns a table needs: the session's games, or more if a bowler has more scores. */
+export function gameColumnCount(sessionGames: number, scoreLists: readonly (readonly number[])[]) {
+  return Math.max(sessionGames, ...scoreLists.map((scores) => scores.length))
+}

@@ -14,6 +14,8 @@ import {
   formatFlagNote,
   formatFlagTag,
   formatGamesOf,
+  formatPlusMinus,
+  gameColumnCount,
   formatSeedingSummary,
   formatSummary,
   formatSweeperColumn,
@@ -22,6 +24,7 @@ import {
   ordinal,
   seedingItems,
   squadItems,
+  sum,
   sweeperItems,
 } from './format'
 
@@ -336,5 +339,33 @@ describe('super sweeper formats (D-90)', () => {
       'Cash Line',
       'row',
     ])
+  })
+})
+
+describe('formatPlusMinus', () => {
+  it('shows the total against 200 a game, with a sign', () => {
+    expect(formatPlusMinus(992, 4)).toBe('+192')
+    expect(formatPlusMinus(780, 4)).toBe('\u221220')
+    expect(formatPlusMinus(800, 4)).toBe('\u00b10')
+  })
+
+  it('counts only the games bowled', () => {
+    expect(formatPlusMinus(210, 1)).toBe('+10')
+    expect(formatPlusMinus(0, 0)).toBe('\u00b10')
+  })
+})
+
+describe('sum', () => {
+  it('adds the scores, and is 0 for none', () => {
+    expect(sum([200, 210, 190])).toBe(600)
+    expect(sum([])).toBe(0)
+  })
+})
+
+describe('gameColumnCount', () => {
+  it('is the session games, or more when a bowler has more scores', () => {
+    expect(gameColumnCount(3, [[200, 200]])).toBe(3)
+    expect(gameColumnCount(3, [[200, 200, 200, 200]])).toBe(4)
+    expect(gameColumnCount(4, [])).toBe(4)
   })
 })

@@ -714,6 +714,7 @@ export function createSquadRow(overrides: Partial<SquadRow> = {}): SquadRow {
     highGame: 200,
     games: 3,
     handicap: 0,
+    scores: [200, 200, 200],
     advancedEarlier: false,
     ties: [],
     ...overrides,
@@ -768,6 +769,7 @@ export function createSweeperRow(overrides: Partial<SweeperRow> = {}): SweeperRo
     ties: [],
     divisionName: 'Open',
     bonusPins: 0,
+    scores: [200, 200, 200],
     ...overrides,
   }
 }
@@ -793,6 +795,37 @@ export function createSweeperResults(overrides: Partial<SweeperResults> = {}): S
   }
 }
 
+/**
+ * Game scores for a demo row: the best game first (`highGame` less the pins), the rest as even as
+ * the total allows. The scratch pins add up to `total` less the pins for each game.
+ */
+function demoScores(total: number, highGame: number, games: number, pins = 0): number[] {
+  const scratch = total - pins * games
+  if (games <= 1) return games === 1 ? [scratch] : []
+  const top = Math.min(highGame - pins, scratch)
+  const rest = scratch - top
+  const share = Math.floor(rest / (games - 1))
+  const extra = rest - share * (games - 1)
+  return [top, ...Array.from({ length: games - 1 }, (_, index) => share + (index < extra ? 1 : 0))]
+}
+
+/** One sweeper's line of a demo super sweeper bowler: the games bowled, then a zero for each one missed. */
+function demoSweeperLine(
+  total: number | null,
+  pins: number,
+  gameCount: number,
+  bowled: number,
+): number[] | null {
+  if (total === null) return null
+  const scores = demoScores(
+    total,
+    Math.ceil((total - pins * bowled) / Math.max(bowled, 1)) + 20,
+    bowled,
+    pins,
+  )
+  return [...scores, ...Array.from({ length: gameCount - bowled }, () => 0)]
+}
+
 type DemoPlayer = [name: string, total: number, highGame: number, handicap?: number, games?: number]
 
 /** Number the players 1 to N and put the first `advance` among the advancers and the next `cash` among the cashers. */
@@ -810,6 +843,7 @@ function demoRows(players: DemoPlayer[], advance: number, cash: number): SquadRo
       highGame,
       handicap,
       games,
+      scores: demoScores(total, highGame, games, handicap),
     }),
   )
 }
@@ -908,6 +942,7 @@ export function createDemoSquadResults(
             highGame: 230,
             games: 2,
             handicap: 0,
+            scores: [230, 215],
           },
         ],
         noShows: [{ registrationId: faker.string.uuid(), name: 'Mike Tran' }],
@@ -971,6 +1006,7 @@ export function createDemoSweeperResults(session: {
         place: index + 1,
         group: index < 2 ? 'casher' : 'other',
         games: session.games,
+        scores: demoScores(total, highGame, session.games, bonusPins),
       }),
     ),
   })
@@ -1058,6 +1094,11 @@ export function createSuperSweeperRow(overrides: Partial<SuperSweeperRow> = {}):
     ties: [],
     divisionName: 'Open',
     sweeperTotals: [600, 600],
+    sweeperScores: [
+      [200, 200, 200],
+      [200, 200, 200],
+    ],
+    sweeperPins: [0, 0],
     flags: [],
     ...overrides,
   }
@@ -1208,19 +1249,31 @@ export function createDemoSuperSweeper(
     cashers: 2,
     cutScore: 1371,
     sweepers: columns,
-    rows: players.map(([name, divisionName, sweeperTotals, total, highGame, flags], index) =>
-      createSuperSweeperRow({
+    rows: players.map(([name, divisionName, sweeperTotals, total, highGame, flags], index) => {
+      const pins = divisionName === 'Open' ? 0 : 10
+      const totals = sweeperTotals.slice(0, columns.length)
+      return createSuperSweeperRow({
         name,
         divisionName,
-        sweeperTotals: sweeperTotals.slice(0, columns.length),
+        sweeperTotals: totals,
+        sweeperScores: columns.map((column, at) => {
+          const flag = flags.find((item) => item.sweeperId === column.id)
+          return demoSweeperLine(
+            totals[at] ?? null,
+            pins,
+            column.games,
+            flag?.gamesBowled ?? column.games,
+          )
+        }),
+        sweeperPins: columns.map(() => pins),
         total,
         highGame,
         flags,
         place: index + 1,
         group: index < 2 ? 'casher' : 'other',
         games: columns.reduce((sum, column) => sum + column.games, 0),
-      }),
-    ),
+      })
+    }),
   })
 }
 

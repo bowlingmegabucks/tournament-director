@@ -32,6 +32,8 @@ export interface SquadRow extends RankedRow {
   group: 'advancer' | 'casher' | 'other'
   /** The handicap per game (SCR-07). */
   handicap: number
+  /** The scratch pins of each game bowled, in game order. */
+  scores: number[]
   /** True only for an earlier advancer at or above the cut score (D-81). */
   advancedEarlier: boolean
 }
@@ -44,6 +46,7 @@ export interface UnplacedRow {
   highGame: number
   games: number
   handicap: number
+  scores: number[]
 }
 
 export interface DivisionResult {
@@ -86,6 +89,8 @@ export interface SweeperRow extends RankedRow {
   divisionName: string
   /** The bonus pins per game of the bowler's division (SCR-09). */
   bonusPins: number
+  /** The scratch pins of each game bowled, in game order. */
+  scores: number[]
 }
 
 /** What `GET /v1/tournaments/{id}/sweepers/{sessionId}/results` returns. */
@@ -182,6 +187,13 @@ export interface SuperSweeperRow extends RankedRow {
   divisionName: string
   /** One total per entry of `sweepers`, in that order. `null`: still open, no score yet (D-90). */
   sweeperTotals: (number | null)[]
+  /**
+   * The scratch games of each entry of `sweepers`, in that order: one per game of a complete sweeper
+   * (zero for a game not bowled). `null`: still open, no score yet.
+   */
+  sweeperScores: (number[] | null)[]
+  /** The pins added per game bowled in each entry of `sweepers` (SCR-09). */
+  sweeperPins: number[]
   flags: SweeperFlag[]
 }
 

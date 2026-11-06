@@ -44,17 +44,14 @@ export function DeleteDivisionDialog({
   const blocked = info !== undefined && info.registrationCount > 0
 
   // Loading says the short version; a failed read says pins may go; a read answer says how many.
-  let pinsSentence = ''
+  const sentences: string[] = []
   if (info === undefined) {
-    if (!loading) pinsSentence = 'Any sweeper bonus pins for it go too.'
+    if (!loading) sentences.push('Any sweeper bonus pins for it go too.')
   } else if (info.sweeperCount > 0) {
-    pinsSentence = pins(info.sweeperCount)
+    sentences.push(pins(info.sweeperCount))
   }
-  const sentences = [
-    pinsSentence,
-    loading ? '' : 'Divisions after it move up one number.',
-    'This cannot be undone.',
-  ].filter((sentence) => sentence !== '')
+  if (!loading) sentences.push('Divisions after it move up one number.')
+  sentences.push('This cannot be undone.')
 
   return (
     <dialog ref={showOnMount} className={styles.dialog} aria-labelledby={titleId} onClose={onClose}>

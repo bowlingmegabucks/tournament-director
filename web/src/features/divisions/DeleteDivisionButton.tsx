@@ -60,6 +60,7 @@ export function DeleteDivisionButton({
   const closes = useRef(0)
 
   function close() {
+    // Stryker disable next-line AssignmentOperator: counting down also differs from the start value, so the guard works either way.
     closes.current += 1
     setOpen(false)
     setFailure(undefined)

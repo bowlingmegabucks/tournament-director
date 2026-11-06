@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
@@ -285,5 +285,96 @@ describe('deleting a division (DIV-12, DIV-01, D-151 to D-155)', () => {
 
     await screen.findByRole('rowheader', { name: 'Women' })
     expect(screen.queryByText('Division deleted')).not.toBeInTheDocument()
+  })
+
+  it('closes the dialog after a delete even while the row is still listed', async () => {
+    setMockUser(createSignedInUser({ roles: ['director'] }))
+    // A 204 that leaves the list alone: only the button itself can close the dialog.
+    serve(trio(), { remove: () => new HttpResponse(null, { status: 204 }) })
+    const user = userEvent.setup()
+    open()
+
+    const dialog = await openDialog(user)
+    await user.click(await within(dialog).findByRole('button', { name: 'Delete division' }))
+
+    await screen.findByText('Division deleted')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('forgets an old failure when the dialog closes', async () => {
+    setMockUser(createSignedInUser({ roles: ['director'] }))
+    serve(trio(), { remove: () => new HttpResponse(null, { status: 500 }) })
+    const user = userEvent.setup()
+    open()
+    const first = await openDialog(user)
+    await user.click(await within(first).findByRole('button', { name: 'Delete division' }))
+    await within(first).findByRole('alert')
+    await user.click(within(first).getByRole('button', { name: 'Cancel' }))
+
+    const second = await openDialog(user)
+
+    await within(second).findByRole('button', { name: 'Delete division' })
+    expect(within(second).queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('clears a failure when the director tries again', async () => {
+    setMockUser(createSignedInUser({ roles: ['director'] }))
+    let release: () => void = () => undefined
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let calls = 0
+    serve(trio(), {
+      remove: async () => {
+        calls += 1
+        if (calls === 1) return new HttpResponse(null, { status: 500 })
+        await held
+        return new HttpResponse(null, { status: 204 })
+      },
+    })
+    const user = userEvent.setup()
+    open()
+    const dialog = await openDialog(user)
+    await user.click(await within(dialog).findByRole('button', { name: 'Delete division' }))
+    await within(dialog).findByRole('alert')
+
+    await user.click(within(dialog).getByRole('button', { name: 'Delete division' }))
+
+    await within(dialog).findByRole('button', { name: 'Deleting…' })
+    expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument()
+    release()
+    await screen.findByText('Division deleted')
+  })
+
+  it('ignores a reply that lands after the dialog was closed', async () => {
+    setMockUser(createSignedInUser({ roles: ['director'] }))
+    let release: () => void = () => undefined
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    serve(trio(), {
+      remove: async () => {
+        await held
+        return HttpResponse.json({ message: 'No', errors: { division: 'No' } }, { status: 409 })
+      },
+    })
+    const user = userEvent.setup()
+    open()
+    const first = await openDialog(user)
+    await user.click(await within(first).findByRole('button', { name: 'Delete division' }))
+    await within(first).findByRole('button', { name: 'Deleting…' })
+    // Escape closes a native dialog; the Cancel button is off while the request runs.
+    act(() => {
+      ;(first as HTMLDialogElement).close()
+    })
+    const second = await openDialog(user)
+
+    release()
+    await within(second).findByRole('button', { name: 'Delete division' })
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })

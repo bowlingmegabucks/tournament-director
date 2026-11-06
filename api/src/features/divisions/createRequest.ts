@@ -35,7 +35,7 @@ function limit(range: { min: number; max: number; message: string }) {
 const missing = (value: unknown) => value === undefined || value === null
 
 /** The rule for each field (D-141). Refused, never rounded (D-125). */
-const divisionFields = {
+export const divisionFields = {
   name: z
     .string({ error: (issue) => (missing(issue.input) ? 'Name is required' : 'Enter text') })
     .trim()
@@ -72,6 +72,45 @@ const divisionFields = {
 // Compare only two numbers: a field that failed its own rule may hold anything.
 const above = (a: unknown, b: unknown) => typeof a === 'number' && typeof b === 'number' && a > b
 
+type PairFields = Pick<
+  NewDivision,
+  | 'minimumAge'
+  | 'maximumAge'
+  | 'minimumAverage'
+  | 'maximumAverage'
+  | 'handicapPercentage'
+  | 'handicapBase'
+  | 'maximumHandicapPerGame'
+>
+
+/**
+ * The rules that look at two fields at once (DIV-05, DIV-07, DIV-09, DIV-11), keyed by the field the
+ * message belongs under. Create runs them on the body; edit runs them on the merged result (D-147).
+ * A field that failed its own rule may hold anything, so only two numbers are compared.
+ */
+export function pairErrors(values: PairFields): FieldErrors {
+  const errors: FieldErrors = {}
+  if (above(values.minimumAge, values.maximumAge)) {
+    errors.minimumAge = 'Minimum age must be less than or equal to maximum age' // DIV-05
+  }
+  if (above(values.minimumAverage, values.maximumAverage)) {
+    errors.minimumAverage = 'Minimum average must be less than or equal to maximum average' // DIV-07
+  }
+  const hasPercent = values.handicapPercentage !== null
+  const hasBase = values.handicapBase !== null
+  if (hasPercent && !hasBase) {
+    errors.handicapBase = 'Handicap base is required with a handicap percentage' // DIV-09
+  }
+  if (hasBase && !hasPercent) {
+    errors.handicapPercentage = 'Handicap percentage is required with a handicap base' // DIV-09
+  }
+  if (values.maximumHandicapPerGame !== null && !(hasPercent && hasBase)) {
+    errors.maximumHandicapPerGame =
+      'Maximum handicap per game is allowed only with a handicap percentage and base' // DIV-11
+  }
+  return errors
+}
+
 /**
  * The create body (DIV-02, DIV-04 to DIV-11, D-141). Strict: a key we do not know is refused. A
  * sent `number` is allowed and dropped, since the server picks it (D-139). `confirmWarnings`
@@ -84,28 +123,8 @@ const createDivisionSchema = z
     confirmWarnings: z.boolean({ error: 'Send true or false' }).optional(),
   })
   .superRefine((body, ctx) => {
-    const problem = (path: keyof typeof divisionFields, error: string) =>
-      ctx.addIssue({ code: 'custom', path: [path], message: error })
-
-    if (above(body.minimumAge, body.maximumAge)) {
-      problem('minimumAge', 'Minimum age must be less than or equal to maximum age') // DIV-05
-    }
-    if (above(body.minimumAverage, body.maximumAverage)) {
-      problem('minimumAverage', 'Minimum average must be less than or equal to maximum average') // DIV-07
-    }
-    const hasPercent = body.handicapPercentage !== null
-    const hasBase = body.handicapBase !== null
-    if (hasPercent && !hasBase) {
-      problem('handicapBase', 'Handicap base is required with a handicap percentage') // DIV-09
-    }
-    if (hasBase && !hasPercent) {
-      problem('handicapPercentage', 'Handicap percentage is required with a handicap base') // DIV-09
-    }
-    if (body.maximumHandicapPerGame !== null && !(hasPercent && hasBase)) {
-      problem(
-        'maximumHandicapPerGame',
-        'Maximum handicap per game is allowed only with a handicap percentage and base', // DIV-11
-      )
+    for (const [path, message] of Object.entries(pairErrors(body))) {
+      ctx.addIssue({ code: 'custom', path: [path], message })
     }
   })
 

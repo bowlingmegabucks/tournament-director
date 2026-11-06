@@ -7,6 +7,7 @@ import type { Logger } from './shared/logger.ts'
 import { createRateLimiter } from './shared/rateLimit.ts'
 import { requestIdHeader, requestLogging } from './shared/requestLogging.ts'
 import { createDivisionCreateRouter } from './features/divisions/createRoutes.ts'
+import { createDivisionUpdateRouter } from './features/divisions/updateRoutes.ts'
 import { createDivisionRouter } from './features/divisions/routes.ts'
 import type { DivisionRepository } from './features/divisions/repository.ts'
 import type { DivisionWriter } from './features/divisions/writer.ts'
@@ -56,7 +57,7 @@ export interface AppDependencies {
   /** Creates tournaments for the web app (TRN-19). */
   tournamentWriter: TournamentWriter
   divisions: DivisionRepository
-  /** Creates divisions for the web app (DIV-12). */
+  /** Creates and edits divisions for the web app (DIV-12). */
   divisionWriter: DivisionWriter
   registrations: RegistrationRepository
   /** Creates registrations for the registration site and the desk (API-05, D-112). */
@@ -161,6 +162,12 @@ export function createApp({
         access: { permission: 'divisions.write' }, // DIV-12, D-138: the API key cannot reach it
         methods: ['POST'],
         router: createDivisionCreateRouter(divisionWriter, logger),
+      },
+      {
+        path: '/v1/tournaments/:id/divisions',
+        access: { permission: 'divisions.write' }, // DIV-12, D-150: edit and its edit-info read; no API key
+        methods: ['PATCH', 'GET'],
+        router: createDivisionUpdateRouter(divisionWriter, logger),
       },
       {
         path: '/v1/tournaments/:id/squads',

@@ -6,7 +6,7 @@ import type { PrismaClient } from '../shared/database.ts'
  */
 export interface LegacyRows {
   tournament(overrides?: { completed?: boolean; start?: string; end?: string }): Promise<string>
-  division(tournamentId: string): Promise<string>
+  division(tournamentId: string, overrides?: { name?: string; number?: number }): Promise<string>
   /** `at` is local time as legacy stores it, like `2026-10-24 09:00:00`. */
   session(tournamentId: string, kind: 'squad' | 'sweeper', at: string): Promise<string>
   registration(divisionId: string): Promise<{ registrationId: string; bowlerId: string }>
@@ -35,11 +35,13 @@ export function legacyRows(client: PrismaClient): LegacyRows {
       )
       return id
     },
-    async division(tournamentId) {
+    async division(tournamentId, { name = 'Open', number = 1 } = {}) {
       const id = crypto.randomUUID()
       await run(
-        `INSERT INTO Divisions (Id, Name, Number, TournamentId) VALUES (?, 'Open', 1, ?)`,
+        `INSERT INTO Divisions (Id, Name, Number, TournamentId) VALUES (?, ?, ?, ?)`,
         id,
+        name,
+        number,
         tournamentId,
       )
       return id

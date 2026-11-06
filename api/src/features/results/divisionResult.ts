@@ -30,6 +30,7 @@ export function toDivisionResult(
     highGame: entry.highGame,
     games: entry.games.length,
     handicap: entry.pins,
+    scores: entry.games,
     // D-81: only an earlier advancer at or above the cut, who would have advanced.
     advancedEarlier:
       advancedBefore.has(entry.bowlerId) && cutTotal !== undefined && entry.total >= cutTotal,
@@ -58,6 +59,7 @@ export function toDivisionResult(
       highGame: entry.highGame,
       games: entry.games.length,
       handicap: entry.pins,
+      scores: entry.games,
     })),
     noShows: outcome.noShows.map((entry) => ({
       registrationId: entry.registrationId,

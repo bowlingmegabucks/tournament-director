@@ -68,6 +68,11 @@ describe('buildSuperSweeperEntries', () => {
     const { entries } = buildSuperSweeperEntries([first, second], [women])
 
     expect(entries[0]?.sweeperTotals).toEqual([630, 612])
+    expect(entries[0]?.sweeperScores).toEqual([
+      [200, 200, 200],
+      [200, 200, 200],
+    ])
+    expect(entries[0]?.sweeperPins).toEqual([10, 4])
     expect(entries[0]?.entry.total).toBe(1242)
     // The high game uses the pins of the sweeper it was bowled in.
     expect(entries[0]?.entry.highGame).toBe(210)
@@ -96,6 +101,11 @@ describe('buildSuperSweeperEntries', () => {
 
     const mine = entries.find((item) => item.entry.registrationId === bowler.registrationId)
     expect(mine?.sweeperTotals).toEqual([630, 0])
+    // A missed complete sweeper shows a zero for each of its games.
+    expect(mine?.sweeperScores).toEqual([
+      [200, 200, 200],
+      [0, 0, 0],
+    ])
     expect(mine?.entry.total).toBe(630)
     expect(mine?.entry.games).toHaveLength(6)
     expect(mine?.flags).toEqual([{ kind: 'missed', sweeperId: missed.sweeper.id, gamesBowled: 0 }])
@@ -136,6 +146,7 @@ describe('buildSuperSweeperEntries', () => {
     const { entries } = buildSuperSweeperEntries([done, running], [open])
 
     expect(entries[0]?.sweeperTotals).toEqual([600, null])
+    expect(entries[0]?.sweeperScores).toEqual([[200, 200, 200], null])
     expect(entries[0]?.entry.games).toHaveLength(3)
     expect(entries[0]?.flags).toEqual([])
   })

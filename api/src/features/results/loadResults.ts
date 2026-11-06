@@ -116,6 +116,7 @@ export async function loadSweeperResults(
     ties: marks.get(entry.registrationId) ?? [],
     divisionName: entry.divisionName,
     bonusPins: entry.pins,
+    scores: entry.games,
   })
 
   return {

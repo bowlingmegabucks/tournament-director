@@ -171,6 +171,7 @@ describe('toDivisionResult', () => {
         highGame: 235,
         games: 2,
         handicap: 5,
+        scores: [210, 230],
       },
     ])
     expect(result.rows.map((row) => row.registrationId)).not.toContain(quit.registrationId)

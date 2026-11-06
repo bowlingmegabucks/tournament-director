@@ -215,6 +215,8 @@ export async function loadSuperSweeper(
     ties: marks.get(item.entry.registrationId) ?? [],
     divisionName: item.entry.divisionName,
     sweeperTotals: item.sweeperTotals,
+    sweeperScores: item.sweeperScores,
+    sweeperPins: item.sweeperPins,
     flags: item.flags,
   })
 

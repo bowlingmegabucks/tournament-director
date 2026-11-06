@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { planCreate, type CreateFacts, type DivisionWarning } from './createPlan.ts'
 import type { FieldErrors, NewDivision } from './createRequest.ts'
+import { planDelete, type DeleteFacts, type DivisionDeleteInfo } from './deletePlan.ts'
 import { noDivisionEditFacts, type DivisionEditFacts, type DivisionEditInfo } from './editFacts.ts'
 import { planEdit, type DivisionEditState } from './editPlan.ts'
 import type { Division } from './types.ts'
@@ -31,7 +32,15 @@ export type UpdateDivisionOutcome =
   | { warnings: DivisionWarning[] }
   | { updated: Division; changed: (keyof NewDivision)[] }
 
-/** What the create, edit, and edit-info routes need from storage. The Prisma version writes the legacy table. */
+/** How a delete ended (DIV-12). Only `deleted` removed anything. */
+export type DeleteDivisionOutcome =
+  | NotFound
+  /** A complete tournament or bowlers registered: 409 with `errors` (D-151). */
+  | { refused: FieldErrors }
+  /** The number the division held, for the log (D-155). */
+  | { deleted: { number: number } }
+
+/** What the create, edit, edit-info, delete, and delete-info routes need from storage. The Prisma version writes the legacy table. */
 export interface DivisionWriter {
   create(
     tournamentId: string,
@@ -46,6 +55,10 @@ export interface DivisionWriter {
   ): Promise<UpdateDivisionOutcome>
   /** What the edit page shows before the director types (D-147). */
   getEditInfo(tournamentId: string, divisionId: string): Promise<DivisionEditInfo | NotFound>
+  /** Removes the division and moves later numbers down by one (D-151, D-153). */
+  remove(tournamentId: string, divisionId: string): Promise<DeleteDivisionOutcome>
+  /** What the delete dialog shows before the director presses Delete (D-154). */
+  getDeleteInfo(tournamentId: string, divisionId: string): Promise<DivisionDeleteInfo | NotFound>
 }
 
 /** The stored division for an input and the number the plan chose. */
@@ -100,6 +113,26 @@ export async function applyUpdate(
   }
 }
 
+/**
+ * Plan a delete and, when it goes ahead, call `persist`. Both versions of the writer use this, so
+ * the rules live in one place (`planDelete`) and storage only reads and writes.
+ */
+export async function applyDelete(
+  facts: DeleteFacts,
+  persist: () => Promise<void>,
+): Promise<{ refused: FieldErrors } | { deleted: true }> {
+  const plan = planDelete(facts)
+  if (plan.kind === 'refused') return { refused: plan.errors }
+  await persist()
+  return { deleted: true }
+}
+
+const noDeleteInfo = (given: Partial<DivisionDeleteInfo> = {}): DivisionDeleteInfo => ({
+  registrationCount: 0,
+  sweeperCount: 0,
+  ...given,
+})
+
 /** For route tests. `stored` holds what was written; a tournament not in `known` is a 404. */
 export function createInMemoryDivisionWriter(
   options: {
@@ -109,6 +142,8 @@ export function createInMemoryDivisionWriter(
     seed?: { tournamentId: string; division: Division }[]
     /** Per division id: what the edit rules look at (D-147). */
     editFacts?: Record<string, Partial<DivisionEditFacts>>
+    /** Per division id: what the delete rules look at (D-151, D-152). */
+    deleteInfo?: Record<string, Partial<DivisionDeleteInfo>>
   } = {},
 ) {
   const stored = [...(options.seed ?? [])]
@@ -166,6 +201,33 @@ export function createInMemoryDivisionWriter(
       const found = locate(tournamentId, divisionId)
       if (!('entry' in found)) return Promise.resolve(found)
       return Promise.resolve({ ...noDivisionEditFacts, ...options.editFacts?.[divisionId] })
+    },
+    remove: async (tournamentId, divisionId) => {
+      const found = locate(tournamentId, divisionId)
+      if (!('entry' in found)) return found
+      const { number } = found.entry.division
+      const outcome = await applyDelete(
+        {
+          completed: options.completed?.includes(tournamentId) ?? false,
+          registrationCount: noDeleteInfo(options.deleteInfo?.[divisionId]).registrationCount,
+        },
+        () => {
+          stored.splice(stored.indexOf(found.entry), 1)
+          // Later divisions move down by one; an old odd row below the gap stays put (D-153).
+          for (const entry of stored) {
+            if (entry.tournamentId === tournamentId && entry.division.number > number) {
+              entry.division.number -= 1
+            }
+          }
+          return Promise.resolve()
+        },
+      )
+      return 'refused' in outcome ? outcome : { deleted: { number } }
+    },
+    getDeleteInfo: (tournamentId, divisionId) => {
+      const found = locate(tournamentId, divisionId)
+      if (!('entry' in found)) return Promise.resolve(found)
+      return Promise.resolve(noDeleteInfo(options.deleteInfo?.[divisionId]))
     },
   }
   return { writer, stored }

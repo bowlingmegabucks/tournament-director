@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Delete dialog mockup</title>
+    <link rel="stylesheet" href="../../../web/src/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../web/src/styles/base.css" />
+    <style>
+      main { max-inline-size: var(--layout-width); margin: 0 auto; padding: var(--space-4); }
+      h2 { margin-block-start: var(--space-8); font-size: var(--font-size-lg); }
+      .frame { border: var(--border-width) dashed var(--color-border); border-radius: var(--radius); padding: var(--space-4); margin-block: var(--space-3); background: var(--color-backdrop); }
+      .cap { color: var(--color-text-muted); font-size: var(--font-size-sm); margin: 0 0 var(--space-3); }
+      .dialog { inline-size: min(26rem, 100%); margin: 0 auto; background: var(--color-surface); color: var(--color-text); border: var(--border-width) solid var(--color-border); border-radius: var(--radius); box-shadow: var(--shadow-elevated); }
+      .content { display: grid; gap: var(--space-3); padding: var(--space-4); }
+      .title { margin: 0; font-size: var(--font-size-lg); }
+      .text { margin: 0; }
+      .error { margin: 0; padding: var(--space-3); border: var(--border-width) solid var(--color-danger); border-radius: var(--radius); color: var(--color-danger); }
+      .actions { display: flex; justify-content: end; gap: var(--space-2); }
+      .secondary { background: transparent; color: var(--color-accent); }
+      .destructive { background: var(--color-danger); border-color: var(--color-danger); color: var(--color-on-status); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Delete dialog</h1>
+      <p class="cap">Native modal dialog, as the tournament delete. Cancel has focus first, so Enter does the safe thing. Delete is the red button and names the action.</p>
+
+      <h2>Loading what goes</h2>
+      <div class="frame"><div class="dialog" role="dialog" aria-labelledby="t1"><div class="content">
+        <h2 class="title" id="t1">Delete this division?</h2>
+        <p class="text"><strong>Women</strong> will be deleted. This cannot be undone.</p>
+        <div class="actions"><button type="button" class="secondary">Cancel</button><button type="button" class="destructive" disabled>Delete division</button></div>
+      </div></div></div>
+
+      <h2>Sweepers hold bonus pins for it</h2>
+      <div class="frame"><div class="dialog" role="dialog" aria-labelledby="t2"><div class="content">
+        <h2 class="title" id="t2">Delete this division?</h2>
+        <p class="text"><strong>Women</strong> will be deleted. 2 sweepers lose their bonus pins for it. Divisions after it move up one number. This cannot be undone.</p>
+        <div class="actions"><button type="button" class="secondary">Cancel</button><button type="button" class="destructive">Delete division</button></div>
+      </div></div></div>
+
+      <h2>One sweeper</h2>
+      <div class="frame"><div class="dialog" role="dialog" aria-labelledby="t3"><div class="content">
+        <h2 class="title" id="t3">Delete this division?</h2>
+        <p class="text"><strong>Women</strong> will be deleted. 1 sweeper loses its bonus pins for it. Divisions after it move up one number. This cannot be undone.</p>
+        <div class="actions"><button type="button" class="secondary">Cancel</button><button type="button" class="destructive">Delete division</button></div>
+      </div></div></div>
+
+      <h2>No sweeper pins</h2>
+      <div class="frame"><div class="dialog" role="dialog" aria-labelledby="t4"><div class="content">
+        <h2 class="title" id="t4">Delete this division?</h2>
+        <p class="text"><strong>Women</strong> will be deleted. Divisions after it move up one number. This cannot be undone.</p>
+        <div class="actions"><button type="button" class="secondary">Cancel</button><button type="button" class="destructive">Delete division</button></div>
+      </div></div></div>
+
+      <h2>Deleting</h2>
+      <div class="frame"><div class="dialog" role="dialog" aria-labelledby="t5"><div class="content">
+        <h2 class="title" id="t5">Delete this division?</h2>
+        <p class="text"><strong>Women</strong> will be deleted. 2 sweepers lose their bonus pins for it. Divisions after it move up one number. This cannot be undone.</p>
+        <div class="actions"><button type="button" class="secondary" disabled>Cancel</button><button type="button" class="destructive" disabled>Deleting…</button></div>
+      </div></div></div>
+
+      <h2>The count could not be read</h2>
+      <div class="frame"><div class="dialog" role="dialog" aria-labelledby="t6"><div class="content">
+        <h2 class="title" id="t6">Delete this division?</h2>
+        <p class="text"><strong>Women</strong> will be deleted. Any sweeper bonus pins for it go too. Divisions after it move up one number. This cannot be undone.</p>
+        <div class="actions"><button type="button" class="secondary">Cancel</button><button type="button" class="destructive">Delete division</button></div>
+      </div></div></div>
+      <p class="cap">Delete still works: the server refuses when bowlers are registered, and the error toast shows.</p>
+
+      <h2>Bowlers registered: the dialog shows the refusal (approved)</h2>
+      <div class="frame"><div class="dialog" role="dialog" aria-labelledby="t7"><div class="content">
+        <h2 class="title" id="t7">Delete this division?</h2>
+        <p class="error" role="alert">12 bowlers are registered in <strong>Open</strong>. Move them to another division first.</p>
+        <div class="actions"><button type="button" class="secondary">Close</button></div>
+      </div></div></div>
+      <p class="cap">The dialog reads the registration count first, so it says this before any Delete press. If a bowler registers after the dialog opens, the API refuses and the page shows an error toast (see the list mockup).</p>
+    </main>
+  </body>
+</html>

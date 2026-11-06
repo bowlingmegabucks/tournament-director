@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Divisions list mockup</title>
+    <link rel="stylesheet" href="../../../web/src/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../web/src/styles/base.css" />
+    <style>
+      main { max-inline-size: var(--layout-width); margin: 0 auto; padding: var(--space-4); }
+      h2 { margin-block-start: var(--space-8); font-size: var(--font-size-lg); }
+      .frame { border: var(--border-width) dashed var(--color-border); border-radius: var(--radius); padding: var(--space-4); margin-block: var(--space-3); }
+      .cap { color: var(--color-text-muted); font-size: var(--font-size-sm); margin: 0 0 var(--space-3); }
+      table { inline-size: 100%; border-collapse: collapse; }
+      th, td { padding: var(--space-2) var(--space-3); text-align: start; vertical-align: top; border-block-end: var(--border-width) solid var(--color-border); }
+      thead th { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+      .actions { white-space: nowrap; display: flex; gap: var(--space-2); align-items: center; }
+      a.edit { display: inline-flex; align-items: center; min-block-size: var(--target-min); padding-inline: var(--space-2); }
+      button.secondary { background: transparent; color: var(--color-accent); border: var(--border-width) solid var(--color-accent); }
+      .toast { display: block; padding: var(--space-3) var(--space-4); border-radius: var(--radius); color: var(--color-on-status); font-weight: 600; max-inline-size: 28rem; }
+      .toast.ok { background: var(--color-success); }
+      .toast.bad { background: var(--color-danger); }
+      .toast button { margin-inline-start: var(--space-3); }
+      .card { max-inline-size: 22rem; padding: var(--space-3); background: var(--color-surface); border: var(--border-width) solid var(--color-border); border-radius: var(--radius); }
+      .card strong { font-size: var(--font-size-lg); display: block; }
+      .card p { margin: var(--space-1) 0; }
+      .muted { color: var(--color-text-muted); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Divisions list</h1>
+
+      <h2>Open tournament, director signed in</h2>
+      <div class="frame">
+        <p class="cap">Delete sits beside Edit in the actions cell. Delete is a button (it changes data); Edit is a link.</p>
+        <table>
+          <caption hidden>Divisions in Spring Open</caption>
+          <thead><tr><th scope="col">#</th><th scope="col">Name</th><th scope="col">Gender</th><th scope="col">Ages</th><th scope="col">Averages</th><th scope="col">Handicap</th><th scope="col"><span hidden>Actions</span></th></tr></thead>
+          <tbody>
+            <tr><td>1</td><th scope="row">Open</th><td>Any</td><td>Any</td><td>Any</td><td>Scratch</td><td class="actions"><a class="edit" href="#">Edit</a><button type="button" class="secondary" aria-label="Delete Open">Delete</button></td></tr>
+            <tr><td>2</td><th scope="row">Women</th><td>Female</td><td>Any</td><td>Any</td><td>90% of 220, max 40 a game</td><td class="actions"><a class="edit" href="#">Edit</a><button type="button" class="secondary" aria-label="Delete Women">Delete</button></td></tr>
+            <tr><td>3</td><th scope="row">Senior</th><td>Any</td><td>55+</td><td>Any</td><td>Scratch</td><td class="actions"><a class="edit" href="#">Edit</a><button type="button" class="secondary" aria-label="Delete Senior">Delete</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>After deleting Women</h2>
+      <div class="frame">
+        <p class="cap">Senior moved from 3 to 2. The toast closes itself after 5 seconds.</p>
+        <table>
+          <caption hidden>Divisions in Spring Open</caption>
+          <thead><tr><th scope="col">#</th><th scope="col">Name</th><th scope="col">Gender</th><th scope="col"><span hidden>Actions</span></th></tr></thead>
+          <tbody>
+            <tr><td>1</td><th scope="row">Open</th><td>Any</td><td class="actions"><a class="edit" href="#">Edit</a><button type="button" class="secondary" aria-label="Delete Open">Delete</button></td></tr>
+            <tr><td>2</td><th scope="row">Senior</th><td>Any</td><td class="actions"><a class="edit" href="#">Edit</a><button type="button" class="secondary" aria-label="Delete Senior">Delete</button></td></tr>
+          </tbody>
+        </table>
+        <p role="status" class="toast ok">Division deleted</p>
+      </div>
+
+      <h2>Refused: bowlers registered (error toast, stays until dismissed)</h2>
+      <div class="frame">
+        <p role="alert" class="toast bad">12 bowlers are registered in this division. Move them to another division first.<button type="button" class="secondary">Dismiss</button></p>
+      </div>
+
+      <h2>Refused: tournament complete and bowlers registered (both reasons)</h2>
+      <div class="frame">
+        <p class="cap">The Delete button is hidden on a complete tournament, so this only shows after a stale page. Reasons are joined, one per line.</p>
+        <p role="alert" class="toast bad">This tournament is complete and cannot be changed.<br />1 bowler is registered in this division. Move them to another division first.<button type="button" class="secondary">Dismiss</button></p>
+      </div>
+
+      <h2>Complete tournament, or no permission</h2>
+      <div class="frame">
+        <p class="cap">No Edit and no Delete, and no empty column on a phone.</p>
+        <table>
+          <caption hidden>Divisions in Fall Classic</caption>
+          <thead><tr><th scope="col">#</th><th scope="col">Name</th><th scope="col">Gender</th></tr></thead>
+          <tbody><tr><td>1</td><th scope="row">Open</th><td>Any</td></tr></tbody>
+        </table>
+      </div>
+
+      <h2>Phone (320px): a card per row</h2>
+      <div class="frame">
+        <div class="card">
+          <strong>Women</strong>
+          <p><span class="muted">Number: </span>2</p>
+          <p><span class="muted">Gender: </span>Female</p>
+          <p><span class="muted">Ages: </span>Any</p>
+          <p><span class="muted">Averages: </span>Any</p>
+          <p><span class="muted">Handicap: </span>90% of 220, max 40 a game</p>
+          <p class="actions"><a class="edit" href="#" aria-label="Edit Women">Edit</a><button type="button" class="secondary" aria-label="Delete Women">Delete</button></p>
+        </div>
+      </div>
+
+      <h2>Empty list</h2>
+      <div class="frame"><p>No divisions yet.</p></div>
+    </main>
+  </body>
+</html>

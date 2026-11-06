@@ -236,7 +236,7 @@
   vertical-align: middle;
 }
 
-@media (max-width: 40rem) {
+@media (max-width: 40rem), screen and (max-width: 64rem) {
   .games tbody tr,
   .games tbody.bowler {
     grid-template-columns: 2.25rem repeat(auto-fill, minmax(3.25rem, 1fr));
@@ -301,8 +301,10 @@
 }
 
 /*
- * The same card layout from 40rem up to 64rem on screen: with the menu beside it, the table has too
- * little room for a column for each game. Paper keeps the table (print media is not `screen`).
+ * The general card rules above, copied for the game tables between 40rem and 64rem on screen: with
+ * the menu beside it, a table with a column for each game has too little room. Paper keeps the
+ * table (print media is not `screen`). `ResultsTable.test.ts` fails if this copy drifts from the
+ * 40rem block, so change both together.
  */
 @media screen and (min-width: 40.0625rem) and (max-width: 64rem) {
   .table.games,
@@ -381,67 +383,6 @@
   }
 
   .table.games td.num::before {
-    content: attr(data-label);
-    display: block;
-    color: var(--color-text-muted);
-    font-size: var(--font-size-sm);
-    font-weight: 400;
-  }
-
-  .games tbody tr,
-  .games tbody.bowler {
-    grid-template-columns: 2.25rem repeat(auto-fill, minmax(3.25rem, 1fr));
-  }
-
-  .table.games tr > .plusMinus {
-    grid-column: 2 / -1;
-    padding-block-start: var(--space-1);
-    font-size: var(--font-size-lg);
-    text-align: start;
-  }
-
-  .table.games td.empty {
-    display: none;
-  }
-
-  .table.games tbody.bowler {
-    display: grid;
-    column-gap: var(--space-3);
-    padding: var(--space-3) 0;
-    border-block-end: var(--border-width) solid var(--color-border);
-  }
-
-  .table.games tbody.bowler > tr {
-    display: contents;
-  }
-
-  .table.games tbody.bowler .place {
-    grid-column: 1;
-    grid-row: 1 / span 30;
-    align-self: start;
-    font-size: var(--font-size-lg);
-    font-weight: 700;
-  }
-
-  .table.games tbody.bowler .sweeperName {
-    grid-column: 2 / -1;
-    padding-block-start: var(--space-3);
-    border-block-start: var(--border-width) dotted var(--color-border);
-  }
-
-  .table.games tbody.bowler .cumulative {
-    grid-column: 2 / -1;
-    order: 99;
-    padding-block-start: var(--space-3);
-    font-weight: 700;
-  }
-
-  .table.games tbody.bowler > tr > td,
-  .table.games tbody.bowler > tr > th {
-    border: 0;
-  }
-
-  .table.games td.cumulative::before {
     content: attr(data-label);
     display: block;
     color: var(--color-text-muted);

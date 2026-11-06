@@ -7,7 +7,9 @@ import {
   createDivision as postDivision,
   DivisionRejectedError,
   DivisionWarningsError,
+  fetchDivisionEditInfo,
   fetchDivisions,
+  updateDivision,
 } from './api'
 
 const path = '/v1/tournaments/:id/divisions'
@@ -316,5 +318,159 @@ describe('createDivision (the API call)', () => {
     const failure = await postDivision('t1', input).catch((error: unknown) => error)
 
     expect(failure).toBeInstanceOf(DivisionRejectedError)
+  })
+})
+
+describe('updateDivision (the API call)', () => {
+  const patchPath = '/v1/tournaments/:id/divisions/:divisionId'
+
+  it('patches the division of the tournament with only the changes and returns the division (DIV-12)', async () => {
+    let seen: { params: unknown; body: unknown; method: string } | undefined
+    const division = createDivision({ name: 'Main' })
+    server.use(
+      http.patch(patchPath, async ({ params, request }) => {
+        seen = { params, body: await request.json(), method: request.method }
+        return HttpResponse.json({ division })
+      }),
+    )
+
+    await expect(updateDivision('t 1', 'd/1', { name: 'Main' })).resolves.toEqual(division)
+
+    expect(seen).toEqual({
+      params: { id: 't 1', divisionId: 'd/1' },
+      body: { name: 'Main' },
+      method: 'PATCH',
+    })
+  })
+
+  it('adds confirmWarnings only when told to (D-129)', async () => {
+    const bodies: unknown[] = []
+    server.use(
+      http.patch(patchPath, async ({ request }) => {
+        bodies.push(await request.json())
+        return HttpResponse.json({ division: createDivision() })
+      }),
+    )
+
+    await updateDivision('t1', 'd1', { name: 'A' })
+    await updateDivision('t1', 'd1', { name: 'A' }, true)
+
+    expect(bodies).toEqual([{ name: 'A' }, { name: 'A', confirmWarnings: true }])
+  })
+
+  it('throws DivisionRejectedError with a message per field for 400 and 409', async () => {
+    for (const status of [400, 409]) {
+      server.use(
+        http.patch(patchPath, () =>
+          HttpResponse.json(
+            { message: 'No', errors: { name: 'A name', minimumAge: 'An age', other: 'x' } },
+            { status },
+          ),
+        ),
+      )
+
+      const failure = await updateDivision('t1', 'd1', {}).catch((error: unknown) => error)
+
+      expect(failure).toBeInstanceOf(DivisionRejectedError)
+      expect((failure as DivisionRejectedError).errors).toEqual({
+        name: 'A name',
+        minimumAge: 'An age',
+      })
+      expect((failure as DivisionRejectedError).tournament).toBeUndefined()
+    }
+  })
+
+  it('carries a reason that is not about a field as `tournament` (D-149)', async () => {
+    server.use(
+      http.patch(patchPath, () =>
+        HttpResponse.json(
+          { message: 'Complete', errors: { tournament: 'This tournament is complete' } },
+          { status: 409 },
+        ),
+      ),
+    )
+
+    const failure = await updateDivision('t1', 'd1', {}).catch((error: unknown) => error)
+
+    expect((failure as DivisionRejectedError).tournament).toBe('This tournament is complete')
+  })
+
+  it('throws DivisionWarningsError when the API asks to confirm (D-147)', async () => {
+    server.use(
+      http.patch(patchPath, () =>
+        HttpResponse.json(
+          { message: 'Confirm', warnings: [{ field: 'minimumAge', message: 'Careful' }] },
+          { status: 409 },
+        ),
+      ),
+    )
+
+    const failure = await updateDivision('t1', 'd1', {}).catch((error: unknown) => error)
+
+    expect(failure).toBeInstanceOf(DivisionWarningsError)
+    expect((failure as DivisionWarningsError).warnings).toEqual([
+      { field: 'minimumAge', message: 'Careful' },
+    ])
+  })
+
+  it.each([
+    [401, 'Sign in to edit a division.'],
+    [403, 'You do not have permission to edit a division.'],
+    [404, 'This division was not found. It may have been removed.'],
+    [503, 'Failed to save the division (503)'],
+  ])('says what status %i means', async (status, message) => {
+    server.use(http.patch(patchPath, () => new HttpResponse(null, { status })))
+
+    await expect(updateDivision('t1', 'd1', {})).rejects.toThrow(message)
+  })
+
+  it('rejects a success that is not a division', async () => {
+    server.use(http.patch(patchPath, () => HttpResponse.json({ division: { id: 1 } })))
+
+    await expect(updateDivision('t1', 'd1', {})).rejects.toThrow('unexpected response')
+  })
+})
+
+describe('fetchDivisionEditInfo', () => {
+  const infoPath = '/v1/tournaments/:id/divisions/:divisionId/edit-info'
+
+  it('reads the registered count and whether scores exist (D-147, D-148)', async () => {
+    let asked: unknown
+    server.use(
+      http.get(infoPath, ({ params }) => {
+        asked = params
+        return HttpResponse.json({ editInfo: { registrationCount: 12, hasScores: true } })
+      }),
+    )
+
+    await expect(fetchDivisionEditInfo('t1', 'd1')).resolves.toEqual({
+      registrationCount: 12,
+      hasScores: true,
+    })
+    expect(asked).toEqual({ id: 't1', divisionId: 'd1' })
+  })
+
+  it('reports not found for 404', async () => {
+    server.use(http.get(infoPath, () => new HttpResponse(null, { status: 404 })))
+
+    await expect(fetchDivisionEditInfo('t1', 'd1')).rejects.toBeInstanceOf(TournamentNotFoundError)
+  })
+
+  it('reports the status for another failure', async () => {
+    server.use(http.get(infoPath, () => new HttpResponse(null, { status: 503 })))
+
+    await expect(fetchDivisionEditInfo('t1', 'd1')).rejects.toThrow(
+      'Failed to load the division (503)',
+    )
+  })
+
+  it.each([
+    ['no editInfo', {}],
+    ['a count that is text', { editInfo: { registrationCount: '3', hasScores: false } }],
+    ['scores that are not a boolean', { editInfo: { registrationCount: 3, hasScores: 'no' } }],
+  ])('rejects %s', async (_label, body) => {
+    server.use(http.get(infoPath, () => HttpResponse.json(body)))
+
+    await expect(fetchDivisionEditInfo('t1', 'd1')).rejects.toThrow('unexpected response')
   })
 })

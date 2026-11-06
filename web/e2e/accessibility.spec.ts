@@ -197,6 +197,50 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('divisions page with Edit links has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Divisions')
+      await expect(page.getByRole('link', { name: 'Edit Open' })).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
+    test('edit division form has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Divisions')
+      await page.getByRole('link', { name: 'Edit Open' }).click()
+      await expect(page.getByRole('heading', { name: 'Edit division', level: 1 })).toBeVisible()
+      await expect(page.getByLabel('Name (required)', { exact: true })).toHaveValue('Open')
+
+      await expectNoViolations(page)
+    })
+
+    test('edit division form with errors has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Divisions')
+      await page.getByRole('link', { name: 'Edit Open' }).click()
+      await page.getByLabel('Name (required)', { exact: true }).fill('')
+      await page.getByRole('button', { name: 'Save changes' }).click()
+      await expect(page.getByRole('alert')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
+    test('edit division confirm dialog has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Divisions')
+      await page.getByRole('link', { name: 'Edit Open' }).click()
+      await page.getByLabel('Handicap percent').fill('110')
+      await page.getByRole('button', { name: 'Save changes' }).click()
+      await expect(page.getByRole('dialog', { name: 'Save these changes?' })).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
     test('edit tournament form has no WCAG 2.2 AA violations', async ({ page }) => {
       await openTournamentsSignedIn(page)
       await page.getByRole('article').first().getByRole('link').click()

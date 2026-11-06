@@ -8,9 +8,34 @@ import type { Tournament } from '../tournaments/types'
 import { useTournamentSettings } from '../tournaments/useTournamentSettings'
 import styles from './DivisionsPage.module.css'
 import { formatGender, formatHandicap, formatRange } from './format'
+import type { Division } from './types'
 import { useDivisions } from './useDivisions'
 
 const TOAST_MS = 5000
+
+/**
+ * The Edit link of one row, in a cell of its own. The cell sits inside `<Can>`, so a visitor without
+ * the permission never reads the settings. A complete tournament has no link (D-149, D-19); while
+ * the settings load the link waits. If they fail it shows anyway: the API refuses a complete
+ * tournament, and a slow start must not take the link away.
+ */
+function EditCell({ id, division }: Readonly<{ id: string; division: Division }>) {
+  const settings = useTournamentSettings(id)
+  const show = !settings.isPending && settings.data?.completed !== true
+  return (
+    <td className={styles.actionsCell}>
+      {show && (
+        <Link
+          className={styles.editLink}
+          to={`/tournaments/${id}/divisions/${division.id}/edit`}
+          aria-label={`Edit ${division.name}`}
+        >
+          Edit
+        </Link>
+      )}
+    </td>
+  )
+}
 
 /**
  * The "New division" link. It sits inside `<Can>`, so a visitor without the permission never reads
@@ -38,6 +63,8 @@ export function DivisionsPage() {
   const navigate = useNavigate()
   // The add form sets this state as it moves here (D-144). Clearing it keeps a reload quiet.
   const justCreated = field(location.state, 'created') === true
+  // The edit form sets this one the same way (DIV-12).
+  const justSaved = field(location.state, 'saved') === true
 
   return (
     <>
@@ -71,6 +98,11 @@ export function DivisionsPage() {
               <th scope="col">Ages</th>
               <th scope="col">Averages</th>
               <th scope="col">Handicap</th>
+              <Can permission="divisions.write">
+                <th scope="col">
+                  <span className={styles.hidden}>Actions</span>
+                </th>
+              </Can>
             </tr>
           </thead>
           <tbody>
@@ -84,12 +116,15 @@ export function DivisionsPage() {
                   {formatRange(division.minimumAverage, division.maximumAverage)}
                 </td>
                 <td data-label="Handicap">{formatHandicap(division)}</td>
+                <Can permission="divisions.write">
+                  <EditCell id={id} division={division} />
+                </Can>
               </tr>
             ))}
           </tbody>
         </table>
       )}
-      {justCreated && (
+      {(justCreated || justSaved) && (
         <Toast
           kind="success"
           autoDismissMs={TOAST_MS}
@@ -98,7 +133,7 @@ export function DivisionsPage() {
             void navigate('.', { replace: true, state: null })
           }}
         >
-          Division created
+          {justCreated ? 'Division created' : 'Division saved'}
         </Toast>
       )}
     </>

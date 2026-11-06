@@ -3,14 +3,21 @@ import type { ChangeEvent, MouseEvent, SubmitEvent } from 'react'
 import { Link } from 'react-router'
 import { ConfirmChangesDialog } from '../../shared/ConfirmChangesDialog'
 import styles from './DivisionForm.module.css'
+import { describeChange } from './describeChange'
 import {
   divisionFields,
   type DivisionField,
   type DivisionFieldErrors,
+  type DivisionFieldNotes,
   type DivisionFormValues,
   type DivisionWarning,
 } from './types'
-import { emptyDivisionForm, validateDivision } from './validateDivision'
+import {
+  emptyDivisionForm,
+  isDivisionField,
+  validateDivision,
+  validateDivisionChanges,
+} from './validateDivision'
 
 interface BoxSpec {
   label: string
@@ -65,8 +72,18 @@ export type DivisionSubmitResult =
   | undefined
 
 interface DivisionFormProps {
-  /** The number the new division will most likely get; `undefined` while it is not known (D-139). */
+  /**
+   * Add: the number the new division will most likely get, `undefined` while it is not known
+   * (D-139). Edit: the stored number, which cannot change (D-146).
+   */
   number: number | undefined
+  /** The values the form starts with: empty for add, the stored ones for edit. */
+  initialValues?: DivisionFormValues
+  /** Edit (D-147): check only the boxes the director changed, and say so in the confirm dialog. */
+  checkChangedOnly?: boolean
+  /** Boxes whose change asks for a confirmation, each with the reason (D-12, D-147). */
+  confirms?: DivisionFieldNotes
+  submitLabel?: string
   pending: boolean
   /** Send the values. `confirmWarnings` is true when the director has agreed to the warnings. */
   onSubmit: (values: DivisionFormValues, confirmWarnings: boolean) => Promise<DivisionSubmitResult>
@@ -84,6 +101,10 @@ interface DivisionFormProps {
  */
 export function DivisionForm({
   number,
+  initialValues = emptyDivisionForm,
+  checkChangedOnly = false,
+  confirms = {},
+  submitLabel = 'Add division',
   pending,
   onSubmit,
   onFailure,
@@ -91,7 +112,7 @@ export function DivisionForm({
   cancelTo,
 }: Readonly<DivisionFormProps>) {
   const base = useId()
-  const [values, setValues] = useState<DivisionFormValues>(emptyDivisionForm)
+  const [values, setValues] = useState<DivisionFormValues>(initialValues)
   const [errors, setErrors] = useState<DivisionFieldErrors>({})
   const [summary, setSummary] = useState(false)
   // A field the director has typed in. Leaving one they never touched says nothing.
@@ -101,6 +122,10 @@ export function DivisionForm({
   >()
 
   const idOf = (name: DivisionField) => `${base}-${name}`
+  const check = (candidate: DivisionFormValues) =>
+    checkChangedOnly
+      ? validateDivisionChanges(initialValues, candidate)
+      : validateDivision(candidate)
   const invalid = divisionFields.filter((name) => errors[name] !== undefined)
 
   function focusField(name: DivisionField) {
@@ -128,7 +153,7 @@ export function DivisionForm({
     return () => {
       // Tabbing through an empty box is not a mistake, unless a save has already failed.
       if (!edited[name] && !summary) return
-      const found = validateDivision(values)
+      const found = check(values)
       // A pair of boxes can make each other wrong (the percent and the base), so refresh them all
       // that the director has touched.
       setErrors((current) => {
@@ -145,7 +170,7 @@ export function DivisionForm({
   function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     onAttempt()
-    const found = validateDivision(values)
+    const found = check(values)
     if (Object.keys(found).length > 0) {
       show(found)
       return
@@ -174,6 +199,7 @@ export function DivisionForm({
     const spec = boxes[name]
     const id = idOf(name)
     const error = errors[name]
+    const confirm = confirms[name]
     const input = (
       <input
         className={styles.input}
@@ -185,7 +211,11 @@ export function DivisionForm({
         value={values[name]}
         aria-invalid={error ? true : undefined}
         // Stryker disable next-line MethodExpression: without the filter the list ends in a space, which assistive technology ignores.
-        aria-describedby={[`${id}-hint`, error ? `${id}-error` : undefined]
+        aria-describedby={[
+          `${id}-hint`,
+          confirm ? `${id}-confirm` : undefined,
+          error ? `${id}-error` : undefined,
+        ]
           .filter(Boolean)
           .join(' ')}
         onChange={change(name)}
@@ -208,6 +238,11 @@ export function DivisionForm({
         <p id={`${id}-hint`} className={styles.hint}>
           {spec.hint}
         </p>
+        {confirm && (
+          <p id={`${id}-confirm`} className={styles.note}>
+            <span className={styles.noteLabel}>Asks you to confirm:</span> {confirm}
+          </p>
+        )}
         {error && (
           <p id={`${id}-error`} className={styles.fieldError}>
             {error}
@@ -215,6 +250,15 @@ export function DivisionForm({
         )}
       </div>
     )
+  }
+
+  /** The change behind a warning: "Handicap percent: 90% → 85%" on edit, the typed percent on add. */
+  function changeLine(name: string): string {
+    if (!isDivisionField(name)) return ''
+    if (checkChangedOnly) return describeChange(name, initialValues, values)
+    return name === 'handicapPercentage'
+      ? `Handicap percent: ${values.handicapPercentage.trim()}%`
+      : ''
   }
 
   const genderId = idOf('gender')
@@ -247,9 +291,11 @@ export function DivisionForm({
           <strong>Number:</strong> <span>{number}</span>
         </p>
         <p className={styles.hint}>
-          {number === undefined
-            ? 'Assigned when you save.'
-            : 'Assigned when you save: one more than the highest number in this tournament.'}
+          {checkChangedOnly && 'The number cannot change.'}
+          {!checkChangedOnly && number === undefined && 'Assigned when you save.'}
+          {!checkChangedOnly &&
+            number !== undefined &&
+            'Assigned when you save: one more than the highest number in this tournament.'}
         </p>
       </div>
       {box('name')}
@@ -262,7 +308,7 @@ export function DivisionForm({
           id={genderId}
           name="gender"
           value={values.gender}
-          aria-describedby={`${genderId}-hint`}
+          aria-describedby={`${genderId}-hint${confirms.gender ? ` ${genderId}-confirm` : ''}`}
           onChange={change('gender')}
         >
           <option value="">Any gender</option>
@@ -272,6 +318,11 @@ export function DivisionForm({
         <p id={`${genderId}-hint`} className={styles.hint}>
           Leave as Any gender to allow everyone.
         </p>
+        {confirms.gender && (
+          <p id={`${genderId}-confirm`} className={styles.note}>
+            <span className={styles.noteLabel}>Asks you to confirm:</span> {confirms.gender}
+          </p>
+        )}
       </div>
       <fieldset className={styles.group}>
         <legend>Age limits</legend>
@@ -298,7 +349,7 @@ export function DivisionForm({
       </fieldset>
       <div className={styles.actions}>
         <button type="submit" disabled={pending} onMouseDown={keepFocus}>
-          {pending ? 'Saving…' : 'Add division'}
+          {pending ? 'Saving…' : submitLabel}
         </button>
         <Link className={styles.cancel} to={cancelTo} onMouseDown={keepFocus}>
           Cancel
@@ -306,15 +357,12 @@ export function DivisionForm({
       </div>
       {confirming && (
         <ConfirmChangesDialog
-          title="Add this division?"
-          confirmLabel="Add division"
+          title={checkChangedOnly ? 'Save these changes?' : 'Add this division?'}
+          confirmLabel={checkChangedOnly ? 'Save anyway' : 'Add division'}
           items={confirming.warnings.map((warning) => ({
             field: warning.field,
             message: warning.message,
-            change:
-              warning.field === 'handicapPercentage'
-                ? `Handicap percent: ${values.handicapPercentage.trim()}%`
-                : '',
+            change: changeLine(warning.field),
           }))}
           pending={pending}
           failure={confirming.failure}

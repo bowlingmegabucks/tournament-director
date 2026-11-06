@@ -6,6 +6,7 @@ import { SetPasswordPage } from './features/auth/SetPasswordPage'
 import { RequirePermission } from './features/auth/RequirePermission'
 import { signInEnabled } from './features/auth/signInEnabled'
 import { DivisionsPage } from './features/divisions/DivisionsPage'
+import { EditDivisionPage } from './features/divisions/EditDivisionPage'
 import { NewDivisionPage } from './features/divisions/NewDivisionPage'
 import { LanesPage } from './features/lanes/LanesPage'
 import { AtLargePage } from './features/results/AtLargePage'
@@ -60,6 +61,14 @@ export default function App() {
             element={
               <RequirePermission permission="divisions.write">
                 <NewDivisionPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="divisions/:divisionId/edit"
+            element={
+              <RequirePermission permission="divisions.write">
+                <EditDivisionPage />
               </RequirePermission>
             }
           />

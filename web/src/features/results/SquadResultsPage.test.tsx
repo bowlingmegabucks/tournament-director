@@ -60,7 +60,7 @@ afterEach(() => {
 })
 
 describe('SquadResultsPage', () => {
-  it('shows a division with its place, name, total, and high game, and the lines (RES-10, RES-11, RES-32)', async () => {
+  it('shows a division with its place, name, +/- figure, games, and total, and the lines (RES-10, RES-11, RES-32)', async () => {
     const results = createSquadResults({ divisions: [openDivision()] })
     serve(results)
 
@@ -73,18 +73,21 @@ describe('SquadResultsPage', () => {
     expect(view.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
       'Place',
       'Name',
+      'Plus or minus 200 a game',
+      'G1',
+      'G2',
+      'G3',
       'Total',
-      'HG',
     ])
     const lines = view.getAllByRole('row').map((tr) => tr.textContent)
     expect(lines).toEqual([
-      'PlaceNameTotalHG',
-      '1Dave Kowalski735258',
+      'PlaceNamePlus or minus 200 a gameG1G2G3Total',
+      '1Dave Kowalski+135200200200735',
       'Cut Line',
-      '2Marcus Reyes717250',
+      '2Marcus Reyes+117200200200717',
       'Cash Line',
-      '3Tom Brandt702244',
-      '4Jim Albright692236',
+      '3Tom Brandt+102200200200702',
+      '4Jim Albright+92200200200692',
     ])
   })
 
@@ -129,11 +132,11 @@ describe('SquadResultsPage', () => {
 
     const view = await table('Results for the Open division')
     expect(view.getAllByRole('row').map((tr) => tr.textContent)).toEqual([
-      'PlaceNameTotalHG',
+      'PlaceNamePlus or minus 200 a gameG1G2G3Total',
       'No Advancers',
-      '1Ken Mahoney701200',
+      '1Ken Mahoney+101200200200701',
       'Cash Line',
-      '2Phil Garner690200',
+      '2Phil Garner+90200200200690',
     ])
   })
 
@@ -238,27 +241,58 @@ describe('SquadResultsPage', () => {
     )
   })
 
-  it('shows the HDCP column only when the division has a handicap (RW-2, RW-3, RES-11a)', async () => {
+  it('shows the handicap totals only when the division has a handicap (RW-2, RW-3, RES-11a)', async () => {
     const plain = createSquadResults({ divisions: [openDivision({ showHandicap: false })] })
     serve(plain)
     const { unmount } = open(plain)
     const withoutColumn = await table('Results for the Open division')
-    expect(withoutColumn.queryByRole('columnheader', { name: 'HDCP' })).not.toBeInTheDocument()
+    expect(
+      withoutColumn.queryByRole('columnheader', { name: 'Total HDCP' }),
+    ).not.toBeInTheDocument()
+    expect(withoutColumn.getByRole('columnheader', { name: 'Total' })).toBeVisible()
     unmount()
 
     const handicapped = createSquadResults({
       divisions: [
         openDivision({
           showHandicap: true,
-          rows: [row({ name: 'Linda Perrault', group: 'advancer', handicap: 24 })],
+          rows: [
+            row({
+              name: 'Linda Perrault',
+              group: 'advancer',
+              handicap: 24,
+              scores: [210, 200, 190],
+              total: 672,
+            }),
+          ],
         }),
       ],
     })
     serve(handicapped)
     open(handicapped)
     const withColumn = await table('Results for the Open division')
-    expect(withColumn.getByRole('columnheader', { name: 'HDCP' })).toBeVisible()
-    expect(withColumn.getAllByRole('row')[1]).toHaveTextContent('24')
+    expect(withColumn.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
+      'Place',
+      'Name',
+      'Plus or minus 200 a game',
+      'G1',
+      'G2',
+      'G3',
+      'Scratch Total',
+      'Total HDCP',
+      'HDCP Total',
+    ])
+    expect(cellsOf(withColumn)[1]).toEqual([
+      '1',
+      'Linda Perrault',
+      '+72',
+      '210',
+      '200',
+      '190',
+      '600',
+      '72',
+      '672',
+    ])
   })
 
   it('shows a handicap of 0 as 0 in a handicap division (RW-3)', async () => {
@@ -267,7 +301,13 @@ describe('SquadResultsPage', () => {
         openDivision({
           showHandicap: true,
           rows: [
-            row({ name: 'Carol Ng', group: 'advancer', handicap: 0, total: 593, highGame: 205 }),
+            row({
+              name: 'Carol Ng',
+              group: 'advancer',
+              handicap: 0,
+              total: 593,
+              scores: [205, 190, 198],
+            }),
           ],
         }),
       ],
@@ -277,17 +317,39 @@ describe('SquadResultsPage', () => {
     open(results)
 
     const view = await table('Results for the Open division')
-    expect(cellsOf(view)[1]).toEqual(['1', 'Carol Ng', '593', '205', '0'])
+    expect(cellsOf(view)[1]).toEqual([
+      '1',
+      'Carol Ng',
+      '\u22127',
+      '205',
+      '190',
+      '198',
+      '593',
+      '0',
+      '593',
+    ])
   })
 
-  it('shows the Games column only while game counts differ (RW-4, D-76)', async () => {
+  it('shows a dash for a game a bowler has not bowled yet (RW-4, D-76)', async () => {
     const results = createSquadResults({
       divisions: [
         openDivision({
-          showGames: true,
           rows: [
-            row({ name: 'Dave Kowalski', group: 'advancer', games: 2, total: 503 }),
-            row({ name: 'Paul Nguyen', group: 'other', place: 2, games: 1, total: 232 }),
+            row({
+              name: 'Dave Kowalski',
+              group: 'advancer',
+              games: 2,
+              scores: [250, 253],
+              total: 503,
+            }),
+            row({
+              name: 'Paul Nguyen',
+              group: 'other',
+              place: 2,
+              games: 1,
+              scores: [232],
+              total: 232,
+            }),
           ],
         }),
       ],
@@ -297,21 +359,35 @@ describe('SquadResultsPage', () => {
     open(results)
 
     const view = await table('Results for the Open division')
-    expect(view.getByRole('columnheader', { name: 'Games' })).toBeVisible()
-    const first = within(view.getAllByRole('row')[1] as HTMLElement)
-    expect(first.getByText('2')).toBeVisible()
+    expect(view.queryByRole('columnheader', { name: 'Games' })).not.toBeInTheDocument()
+    expect(cellsOf(view)[1]).toEqual([
+      '1',
+      'Dave Kowalski',
+      '+103',
+      '250',
+      '253',
+      'No game\u2013',
+      '503',
+    ])
+    expect(cellsOf(view)[3]).toEqual([
+      '2',
+      'Paul Nguyen',
+      '+32',
+      '232',
+      'No game\u2013',
+      'No game\u2013',
+      '232',
+    ])
   })
 
   it.each([
-    [false, false, 4],
-    [true, false, 5],
-    [false, true, 5],
-    [true, true, 6],
+    [false, 7],
+    [true, 9],
   ])(
-    'spans the lines across every column: games %s, handicap %s, %i columns (RES-11)',
-    async (showGames, showHandicap, columns) => {
+    'spans the lines across every column: handicap %s, %i columns (RES-11)',
+    async (showHandicap, columns) => {
       const results = createSquadResults({
-        divisions: [openDivision({ showGames, showHandicap })],
+        divisions: [openDivision({ showHandicap })],
       })
       serve(results)
 
@@ -330,10 +406,11 @@ describe('SquadResultsPage', () => {
     const quit = {
       registrationId: 'r1',
       name: 'Bob Whitaker',
-      total: 445,
-      highGame: 230,
+      total: 469,
+      highGame: 242,
       games: 2,
       handicap: 12,
+      scores: [215, 230],
     }
     const withHandicap = createSquadResults({
       session: { ...createSquadResults().session, complete: true },
@@ -342,29 +419,35 @@ describe('SquadResultsPage', () => {
     serve(withHandicap)
     const { unmount } = open(withHandicap)
     const dnf = await table('Open division, did not finish')
-    expect(dnf.getByRole('columnheader', { name: 'HDCP' })).toBeVisible()
-    expect(cellsOf(dnf)[1]).toEqual(['Bob Whitaker', '2 of 3', '445', '230', '12'])
+    expect(dnf.getByRole('columnheader', { name: 'Total HDCP' })).toBeVisible()
+    expect(cellsOf(dnf)[1]).toEqual([
+      'Bob Whitaker',
+      '2 of 3',
+      '215',
+      '230',
+      'No game\u2013',
+      '445',
+      '24',
+      '469',
+    ])
     unmount()
 
     const without = createSquadResults({
       session: { ...createSquadResults().session, complete: true },
-      divisions: [openDivision({ showHandicap: false, didNotFinish: [quit] })],
+      divisions: [openDivision({ showHandicap: false, didNotFinish: [{ ...quit, total: 445 }] })],
     })
     serve(without)
     open(without)
     const plain = await table('Open division, did not finish')
-    expect(plain.queryByRole('columnheader', { name: 'HDCP' })).not.toBeInTheDocument()
-    expect(cellsOf(plain)[1]).toEqual(['Bob Whitaker', '2 of 3', '445', '230'])
-  })
-
-  it('hides the Games column when the counts match (D-76)', async () => {
-    const results = createSquadResults({ divisions: [openDivision({ showGames: false })] })
-    serve(results)
-
-    open(results)
-
-    const view = await table('Results for the Open division')
-    expect(view.queryByRole('columnheader', { name: 'Games' })).not.toBeInTheDocument()
+    expect(plain.queryByRole('columnheader', { name: 'Total HDCP' })).not.toBeInTheDocument()
+    expect(cellsOf(plain)[1]).toEqual([
+      'Bob Whitaker',
+      '2 of 3',
+      '215',
+      '230',
+      'No game\u2013',
+      '445',
+    ])
   })
 
   it('lists a bowler who did not finish and a no-show apart, with no place (D-75)', async () => {
@@ -380,6 +463,7 @@ describe('SquadResultsPage', () => {
               highGame: 230,
               games: 2,
               handicap: 0,
+              scores: [230, 215],
             },
           ],
           noShows: [{ registrationId: 'r2', name: 'Mike Tran' }],
@@ -394,7 +478,14 @@ describe('SquadResultsPage', () => {
       await screen.findByRole('heading', { level: 3, name: 'Did not finish' }, { timeout: 3000 }),
     ).toBeVisible()
     const dnf = await table('Open division, did not finish')
-    expect(cellsOf(dnf)[1]).toEqual(['Bob Whitaker', '2 of 3', '445', '230'])
+    expect(cellsOf(dnf)[1]).toEqual([
+      'Bob Whitaker',
+      '2 of 3',
+      '230',
+      '215',
+      'No game\u2013',
+      '445',
+    ])
     expect(screen.getByRole('heading', { level: 3, name: 'No show' })).toBeVisible()
     expect(screen.getByText('Mike Tran')).toBeVisible()
   })
@@ -416,7 +507,15 @@ describe('SquadResultsPage', () => {
         openDivision({
           rows: [],
           didNotFinish: [
-            { registrationId: 'r1', name: 'Bob', total: 1, highGame: 1, games: 1, handicap: 0 },
+            {
+              registrationId: 'r1',
+              name: 'Bob',
+              total: 1,
+              highGame: 1,
+              games: 1,
+              handicap: 0,
+              scores: [1],
+            },
           ],
         }),
       ],

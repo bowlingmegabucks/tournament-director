@@ -388,7 +388,7 @@ for (const colorScheme of colorSchemes) {
       await page
         .getByRole('combobox', { name: 'Division' })
         .selectOption({ label: 'Women (12 entries)' })
-      await expect(page.getByRole('columnheader', { name: 'HDCP' })).toBeVisible()
+      await expect(page.getByRole('columnheader', { name: 'Total HDCP' })).toBeVisible()
       await expectNoViolations(page)
 
       await page.setViewportSize({ width: 320, height: 800 })

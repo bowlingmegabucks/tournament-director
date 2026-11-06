@@ -46,6 +46,7 @@ function filled(overrides: Partial<SweeperResults> = {}): SweeperResults {
         group: 'casher',
         total: 712,
         highGame: 256,
+        scores: [256, 230, 226],
         divisionName: 'Open',
       }),
       createSweeperRow({
@@ -54,6 +55,7 @@ function filled(overrides: Partial<SweeperResults> = {}): SweeperResults {
         group: 'other',
         total: 681,
         highGame: 229,
+        scores: [229, 212, 210],
         divisionName: 'Women',
         bonusPins: 10,
       }),
@@ -63,6 +65,7 @@ function filled(overrides: Partial<SweeperResults> = {}): SweeperResults {
         group: 'other',
         total: 661,
         highGame: 220,
+        scores: [220, 211, 200],
         divisionName: 'Women',
         bonusPins: 10,
         ties: [{ line: 'cash', outcome: 'lost', decidedBy: { kind: 'game', rank: 1 } }],
@@ -89,15 +92,20 @@ describe('SweeperResultsPage', () => {
     expect(view.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
       'Place',
       'Name',
-      'Total',
-      'HG',
+      'Plus or minus 200 a game',
+      'G1',
+      'G2',
+      'G3',
+      'Scratch Total',
+      'Total HDCP',
+      'HDCP Total',
     ])
     expect(view.getAllByRole('row').map((tr) => tr.textContent)).toEqual([
-      'PlaceNameTotalHG',
-      '1Dave KowalskiOpen712256',
+      'PlaceNamePlus or minus 200 a gameG1G2G3Scratch TotalTotal HDCPHDCP Total',
+      '1Dave KowalskiOpen+1122562302267120712',
       'Cash Line',
-      '2Linda PerraultWomen, +10 a game681229',
-      '3Gail WhitmoreWomen, +10 a gameTied on total at the cash line. Lost the spot on high game.661220',
+      '2Linda PerraultWomen, +10 a game+8122921221065130681',
+      '3Gail WhitmoreWomen, +10 a gameTied on total at the cash line. Lost the spot on high game.+6122021120063130661',
     ])
   })
 

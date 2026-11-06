@@ -64,7 +64,7 @@ export function SweeperResultsPage() {
           <p className={tableStyles.sub}>
             {entries} · Cashing {data.cashers} · Cut score {data.cutScore}
           </p>
-          <SweeperTable rows={data.rows} />
+          <SweeperTable rows={data.rows} games={session.games} />
           {printing && <PrintResults results={data} />}
         </>
       )}

@@ -43,7 +43,7 @@ export function PrintResults({
             {plural(results.entries, 'entry', 'entries')} · Cashing {results.cashers} · Cut score{' '}
             {results.cutScore}
           </p>
-          <SweeperTable rows={results.rows} />
+          <SweeperTable rows={results.rows} games={session.games} />
         </section>
       )}
     </div>,

@@ -188,3 +188,264 @@
     font-weight: 400;
   }
 }
+
+/*
+ * Tables with a column for each game (G1, G2, ...). Narrower padding fits up to six games and the
+ * totals beside the name; below 40rem the cells reflow into a card with three-wide figures.
+ */
+.games th,
+.games td {
+  padding-inline: var(--space-1);
+}
+
+/* A tag may wrap, so a long one ("Did not finish a sweeper") does not widen the table. */
+.games .tag {
+  white-space: normal;
+}
+
+/* The total against 200 a game, right after the name. No header text on screen. */
+.table .plusMinus {
+  font-weight: 700;
+  text-align: end;
+}
+
+/* A game the sweeper did not have: a dash that screen readers say as "No game". */
+.empty {
+  color: var(--color-text-muted);
+}
+
+/* The cell of a sweeper line that names the sweeper and its date. */
+.table .sweeperName {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+/* One bowler of the super sweeper: a group of rows, one for each sweeper. */
+.bowler > tr > td,
+.bowler > tr > th {
+  border-block-end: var(--border-width) dotted var(--color-border);
+}
+
+.bowler > tr:last-child > td,
+.bowler > tr:last-child > th {
+  border-block-end: var(--border-width) solid var(--color-border);
+}
+
+.table .middle {
+  vertical-align: middle;
+}
+
+@media (max-width: 40rem) {
+  .games tbody tr,
+  .games tbody.bowler {
+    grid-template-columns: 2.25rem repeat(auto-fill, minmax(3.25rem, 1fr));
+  }
+
+  .table tr > .plusMinus {
+    grid-column: 2 / -1;
+    padding-block-start: var(--space-1);
+    font-size: var(--font-size-lg);
+    text-align: start;
+  }
+
+  .table td.empty {
+    display: none;
+  }
+
+  /* The super sweeper: one card for the bowler. The sweeper rows dissolve into the card's grid. */
+  .table tbody.bowler {
+    display: grid;
+    column-gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-block-end: var(--border-width) solid var(--color-border);
+  }
+
+  .table tbody.bowler > tr {
+    display: contents;
+  }
+
+  .table tbody.bowler .place {
+    grid-column: 1;
+    grid-row: 1 / span 30;
+    align-self: start;
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+  }
+
+  .table tbody.bowler .sweeperName {
+    grid-column: 2 / -1;
+    padding-block-start: var(--space-3);
+    border-block-start: var(--border-width) dotted var(--color-border);
+  }
+
+  .table tbody.bowler .cumulative {
+    grid-column: 2 / -1;
+    order: 99;
+    padding-block-start: var(--space-3);
+    font-weight: 700;
+  }
+
+  .table tbody.bowler > tr > td,
+  .table tbody.bowler > tr > th {
+    border: 0;
+  }
+
+  .table td.cumulative::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    font-weight: 400;
+  }
+}
+
+/*
+ * The same card layout from 40rem up to 64rem on screen: with the menu beside it, the table has too
+ * little room for a column for each game. Paper keeps the table (print media is not `screen`).
+ */
+@media screen and (min-width: 40.0625rem) and (max-width: 64rem) {
+  .table.games,
+  .table.games tbody,
+  .table.games tr,
+  .table.games th,
+  .table.games td {
+    display: block;
+  }
+
+  .games .head {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .table.games tbody tr {
+    display: grid;
+    grid-template-columns: 2.25rem repeat(auto-fill, minmax(4.25rem, 1fr));
+    column-gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-block-end: var(--border-width) solid var(--color-border);
+  }
+
+  .table.games tbody tr.line {
+    display: block;
+  }
+
+  .table.games tr > .place {
+    grid-column: 1;
+    grid-row: 1 / span 4;
+    align-self: start;
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+  }
+
+  .table.games tr > .who {
+    grid-column: 2 / -1;
+    order: -1;
+  }
+
+  .table.games tr > .text {
+    grid-column: 2 / -1;
+    padding-block-start: var(--space-1);
+  }
+
+  .table.games td.num {
+    align-self: end;
+    padding-block-start: var(--space-2);
+  }
+
+  .table.games th,
+  .table.games td {
+    padding: 0;
+    border: 0;
+  }
+
+  .table.games td:empty {
+    display: none;
+  }
+
+  .table.games .line td {
+    padding: var(--space-2) 0;
+  }
+
+  .table.games .num {
+    text-align: start;
+  }
+
+  .table.games td.text[data-label]::before {
+    content: attr(data-label) ' ';
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+  }
+
+  .table.games td.num::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    font-weight: 400;
+  }
+
+  .games tbody tr,
+  .games tbody.bowler {
+    grid-template-columns: 2.25rem repeat(auto-fill, minmax(3.25rem, 1fr));
+  }
+
+  .table.games tr > .plusMinus {
+    grid-column: 2 / -1;
+    padding-block-start: var(--space-1);
+    font-size: var(--font-size-lg);
+    text-align: start;
+  }
+
+  .table.games td.empty {
+    display: none;
+  }
+
+  .table.games tbody.bowler {
+    display: grid;
+    column-gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-block-end: var(--border-width) solid var(--color-border);
+  }
+
+  .table.games tbody.bowler > tr {
+    display: contents;
+  }
+
+  .table.games tbody.bowler .place {
+    grid-column: 1;
+    grid-row: 1 / span 30;
+    align-self: start;
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+  }
+
+  .table.games tbody.bowler .sweeperName {
+    grid-column: 2 / -1;
+    padding-block-start: var(--space-3);
+    border-block-start: var(--border-width) dotted var(--color-border);
+  }
+
+  .table.games tbody.bowler .cumulative {
+    grid-column: 2 / -1;
+    order: 99;
+    padding-block-start: var(--space-3);
+    font-weight: 700;
+  }
+
+  .table.games tbody.bowler > tr > td,
+  .table.games tbody.bowler > tr > th {
+    border: 0;
+  }
+
+  .table.games td.cumulative::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    font-weight: 400;
+  }
+}

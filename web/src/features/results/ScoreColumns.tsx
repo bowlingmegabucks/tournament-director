@@ -94,8 +94,7 @@ export function TotalCells({
 }>) {
   const scratch = scores === null ? null : sum(scores)
   // A sweeper still open with no score has no total yet: a dash that screen readers skip.
-  const figure = (value: number | null) =>
-    value === null ? <span aria-hidden="true">{'\u2013'}</span> : value
+  const figure = (value: number | null) => value ?? <span aria-hidden="true">{'\u2013'}</span>
   if (!handicap) {
     return (
       <td className={styles.totalCell} data-label="Total">

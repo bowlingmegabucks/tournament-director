@@ -58,7 +58,7 @@ export default function App() {
           <Route
             path="divisions/new"
             element={
-              <RequirePermission permission="divisions.create">
+              <RequirePermission permission="divisions.write">
                 <NewDivisionPage />
               </RequirePermission>
             }

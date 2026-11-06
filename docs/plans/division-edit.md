@@ -43,7 +43,7 @@ Second part of 0.6.0 (create was the first, D-145). Delete and renumbering come 
 
 Both routes sit under `/v1/tournaments/:id/divisions`, need `divisions.write`, and are web only. The API key cannot reach them (D-96, D-150).
 
-**Permission rename.** `divisions.create` becomes `divisions.write` in `permissions.ts` and everywhere it is used (add route, web `Can` and `RequirePermission`, mock data, role test, docs), and covers add and edit, as `tournaments.write` does (owner, 2026-11-06). Step 1 does the rename. `divisions.write` The director holds it by rule (only three permissions are withheld, D-97); the admin holds every permission. Score keeper and the API key do not.
+**Permission rename.** `divisions.create` becomes `divisions.write` in `permissions.ts` and everywhere it is used (add route, web `Can` and `RequirePermission`, mock data, role test, docs), and covers add and edit, as `tournaments.write` does (owner, 2026-11-06). Step 1 does the rename. The director holds it by rule (only three permissions are withheld, D-97); the admin holds every permission. Score keeper and the API key do not.
 
 ### `PATCH /v1/tournaments/{id}/divisions/{divisionId}`
 

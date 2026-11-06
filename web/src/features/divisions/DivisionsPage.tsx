@@ -44,7 +44,7 @@ export function DivisionsPage() {
       <title>{`Divisions · ${tournament.name} · Tournament Director`}</title>
       <div className={styles.titlebar}>
         <h1>Divisions</h1>
-        <Can permission="divisions.create">
+        <Can permission="divisions.write">
           <NewDivisionLink id={id} />
         </Can>
       </div>

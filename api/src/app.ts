@@ -158,7 +158,7 @@ export function createApp({
       },
       {
         path: '/v1/tournaments/:id/divisions',
-        access: { permission: 'divisions.create' }, // DIV-12, D-138: the API key cannot reach it
+        access: { permission: 'divisions.write' }, // DIV-12, D-138: the API key cannot reach it
         methods: ['POST'],
         router: createDivisionCreateRouter(divisionWriter, logger),
       },

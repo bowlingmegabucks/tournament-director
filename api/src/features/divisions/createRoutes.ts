@@ -17,7 +17,7 @@ const confirmMessage = 'Confirm to add this division.'
 const firstOf = (errors: Record<string, string>) => Object.values(errors)[0] ?? ''
 
 /**
- * Mounted at `/v1/tournaments/:id/divisions` for `POST` only, behind `divisions.create` (D-138).
+ * Mounted at `/v1/tournaments/:id/divisions` for `POST` only, behind `divisions.write` (D-138).
  * Web only: the legacy API has no such route, so the vendor sees no change (D-09). What a create
  * may do is `planCreate` (D-139 to D-143); this route only turns its answer into HTTP.
  */

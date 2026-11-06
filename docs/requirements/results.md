@@ -66,13 +66,15 @@ SquadResults {
   session: { id, kind: 'squad', date, complete, games }
   finalsRatio, cashRatio                  // the squad's effective ratios
   divisions: [{                           // by name; empty divisions left out
-    id, number, name, entries, showHandicap, showGames,
-    rows: [{ registrationId, name, place, total, highGame, games, handicap,
+    id, number, name, entries, showHandicap,
+    rows: [{ registrationId, name, place, total, games, handicap,
+             scores: (number | null)[],     // by game number; null = no saved score
              group: 'advancer' | 'casher' | 'other',
              advancedEarlier,
              ties: [{ line: 'cut' | 'cash', outcome: 'won' | 'lost' | 'full',
                       decidedBy: { kind: 'games' } | { kind: 'game', rank } | null }] }],
-    didNotFinish: [{ registrationId, name, total, highGame, games, handicap }],
+    didNotFinish: [{ registrationId, name, total, games, handicap,
+                     scores: (number | null)[] }],
     noShows: [{ registrationId, name }]
   }]
 }
@@ -80,8 +82,9 @@ SquadResults {
 SweeperResults {
   session: { id, kind: 'sweeper', date, complete, games }
   cashRatio, entries, cashers, cutScore   // cutScore is null with no entries
-  rows: [{ registrationId, name, place, total, highGame, games, ties,
-           group: 'casher' | 'other', divisionName, bonusPins }]
+  rows: [{ registrationId, name, place, total, games, ties,
+           group: 'casher' | 'other', divisionName, bonusPins,
+           scores: (number | null)[] }]
 }
 ```
 
@@ -225,7 +228,7 @@ File: `api/src/features/results/squadResults.test.ts` and the web page tests. No
 
 | ID   | Case                                                                                                        | Expected                                                                                                                                                           | Source                                                                                               |
 | ---- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| RW-1 | A row carries place, name (`First Last, Suffix`), total, high game, handicap, games, and the group it is in | As stated                                                                                                                                                          | legacy `SquadResultsViewModelTests` (place, name, score, scratch score, high game, advancer, casher) |
+| RW-1 | A row carries place, name (`First Last, Suffix`), total, handicap, games, the scratch score of each game, and the group it is in | As stated                                                                                                                                                          | legacy `SquadResultsViewModelTests` (place, name, score, scratch score, high game, advancer, casher) |
 | RW-2 | A division where no bowler has a handicap above 0                                                           | The page has no Scratch Total, Total HDCP, or HDCP Total column, only Total                                                                                                                                        | gap                                                                                                  |
 | RW-3 | A division where someone has a handicap above 0                                                             | The page shows Scratch Total, Total HDCP, and HDCP Total, and a bowler with 0 handicap shows 0                                                                                                           | gap                                                                                                  |
 | RW-4 | A division whose bowlers all have the same game count                                                       | No Games column. A bowler with fewer games than the column count shows a dash for each game not bowled (D-76)                                                                                                        | gap                                                                                                  |
@@ -281,6 +284,6 @@ Files: `SquadResultsPage.test.tsx`, `SweeperResultsPage.test.tsx`, `PrintResults
 
 ### Game scores (squad, sweeper, super sweeper)
 
-Built on branch `resultFix`. The squad, did-not-finish, and sweeper rows carry `scores` (the scratch pins of each game bowled, in game order). The super sweeper row carries `sweeperScores` (one list for each sweeper, zero-filled for a game not bowled in a complete sweeper, `null` while an open sweeper has no score) and `sweeperPins`. The web app derives every figure from them: Scratch Total is the sum, Total HDCP is `total` less the scratch sum, and "+/−" is `total − 200 × games`.
+Built on branch `resultFix`. The squad, did-not-finish, and sweeper rows carry `scores`: the scratch pins of each game by game number, with `null` for a game that has no saved score (the page shows a dash). The old `showGames` flag and the rows' `highGame` are gone: the games show both, and ranking still uses the high game inside the API. The super sweeper row carries `sweeperScores` (one list for each sweeper, zero-filled for a game not bowled in a complete sweeper, `null` while an open sweeper has no score) and `sweeperPins`. The web app derives every figure from them: Scratch Total is the sum, Total HDCP is `total` less the scratch sum, and "+/−" is `total − 200 × games`.
 
 Super sweeper: one line for each sweeper (the sweeper's date, its games, its Scratch Total, Total HDCP, and HDCP Total). Place, name, and "+/−" span the lines, and Cumulative spans them at the right. Sweepers with different game counts share the longest sweeper's columns; the sweeper cell then names its game count.

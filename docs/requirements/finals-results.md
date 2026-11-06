@@ -75,7 +75,9 @@ SuperSweeperResults {
   sweepers: [{ id, date, games, complete }],    // date order: one column each
   rows: [{ registrationId, name, place, group: 'casher' | 'other', divisionName,
            sweeperTotals: (number | null)[],    // aligned with `sweepers`; null = open, no score yet
-           total, highGame, games, ties,
+           sweeperScores: (number[] | null)[],  // each sweeper's games, zero for a game not bowled; null = open
+           sweeperPins: number[],               // pins per game bowled in each sweeper (SCR-09)
+           total, games, ties,
            flags: [{ kind: 'missed' | 'unfinished', sweeperId, gamesBowled }] }]
 }
 ```

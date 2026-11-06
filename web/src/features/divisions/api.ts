@@ -6,6 +6,8 @@ import { TournamentNotFoundError } from '../../shared/tournamentQuery'
 import {
   divisionFields,
   type Division,
+  type DivisionChanges,
+  type DivisionEditInfo,
   type DivisionFieldErrors,
   type DivisionWarning,
   type NewDivision,
@@ -95,6 +97,23 @@ function warningsOf(value: unknown): DivisionWarning[] | undefined {
   return warnings
 }
 
+/** The error for a 400 or 409: a warning to confirm, or the API's messages per field. */
+async function rejection(response: Response): Promise<Error> {
+  const body = await readJson(response, 'Failed to save the division')
+  const message = field(body, 'message')
+  const text = typeof message === 'string' ? message : 'The division was not accepted.'
+  const warnings = warningsOf(field(body, 'warnings'))
+  if (warnings !== undefined && warnings.length > 0)
+    return new DivisionWarningsError(text, warnings)
+  const errors = field(body, 'errors')
+  const tournament = field(errors, 'tournament')
+  return new DivisionRejectedError(
+    text,
+    fieldErrors(errors),
+    typeof tournament === 'string' ? tournament : undefined,
+  )
+}
+
 /**
  * Add a division (DIV-12). Throws `DivisionRejectedError` for a bad field or a refusal (400, 409
  * with `errors`) and `DivisionWarningsError` when the director must confirm (409 with `warnings`).
@@ -112,21 +131,7 @@ export async function createDivision(
       body: JSON.stringify(confirmWarnings ? { ...input, confirmWarnings: true } : input),
     },
   )
-  if (response.status === 400 || response.status === 409) {
-    const body = await readJson(response, 'Failed to save the division')
-    const message = field(body, 'message')
-    const text = typeof message === 'string' ? message : 'The division was not accepted.'
-    const warnings = warningsOf(field(body, 'warnings'))
-    if (warnings !== undefined && warnings.length > 0)
-      throw new DivisionWarningsError(text, warnings)
-    const errors = field(body, 'errors')
-    const tournament = field(errors, 'tournament')
-    throw new DivisionRejectedError(
-      text,
-      fieldErrors(errors),
-      typeof tournament === 'string' ? tournament : undefined,
-    )
-  }
+  if (response.status === 400 || response.status === 409) throw await rejection(response)
   if (response.status === 404) throw new TournamentNotFoundError()
   if (response.status === 401) throw new Error('Sign in to add a division.')
   if (response.status === 403) throw new Error('You do not have permission to add a division.')
@@ -134,4 +139,55 @@ export async function createDivision(
   const division = field(await readJson(response, 'Failed to save the division'), 'division')
   if (!isDivision(division)) throw new Error('Failed to save the division (unexpected response)')
   return division
+}
+
+const divisionUrl = (tournamentId: string, divisionId: string) =>
+  apiUrl(
+    `/v1/tournaments/${encodeURIComponent(tournamentId)}/divisions/${encodeURIComponent(divisionId)}`,
+  )
+
+/**
+ * Change a division (DIV-12, D-147): send only the fields that changed. Throws `DivisionRejectedError`
+ * for a bad field or a refusal (400, 409 with `errors`) and `DivisionWarningsError` when the director
+ * must confirm (409 with `warnings`).
+ */
+export async function updateDivision(
+  tournamentId: string,
+  divisionId: string,
+  changes: DivisionChanges,
+  confirmWarnings = false,
+): Promise<Division> {
+  const response = await apiFetch(divisionUrl(tournamentId, divisionId), {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(confirmWarnings ? { ...changes, confirmWarnings: true } : changes),
+  })
+  if (response.status === 400 || response.status === 409) throw await rejection(response)
+  if (response.status === 404)
+    throw new Error('This division was not found. It may have been removed.')
+  if (response.status === 401) throw new Error('Sign in to edit a division.')
+  if (response.status === 403) throw new Error('You do not have permission to edit a division.')
+  if (!response.ok) throw new Error(`Failed to save the division (${response.status})`)
+  const division = field(await readJson(response, 'Failed to save the division'), 'division')
+  if (!isDivision(division)) throw new Error('Failed to save the division (unexpected response)')
+  return division
+}
+
+/** What depends on one division's settings, for the edit page (D-147, D-148). */
+export async function fetchDivisionEditInfo(
+  tournamentId: string,
+  divisionId: string,
+): Promise<DivisionEditInfo> {
+  const response = await apiFetch(`${divisionUrl(tournamentId, divisionId)}/edit-info`)
+  // The API answers 404 for an unknown tournament and for an unknown division alike.
+  if (response.status === 404)
+    throw new Error('This division was not found. It may have been removed.')
+  if (!response.ok) throw new Error(`Failed to load the division (${response.status})`)
+  const info = field(await readJson(response, 'Failed to load the division'), 'editInfo')
+  const count = field(info, 'registrationCount')
+  const scores = field(info, 'hasScores')
+  if (typeof count !== 'number' || typeof scores !== 'boolean') {
+    throw new TypeError('Failed to load the division (unexpected response)')
+  }
+  return { registrationCount: count, hasScores: scores }
 }

@@ -8,9 +8,43 @@ import type { Tournament } from '../tournaments/types'
 import { useTournamentSettings } from '../tournaments/useTournamentSettings'
 import styles from './DivisionsPage.module.css'
 import { formatGender, formatHandicap, formatRange } from './format'
+import type { Division } from './types'
 import { useDivisions } from './useDivisions'
 
 const TOAST_MS = 5000
+
+/**
+ * Whether the add and edit links may show: not while the settings load, and not on a complete
+ * tournament (D-143, D-149, D-19). If the settings fail they show anyway: the API refuses a complete
+ * tournament, and a slow start must not take the links away. Every caller shares one cached read.
+ */
+function useTournamentOpen(id: string): boolean {
+  const settings = useTournamentSettings(id)
+  return !settings.isPending && settings.data?.completed !== true
+}
+
+/**
+ * The Edit link of one row, in a cell of its own. The cell sits inside `<Can>`, so a visitor without
+ * the permission never reads the settings. A complete tournament has no link (D-149, D-19); while
+ * the settings load the link waits. If they fail it shows anyway: the API refuses a complete
+ * tournament, and a slow start must not take the link away.
+ */
+function EditCell({ id, division }: Readonly<{ id: string; division: Division }>) {
+  const show = useTournamentOpen(id)
+  return (
+    <td className={styles.actionsCell}>
+      {show && (
+        <Link
+          className={styles.editLink}
+          to={`/tournaments/${id}/divisions/${division.id}/edit`}
+          aria-label={`Edit ${division.name}`}
+        >
+          Edit
+        </Link>
+      )}
+    </td>
+  )
+}
 
 /**
  * The "New division" link. It sits inside `<Can>`, so a visitor without the permission never reads
@@ -19,8 +53,7 @@ const TOAST_MS = 5000
  * complete tournament, and a slow start must not take the link away.
  */
 function NewDivisionLink({ id }: Readonly<{ id: string }>) {
-  const settings = useTournamentSettings(id)
-  if (settings.isPending || settings.data?.completed === true) return null
+  if (!useTournamentOpen(id)) return null
   return (
     <Link className={styles.newButton} to={`/tournaments/${id}/divisions/new`}>
       New division
@@ -38,13 +71,15 @@ export function DivisionsPage() {
   const navigate = useNavigate()
   // The add form sets this state as it moves here (D-144). Clearing it keeps a reload quiet.
   const justCreated = field(location.state, 'created') === true
+  // The edit form sets this one the same way (DIV-12).
+  const justSaved = field(location.state, 'saved') === true
 
   return (
     <>
       <title>{`Divisions · ${tournament.name} · Tournament Director`}</title>
       <div className={styles.titlebar}>
         <h1>Divisions</h1>
-        <Can permission="divisions.create">
+        <Can permission="divisions.write">
           <NewDivisionLink id={id} />
         </Can>
       </div>
@@ -71,6 +106,11 @@ export function DivisionsPage() {
               <th scope="col">Ages</th>
               <th scope="col">Averages</th>
               <th scope="col">Handicap</th>
+              <Can permission="divisions.write">
+                <th scope="col">
+                  <span className={styles.hidden}>Actions</span>
+                </th>
+              </Can>
             </tr>
           </thead>
           <tbody>
@@ -84,12 +124,15 @@ export function DivisionsPage() {
                   {formatRange(division.minimumAverage, division.maximumAverage)}
                 </td>
                 <td data-label="Handicap">{formatHandicap(division)}</td>
+                <Can permission="divisions.write">
+                  <EditCell id={id} division={division} />
+                </Can>
               </tr>
             ))}
           </tbody>
         </table>
       )}
-      {justCreated && (
+      {(justCreated || justSaved) && (
         <Toast
           kind="success"
           autoDismissMs={TOAST_MS}
@@ -98,7 +141,7 @@ export function DivisionsPage() {
             void navigate('.', { replace: true, state: null })
           }}
         >
-          Division created
+          {justCreated ? 'Division created' : 'Division saved'}
         </Toast>
       )}
     </>

@@ -1,6 +1,8 @@
 import {
   divisionFields,
   type Division,
+  type DivisionChanges,
+  type DivisionField,
   type DivisionFieldErrors,
   type DivisionFormValues,
   type NewDivision,
@@ -142,3 +144,60 @@ export function toNewDivision(values: DivisionFormValues): NewDivision {
 /** Is this one of the form's fields? The API may name another in an error. */
 export const isDivisionField = (name: string): name is (typeof divisionFields)[number] =>
   (divisionFields as readonly string[]).includes(name)
+
+/** The form's starting values for a stored division: every box as text (DIV-12). */
+export function toFormValues(division: Division): DivisionFormValues {
+  const text = (value: number | null) => (value === null ? '' : String(value))
+  return {
+    name: division.name,
+    gender: division.gender ?? '',
+    minimumAge: text(division.minimumAge),
+    maximumAge: text(division.maximumAge),
+    minimumAverage: text(division.minimumAverage),
+    maximumAverage: text(division.maximumAverage),
+    handicapPercentage: text(division.handicapPercentage),
+    handicapBase: text(division.handicapBase),
+    maximumHandicapPerGame: text(division.maximumHandicapPerGame),
+  }
+}
+
+/** The fields each rule that compares boxes reads. A message shows when one of them changed. */
+const groups: readonly (readonly DivisionField[])[] = [
+  ['minimumAge', 'maximumAge'],
+  ['minimumAverage', 'maximumAverage'],
+  ['handicapPercentage', 'handicapBase', 'maximumHandicapPerGame'],
+]
+
+/**
+ * The edit rules (D-147): the add rules, but a message shows only for a box the director changed, or
+ * for a box that goes with one they changed (the minimum age with the maximum). A stored value that
+ * breaks a rule, as old data may, never blocks a fix to another box.
+ */
+export function validateDivisionChanges(
+  initial: DivisionFormValues,
+  values: DivisionFormValues,
+): DivisionFieldErrors {
+  const all = validateDivision(values)
+  const changed = (name: DivisionField) => values[name] !== initial[name]
+  const errors: DivisionFieldErrors = {}
+  for (const name of divisionFields) {
+    const message = all[name]
+    if (message === undefined) continue
+    const group = groups.find((members) => members.includes(name))
+    if (group ? group.some(changed) : changed(name)) errors[name] = message
+  }
+  return errors
+}
+
+/** The body of an edit: only the boxes that differ from the starting values (D-147). */
+export function toDivisionChanges(
+  initial: DivisionFormValues,
+  values: DivisionFormValues,
+): DivisionChanges {
+  const all = toNewDivision(values)
+  const changes: DivisionChanges = {}
+  for (const name of divisionFields) {
+    if (values[name] !== initial[name]) Object.assign(changes, { [name]: all[name] })
+  }
+  return changes
+}

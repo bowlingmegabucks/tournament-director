@@ -104,3 +104,14 @@
   font-weight: 600;
   text-decoration: none;
 }
+
+.note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.noteLabel {
+  color: var(--color-text);
+  font-weight: 600;
+}

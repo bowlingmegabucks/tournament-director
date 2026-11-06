@@ -44,7 +44,7 @@ What the user sees and can do.
 | Feature                                               | File                                             |
 | ----------------------------------------------------- | ------------------------------------------------ |
 | Tournaments (create, edit, list, Home card, overview) | [tournaments.md](tournaments.md)                 |
-| Divisions (list, create)                              | [divisions.md](divisions.md)                     |
+| Divisions (list, create, edit)                        | [divisions.md](divisions.md)                     |
 | Squads and sweepers (lists)                           | [squads-and-sweepers.md](squads-and-sweepers.md) |
 | Registrations (list)                                  | [registrations.md](registrations.md)             |
 | Registration API (create, append, get, OpenAPI)       | [registration-api.md](registration-api.md)       |

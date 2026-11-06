@@ -3,8 +3,11 @@ import { createDivision } from '../../mocks/data'
 import {
   emptyDivisionForm,
   nextDivisionNumber,
+  toDivisionChanges,
+  toFormValues,
   toNewDivision,
   validateDivision,
+  validateDivisionChanges,
 } from './validateDivision'
 import type { DivisionFormValues } from './types'
 
@@ -235,5 +238,113 @@ describe('nextDivisionNumber', () => {
     expect(
       nextDivisionNumber([createDivision({ number: 0 }), createDivision({ number: -2 })]),
     ).toBe(1)
+  })
+})
+
+describe('toFormValues', () => {
+  it('turns a stored division into text boxes, with blank for not set (DIV-12)', () => {
+    expect(
+      toFormValues(
+        createDivision({
+          name: 'Seniors',
+          gender: 'Female',
+          minimumAge: 50,
+          maximumAge: null,
+          minimumAverage: 0,
+          maximumAverage: 200,
+          handicapPercentage: 90,
+          handicapBase: 0,
+          maximumHandicapPerGame: null,
+        }),
+      ),
+    ).toEqual({
+      name: 'Seniors',
+      gender: 'Female',
+      minimumAge: '50',
+      maximumAge: '',
+      minimumAverage: '0',
+      maximumAverage: '200',
+      handicapPercentage: '90',
+      handicapBase: '0',
+      maximumHandicapPerGame: '',
+    })
+  })
+
+  it('shows any gender as the empty choice', () => {
+    expect(toFormValues(createDivision({ gender: null })).gender).toBe('')
+  })
+})
+
+describe('validateDivisionChanges (D-147)', () => {
+  const start = form({ name: 'Open', minimumAge: '40', maximumAge: '60' })
+
+  it('says nothing about a box the director did not change, even when its stored value breaks a rule', () => {
+    const odd = form({ name: 'Open', minimumAge: '60', maximumAge: '40' })
+
+    expect(validateDivisionChanges(odd, { ...odd, name: 'Main' })).toEqual({})
+  })
+
+  it('checks a box the director changed', () => {
+    expect(validateDivisionChanges(start, { ...start, name: '' })).toEqual({
+      name: 'Name is required',
+    })
+  })
+
+  it('shows the pair message on the minimum when the maximum was changed (DIV-05)', () => {
+    expect(validateDivisionChanges(start, { ...start, maximumAge: '30' })).toEqual({
+      minimumAge: 'Minimum age must be less than or equal to maximum age',
+    })
+  })
+
+  it('shows the averages pair the same way (DIV-07)', () => {
+    const averaged = form({ name: 'Open', minimumAverage: '150', maximumAverage: '200' })
+
+    expect(validateDivisionChanges(averaged, { ...averaged, minimumAverage: '210' })).toEqual({
+      minimumAverage: 'Minimum average must be less than or equal to maximum average',
+    })
+  })
+
+  it('shows the averages message on the minimum when only the maximum was changed (DIV-07)', () => {
+    const averaged = form({ name: 'Open', minimumAverage: '150', maximumAverage: '200' })
+
+    expect(validateDivisionChanges(averaged, { ...averaged, maximumAverage: '100' })).toEqual({
+      minimumAverage: 'Minimum average must be less than or equal to maximum average',
+    })
+  })
+
+  it('shows the handicap messages when one of the three boxes was changed (DIV-09, DIV-11)', () => {
+    const scratch = form({ name: 'Open' })
+
+    expect(validateDivisionChanges(scratch, { ...scratch, handicapPercentage: '80' })).toEqual({
+      handicapBase: 'Handicap base is required with a handicap percentage',
+    })
+    expect(validateDivisionChanges(scratch, { ...scratch, maximumHandicapPerGame: '30' })).toEqual({
+      maximumHandicapPerGame:
+        'Maximum handicap per game is allowed only with a handicap percentage and base',
+    })
+  })
+
+  it('passes a valid change', () => {
+    expect(validateDivisionChanges(start, { ...start, maximumAge: '70' })).toEqual({})
+  })
+})
+
+describe('toDivisionChanges (D-147)', () => {
+  const start = form({ name: 'Open', gender: 'Female', minimumAge: '40', handicapPercentage: '90' })
+
+  it('holds only the boxes that differ from the start, as the API takes them', () => {
+    expect(
+      toDivisionChanges(start, {
+        ...start,
+        name: '  Main ',
+        gender: '',
+        minimumAge: '45',
+        handicapPercentage: '',
+      }),
+    ).toEqual({ name: 'Main', gender: null, minimumAge: 45, handicapPercentage: null })
+  })
+
+  it('is empty when nothing changed', () => {
+    expect(toDivisionChanges(start, { ...start })).toEqual({})
   })
 })

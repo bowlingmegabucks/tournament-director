@@ -251,7 +251,109 @@ describe('DivisionsPage', () => {
       open()
 
       expect(await screen.findByRole('rowheader', { name: 'Open' })).toBeVisible()
-      expect(await screen.findByRole('link', { name: 'New division' })).toBeVisible()
+      // The built-in retry waits about a second before the settings give up.
+      expect(
+        await screen.findByRole('link', { name: 'New division' }, { timeout: 3000 }),
+      ).toBeVisible()
+    })
+  })
+
+  describe('the Edit link (DIV-12, D-19, D-149, D-150)', () => {
+    const settings = (completed: boolean) =>
+      http.get('/v1/tournaments/:id/settings', () =>
+        HttpResponse.json({ settings: createSettings({ completed }) }),
+      )
+
+    it('gives a director one Edit link per row, named for its division', async () => {
+      setMockUser(createSignedInUser({ roles: ['director'] }))
+      const open_ = createDivision({ number: 1, name: 'Open' })
+      const women = createDivision({ number: 2, name: 'Women' })
+      serve([open_, women])
+      server.use(settings(false))
+
+      open()
+
+      expect(await screen.findByRole('link', { name: 'Edit Open' })).toHaveAttribute(
+        'href',
+        `/tournaments/${tournament.id}/divisions/${open_.id}/edit`,
+      )
+      expect(screen.getByRole('link', { name: 'Edit Women' })).toHaveAttribute(
+        'href',
+        `/tournaments/${tournament.id}/divisions/${women.id}/edit`,
+      )
+      expect(screen.getByRole('columnheader', { name: 'Actions' })).toBeInTheDocument()
+    })
+
+    it('shows an admin the links too', async () => {
+      setMockUser(createSignedInUser({ roles: ['admin'] }))
+      serve([createDivision({ name: 'Open' })])
+      server.use(settings(false))
+
+      open()
+
+      expect(await screen.findByRole('link', { name: 'Edit Open' })).toBeVisible()
+    })
+
+    it('hides them for a complete tournament', async () => {
+      setMockUser(createSignedInUser({ roles: ['director'] }))
+      serve([createDivision({ name: 'Open' })])
+      server.use(settings(true))
+
+      open()
+
+      await screen.findByRole('table')
+      await waitFor(() => {
+        expect(screen.queryByRole('link', { name: /^Edit / })).not.toBeInTheDocument()
+      })
+    })
+
+    it('hides them, and the Actions column, from a score keeper', async () => {
+      setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+      serve([createDivision({ name: 'Open' })])
+
+      open()
+
+      await screen.findByRole('table')
+      expect(screen.queryByRole('link', { name: /^Edit / })).not.toBeInTheDocument()
+      expect(screen.queryByRole('columnheader', { name: 'Actions' })).not.toBeInTheDocument()
+    })
+
+    it('hides them from a signed-out visitor', async () => {
+      serve([createDivision({ name: 'Open' })])
+
+      open()
+
+      await screen.findByRole('table')
+      expect(screen.queryByRole('link', { name: /^Edit / })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('the toast after an edit (DIV-12)', () => {
+    function openAfterSave() {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      render(
+        <QueryClientProvider client={client}>
+          <MemoryRouter
+            initialEntries={[
+              { pathname: `/tournaments/${tournament.id}/divisions`, state: { saved: true } },
+            ]}
+          >
+            <App />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      )
+    }
+
+    it('says "Division saved" and closes on Dismiss', async () => {
+      serve([createDivision({ name: 'Open' })])
+      const user = userEvent.setup()
+
+      openAfterSave()
+
+      expect(await screen.findByText('Division saved')).toBeVisible()
+      expect(screen.queryByText('Division created')).not.toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: 'Dismiss' }))
+      expect(screen.queryByText('Division saved')).not.toBeInTheDocument()
     })
   })
 

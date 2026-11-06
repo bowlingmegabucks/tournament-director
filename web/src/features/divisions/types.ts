@@ -73,3 +73,20 @@ export interface DivisionWarning {
   field: string
   message: string
 }
+
+/** What `PATCH /v1/tournaments/{id}/divisions/{divisionId}` takes: only the fields that changed (DIV-12). */
+export type DivisionChanges = Partial<NewDivision>
+
+/**
+ * What `GET /v1/tournaments/{id}/divisions/{divisionId}/edit-info` returns (D-147, D-148). The API's
+ * `features/divisions/editFacts.ts` has the same fields: change both together.
+ */
+export interface DivisionEditInfo {
+  /** Registrations in this division. */
+  registrationCount: number
+  /** Any saved score of a bowler registered in this division. */
+  hasScores: boolean
+}
+
+/** A line of text per field, shown under its box. */
+export type DivisionFieldNotes = Partial<Record<DivisionField, string>>

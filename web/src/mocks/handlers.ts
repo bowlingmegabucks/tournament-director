@@ -19,7 +19,7 @@ import {
 } from './data'
 import { authHandlers } from './authHandlers'
 import { userHandlers } from './userHandlers'
-import type { NewDivision } from '../features/divisions/types'
+import type { DivisionChanges, NewDivision } from '../features/divisions/types'
 import type {
   NewTournament,
   TournamentChanges,
@@ -159,6 +159,50 @@ export const handlers = [
     })
     divisions.push(created)
     return HttpResponse.json({ division: created }, { status: 201 })
+  }),
+  // DIV-12 edit: the mock saves what was sent, refuses a name another division uses, and asks to
+  // confirm a percent over 100. It knows no registrations or scores, and never completes a
+  // tournament, so the API tests cover those rules (D-147).
+  http.patch('/v1/tournaments/:id/divisions/:divisionId', async ({ params, request }) => {
+    if (!tournaments.some((candidate) => candidate.id === params['id'])) return notFound()
+    const found = divisions.find((stored) => stored.id === params['divisionId'])
+    if (!found) return HttpResponse.json({ message: 'Division not found' }, { status: 404 })
+    const { confirmWarnings, ...changes } = (await request.json()) as DivisionChanges & {
+      confirmWarnings?: boolean
+    }
+    if (
+      changes.name !== undefined &&
+      divisions.some(
+        (stored) =>
+          stored.id !== found.id &&
+          stored.name.trim().toLowerCase() === changes.name?.trim().toLowerCase(),
+      )
+    ) {
+      const message = 'A division with this name already exists in this tournament'
+      return HttpResponse.json({ message, errors: { name: message } }, { status: 409 })
+    }
+    if ((changes.handicapPercentage ?? 0) > 100 && confirmWarnings !== true) {
+      return HttpResponse.json(
+        {
+          message: 'Confirm these changes to save them.',
+          warnings: [
+            {
+              field: 'handicapPercentage',
+              message: 'A handicap percentage above 100 is unusual. Check that it is right.',
+            },
+          ],
+        },
+        { status: 409 },
+      )
+    }
+    Object.assign(found, changes)
+    return HttpResponse.json({ division: found })
+  }),
+  http.get('/v1/tournaments/:id/divisions/:divisionId/edit-info', ({ params }) => {
+    if (!tournaments.some((candidate) => candidate.id === params['id'])) return notFound()
+    return divisions.some((stored) => stored.id === params['divisionId'])
+      ? HttpResponse.json({ editInfo: { registrationCount: 0, hasScores: false } })
+      : HttpResponse.json({ message: 'Division not found' }, { status: 404 })
   }),
   http.get('/v1/tournaments/:id/divisions', ({ params }) =>
     tournaments.some((candidate) => candidate.id === params.id)

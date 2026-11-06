@@ -93,3 +93,19 @@
   font-weight: 600;
   text-decoration: none;
 }
+
+.actionsCell {
+  inline-size: 1%;
+  white-space: nowrap;
+}
+
+/* On a card an empty cell (a complete tournament) takes no room. */
+.actionsCell:empty {
+  display: none;
+}
+
+.editLink {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--target-min);
+}

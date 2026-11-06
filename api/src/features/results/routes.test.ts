@@ -100,7 +100,6 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/results', () => {
         'games',
         'group',
         'handicap',
-        'highGame',
         'name',
         'place',
         'registrationId',
@@ -118,7 +117,6 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/results', () => {
         'noShows',
         'number',
         'rows',
-        'showGames',
         'showHandicap',
       ].toSorted(),
     )

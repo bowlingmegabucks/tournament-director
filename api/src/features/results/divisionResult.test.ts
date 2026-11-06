@@ -60,7 +60,6 @@ describe('toDivisionResult', () => {
 
     expect(result.rows[0]).toMatchObject({
       total: 636,
-      highGame: 222,
       games: 3,
       handicap: 12,
       ties: [],
@@ -143,18 +142,10 @@ describe('toDivisionResult', () => {
     expect(result.showHandicap).toBe(true)
   })
 
-  it('shows the games column only while the game counts differ (RW-4, D-76)', () => {
-    const same = build([flat(200), flat(190)])
-    const mixed = build([flat(200), createResultEntry({ games: [250, 250] })])
-
-    expect(same.showGames).toBe(false)
-    expect(mixed.showGames).toBe(true)
-  })
-
-  it('hides the games column on a complete squad, where the short games are listed apart (D-75, D-76)', () => {
+  it('lists a short-game bowler apart on a complete squad, not among the placed rows (D-75)', () => {
     const result = build([flat(200), createResultEntry({ games: [250, 250] })], { complete: true })
 
-    expect(result.showGames).toBe(false)
+    expect(result.rows).toHaveLength(1)
     expect(result.didNotFinish).toHaveLength(1)
   })
 
@@ -168,7 +159,6 @@ describe('toDivisionResult', () => {
         registrationId: quit.registrationId,
         name: quit.name,
         total: 450,
-        highGame: 235,
         games: 2,
         handicap: 5,
         scores: [210, 230],

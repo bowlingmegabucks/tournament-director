@@ -168,7 +168,6 @@ describe('GET /v1/tournaments/:id/super-sweeper', () => {
         'flags',
         'games',
         'group',
-        'highGame',
         'name',
         'place',
         'registrationId',

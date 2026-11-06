@@ -21,6 +21,10 @@ const base: ResultEntryInput = {
 }
 
 describe('toResultEntry', () => {
+  it('uses the games as the game scores when no game numbers are given', () => {
+    expect(toResultEntry({ ...base, games: [200, 190] }).gameScores).toEqual([200, 190])
+  })
+
   it('sums the games and takes the largest as the high game (RK-14)', () => {
     const entry = toResultEntry({ ...base, games: [200, 201, 202] })
 
@@ -81,6 +85,24 @@ describe('buildResultEntries', () => {
       divisionName: 'Open',
       games: [190, 210],
     })
+  })
+
+  it('keeps a game with no saved score as null by game number, so the page can show a dash', () => {
+    const bowler = createLaneEntry({ divisionId: open.id })
+
+    const { entries } = buildResultEntries(
+      [bowler],
+      [
+        { bowlerId: bowler.bowlerId, game: 1, score: 190 },
+        { bowlerId: bowler.bowlerId, game: 3, score: 210 },
+      ],
+      [open],
+      () => 0,
+    )
+
+    expect(entries[0]?.gameScores).toEqual([190, null, 210])
+    // Ranking still uses only the games bowled.
+    expect(entries[0]).toMatchObject({ games: [190, 210], total: 400 })
   })
 
   it('counts a stored zero as a score, so a no-show is an entry (D-06)', () => {

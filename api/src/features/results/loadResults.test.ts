@@ -372,7 +372,7 @@ describe('loadSquadResults: the result (RES-10, RES-11b, D-77)', () => {
     const result = await loadSquadResults(deps, reporting, tournament.id, squad.id)
 
     expect(result.divisions[0]?.showHandicap).toBe(true)
-    expect(rowOf(result, entry)).toMatchObject({ handicap: 18, total: 654, highGame: 218 })
+    expect(rowOf(result, entry)).toMatchObject({ handicap: 18, total: 654 })
   })
 
   it('skips an entry whose division is not the tournament’s, and logs it once (FL-9, D-51)', async () => {
@@ -529,7 +529,6 @@ describe('loadSweeperResults (RES-22 to RES-25a)', () => {
       divisionName: 'Women/Senior',
       bonusPins: 10,
       games: 3,
-      highGame: 205,
     })
     expect(result.rows[1]).toMatchObject({ divisionName: 'Open', bonusPins: 0 })
     expect(result.session).toEqual({

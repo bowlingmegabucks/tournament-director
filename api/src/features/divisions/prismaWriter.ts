@@ -5,13 +5,17 @@ import { withRetry } from '../../shared/serializableRetry.ts'
 import type { NewDivision } from './createRequest.ts'
 import { loadDivisionEditFacts } from './prismaEditFacts.ts'
 import { toDivision } from './divisionRow.ts'
+import type { DivisionDeleteInfo } from './deletePlan.ts'
 import type { UpdateDivision } from './updateRequest.ts'
 import {
   applyCreate,
+  applyDelete,
   applyUpdate,
   toNewDivision,
   type CreateDivisionOutcome,
+  type DeleteDivisionOutcome,
   type DivisionWriter,
+  type NotFound,
   type UpdateDivisionOutcome,
 } from './writer.ts'
 
@@ -127,6 +131,48 @@ export function createPrismaDivisionWriter(client: PrismaClient, logger: Logger)
     )
   }
 
+  const removeOnce = (tournamentId: string, divisionId: string): Promise<DeleteDivisionOutcome> =>
+    client.$transaction(
+      async (tx) => {
+        const tournament = await tx.tournament.findUnique({
+          where: { id: tournamentId },
+          select: { completed: true },
+        })
+        if (!tournament) return { notFound: 'tournament' as const }
+        // The tournament in the URL must own the division: another tournament's id is not found.
+        const row = await tx.division.findFirst({
+          where: { id: divisionId, tournamentId },
+          select: { number: true },
+        })
+        if (!row) return { notFound: 'division' as const }
+        const registrationCount = await tx.registration.count({ where: { divisionId } })
+        // Another division with the same number (an old duplicate) keeps the number in use, so
+        // there is no gap to close (D-153).
+        const sharesNumber =
+          (await tx.division.count({
+            where: { tournamentId, number: row.number, id: { not: divisionId } },
+          })) > 0
+        const outcome = await applyDelete(
+          { completed: tournament.completed, registrationCount },
+          async () => {
+            // The `SweeperDivision` rows go with it: the database cascades them (D-152).
+            await tx.division.delete({ where: { id: divisionId } })
+            // Later divisions move down by one, unless another division still holds the number.
+            // Rows at or below the gap, an old 0 or a shared number included, stay as they were
+            // (D-153).
+            if (sharesNumber) return
+            await tx.division.updateMany({
+              where: { tournamentId, number: { gt: row.number } },
+              data: { number: { decrement: 1 } },
+            })
+          },
+        )
+        return 'refused' in outcome ? outcome : { deleted: { number: row.number } }
+      },
+      // The count and the delete must not interleave with a registration (D-155).
+      { isolationLevel: 'Serializable' },
+    )
+
   return {
     create: (tournamentId, input, { confirmWarnings }) =>
       withDatabaseErrors(logger, () =>
@@ -149,6 +195,27 @@ export function createPrismaDivisionWriter(client: PrismaClient, logger: Logger)
         })
         if (!row) return { notFound: 'division' as const }
         return loadDivisionEditFacts(client, tournamentId, divisionId)
+      }),
+    remove: (tournamentId, divisionId) =>
+      withDatabaseErrors(logger, () => withRetry(() => removeOnce(tournamentId, divisionId))),
+    getDeleteInfo: (tournamentId, divisionId) =>
+      withDatabaseErrors(logger, async (): Promise<DivisionDeleteInfo | NotFound> => {
+        const tournament = await client.tournament.findUnique({
+          where: { id: tournamentId },
+          select: { id: true },
+        })
+        if (!tournament) return { notFound: 'tournament' }
+        const row = await client.division.findFirst({
+          where: { id: divisionId, tournamentId },
+          select: { id: true },
+        })
+        if (!row) return { notFound: 'division' }
+        const [registrationCount, sweeperCount] = await Promise.all([
+          client.registration.count({ where: { divisionId } }),
+          // A NULL means no bonus pins, the same as 0 (database.md), so only rows above 0 count.
+          client.sweeperDivision.count({ where: { divisionId, bonusPinsPerGame: { gt: 0 } } }),
+        ])
+        return { registrationCount, sweeperCount }
       }),
   }
 }

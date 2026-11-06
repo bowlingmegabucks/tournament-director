@@ -29,6 +29,8 @@ import type {
 // Built once so refetches return the same list, as a real API would.
 const tournaments = createDemoTournaments()
 const divisions = createDemoDivisions()
+/** The demo division the mock treats as holding registered bowlers (D-151). */
+const registeredDemoDivision = 'Scratch'
 const squads = createDemoSquads()
 const sweepers = createDemoSweepers(divisions)
 const registrations = createDemoRegistrationList(divisions, squads, sweepers)
@@ -197,6 +199,34 @@ export const handlers = [
     }
     Object.assign(found, changes)
     return HttpResponse.json({ division: found })
+  }),
+  // DIV-12 delete: the mock removes the division and closes the numbers after it (D-153). It
+  // pretends 12 bowlers are registered in the demo "Scratch" division, so the refusal can be seen
+  // (D-151); it never completes a tournament, so the API tests cover that rule.
+  http.delete('/v1/tournaments/:id/divisions/:divisionId', ({ params }) => {
+    if (!tournaments.some((candidate) => candidate.id === params['id'])) return notFound()
+    const at = divisions.findIndex((stored) => stored.id === params['divisionId'])
+    const found = divisions[at]
+    if (!found) return HttpResponse.json({ message: 'Division not found' }, { status: 404 })
+    if (found.name === registeredDemoDivision) {
+      const message =
+        '12 bowlers are registered in this division. Move them to another division first.'
+      return HttpResponse.json({ message, errors: { division: message } }, { status: 409 })
+    }
+    divisions.splice(at, 1)
+    for (const stored of divisions) if (stored.number > found.number) stored.number -= 1
+    return new HttpResponse(null, { status: 204 })
+  }),
+  http.get('/v1/tournaments/:id/divisions/:divisionId/delete-info', ({ params }) => {
+    if (!tournaments.some((candidate) => candidate.id === params['id'])) return notFound()
+    const found = divisions.find((stored) => stored.id === params['divisionId'])
+    if (!found) return HttpResponse.json({ message: 'Division not found' }, { status: 404 })
+    return HttpResponse.json({
+      deleteInfo: {
+        registrationCount: found.name === registeredDemoDivision ? 12 : 0,
+        sweeperCount: 0,
+      },
+    })
   }),
   http.get('/v1/tournaments/:id/divisions/:divisionId/edit-info', ({ params }) => {
     if (!tournaments.some((candidate) => candidate.id === params['id'])) return notFound()

@@ -7,6 +7,7 @@ import {
   divisionFields,
   type Division,
   type DivisionChanges,
+  type DivisionDeleteInfo,
   type DivisionEditInfo,
   type DivisionFieldErrors,
   type DivisionWarning,
@@ -190,4 +191,63 @@ export async function fetchDivisionEditInfo(
     throw new TypeError('Failed to load the division (unexpected response)')
   }
   return { registrationCount: count, hasScores: scores }
+}
+
+/**
+ * The API refused the delete (409): the tournament is complete or bowlers are registered (D-151).
+ * `reasons` holds every reason, the tournament's first. Nothing was deleted and confirming cannot
+ * change that.
+ */
+export class DivisionDeleteRefusedError extends Error {
+  readonly reasons: string[]
+
+  constructor(message: string, reasons: string[]) {
+    super(message)
+    this.reasons = reasons
+  }
+}
+
+function reasonsOf(errors: unknown, fallback: string): string[] {
+  const reasons = ['tournament', 'division']
+    .map((key) => field(errors, key))
+    .filter((reason): reason is string => typeof reason === 'string')
+  return reasons.length > 0 ? reasons : [fallback]
+}
+
+/**
+ * Delete a division (DIV-12, D-151). Throws `DivisionDeleteRefusedError` for a 409. The API moves
+ * the later divisions down by one (D-153), so the caller refreshes the list.
+ */
+export async function deleteDivision(tournamentId: string, divisionId: string): Promise<void> {
+  const response = await apiFetch(divisionUrl(tournamentId, divisionId), { method: 'DELETE' })
+  if (response.status === 409) {
+    const body = await readJson(response, 'Failed to delete the division')
+    const message = field(body, 'message')
+    const text = typeof message === 'string' ? message : 'The division cannot be deleted.'
+    throw new DivisionDeleteRefusedError(text, reasonsOf(field(body, 'errors'), text))
+  }
+  if (response.status === 404)
+    throw new Error('This division was not found. It may have been removed.')
+  if (response.status === 401) throw new Error('Sign in to delete a division.')
+  if (response.status === 403) throw new Error('You do not have permission to delete a division.')
+  if (!response.ok) throw new Error(`Failed to delete the division (${response.status})`)
+}
+
+/** What the delete dialog says before the director presses Delete (D-152, D-154). */
+export async function fetchDivisionDeleteInfo(
+  tournamentId: string,
+  divisionId: string,
+): Promise<DivisionDeleteInfo> {
+  const response = await apiFetch(`${divisionUrl(tournamentId, divisionId)}/delete-info`)
+  // The API answers 404 for an unknown tournament and for an unknown division alike.
+  if (response.status === 404)
+    throw new Error('This division was not found. It may have been removed.')
+  if (!response.ok) throw new Error(`Failed to load the division (${response.status})`)
+  const info = field(await readJson(response, 'Failed to load the division'), 'deleteInfo')
+  const registrations = field(info, 'registrationCount')
+  const sweepers = field(info, 'sweeperCount')
+  if (typeof registrations !== 'number' || typeof sweepers !== 'number') {
+    throw new TypeError('Failed to load the division (unexpected response)')
+  }
+  return { registrationCount: registrations, sweeperCount: sweepers }
 }

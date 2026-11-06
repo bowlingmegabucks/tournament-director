@@ -7,6 +7,7 @@ import type { Logger } from './shared/logger.ts'
 import { createRateLimiter } from './shared/rateLimit.ts'
 import { requestIdHeader, requestLogging } from './shared/requestLogging.ts'
 import { createDivisionCreateRouter } from './features/divisions/createRoutes.ts'
+import { createDivisionDeleteRouter } from './features/divisions/deleteRoutes.ts'
 import { createDivisionUpdateRouter } from './features/divisions/updateRoutes.ts'
 import { createDivisionRouter } from './features/divisions/routes.ts'
 import type { DivisionRepository } from './features/divisions/repository.ts'
@@ -168,6 +169,12 @@ export function createApp({
         access: { permission: 'divisions.write' }, // DIV-12, D-150: edit and its edit-info read; no API key
         methods: ['PATCH', 'GET'],
         router: createDivisionUpdateRouter(divisionWriter, logger),
+      },
+      {
+        path: '/v1/tournaments/:id/divisions',
+        access: { permission: 'divisions.write' }, // DIV-12, D-151: delete and its delete-info read; no API key
+        methods: ['DELETE', 'GET'],
+        router: createDivisionDeleteRouter(divisionWriter, logger),
       },
       {
         path: '/v1/tournaments/:id/squads',

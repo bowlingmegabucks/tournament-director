@@ -224,7 +224,13 @@ describe(`POST ${url}`, () => {
 
   it('passes a storage outage on as 503 (DIV-12)', async () => {
     const outage = () => Promise.reject(new HttpError(503, 'Database unavailable'))
-    const writer: DivisionWriter = { create: outage, update: outage, getEditInfo: outage }
+    const writer: DivisionWriter = {
+      create: outage,
+      update: outage,
+      getEditInfo: outage,
+      remove: outage,
+      getDeleteInfo: outage,
+    }
 
     const response = await request(createSignedInTestApp({ divisionWriter: writer }))
       .post(url)

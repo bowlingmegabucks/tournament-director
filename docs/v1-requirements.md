@@ -29,10 +29,11 @@ Version numbers follow content, not a countdown. 0.10.0 is fine.
   - [x] Edit a tournament, with free, confirmed, and refused fields by what depends on them (`editTournament`, `TRN-24` to `TRN-31`, D-127 to D-131).
   - [ ] Complete a tournament: final, completes open squads and sweepers, freezes everything (D-130). Built with Complete squad and Complete sweeper (`SQD-15` to `SQD-18`).
   - [x] Delete a tournament: admin only, refused with scores or a real payment, confirmed with the typed name (`deleteTournament`, `TRN-32` to `TRN-37`, D-132 to D-137).
-- [ ] Division commands (D-12, D-15; [divisions.md](requirements/divisions.md)), 0.6.0:
+- [x] Division commands (D-12, D-15; [divisions.md](requirements/divisions.md)), 0.6.0:
   - [x] Create a division: the server numbers it, a name is unique in the tournament, a complete tournament refuses, a percent over 100 confirms (`createDivision`, `DIV-01` to `DIV-11`, `DIV-15`, D-138 to D-145).
-  - [ ] Edit a division, warning when registered bowlers may no longer fit (D-12).
-  - [ ] Delete a division (D-15).
+  - [x] Edit a division, warning when registered bowlers may no longer fit (`editDivision`, `DIV-12`, D-146 to D-150).
+  - [x] Delete a division: refused for a complete tournament or any registered bowler, the number gap closes (`deleteDivision`, `DIV-12`, D-151 to D-156).
+  - [ ] Change a registered bowler's division in the new app, so a director can empty a division before deleting it (`REG-15`, Q-37, D-156). Built with the registrations edit feature.
 
 ## Data and cutover
 

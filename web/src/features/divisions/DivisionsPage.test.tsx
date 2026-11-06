@@ -180,7 +180,7 @@ describe('DivisionsPage', () => {
     expect(calls).toBe(1)
   })
 
-  it('has no edit or delete button (D-40)', async () => {
+  it('has no edit or delete button for a signed-out visitor (D-40)', async () => {
     serve([createDivision()])
 
     open()

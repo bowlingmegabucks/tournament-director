@@ -101,7 +101,7 @@ export function DeleteTournamentDialog({
           >
             Cancel
           </button>
-          <button type="submit" className={own.destructive} disabled={!matches || pending}>
+          <button type="submit" className={styles.destructive} disabled={!matches || pending}>
             {submitLabel}
           </button>
         </div>

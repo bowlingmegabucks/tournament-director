@@ -646,7 +646,9 @@ test('Print this division prints only the chosen seeding division on one letter 
   expect(pdf.match(/\/MediaBox \[0 0 612 792\]/g)).toHaveLength(1)
 })
 
-test('Print results prints the super sweeper on one letter page (D-89)', async ({ page }) => {
+test('Print results prints the super sweeper as one list on letter pages (D-89)', async ({
+  page,
+}) => {
   await page.addInitScript(() => {
     window.print = () => undefined
   })
@@ -661,7 +663,11 @@ test('Print results prints the super sweeper on one letter page (D-89)', async (
     'latin1',
   )
 
-  expect(pdf.match(/\/MediaBox \[0 0 612 792\]/g)).toHaveLength(1)
+  // The list has a line for each sweeper, so fonts decide whether it fills one page or two (CI
+  // wraps more than a Mac). Every page must be letter, and none may be another size.
+  const boxes = pdf.match(/\/MediaBox \[[^\]]+\]/g) ?? []
+  expect(boxes.length).toBeGreaterThan(0)
+  expect(boxes.every((box) => box === '/MediaBox [0 0 612 792]')).toBe(true)
 })
 
 test('the at-large, seeding, and super sweeper pages do not scroll sideways on a phone (D-73)', async ({

@@ -48,7 +48,6 @@ function filled(overrides: Partial<SuperSweeperResults> = {}): SuperSweeperResul
         ],
         sweeperPins: [0, 0],
         total: 1410,
-        highGame: 262,
       }),
       createSuperSweeperRow({
         name: 'Joe Fontaine',
@@ -57,7 +56,6 @@ function filled(overrides: Partial<SuperSweeperResults> = {}): SuperSweeperResul
         divisionName: 'Open',
         sweeperTotals: [690, 681],
         total: 1371,
-        highGame: 248,
         ties: [{ line: 'cash', outcome: 'won', decidedBy: { kind: 'game', rank: 1 } }],
       }),
       createSuperSweeperRow({
@@ -66,7 +64,6 @@ function filled(overrides: Partial<SuperSweeperResults> = {}): SuperSweeperResul
         divisionName: 'Open',
         sweeperTotals: [605, 0],
         total: 605,
-        highGame: 220,
         flags: [{ kind: 'missed', sweeperId: saturday.id, gamesBowled: 0 }],
       }),
       createSuperSweeperRow({
@@ -79,7 +76,6 @@ function filled(overrides: Partial<SuperSweeperResults> = {}): SuperSweeperResul
           [0, 0, 0],
         ],
         total: 770,
-        highGame: 231,
         flags: [{ kind: 'unfinished', sweeperId: friday.id, gamesBowled: 2 }],
       }),
     ],

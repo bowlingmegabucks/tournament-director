@@ -18,7 +18,6 @@ describe('SuperSweeperTable (RES-29a, D-90)', () => {
           name: 'Joe Fontaine',
           divisionName: 'Women',
           total: 1234,
-          highGame: 256,
           sweeperTotals: [600, 634],
           sweeperScores: [
             [200, 200, 200],

@@ -24,7 +24,6 @@ const squad = createSquadResults({
           registrationId: 'r1',
           name: 'Bob Whitaker',
           total: 445,
-          highGame: 230,
           games: 2,
           handicap: 0,
           scores: [230, 215],

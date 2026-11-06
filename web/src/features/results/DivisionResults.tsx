@@ -71,7 +71,7 @@ export function DivisionBody({
                     )}
                     <TieMarks row={item.row} />
                   </th>
-                  <PlusMinusCell total={item.row.total} games={item.row.scores.length} />
+                  <PlusMinusCell total={item.row.total} games={item.row.games} />
                   <GameCells scores={item.row.scores} count={count} />
                   <TotalCells
                     scores={item.row.scores}

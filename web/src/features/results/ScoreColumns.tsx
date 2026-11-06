@@ -55,10 +55,10 @@ export function PlusMinusCell({ total, games }: Readonly<{ total: number; games:
 export function GameCells({
   scores,
   count,
-}: Readonly<{ scores: readonly number[] | null; count: number }>) {
+}: Readonly<{ scores: readonly (number | null)[] | null; count: number }>) {
   return Array.from({ length: count }, (_, index) => {
     const label = `G${index + 1}`
-    const score = scores?.[index]
+    const score = scores?.[index] ?? undefined
     if (score !== undefined) {
       return (
         <td key={label} className={styles.num} data-label={label}>
@@ -87,7 +87,11 @@ export function TotalCells({
   scores,
   total,
   handicap,
-}: Readonly<{ scores: readonly number[] | null; total: number | null; handicap: boolean }>) {
+}: Readonly<{
+  scores: readonly (number | null)[] | null
+  total: number | null
+  handicap: boolean
+}>) {
   const scratch = scores === null ? null : sum(scores)
   // A sweeper still open with no score has no total yet: a dash that screen readers skip.
   const figure = (value: number | null) =>

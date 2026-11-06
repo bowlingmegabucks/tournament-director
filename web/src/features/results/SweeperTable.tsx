@@ -60,7 +60,7 @@ export function SweeperTable({
                   </span>
                 ))}
               </th>
-              <PlusMinusCell total={item.row.total} games={item.row.scores.length} />
+              <PlusMinusCell total={item.row.total} games={item.row.games} />
               <GameCells scores={item.row.scores} count={count} />
               <TotalCells scores={item.row.scores} total={item.row.total} handicap={handicap} />
             </tr>

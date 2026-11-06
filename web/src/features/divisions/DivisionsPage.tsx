@@ -4,6 +4,7 @@ import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { Toast } from '../../shared/Toast'
 import { Can } from '../auth/Can'
+import { DeleteDivisionButton } from './DeleteDivisionButton'
 import type { Tournament } from '../tournaments/types'
 import { useTournamentSettings } from '../tournaments/useTournamentSettings'
 import styles from './DivisionsPage.module.css'
@@ -24,23 +25,26 @@ function useTournamentOpen(id: string): boolean {
 }
 
 /**
- * The Edit link of one row, in a cell of its own. The cell sits inside `<Can>`, so a visitor without
- * the permission never reads the settings. A complete tournament has no link (D-149, D-19); while
- * the settings load the link waits. If they fail it shows anyway: the API refuses a complete
- * tournament, and a slow start must not take the link away.
+ * The Edit link and Delete button of one row, in a cell of their own. The cell sits inside `<Can>`,
+ * so a visitor without the permission never reads the settings. A complete tournament has neither
+ * (D-149, D-154, D-19); while the settings load they wait. If the read fails they show anyway: the
+ * API refuses a complete tournament, and a slow start must not take them away.
  */
-function EditCell({ id, division }: Readonly<{ id: string; division: Division }>) {
+function ActionsCell({ id, division }: Readonly<{ id: string; division: Division }>) {
   const show = useTournamentOpen(id)
   return (
     <td className={styles.actionsCell}>
       {show && (
-        <Link
-          className={styles.editLink}
-          to={`/tournaments/${id}/divisions/${division.id}/edit`}
-          aria-label={`Edit ${division.name}`}
-        >
-          Edit
-        </Link>
+        <div className={styles.actions}>
+          <Link
+            className={styles.editLink}
+            to={`/tournaments/${id}/divisions/${division.id}/edit`}
+            aria-label={`Edit ${division.name}`}
+          >
+            Edit
+          </Link>
+          <DeleteDivisionButton tournamentId={id} division={division} />
+        </div>
       )}
     </td>
   )
@@ -61,6 +65,11 @@ function NewDivisionLink({ id }: Readonly<{ id: string }>) {
   )
 }
 
+function toastText(created: boolean, deleted: boolean): string {
+  if (created) return 'Division created'
+  return deleted ? 'Division deleted' : 'Division saved'
+}
+
 /** The divisions of the tournament in the URL, as a table (DIV-12, DIV-13, D-40). */
 export function DivisionsPage() {
   // Stryker disable next-line StringLiteral: the route always has an :id; this only satisfies the type.
@@ -73,6 +82,8 @@ export function DivisionsPage() {
   const justCreated = field(location.state, 'created') === true
   // The edit form sets this one the same way (DIV-12).
   const justSaved = field(location.state, 'saved') === true
+  // The delete button sets this one without leaving the page (D-154).
+  const justDeleted = field(location.state, 'deleted') === true
 
   return (
     <>
@@ -125,14 +136,14 @@ export function DivisionsPage() {
                 </td>
                 <td data-label="Handicap">{formatHandicap(division)}</td>
                 <Can permission="divisions.write">
-                  <EditCell id={id} division={division} />
+                  <ActionsCell id={id} division={division} />
                 </Can>
               </tr>
             ))}
           </tbody>
         </table>
       )}
-      {(justCreated || justSaved) && (
+      {(justCreated || justSaved || justDeleted) && (
         <Toast
           kind="success"
           autoDismissMs={TOAST_MS}
@@ -141,7 +152,7 @@ export function DivisionsPage() {
             void navigate('.', { replace: true, state: null })
           }}
         >
-          {justCreated ? 'Division created' : 'Division saved'}
+          {toastText(justCreated, justDeleted)}
         </Toast>
       )}
     </>

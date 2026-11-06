@@ -88,5 +88,16 @@ export interface DivisionEditInfo {
   hasScores: boolean
 }
 
+/**
+ * What `GET /v1/tournaments/{id}/divisions/{divisionId}/delete-info` returns (D-152, D-154). The
+ * API's `features/divisions/deletePlan.ts` has the same fields: change both together.
+ */
+export interface DivisionDeleteInfo {
+  /** Registrations in this division. Above 0, the delete is refused (D-151). */
+  registrationCount: number
+  /** Sweepers that hold bonus pins above 0 for this division, who lose them with it. */
+  sweeperCount: number
+}
+
 /** A line of text per field, shown under its box. */
 export type DivisionFieldNotes = Partial<Record<DivisionField, string>>

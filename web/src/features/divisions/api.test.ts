@@ -5,8 +5,11 @@ import { createDivision } from '../../mocks/data'
 import { TournamentNotFoundError } from '../../shared/tournamentQuery'
 import {
   createDivision as postDivision,
+  deleteDivision,
+  DivisionDeleteRefusedError,
   DivisionRejectedError,
   DivisionWarningsError,
+  fetchDivisionDeleteInfo,
   fetchDivisionEditInfo,
   fetchDivisions,
   updateDivision,
@@ -509,5 +512,139 @@ describe('fetchDivisionEditInfo', () => {
     server.use(http.get(infoPath, () => HttpResponse.json(body)))
 
     await expect(fetchDivisionEditInfo('t1', 'd1')).rejects.toThrow('unexpected response')
+  })
+})
+
+describe('deleteDivision', () => {
+  const deletePath = '/v1/tournaments/:id/divisions/:divisionId'
+
+  it('sends DELETE for the division of the tournament and resolves on 204 (DIV-12)', async () => {
+    let asked: unknown
+    server.use(
+      http.delete(deletePath, ({ params }) => {
+        asked = params
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+
+    await expect(deleteDivision('t1', 'd1')).resolves.toBeUndefined()
+    expect(asked).toEqual({ id: 't1', divisionId: 'd1' })
+  })
+
+  it('throws the reasons of a refusal, the tournament first (D-151)', async () => {
+    const complete = 'This tournament is complete and cannot be changed'
+    const bowlers = '1 bowler is registered in this division. Move them to another division first.'
+    server.use(
+      http.delete(deletePath, () =>
+        HttpResponse.json(
+          { message: complete, errors: { division: bowlers, tournament: complete } },
+          { status: 409 },
+        ),
+      ),
+    )
+
+    const failure = await deleteDivision('t1', 'd1').catch((error: unknown) => error)
+
+    expect(failure).toBeInstanceOf(DivisionDeleteRefusedError)
+    expect(failure).toMatchObject({ message: complete, reasons: [complete, bowlers] })
+  })
+
+  it('falls back to the message when a refusal has no known reason', async () => {
+    server.use(
+      http.delete(deletePath, () =>
+        HttpResponse.json({ message: 'Nope', errors: { other: 'x' } }, { status: 409 }),
+      ),
+    )
+
+    await expect(deleteDivision('t1', 'd1')).rejects.toMatchObject({
+      message: 'Nope',
+      reasons: ['Nope'],
+    })
+  })
+
+  it('uses a plain message when a refusal has none', async () => {
+    server.use(http.delete(deletePath, () => HttpResponse.json({}, { status: 409 })))
+
+    await expect(deleteDivision('t1', 'd1')).rejects.toMatchObject({
+      message: 'The division cannot be deleted.',
+      reasons: ['The division cannot be deleted.'],
+    })
+  })
+
+  it('names the failure when a refusal is not JSON', async () => {
+    server.use(http.delete(deletePath, () => new HttpResponse('nope', { status: 409 })))
+
+    await expect(deleteDivision('t1', 'd1')).rejects.toThrow(
+      'Failed to delete the division (response is not JSON)',
+    )
+  })
+
+  it.each([
+    [404, 'This division was not found. It may have been removed.'],
+    [401, 'Sign in to delete a division.'],
+    [403, 'You do not have permission to delete a division.'],
+    [503, 'Failed to delete the division (503)'],
+  ])('explains a %s', async (status, message) => {
+    server.use(http.delete(deletePath, () => new HttpResponse(null, { status })))
+
+    const failure = await deleteDivision('t1', 'd1').catch((error: unknown) => error)
+
+    expect(failure).toEqual(new Error(message))
+    expect(failure).not.toBeInstanceOf(DivisionDeleteRefusedError)
+  })
+})
+
+describe('fetchDivisionDeleteInfo', () => {
+  const infoPath = '/v1/tournaments/:id/divisions/:divisionId/delete-info'
+
+  it('reads the registered count and the sweepers holding pins (D-154)', async () => {
+    let asked: unknown
+    server.use(
+      http.get(infoPath, ({ params }) => {
+        asked = params
+        return HttpResponse.json({ deleteInfo: { registrationCount: 12, sweeperCount: 2 } })
+      }),
+    )
+
+    await expect(fetchDivisionDeleteInfo('t1', 'd1')).resolves.toEqual({
+      registrationCount: 12,
+      sweeperCount: 2,
+    })
+    expect(asked).toEqual({ id: 't1', divisionId: 'd1' })
+  })
+
+  it('names the failure when the body is not JSON', async () => {
+    server.use(http.get(infoPath, () => new HttpResponse('nope')))
+
+    await expect(fetchDivisionDeleteInfo('t1', 'd1')).rejects.toThrow(
+      'Failed to load the division (response is not JSON)',
+    )
+  })
+
+  it('says the division was not found for 404, not that the tournament was', async () => {
+    server.use(http.get(infoPath, () => new HttpResponse(null, { status: 404 })))
+
+    const failure = await fetchDivisionDeleteInfo('t1', 'd1').catch((error: unknown) => error)
+
+    expect(failure).toEqual(new Error('This division was not found. It may have been removed.'))
+    expect(failure).not.toBeInstanceOf(TournamentNotFoundError)
+  })
+
+  it('reports the status for another failure', async () => {
+    server.use(http.get(infoPath, () => new HttpResponse(null, { status: 503 })))
+
+    await expect(fetchDivisionDeleteInfo('t1', 'd1')).rejects.toThrow(
+      'Failed to load the division (503)',
+    )
+  })
+
+  it.each([
+    ['no deleteInfo', {}],
+    ['a count that is text', { deleteInfo: { registrationCount: '3', sweeperCount: 0 } }],
+    ['a sweeper count that is text', { deleteInfo: { registrationCount: 3, sweeperCount: '1' } }],
+  ])('rejects %s', async (_label, body) => {
+    server.use(http.get(infoPath, () => HttpResponse.json(body)))
+
+    await expect(fetchDivisionDeleteInfo('t1', 'd1')).rejects.toThrow('unexpected response')
   })
 })

@@ -241,6 +241,29 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('delete division dialog has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Divisions')
+      await page.getByRole('button', { name: 'Delete Open' }).click()
+      await expect(page.getByRole('dialog', { name: 'Delete this division?' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Delete division' })).toBeEnabled()
+
+      await expectNoViolations(page)
+    })
+
+    test('delete division dialog with bowlers registered has no WCAG 2.2 AA violations', async ({
+      page,
+    }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Divisions')
+      await page.getByRole('button', { name: 'Delete Scratch' }).click()
+      await expect(page.getByText('12 bowlers are registered in')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
     test('edit tournament form has no WCAG 2.2 AA violations', async ({ page }) => {
       await openTournamentsSignedIn(page)
       await page.getByRole('article').first().getByRole('link').click()

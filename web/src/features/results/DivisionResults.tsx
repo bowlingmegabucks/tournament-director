@@ -20,10 +20,11 @@ function TieMarks({ row }: Readonly<{ row: SquadRow }>) {
 }
 
 /**
- * The summary, tables, and sections of one division (RES-10, RES-11, RES-11a, D-75, D-76, D-81): a
- * table with the cut and cash lines, the tie marks, and the earlier-advancer tag; then the bowlers
- * who did not finish and the no-shows. The total against 200 a game sits after the name, then one cell for each game; Scratch Total, Total HDCP, and HDCP Total show only when the API says someone has a handicap. Below 40rem
- * each row is a block. The screen and the print copy both draw it.
+ * The summary, tables, and sections of one division (RES-10, RES-11, RES-11a, D-75, D-81): a table
+ * with the cut and cash lines, the tie marks, and the earlier-advancer tag; then the bowlers who did
+ * not finish and the no-shows. The total against 200 a game sits after the name, then one cell for
+ * each game. Scratch Total, Total HDCP, and HDCP Total show only when the API says someone has a
+ * handicap. Below 64rem on screen each row is a block. The screen and the print copy both draw it.
  */
 export function DivisionBody({
   division,

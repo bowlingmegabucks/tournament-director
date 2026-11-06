@@ -24,9 +24,9 @@ const squad = createSquadResults({
           registrationId: 'r1',
           name: 'Bob Whitaker',
           total: 445,
-          highGame: 230,
           games: 2,
           handicap: 0,
+          scores: [230, 215],
         },
       ],
     }),
@@ -75,7 +75,7 @@ describe('PrintResults (RES-33, RPT-01, D-78)', () => {
       within(open as HTMLElement).getByRole('heading', { level: 3, name: 'Did not finish' }),
     ).toBeInTheDocument()
     expect(
-      within(women as HTMLElement).getByRole('columnheader', { name: 'HDCP' }),
+      within(women as HTMLElement).getByRole('columnheader', { name: 'Total HDCP' }),
     ).toBeInTheDocument()
     expect(within(women as HTMLElement).queryByText('Dave Kowalski')).not.toBeInTheDocument()
   })

@@ -111,11 +111,11 @@ export async function loadSweeperResults(
     place: index + 1,
     group,
     total: entry.total,
-    highGame: entry.highGame,
     games: entry.games.length,
     ties: marks.get(entry.registrationId) ?? [],
     divisionName: entry.divisionName,
     bonusPins: entry.pins,
+    scores: entry.gameScores,
   })
 
   return {

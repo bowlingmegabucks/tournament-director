@@ -445,7 +445,7 @@ test('the Results tab of a complete squad shows one division at a time, with lin
 
   await expect(page.getByRole('heading', { level: 2, name: 'Women' })).toBeVisible()
   const women = page.getByRole('table', { name: 'Results for the Women division' })
-  await expect(women.getByRole('columnheader', { name: 'HDCP' })).toBeVisible()
+  await expect(women.getByRole('columnheader', { name: 'Total HDCP' })).toBeVisible()
   await expect(page.getByText('Lost the spot on high game.')).toBeVisible()
   await expect(page).toHaveURL(/results\?division=/)
 
@@ -454,13 +454,16 @@ test('the Results tab of a complete squad shows one division at a time, with lin
   await expect(page).not.toHaveURL(/results/)
 })
 
-test('the Results tab of an open squad shows the Games column (RES-34, D-76)', async ({ page }) => {
+test('the Results tab of an open squad shows a column for each game, with a dash for one not bowled (RES-34, D-76)', async ({
+  page,
+}) => {
   await openSquad(page, '1:00 PM')
 
   await page.getByRole('link', { name: 'Results' }).click()
 
   const open = page.getByRole('table', { name: 'Results for the Open division' })
-  await expect(open.getByRole('columnheader', { name: 'Games' })).toBeVisible()
+  await expect(open.getByRole('columnheader', { name: 'G3' })).toBeVisible()
+  await expect(open.getByText('No game').first()).toBeAttached()
   await expect(page.getByRole('heading', { name: 'Did not finish' })).toHaveCount(0)
 })
 
@@ -594,7 +597,7 @@ test('Super sweeper results open from the Sweepers page, with a column for each 
   await expect(list.getByRole('row', { name: 'Cash Line' })).toBeVisible()
   await expect(list.getByText('Did not finish a sweeper')).toBeVisible()
   // A bowler who did not finish and one who missed a sweeper rank by total; a no-show is last (D-90).
-  const names = list.getByRole('rowheader')
+  const names = list.locator('th[scope="rowgroup"]')
   await expect(names).toHaveText([
     /Dana Whitfield/,
     /Dave Kowalski/,
@@ -643,7 +646,9 @@ test('Print this division prints only the chosen seeding division on one letter 
   expect(pdf.match(/\/MediaBox \[0 0 612 792\]/g)).toHaveLength(1)
 })
 
-test('Print results prints the super sweeper on one letter page (D-89)', async ({ page }) => {
+test('Print results prints the super sweeper as one list on letter pages (D-89)', async ({
+  page,
+}) => {
   await page.addInitScript(() => {
     window.print = () => undefined
   })
@@ -658,7 +663,11 @@ test('Print results prints the super sweeper on one letter page (D-89)', async (
     'latin1',
   )
 
-  expect(pdf.match(/\/MediaBox \[0 0 612 792\]/g)).toHaveLength(1)
+  // The list has a line for each sweeper, so fonts decide whether it fills one page or two (CI
+  // wraps more than a Mac). Every page must be letter, and none may be another size.
+  const boxes = pdf.match(/\/MediaBox \[[^\]]+\]/g) ?? []
+  expect(boxes.length).toBeGreaterThan(0)
+  expect(boxes.every((box) => box === '/MediaBox [0 0 612 792]')).toBe(true)
 })
 
 test('the at-large, seeding, and super sweeper pages do not scroll sideways on a phone (D-73)', async ({

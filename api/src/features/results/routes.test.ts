@@ -79,6 +79,10 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/results', () => {
       bowlers.map((entry) => entry.registrationId),
     )
     expect(rows[0]).toMatchObject({ place: 1, group: 'advancer', total: 750, games: 3 })
+    expect(rows[0].scores).toHaveLength(3)
+    expect(rows[0].scores.reduce((sum: number, score: number) => sum + score, 0)).toBe(
+      750 - rows[0].handicap * 3,
+    )
     expect(rows[1]).toMatchObject({ place: 2, group: 'casher' })
     expect(rows[2]).toMatchObject({ place: 3, group: 'other' })
   })
@@ -96,10 +100,10 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/results', () => {
         'games',
         'group',
         'handicap',
-        'highGame',
         'name',
         'place',
         'registrationId',
+        'scores',
         'ties',
         'total',
       ].toSorted(),
@@ -113,7 +117,6 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/results', () => {
         'noShows',
         'number',
         'rows',
-        'showGames',
         'showHandicap',
       ].toSorted(),
     )

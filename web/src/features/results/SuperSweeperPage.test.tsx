@@ -42,8 +42,12 @@ function filled(overrides: Partial<SuperSweeperResults> = {}): SuperSweeperResul
         group: 'casher',
         divisionName: 'Women',
         sweeperTotals: [712, 698],
+        sweeperScores: [
+          [262, 230, 220],
+          [240, 230, 228],
+        ],
+        sweeperPins: [0, 0],
         total: 1410,
-        highGame: 262,
       }),
       createSuperSweeperRow({
         name: 'Joe Fontaine',
@@ -52,7 +56,6 @@ function filled(overrides: Partial<SuperSweeperResults> = {}): SuperSweeperResul
         divisionName: 'Open',
         sweeperTotals: [690, 681],
         total: 1371,
-        highGame: 248,
         ties: [{ line: 'cash', outcome: 'won', decidedBy: { kind: 'game', rank: 1 } }],
       }),
       createSuperSweeperRow({
@@ -61,7 +64,6 @@ function filled(overrides: Partial<SuperSweeperResults> = {}): SuperSweeperResul
         divisionName: 'Open',
         sweeperTotals: [605, 0],
         total: 605,
-        highGame: 220,
         flags: [{ kind: 'missed', sweeperId: saturday.id, gamesBowled: 0 }],
       }),
       createSuperSweeperRow({
@@ -69,8 +71,11 @@ function filled(overrides: Partial<SuperSweeperResults> = {}): SuperSweeperResul
         place: 4,
         divisionName: 'Senior',
         sweeperTotals: [390, 380],
+        sweeperScores: [
+          [231, 159, 0],
+          [0, 0, 0],
+        ],
         total: 770,
-        highGame: 231,
         flags: [{ kind: 'unfinished', sweeperId: friday.id, gamesBowled: 2 }],
       }),
     ],
@@ -86,7 +91,7 @@ afterEach(() => {
 })
 
 describe('SuperSweeperPage', () => {
-  it('shows a column for each sweeper, the total, high game, and a cash line (RES-29a, D-90)', async () => {
+  it('shows a line for each sweeper with its games, and the +/- figure and Cumulative beside them (RES-29a, D-90)', async () => {
     serve(filled())
 
     open()
@@ -95,23 +100,157 @@ describe('SuperSweeperPage', () => {
     expect(view.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
       'Place',
       'Name',
-      'Fri 10/9',
-      'Sat 10/10',
+      'Plus or minus 200 a game',
+      'Sweeper',
+      'G1',
+      'G2',
+      'G3',
       'Total',
-      'HG',
+      'Cumulative',
     ])
     const rows = view.getAllByRole('row').slice(1)
-    expect(rows.map((tr) => tr.children.length)).toEqual([6, 6, 1, 6, 6])
+    // Two lines for each of the four bowlers, and the cash line after the second bowler.
     expect(rows.map((tr) => tr.textContent)).toContain('Cash Line')
+    expect(rows).toHaveLength(9)
+    const cells = (tr: HTMLElement | undefined) =>
+      Array.from(tr?.children ?? []).map((cell) => cell.textContent)
+    expect(cells(rows[0])).toEqual([
+      '1',
+      'Dana WhitfieldWomen',
+      '+210',
+      'Fri 10/9',
+      '262',
+      '230',
+      '220',
+      '712',
+      '1410',
+    ])
+    expect(cells(rows[1])).toEqual(['Sat 10/10', '240', '230', '228', '698'])
+    expect(screen.getByText('4 entries · Cashing 2 · Cut score 2040')).toBeVisible()
+  })
+
+  it('spans place, name, the +/- figure, and Cumulative across the sweeper lines (RES-29a)', async () => {
+    serve(filled())
+
+    open()
+
+    const view = await table()
+    const first = view.getAllByRole('row')[1] as HTMLElement
+    for (const cell of [
+      within(first).getByText('1'),
+      within(first).getByText('1410'),
+      within(first).getByText('+210'),
+    ]) {
+      expect(cell).toHaveAttribute('rowspan', '2')
+    }
+  })
+
+  it('shows the three handicap totals for each line when a division has bonus pins (SCR-09)', async () => {
+    serve(
+      filled({
+        rows: [
+          createSuperSweeperRow({
+            name: 'Dana Whitfield',
+            divisionName: 'Women',
+            sweeperTotals: [630, 612],
+            sweeperScores: [
+              [200, 200, 200],
+              [200, 200, 200],
+            ],
+            sweeperPins: [10, 4],
+            total: 1242,
+          }),
+        ],
+      }),
+    )
+
+    open()
+
+    const view = await table()
+    expect(view.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
+      'Place',
+      'Name',
+      'Plus or minus 200 a game',
+      'Sweeper',
+      'G1',
+      'G2',
+      'G3',
+      'Scratch Total',
+      'Total HDCP',
+      'HDCP Total',
+      'Cumulative',
+    ])
+    const rows = view.getAllByRole('row').slice(1)
     expect(Array.from(rows[0]?.children ?? []).map((cell) => cell.textContent)).toEqual([
       '1',
       'Dana WhitfieldWomen',
-      '712',
-      '698',
-      '1410',
-      '262',
+      '+42',
+      'Fri 10/9',
+      '200',
+      '200',
+      '200',
+      '600',
+      '30',
+      '630',
+      '1242',
     ])
-    expect(screen.getByText('4 entries · Cashing 2 · Cut score 2040')).toBeVisible()
+    expect(Array.from(rows[1]?.children ?? []).map((cell) => cell.textContent)).toEqual([
+      'Sat 10/10',
+      '200',
+      '200',
+      '200',
+      '600',
+      '12',
+      '612',
+    ])
+  })
+
+  it('draws six game columns for sweepers of 5 and 6 games, with a dash and the game count (RES-29a)', async () => {
+    serve(
+      filled({
+        sweepers: [
+          { ...friday, games: 5 },
+          { ...saturday, games: 6, complete: true },
+        ],
+        rows: [
+          createSuperSweeperRow({
+            name: 'Dana Whitfield',
+            sweeperTotals: [1000, 1200],
+            sweeperScores: [
+              [200, 200, 200, 200, 200],
+              [200, 200, 200, 200, 200, 200],
+            ],
+            total: 2200,
+            games: 11,
+          }),
+        ],
+      }),
+    )
+
+    open()
+
+    const view = await table()
+    const headers = view.getAllByRole('columnheader').map((cell) => cell.textContent)
+    expect(headers).toContain('G6')
+    const rows = view.getAllByRole('row').slice(1)
+    const first = Array.from(rows[0]?.children ?? []).map((cell) => cell.textContent)
+    expect(first).toEqual([
+      '1',
+      'Dana WhitfieldOpen',
+      '\u00b10',
+      'Fri 10/95 games',
+      '200',
+      '200',
+      '200',
+      '200',
+      '200',
+      'No game\u2013',
+      '1000',
+      '2200',
+    ])
+    expect(within(rows[1] as HTMLElement).getByRole('rowheader')).toHaveTextContent(
+      'Sat 10/106 games',
+    )
   })
 
   it('says "1 entry" and "1 sweeper" for one of each', async () => {
@@ -138,7 +277,7 @@ describe('SuperSweeperPage', () => {
     open()
 
     const view = await table()
-    expect(view.getByText('Cash Line').closest('td')).toHaveAttribute('colspan', '6')
+    expect(view.getByText('Cash Line').closest('td')).toHaveAttribute('colspan', '9')
   })
 
   it('reads a real total aloud (D-90)', async () => {
@@ -148,6 +287,7 @@ describe('SuperSweeperPage', () => {
 
     const view = await table()
     expect(view.getByText('712')).not.toHaveAttribute('aria-hidden')
+    expect(view.getByText('1410')).not.toHaveAttribute('aria-hidden')
   })
 
   it('links back to the sweepers, and sets the page title', async () => {
@@ -184,6 +324,7 @@ describe('SuperSweeperPage', () => {
           createSuperSweeperRow({
             name: 'Ray Dunn',
             sweeperTotals: [560, null],
+            sweeperScores: [[200, 180, 180], null],
             total: 560,
           }),
         ],
@@ -194,7 +335,7 @@ describe('SuperSweeperPage', () => {
 
     const view = await table()
     expect(view.getByText('Not bowled yet')).toBeInTheDocument()
-    expect(view.getByText('–')).toHaveAttribute('aria-hidden', 'true')
+    for (const dash of view.getAllByText('–')) expect(dash).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('names the tie at the cash line (D-93)', async () => {

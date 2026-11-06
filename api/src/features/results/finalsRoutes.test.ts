@@ -159,6 +159,7 @@ describe('GET /v1/tournaments/:id/super-sweeper', () => {
       group: 'casher',
       total: 750,
       sweeperTotals: [750],
+      sweeperPins: [0],
       flags: [],
     })
     expect(Object.keys(response.body.rows[0]).toSorted()).toEqual(
@@ -167,10 +168,11 @@ describe('GET /v1/tournaments/:id/super-sweeper', () => {
         'flags',
         'games',
         'group',
-        'highGame',
         'name',
         'place',
         'registrationId',
+        'sweeperPins',
+        'sweeperScores',
         'sweeperTotals',
         'ties',
         'total',

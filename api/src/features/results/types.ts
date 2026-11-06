@@ -20,15 +20,20 @@ export const tieSchema = z.object({
   decidedBy: deciderSchema.nullable(),
 })
 
+/** The scratch pins of each game by game number. `null`: no score saved for that game. */
+const gameScoresSchema = z.array(z.number().int().nullable())
+
+/** The scratch pins of each game of one sweeper in the super sweeper, zero for a game not bowled. */
+const scoresSchema = z.array(z.number().int())
+
 /** Fields every ranked row carries. */
 const rowFields = {
   registrationId: z.uuid(),
   /** `First Last`, plus `, Suffix` (BWL-13). */
   name: z.string().min(1),
   place: z.number().int().min(1),
-  /** Total and high game include the handicap or bonus pins (SCR-08, SCR-09). */
+  /** The total includes the handicap or bonus pins (SCR-08, SCR-09). */
   total: z.number().int(),
-  highGame: z.number().int(),
   games: z.number().int().nonnegative(),
   ties: z.array(tieSchema),
 }
@@ -39,6 +44,7 @@ export const squadRowSchema = z.object({
   group: z.enum(['advancer', 'casher', 'other']),
   /** The handicap per game (SCR-07). */
   handicap: z.number().int(),
+  scores: gameScoresSchema,
   /** True only for an earlier advancer at or above the cut score (D-81). */
   advancedEarlier: z.boolean(),
 })
@@ -48,9 +54,9 @@ export const unplacedRowSchema = z.object({
   registrationId: z.uuid(),
   name: z.string().min(1),
   total: z.number().int(),
-  highGame: z.number().int(),
   games: z.number().int().nonnegative(),
   handicap: z.number().int(),
+  scores: gameScoresSchema,
 })
 
 export const divisionResultSchema = z.object({
@@ -61,8 +67,6 @@ export const divisionResultSchema = z.object({
   entries: z.number().int().nonnegative(),
   /** RES-11a: someone in the division has a handicap above 0. */
   showHandicap: z.boolean(),
-  /** D-76: the placed bowlers have unequal game counts. */
-  showGames: z.boolean(),
   rows: z.array(squadRowSchema),
   didNotFinish: z.array(unplacedRowSchema),
   noShows: z.array(z.object({ registrationId: z.uuid(), name: z.string().min(1) })),
@@ -97,6 +101,7 @@ export const sweeperRowSchema = z.object({
   divisionName: z.string(),
   /** The bonus pins per game of the bowler's division (SCR-09). */
   bonusPins: z.number().int(),
+  scores: gameScoresSchema,
 })
 
 export type SweeperRow = z.infer<typeof sweeperRowSchema>
@@ -207,6 +212,13 @@ export const superSweeperRowSchema = z.object({
   divisionName: z.string(),
   /** One total per entry of `sweepers`, in that order. `null`: still open, no score yet (D-90). */
   sweeperTotals: z.array(z.number().int().nullable()),
+  /**
+   * The scratch games of each entry of `sweepers`, in that order. A complete sweeper has one score for
+   * each of its games, zero for a game not bowled. `null`: still open, no score yet.
+   */
+  sweeperScores: z.array(scoresSchema.nullable()),
+  /** The pins added per game bowled in each entry of `sweepers` (SCR-09). */
+  sweeperPins: z.array(z.number().int()),
   flags: z.array(sweeperFlagSchema),
 })
 

@@ -47,7 +47,14 @@ const squad = createSquadResults({
       entries: 3,
       rows: [row],
       didNotFinish: [
-        { registrationId: 'r2', name: 'Bob', total: 445, highGame: 230, games: 2, handicap: 0 },
+        {
+          registrationId: 'r2',
+          name: 'Bob',
+          total: 445,
+          games: 2,
+          handicap: 0,
+          scores: [230, 215],
+        },
       ],
       noShows: [{ registrationId: 'r3', name: 'Mike' }],
     }),
@@ -161,7 +168,6 @@ describe('fetchSquadResults', () => {
       'a division with no showHandicap',
       { ...squad, divisions: [{ ...division, showHandicap: 1 }] },
     ],
-    ['a division with no showGames', { ...squad, divisions: [{ ...division, showGames: 'yes' }] }],
     ['a division with no rows', { ...squad, divisions: [{ ...division, rows: undefined }] }],
     ['a row with no name', { ...squad, divisions: [{ ...division, rows: [{ ...row, name: 5 }] }] }],
     [
@@ -173,8 +179,12 @@ describe('fetchSquadResults', () => {
       { ...squad, divisions: [{ ...division, rows: [{ ...row, total: null }] }] },
     ],
     [
-      'a row with no high game',
-      { ...squad, divisions: [{ ...division, rows: [{ ...row, highGame: null }] }] },
+      'a row with no scores',
+      { ...squad, divisions: [{ ...division, rows: [{ ...row, scores: undefined }] }] },
+    ],
+    [
+      'a row with a score that is not a number',
+      { ...squad, divisions: [{ ...division, rows: [{ ...row, scores: [200, 'x'] }] }] },
     ],
     [
       'a row with no games',
@@ -283,7 +293,7 @@ describe('fetchSquadResults', () => {
         divisions: [
           {
             ...division,
-            didNotFinish: [{ name: 'x', total: 1, highGame: 1, games: 1, handicap: 0 }],
+            didNotFinish: [{ name: 'x', total: 1, games: 1, handicap: 0, scores: [1] }],
           },
         ],
       },
@@ -295,7 +305,7 @@ describe('fetchSquadResults', () => {
         divisions: [
           {
             ...division,
-            didNotFinish: [{ registrationId: 'r', total: 1, highGame: 1, games: 1, handicap: 0 }],
+            didNotFinish: [{ registrationId: 'r', total: 1, games: 1, handicap: 0, scores: [1] }],
           },
         ],
       },
@@ -308,7 +318,7 @@ describe('fetchSquadResults', () => {
         divisions: [
           {
             ...division,
-            didNotFinish: [{ registrationId: 'r', name: 'x', highGame: 1, games: 1, handicap: 0 }],
+            didNotFinish: [{ registrationId: 'r', name: 'x', games: 1, handicap: 0, scores: [1] }],
           },
         ],
       },
@@ -320,7 +330,19 @@ describe('fetchSquadResults', () => {
         divisions: [
           {
             ...division,
-            didNotFinish: [{ registrationId: 'r', name: 'x', total: 1, highGame: 1, games: 1 }],
+            didNotFinish: [{ registrationId: 'r', name: 'x', total: 1, games: 1, scores: [1] }],
+          },
+        ],
+      },
+    ],
+    [
+      'a did-not-finish row with no scores',
+      {
+        ...squad,
+        divisions: [
+          {
+            ...division,
+            didNotFinish: [{ registrationId: 'r', name: 'x', total: 1, games: 1, handicap: 0 }],
           },
         ],
       },
@@ -381,6 +403,7 @@ describe('fetchSweeperResults', () => {
     ['a row with an unknown group', { ...sweeper, rows: [{ ...first, group: 'advancer' }] }],
     ['a row with no division', { ...sweeper, rows: [{ ...first, divisionName: undefined }] }],
     ['a row with no bonus pins', { ...sweeper, rows: [{ ...first, bonusPins: null }] }],
+    ['a row with no scores', { ...sweeper, rows: [{ ...first, scores: undefined }] }],
     ['a row with no name', { ...sweeper, rows: [{ ...first, name: undefined }] }],
   ])('rejects %s', async (_label, body) => {
     respondWith(sweeperPath, body)
@@ -644,6 +667,18 @@ describe('the at-large, seeding, and super sweeper shape checks (RES-37)', () =>
       { ...superSweeper, rows: [{ ...superRow, divisionName: undefined }] },
     ],
     ['a row with text totals', { ...superSweeper, rows: [{ ...superRow, sweeperTotals: ['6'] }] }],
+    [
+      'a row with no sweeper scores',
+      { ...superSweeper, rows: [{ ...superRow, sweeperScores: undefined }] },
+    ],
+    [
+      'a row with text sweeper scores',
+      { ...superSweeper, rows: [{ ...superRow, sweeperScores: [['200'], null] }] },
+    ],
+    [
+      'a row with no sweeper pins',
+      { ...superSweeper, rows: [{ ...superRow, sweeperPins: ['0'] }] },
+    ],
     [
       'a row with an unknown flag',
       { ...superSweeper, rows: [{ ...superRow, flags: [{ ...flag, kind: 'late' }] }] },

@@ -210,11 +210,12 @@ export async function loadSuperSweeper(
     place: index + 1,
     group,
     total: item.entry.total,
-    highGame: item.entry.highGame,
     games: item.entry.games.length,
     ties: marks.get(item.entry.registrationId) ?? [],
     divisionName: item.entry.divisionName,
     sweeperTotals: item.sweeperTotals,
+    sweeperScores: item.sweeperScores,
+    sweeperPins: item.sweeperPins,
     flags: item.flags,
   })
 

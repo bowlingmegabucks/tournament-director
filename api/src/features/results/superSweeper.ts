@@ -24,6 +24,10 @@ export interface SuperSweeperEntry {
   entry: ResultEntry
   /** One total per sweeper, in the order given: scratch plus that sweeper's pins. `null`: open, no score yet. */
   sweeperTotals: (number | null)[]
+  /** The scratch games of each sweeper: zero-filled when complete, `null` while open with no score. */
+  sweeperScores: (number[] | null)[]
+  /** The pins per game bowled in each sweeper. */
+  sweeperPins: number[]
   flags: SweeperFlag[]
 }
 
@@ -59,6 +63,8 @@ function buildEntry(
   const games: number[] = []
   const highGames: number[] = []
   const sweeperTotals: (number | null)[] = []
+  const sweeperScores: (number[] | null)[] = []
+  const sweeperPinsList: number[] = []
   const flags: SweeperFlag[] = []
   let total = 0
 
@@ -68,6 +74,8 @@ function buildEntry(
     const bowled = rows.every((score) => score === 0) ? [] : rows
     if (bowled.length === 0 && !sweeper.complete) {
       sweeperTotals.push(null)
+      sweeperScores.push(null)
+      sweeperPinsList.push(pins(registrant, division))
       continue
     }
     const pinsPerGame = pins(registrant, division)
@@ -81,7 +89,10 @@ function buildEntry(
         gamesBowled: bowled.length,
       })
     }
-    games.push(...bowled, ...Array.from({ length: missing }, () => 0))
+    const filled = [...bowled, ...Array.from({ length: missing }, () => 0)]
+    sweeperScores.push(filled)
+    sweeperPinsList.push(pinsPerGame)
+    games.push(...filled)
     highGames.push(...bowled.map((score) => score + pinsPerGame))
     sweeperTotals.push(sweeperTotal)
     total += sweeperTotal
@@ -100,7 +111,13 @@ function buildEntry(
     pins: 0,
   })
   // The pins differ by sweeper, so the total and high game are set here, not by `toResultEntry`.
-  return { entry: { ...base, total, highGame: Math.max(0, ...highGames) }, sweeperTotals, flags }
+  return {
+    entry: { ...base, total, highGame: Math.max(0, ...highGames) },
+    sweeperTotals,
+    sweeperScores,
+    sweeperPins: sweeperPinsList,
+    flags,
+  }
 }
 
 /**

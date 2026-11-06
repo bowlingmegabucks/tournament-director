@@ -16,12 +16,18 @@ export interface ResultEntryInput {
   divisionName: string
   /** Scratch pins by game, in game order. Only games with a stored score. */
   games: number[]
+  /**
+   * The same games by game number, so a game with no stored score is `null` (the dash on the page).
+   * Left out, it is `games`.
+   */
+  gameScores?: (number | null)[]
   /** Pins added per game: the handicap on a squad (SCR-07), the bonus pins on a sweeper (SCR-09). */
   pins: number
 }
 
 /** An entry with the figures that ranking compares (SCR-11). */
 export interface ResultEntry extends ResultEntryInput {
+  gameScores: (number | null)[]
   /** SCR-08, SCR-09: scratch pins plus `pins` for each game bowled. */
   total: number
   /** The best scratch game plus `pins` (SCR-11 step 3). 0 when there are no games. */
@@ -36,6 +42,7 @@ export function toResultEntry(input: ResultEntryInput): ResultEntry {
   const top = best[0]
   return {
     ...input,
+    gameScores: input.gameScores ?? input.games,
     total: scratch + input.pins * input.games.length,
     highGame: top === undefined ? 0 : top + input.pins,
     best,
@@ -98,6 +105,10 @@ export function buildResultEntries(
         divisionId: division.id,
         divisionName: division.name,
         games: [...stored.entries()].sort(([a], [b]) => a - b).map(([, score]) => score),
+        gameScores: Array.from(
+          { length: Math.max(...stored.keys()) },
+          (_, index) => stored.get(index + 1) ?? null,
+        ),
         pins: pinsFor(entry, division),
       }),
     )

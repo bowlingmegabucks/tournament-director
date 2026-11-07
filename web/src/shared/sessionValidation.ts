@@ -48,7 +48,9 @@ export function lane(
   if (parsed.value < range.min || parsed.value > range.max) {
     return `${label} must be between ${range.min} and ${range.max}`
   }
-  return parsed.value % 2 === (parity.odd ? 1 : 0) ? undefined : parity.message
+  const wantedRemainder = parity.odd ? 1 : 0
+  if (parsed.value % 2 !== wantedRemainder) return parity.message
+  return undefined
 }
 
 export function startingLaneProblem(text: string): string | undefined {

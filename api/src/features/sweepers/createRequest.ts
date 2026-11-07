@@ -41,7 +41,7 @@ const sweeperFields = {
     .refine((value) => value <= 99.9, { error: 'Cash ratio cannot be more than 99.9' })
     .refine((value) => hasAtMostDecimals(value, 1), { error: 'Use at most one decimal place' }),
   bonusPins: z.preprocess(
-    (value) => (value === undefined || value === null ? {} : value),
+    (value) => value ?? {},
     z
       .record(
         z.string(),

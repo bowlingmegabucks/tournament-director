@@ -80,13 +80,10 @@ export class SweeperRejectedError extends Error {
 function fieldErrors(value: unknown): SweeperFieldErrors {
   const errors: SweeperFieldErrors = {}
   if (typeof value !== 'object' || value === null) return errors
+  const scalarNames: readonly string[] = sweeperScalarFields
   for (const [key, message] of Object.entries(value)) {
     if (typeof message !== 'string') continue
-    if (
-      key === 'bonusPins' ||
-      key.startsWith(pinKey('')) ||
-      sweeperScalarFields.some((name) => name === key)
-    ) {
+    if (key === 'bonusPins' || key.startsWith(pinKey('')) || scalarNames.includes(key)) {
       errors[key] = message
     }
   }

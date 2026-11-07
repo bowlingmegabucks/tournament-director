@@ -212,6 +212,17 @@ describe('Prisma registration writer', () => {
     expect(await ssnOf(bowlerId)).toBe(legacySsn)
   })
 
+  it('finds a bowler by id, and none for an unknown id (BWL-15, D-157)', async () => {
+    const { writer } = setup()
+    const bowlerId = await insertLegacyBowler('1234-56789', 1)
+
+    const stored = await writer.findBowlerById(bowlerId)
+
+    expect(stored).toMatchObject({ id: bowlerId, usbcId: '1234-56789' })
+    expect(stored).not.toHaveProperty('socialSecurityNumber')
+    expect(await writer.findBowlerById(crypto.randomUUID())).toBeUndefined()
+  })
+
   it('writes one transaction: a duplicate payment code leaves nothing behind (REG-07)', async () => {
     const { writer } = setup()
     const tournamentId = await insertTournament()

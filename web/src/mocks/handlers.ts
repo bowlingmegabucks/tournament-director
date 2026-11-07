@@ -45,6 +45,8 @@ const busySquadId = squads[1]?.id
 const scoredSweeperId = sweepers[0]?.id
 
 const demoSettings = createSettings()
+// The demo's past tournaments are complete, so the e2e tests can see what a complete one refuses (D-130).
+const completedIds = new Set(tournaments.slice(1).map((tournament) => tournament.id))
 // What each tournament made through the form was given, so the overview shows what was typed.
 const createdSettings = new Map<string, TournamentSettings>()
 
@@ -257,7 +259,7 @@ export const handlers = [
       ? HttpResponse.json({
           settings: {
             ...(createdSettings.get(String(params.id)) ?? demoSettings),
-            completed: false,
+            completed: completedIds.has(String(params.id)),
           },
         })
       : notFound(),

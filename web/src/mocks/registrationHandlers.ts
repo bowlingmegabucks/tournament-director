@@ -10,7 +10,6 @@ import type {
 } from '../features/registrations/types'
 import type { Squad } from '../features/squads/types'
 import type { Tournament } from '../features/tournaments/types'
-import { createRegistration } from './data'
 
 interface MockBowler extends BowlerValues {
   id: string
@@ -104,7 +103,7 @@ export function createRegistrationHandlers({
       state: 'MA',
       usbcId: '7000-10001',
     }),
-    // Registered, with a score: the division is locked (D-160).
+    // Registered, with a score: the division is locked (D-160). Not in the list the page first shows.
     bowler({
       firstName: 'Sam',
       lastName: 'Scored',
@@ -146,22 +145,8 @@ export function createRegistrationHandlers({
   const open = squads.find((squad) => !squad.complete)
   const firstDivision = divisions[0]
   if (sam && firstDivision && open) {
-    const entry = createRegistration({
-      bowler: {
-        id: sam.id,
-        name: displayName(sam),
-        firstName: 'Sam',
-        lastName: 'Scored',
-        usbcId: sam.usbcId,
-      },
-      divisionId: firstDivision.id,
-      divisionName: firstDivision.name,
-      squadIds: [open.id],
-    })
-    registrations.registrations.push(entry)
-    registrations.summary.registrations += 1
     stored.push({
-      id: entry.id,
+      id: faker.string.uuid(),
       bowlerId: sam.id,
       divisionId: firstDivision.id,
       average: 185,
@@ -171,6 +156,20 @@ export function createRegistrationHandlers({
       hasScores: true,
     })
   }
+
+  // Hooks for the e2e tests: a search that fails once, one that finds more than 25, and a save that fails once.
+  let boomed = false
+  let flaked = false
+  const crowd: BowlerSearchResult[] = Array.from({ length: 26 }, (_, index) => ({
+    id: faker.string.uuid(),
+    name: `Pat Many${String(index).padStart(2, '0')}`,
+    firstName: 'Pat',
+    lastName: `Many${String(index).padStart(2, '0')}`,
+    usbcId: '',
+    city: 'Salem',
+    state: 'MA',
+    registered: null,
+  }))
 
   const tournamentExists = (id: unknown) => tournaments.some((candidate) => candidate.id === id)
   const registrationOf = (bowlerId: string) => stored.find((entry) => entry.bowlerId === bowlerId)
@@ -249,6 +248,13 @@ export function createRegistrationHandlers({
       if (lastName === '' && firstName === '' && email === '' && usbcId === '') {
         return HttpResponse.json({ message: 'Enter at least one search field.' }, { status: 400 })
       }
+      if (lastName.toLowerCase() === 'boom' && !boomed) {
+        boomed = true
+        return new HttpResponse(null, { status: 500 })
+      }
+      if (lastName.toLowerCase() === 'many') {
+        return HttpResponse.json({ bowlers: crowd.slice(0, 25), more: true })
+      }
       const found = bowlers
         .filter(
           (candidate) =>
@@ -278,6 +284,10 @@ export function createRegistrationHandlers({
       }
       const body = (await request.json()) as DeskRegistrationRequest
       const errors: Record<string, string> = {}
+      if (body.bowler.lastName === 'Flaky' && !flaked) {
+        flaked = true
+        return new HttpResponse(null, { status: 500 })
+      }
       const stored_ = body.bowlerId
         ? bowlers.find((candidate) => candidate.id === body.bowlerId)
         : undefined

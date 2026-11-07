@@ -702,6 +702,82 @@ for (const colorScheme of colorSchemes) {
 
       await expectNoViolations(page)
     })
+
+    test('add-registration page, every step, and its dialogs have no WCAG 2.2 AA violations', async ({
+      page,
+    }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Registrations')
+      await page.getByRole('link', { name: 'Add registration' }).click()
+      await expect(page.getByRole('form', { name: 'Find a bowler' })).toBeVisible()
+      await expectNoViolations(page)
+
+      // The search with its error, then its results (a Registered badge among them).
+      await page.getByRole('button', { name: 'Search' }).click()
+      await expect(page.getByRole('alert')).toContainText('Enter at least one search field.')
+      await expectNoViolations(page)
+      await page.getByLabel('Last name starts with').fill('Abbott')
+      await page.getByRole('button', { name: 'Search' }).click()
+      await expect(page.getByText('✓ Registered: Open')).toBeVisible()
+      await expectNoViolations(page)
+
+      // A stored bowler, not registered: step 1, step 2 with errors and with a locked squad, step 3.
+      await page.getByLabel('Last name starts with').fill('Gonzalez')
+      await page.getByLabel('First name starts with').fill('Maria')
+      await page.getByRole('button', { name: 'Search' }).click()
+      await page.getByRole('button', { name: /^Pick Maria Gonzalez, 1234-56789/ }).click()
+      await expect(page.getByRole('heading', { name: 'Bowler', level: 2 })).toBeVisible()
+      await page.getByLabel('Street').fill('88 Pine Road')
+      await expectNoViolations(page)
+      await page.getByRole('button', { name: 'Next: registration' }).click()
+      await page.getByRole('button', { name: 'Next: review' }).click()
+      await expect(page.getByRole('alert')).toContainText('Pick a division')
+      await expectNoViolations(page)
+      await page.getByLabel('Division (required)').selectOption('Scratch')
+      await page.getByLabel(/Sat 10\/24\/2026 1:00 PM/).check()
+      await expectNoViolations(page)
+      await page.getByRole('button', { name: 'Next: review' }).click()
+      await expect(page.getByText('Street: 14 Elm Street → 88 Pine Road')).toBeVisible()
+      await expectNoViolations(page)
+    })
+
+    test('add-registration dialogs have no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Registrations')
+      await page.getByRole('link', { name: 'Add registration' }).click()
+
+      // USBC ID on file.
+      await page.getByRole('button', { name: 'New bowler' }).click()
+      await page.getByLabel('First name (required)').fill('Mary')
+      await page.getByLabel('Last name (required)').fill('Gonzalez')
+      await page.getByLabel('USBC ID').fill('1234-56789')
+      await page.getByRole('button', { name: 'Next: registration' }).click()
+      await page.getByLabel('Division (required)').selectOption('Scratch')
+      await page.getByLabel(/Sat 10\/24\/2026 1:00 PM/).check()
+      await page.getByRole('button', { name: 'Next: review' }).click()
+      await page.getByRole('button', { name: 'Add registration', exact: true }).click()
+      await expect(
+        page.getByRole('dialog', { name: 'A bowler with this USBC ID is on file' }),
+      ).toBeVisible()
+      await expectNoViolations(page)
+      await page.getByRole('button', { name: 'No, change the USBC ID' }).click()
+      await page.getByRole('link', { name: 'Cancel' }).click()
+
+      // Already registered, found at save.
+      await page.getByRole('link', { name: 'Add registration' }).click()
+      await page.getByLabel('Last name starts with').fill('Runner')
+      await page.getByRole('button', { name: 'Search' }).click()
+      await page.getByRole('button', { name: /^Pick Race Runner/ }).click()
+      await page.getByRole('button', { name: 'Next: registration' }).click()
+      await page.getByLabel('Division (required)').selectOption('Scratch')
+      await page.getByLabel(/Sun 10\/25\/2026 9:00 AM/).check()
+      await page.getByRole('button', { name: 'Next: review' }).click()
+      await page.getByRole('button', { name: 'Add registration', exact: true }).click()
+      await expect(page.getByRole('dialog', { name: 'Already registered' })).toBeVisible()
+      await expectNoViolations(page)
+    })
   })
 }
 

@@ -32,6 +32,9 @@ describe('changedFields', () => {
     })
     expect(changedFields({ a: 1, b: null as number | null }, { b: null })).toEqual({})
   })
+  it('does not turn a field sent as undefined into a change (SQD-23)', () => {
+    expect(Object.keys(changedFields({ a: 1, b: 2 }, { a: undefined, b: 3 }))).toEqual(['b'])
+  })
   it('counts a cleared override as a change (D-183)', () => {
     expect(changedFields({ fee: 60 as number | null }, { fee: null })).toEqual({ fee: null })
   })
@@ -91,6 +94,19 @@ describe('sessionRefusals', () => {
       numberOfLanes: 'Lane 19 has a bowler assigned. Move them first.',
     })
     expect(sessionRefusals(c, { startingLane: 3, numberOfLanes: 18 }, 'Squad')).toEqual({})
+  })
+  it('refuses a lane just past the new end and allows the last lane itself (D-182)', () => {
+    const past = context({ facts: { assignedLanes: [13] } })
+    expect(sessionRefusals(past, { numberOfLanes: 12 }, 'Squad')).toEqual({
+      numberOfLanes: 'Lane 13 has a bowler assigned. Move them first.',
+    })
+    const last = context({ facts: { assignedLanes: [12] } })
+    expect(sessionRefusals(last, { numberOfLanes: 12 }, 'Squad')).toEqual({})
+  })
+  it('does not look at the lanes when no lane field changes, even if a bowler sits outside them (D-17)', () => {
+    const outside = context({ facts: { assignedLanes: [50] } })
+    expect(sessionRefusals(outside, { date: '2026-10-24T10:00:00' }, 'Squad')).toEqual({})
+    expect(sessionRefusals(outside, { maxPerPair: 5 }, 'Squad')).toEqual({})
   })
   it('allows lanes that still hold every bowler (D-182)', () => {
     const c = context({ facts: { assignedLanes: [3, 19] } })

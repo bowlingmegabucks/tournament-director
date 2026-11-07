@@ -111,7 +111,8 @@ describe(`PATCH ${url}`, () => {
     const response = await request(setup().app).patch(url).send({ startingLane: 197 })
 
     expect(response.status).toBe(400)
-    expect(response.body).toMatchObject({
+    expect(response.body).toEqual({
+      message: 'Check the highlighted fields. Lanes must end at lane 200 or lower',
       errors: { numberOfLanes: 'Lanes must end at lane 200 or lower' },
     })
   })
@@ -243,6 +244,45 @@ describe(`PATCH ${url}`, () => {
     expect(line).toMatchObject({ tournamentId, sweeperId, fields: ['entryFee', 'games'] })
     expect(typeof line?.['actorId']).toBe('string')
     expect(JSON.stringify(line)).not.toContain('27.31')
+  })
+
+  it('does not log a save that changed nothing', async () => {
+    const { logger, records } = createCapturedLogger()
+    const app = createSignedInTestApp({ sweeperWriter: setup().writer, logger })
+
+    await request(app).patch(url).send({})
+
+    expect(records().find((record) => record['msg'] === 'Sweeper updated')).toBeUndefined()
+  })
+
+  it('works out the divisions and the tournament days from the sweeper when none are given', async () => {
+    const twoPins = {
+      ...sweeper,
+      bonusPins: [
+        { divisionId: openId, divisionName: 'Open', bonusPinsPerGame: 10 },
+        { divisionId: womenId, divisionName: 'Women', bonusPinsPerGame: 6 },
+      ],
+    }
+    const { app } = setup({
+      divisions: undefined,
+      dates: undefined,
+      seed: [{ tournamentId, sweeper: twoPins }],
+    })
+
+    const response = await request(app)
+      .patch(url)
+      .send({ date: '2026-10-26T09:00', bonusPins: { [womenId]: 7 } })
+
+    expect(response.status).toBe(200)
+    expect(response.body).toMatchObject({
+      sweeper: {
+        date: '2026-10-26T09:00:00',
+        bonusPins: [
+          { divisionId: openId, divisionName: 'Open', bonusPinsPerGame: 10 },
+          { divisionId: womenId, divisionName: 'Women', bonusPinsPerGame: 7 },
+        ],
+      },
+    })
   })
 
   it('passes a storage outage on as 503', async () => {

@@ -152,6 +152,14 @@ describe('planSquadEdit', () => {
       }
     })
 
+    it('does not warn about the ratios when only another field changes, even with scores (SQD-25)', () => {
+      const scored = context({ facts: { hasScores: true } })
+      expect(planSquadEdit(scored, { entryFee: 70 }, false)).toEqual({
+        kind: 'save',
+        changes: { entryFee: 70 },
+      })
+    })
+
     it('never warns for a field whose value did not change', () => {
       const scored = context({ facts: { hasScores: true, entryCount: 5 } })
       expect(planSquadEdit(scored, { cashRatio: 4, entryFee: 60 }, false)).toEqual({

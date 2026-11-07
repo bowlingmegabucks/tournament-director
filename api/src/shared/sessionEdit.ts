@@ -222,6 +222,7 @@ export const resultsMessage = 'Scores are saved. Posted results change at once.'
 /** Put warnings in the order the form lists its fields, so they read the same every time. */
 export function inFormOrder(warnings: EditWarning[], order: readonly string[]): EditWarning[] {
   const place = (warning: EditWarning) => {
+    // Stryker disable next-line StringLiteral: `split` always returns a first part, so the fallback never runs.
     const index = order.indexOf(warning.field.split('.')[0] ?? '')
     return index === -1 ? order.length : index
   }

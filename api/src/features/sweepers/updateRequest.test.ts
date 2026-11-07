@@ -32,6 +32,12 @@ describe('parseUpdateSweeper (SQD-23, SQD-29)', () => {
     })
   })
 
+  it('refuses a confirmWarnings that is not true or false', () => {
+    expect(errors({ confirmWarnings: 'yes' })).toEqual({
+      confirmWarnings: 'Send confirmWarnings as true or false',
+    })
+  })
+
   it('runs the add checks and messages on each field sent (SQD-11, SQD-12)', () => {
     expect(errors({ entryFee: 0, games: 100, cashRatio: 1, maxPerPair: 1 })).toEqual({
       entryFee: 'Entry fee must be greater than $0',

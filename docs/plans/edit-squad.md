@@ -62,7 +62,7 @@ Both routes are web only. The vendor sees no change (D-09): the legacy API has n
 | --- | --- | --- |
 | `PATCH /v1/tournaments/{id}/squads/{sessionId}` | `200 { squad }` in the list shape | `400 { message, errors }` bad id, field, or unknown key; `401`; `403`; `404` unknown tournament, or the id is not a squad of this tournament; `409 { message, errors }` refused; `409 { message, warnings }` confirm; `503` |
 | `PATCH /v1/tournaments/{id}/sweepers/{sessionId}` | `200 { sweeper }` in the list shape | The same, with the sweeper's own fields |
-| `GET /v1/tournaments/{id}/squads/{sessionId}/edit-info` | `200 { editInfo }` | `400`, `401`, `403`, `404`, `503` |
+| `GET /v1/tournaments/{id}/squads/{sessionId}/edit-info` | `200 { editInfo }` | `400`, `401`, `403`, `404`, `503`. Mounted at its own path so the `squads.write` check cannot reach the public lanes, scores, and results reads |
 | `GET /v1/tournaments/{id}/sweepers/{sessionId}/edit-info` | `200 { editInfo }` | The same |
 
 Both need `squads.write` (director and admin). Signed out gets `401`; the API key and a score keeper get `403`.
@@ -81,7 +81,7 @@ Every key sent gets the add check and message (the `sessionFields` in `shared/se
 ### Order of checks
 
 1. Parse the body (`400`).
-2. Read the facts inside one serializable transaction with retry (D-184).
+2. Read the counts just before one serializable transaction with retry, then the session inside it (D-184, as the tournament and division edits).
 3. Complete tournament, then complete session: `409 errors.tournament` or `errors.session` (D-181).
 4. Date outside the tournament: `409 errors.date` (`SQD-03`).
 5. Locks: sweeper `games` with scores; lanes or max per pair that strand a bowler (D-182). All refusals are reported together.
@@ -138,7 +138,7 @@ Mockups (open `docs/plans/edit-squad-mockups/index.html`):
 Screens:
 
 - **Edit link.** Each card on the Squads and Sweepers pages gets an "Edit" link beside the date link, shown only to a user with `squads.write`, hidden for a complete session or complete tournament (`SQD-30`).
-- **Edit squad** `/tournaments/{id}/squads/{sessionId}/edit` and **Edit sweeper** `/tournaments/{id}/sweepers/{sessionId}/edit`. The add form filled with the stored values (the squad's own values, with a blank box and "Tournament: $50.00" when it does not override). `SquadForm` and `SweeperForm` gain three data props rather than booleans: `fieldNotes` (a "Locked: …" or "Asks you to confirm: …" line per field), `lockedFields` (read-only inputs), and `submitLabel`. Add keeps working unchanged.
+- **Edit squad** `/tournaments/{id}/squads/{sessionId}/edit` and **Edit sweeper** `/tournaments/{id}/sweepers/{sessionId}/edit`. The add form filled with the stored values (the squad's own values, with a blank box and "Tournament: $50.00" when it does not override). `SquadForm` and `SweeperForm` gain `notes` (per box: a `limit`, a `lock` that makes the box read-only, and a `confirm` line), `checkChangedOnly`, and `submitLabel`, and `onSubmit` takes `confirmWarnings`. Add keeps working unchanged. The lane limits show as a "Limit:" line under each lane box, not one note on the group.
 - Only a field the director changed is checked and sent. A failed save shows a summary and moves focus to the first problem; refusals and `errors.date` show under their field; `errors.tournament` and `errors.session` show as a banner in place of the form on load and as an error toast after a save. Save says "Saving…" and is disabled while it runs. Any other failure is an error toast that stays until dismissed.
 - A sweeper's bonus pins show one box per division, filled with the stored value (0 when none). Only a box the director changed is sent.
 - **Confirm dialog.** The shared `ConfirmChangesDialog` titled "Save these changes?" lists each warning with the change behind it ("Entry fee: $50.00 → $60.00"; "Date: Sat Oct 24, 9:00 AM → Sat Oct 24, 1:00 PM"), as in `describeChange`. Go back has focus first; Save anyway resends with `confirmWarnings: true`.

@@ -8,7 +8,15 @@ import {
   startingLaneProblem,
   type TournamentDates,
 } from '../../shared/sessionValidation'
-import type { NewSquad, Squad, SquadFieldErrors, SquadFormValues } from './types'
+import {
+  squadFields,
+  type NewSquad,
+  type Squad,
+  type SquadChanges,
+  type SquadField,
+  type SquadFieldErrors,
+  type SquadFormValues,
+} from './types'
 
 /**
  * The create rules (SQD-02 to SQD-06, SQD-08, D-168 to D-170), run in the browser for quick
@@ -97,4 +105,53 @@ export function startingValues(squads: readonly Squad[] | undefined): SquadFormV
     numberOfLanes: String(latest.numberOfLanes),
     maxPerPair: String(latest.maxPerPair),
   }
+}
+
+/**
+ * The edit form's starting values (D-185): the stored values as text. A fee or ratio the squad does
+ * not override is blank, so the box shows the tournament's value as a hint and saving leaves it.
+ */
+export function toFormValues(squad: Squad): SquadFormValues {
+  return {
+    // The box takes `YYYY-MM-DDTHH:mm`; the API sends seconds too.
+    date: squad.date.slice(0, 16),
+    startingLane: String(squad.startingLane),
+    numberOfLanes: String(squad.numberOfLanes),
+    maxPerPair: String(squad.maxPerPair),
+    entryFee: squad.entryFeeOverridden ? String(squad.entryFee) : '',
+    finalsRatio: squad.finalsRatioOverridden ? String(squad.finalsRatio) : '',
+    cashRatio: squad.cashRatioOverridden ? String(squad.cashRatio) : '',
+  }
+}
+
+/** The boxes whose text differs from where the form started. */
+export function changedFields(initial: SquadFormValues, values: SquadFormValues): SquadField[] {
+  return squadFields.filter((name) => values[name].trim() !== initial[name].trim())
+}
+
+/**
+ * Check only the boxes the director changed (D-184): a stored value that breaks a limit must not
+ * block an edit of something else. The lane block ties the two lane boxes, so a change to either
+ * checks it.
+ */
+export function validateSquadChanges(
+  initial: SquadFormValues,
+  values: SquadFormValues,
+  dates?: TournamentDates,
+): SquadFieldErrors {
+  const changed = new Set(changedFields(initial, values))
+  if (changed.has('startingLane')) changed.add('numberOfLanes')
+  const errors: SquadFieldErrors = {}
+  for (const [key, message] of Object.entries(validateSquad(values, dates))) {
+    if (changed.has(key as SquadField)) errors[key as SquadField] = message
+  }
+  return errors
+}
+
+/** The request for values that passed `validateSquadChanges`: only the boxes that changed. */
+export function toSquadChanges(initial: SquadFormValues, values: SquadFormValues): SquadChanges {
+  const all = toNewSquad(values)
+  const changes: SquadChanges = {}
+  for (const name of changedFields(initial, values)) Object.assign(changes, { [name]: all[name] })
+  return changes
 }

@@ -1,9 +1,13 @@
 import { useId, useState } from 'react'
 import type { ChangeEvent, MouseEvent, SubmitEvent } from 'react'
 import { Link } from 'react-router'
+import { ConfirmChangesDialog } from '../../shared/ConfirmChangesDialog'
+import { FieldNoteLines } from '../../shared/FieldNoteLines'
+import { noteIds, type FieldNote, type SessionWarning } from '../../shared/sessionEdit'
 import { formatDateRange } from '../tournaments/format'
 import styles from '../../shared/sessionForm.module.css'
 import type { TournamentDates } from '../../shared/sessionValidation'
+import { describeChange } from './describeChange'
 import {
   pinKey,
   sweeperScalarFields,
@@ -11,7 +15,7 @@ import {
   type SweeperFormValues,
   type SweeperScalarField,
 } from './types'
-import { validateSweeper } from './validateSweeper'
+import { validateSweeper, validateSweeperChanges } from './validateSweeper'
 
 interface BoxSpec {
   label: string
@@ -40,8 +44,12 @@ const keepFocus = (event: MouseEvent) => {
 const without = (errors: SweeperFieldErrors, key: string): SweeperFieldErrors =>
   Object.fromEntries(Object.entries(errors).filter(([name]) => name !== key))
 
-/** What a send came to: the API's messages for fields, another failure such as an outage, or nothing for success. */
-export type SweeperSubmitResult = { errors: SweeperFieldErrors } | { failure: string } | undefined
+/**
+ * What a send came to: the API's messages for fields, warnings to confirm (edit, D-180), another
+ * failure such as an outage, or nothing for success.
+ */
+export type SweeperSubmitResult =
+  { errors: SweeperFieldErrors } | { warnings: SessionWarning[] } | { failure: string } | undefined
 
 /** A division of the tournament: one bonus-pins box (SQD-13). */
 export interface FormDivision {
@@ -57,7 +65,13 @@ interface SweeperFormProps {
   /** The tournament's divisions in order, one bonus-pins box each. */
   divisions: readonly FormDivision[]
   pending: boolean
-  onSubmit: (values: SweeperFormValues) => Promise<SweeperSubmitResult>
+  /** Edit (D-184): check only the boxes the director changed, and say so in the confirm dialog. */
+  checkChangedOnly?: boolean
+  /** Edit (D-185): what each box carries: a limit, a lock, or a confirmation. Pins use `bonusPins.<id>`. */
+  notes?: Record<string, FieldNote>
+  submitLabel?: string
+  /** Send the values. `confirmWarnings` is true when the director has agreed to the warnings. */
+  onSubmit: (values: SweeperFormValues, confirmWarnings: boolean) => Promise<SweeperSubmitResult>
   /** A failure that is not about a field. */
   onFailure: (message: string) => void
   /** Called when the director presses Add, before any check, so a page can drop an old failure. */
@@ -77,6 +91,9 @@ export function SweeperForm({
   dates,
   divisions,
   pending,
+  checkChangedOnly = false,
+  notes = {},
+  submitLabel = 'Add sweeper',
   onSubmit,
   onFailure,
   onAttempt,
@@ -89,6 +106,9 @@ export function SweeperForm({
   const [summary, setSummary] = useState(false)
   // A field the director has typed in. Leaving one they never touched says nothing.
   const [edited, setEdited] = useState<Record<string, true>>({})
+  const [confirming, setConfirming] = useState<
+    { warnings: SessionWarning[]; failure?: string } | undefined
+  >()
 
   const divisionIds = divisions.map((division) => division.id)
   // In the order the form shows them, so the summary and the focus start at the first box.
@@ -112,7 +132,10 @@ export function SweeperForm({
     if (first) focusField(first)
   }
 
-  const found = (current: SweeperFormValues) => validateSweeper(current, dates, divisionIds)
+  const found = (current: SweeperFormValues) =>
+    checkChangedOnly
+      ? validateSweeperChanges(initialValues, current, dates, divisionIds)
+      : validateSweeper(current, dates, divisionIds)
 
   function change(
     key: string,
@@ -140,7 +163,7 @@ export function SweeperForm({
     }
   }
 
-  async function submit(event: SubmitEvent<HTMLFormElement>) {
+  function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     onAttempt()
     const problems = found(values)
@@ -150,15 +173,34 @@ export function SweeperForm({
     }
     // Stryker disable next-line BooleanLiteral,CallExpression: with the summary kept on, a box leaves its message only when it is wrong, and every box is right here.
     setSummary(false)
-    const result = await onSubmit(values)
+    void send(false)
+  }
+
+  async function send(confirmWarnings: boolean) {
+    const result = await onSubmit(values, confirmWarnings)
     if (result === undefined) return
-    if ('errors' in result) show(result.errors)
-    else onFailure(result.failure)
+    if ('errors' in result) {
+      // The dialog goes first, so the focus that `show` sets lands on the form.
+      setConfirming(undefined)
+      show(result.errors)
+    } else if ('warnings' in result) {
+      setConfirming({ warnings: result.warnings })
+    } else if (confirmWarnings) {
+      setConfirming((current) => current && { ...current, failure: result.failure })
+    } else {
+      onFailure(result.failure)
+    }
   }
 
   const describedBy = (key: string) =>
     // Stryker disable next-line MethodExpression: without the filter the list ends in a space, which assistive technology ignores.
-    [`${idOf(key)}-hint`, errors[key] ? `${idOf(key)}-error` : undefined].filter(Boolean).join(' ')
+    [
+      `${idOf(key)}-hint`,
+      ...noteIds(idOf(key), notes[key]),
+      errors[key] ? `${idOf(key)}-error` : undefined,
+    ]
+      .filter(Boolean)
+      .join(' ')
 
   const message = (key: string) =>
     errors[key] && (
@@ -178,6 +220,7 @@ export function SweeperForm({
         inputMode={name === 'entryFee' || name === 'cashRatio' ? 'decimal' : 'numeric'}
         autoComplete="off"
         value={values[name]}
+        readOnly={notes[name]?.lock !== undefined}
         aria-invalid={errors[name] ? true : undefined}
         aria-describedby={describedBy(name)}
         onChange={change(name, (current, text) => ({ ...current, [name]: text }))}
@@ -200,6 +243,7 @@ export function SweeperForm({
         <p id={`${idOf(name)}-hint`} className={styles.hint}>
           {spec.hint}
         </p>
+        <FieldNoteLines id={idOf(name)} note={notes[name]} />
         {message(name)}
       </div>
     )
@@ -220,6 +264,7 @@ export function SweeperForm({
           inputMode="numeric"
           autoComplete="off"
           value={values.bonusPins[division.id] ?? ''}
+          readOnly={notes[key]?.lock !== undefined}
           aria-invalid={errors[key] ? true : undefined}
           aria-describedby={describedBy(key)}
           onChange={change(key, (current, text) => ({
@@ -231,19 +276,14 @@ export function SweeperForm({
         <p id={`${idOf(key)}-hint`} className={styles.hint}>
           0 to 99. Leave blank for none.
         </p>
+        <FieldNoteLines id={idOf(key)} note={notes[key]} />
         {message(key)}
       </div>
     )
   }
 
   return (
-    <form
-      className={styles.form}
-      noValidate
-      onSubmit={(event) => {
-        void submit(event)
-      }}
-    >
+    <form className={styles.form} noValidate onSubmit={submit}>
       {summary && invalid.length > 0 && (
         <div role="alert" className={styles.summary}>
           <strong>
@@ -278,6 +318,7 @@ export function SweeperForm({
           min={`${dates.startDate}T00:00`}
           max={`${dates.endDate}T23:59`}
           value={values.date}
+          readOnly={notes['date']?.lock !== undefined}
           aria-invalid={errors['date'] ? true : undefined}
           aria-describedby={describedBy('date')}
           onChange={change('date', (current, text) => ({ ...current, date: text }))}
@@ -286,6 +327,7 @@ export function SweeperForm({
         <p id={`${idOf('date')}-hint`} className={styles.hint}>
           Within the tournament dates: {formatDateRange(dates.startDate, dates.endDate)}.
         </p>
+        <FieldNoteLines id={idOf('date')} note={notes['date']} />
         {message('date')}
       </div>
       <fieldset className={styles.group}>
@@ -326,12 +368,30 @@ export function SweeperForm({
       </fieldset>
       <div className={styles.actions}>
         <button type="submit" disabled={pending} onMouseDown={keepFocus}>
-          {pending ? 'Saving…' : 'Add sweeper'}
+          {pending ? 'Saving…' : submitLabel}
         </button>
         <Link className={styles.cancel} to={cancelTo} onMouseDown={keepFocus}>
           Cancel
         </Link>
       </div>
+      {confirming && (
+        <ConfirmChangesDialog
+          items={confirming.warnings.map((warning) => ({
+            field: warning.field,
+            message: warning.message,
+            change: describeChange(warning.field, initialValues, values, divisions),
+          }))}
+          pending={pending}
+          failure={confirming.failure}
+          onConfirm={() => {
+            setConfirming((current) => current && { warnings: current.warnings })
+            void send(true)
+          }}
+          onClose={() => {
+            setConfirming(undefined)
+          }}
+        />
+      )}
     </form>
   )
 }

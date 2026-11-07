@@ -1,10 +1,14 @@
 import { useId, useState } from 'react'
 import type { ChangeEvent, MouseEvent, SubmitEvent } from 'react'
 import { Link } from 'react-router'
+import { ConfirmChangesDialog } from '../../shared/ConfirmChangesDialog'
+import { FieldNoteLines } from '../../shared/FieldNoteLines'
+import { noteIds, type FieldNote, type SessionWarning } from '../../shared/sessionEdit'
 import { formatDateRange } from '../tournaments/format'
 import styles from '../../shared/sessionForm.module.css'
+import { describeChange } from './describeChange'
 import { squadFields, type SquadField, type SquadFieldErrors, type SquadFormValues } from './types'
-import { validateSquad, type TournamentDates } from './validateSquad'
+import { validateSquad, validateSquadChanges, type TournamentDates } from './validateSquad'
 
 interface BoxSpec {
   label: string
@@ -30,8 +34,12 @@ const keepFocus = (event: MouseEvent) => {
   event.preventDefault()
 }
 
-/** What a send came to: the API's messages for fields, another failure such as an outage, or nothing for success. */
-export type SquadSubmitResult = { errors: SquadFieldErrors } | { failure: string } | undefined
+/**
+ * What a send came to: the API's messages for fields, warnings to confirm (edit, D-180), another
+ * failure such as an outage, or nothing for success.
+ */
+export type SquadSubmitResult =
+  { errors: SquadFieldErrors } | { warnings: SessionWarning[] } | { failure: string } | undefined
 
 interface SquadFormProps {
   /** The values the form starts with: lanes and per pair from the latest squad (D-172). */
@@ -41,7 +49,13 @@ interface SquadFormProps {
   /** What the tournament uses, shown under a blank box (D-170), as text such as `$50.00`. */
   tournamentValues: { entryFee: string; finalsRatio: string; cashRatio: string }
   pending: boolean
-  onSubmit: (values: SquadFormValues) => Promise<SquadSubmitResult>
+  /** Edit (D-184): check only the boxes the director changed, and say so in the confirm dialog. */
+  checkChangedOnly?: boolean
+  /** Edit (D-185): what each box carries: a limit, a lock, or a confirmation. */
+  notes?: Partial<Record<SquadField, FieldNote>>
+  submitLabel?: string
+  /** Send the values. `confirmWarnings` is true when the director has agreed to the warnings. */
+  onSubmit: (values: SquadFormValues, confirmWarnings: boolean) => Promise<SquadSubmitResult>
   /** A failure that is not about a field. */
   onFailure: (message: string) => void
   /** Called when the director presses Add, before any check, so a page can drop an old failure. */
@@ -59,6 +73,9 @@ export function SquadForm({
   dates,
   tournamentValues,
   pending,
+  checkChangedOnly = false,
+  notes = {},
+  submitLabel = 'Add squad',
   onSubmit,
   onFailure,
   onAttempt,
@@ -70,8 +87,15 @@ export function SquadForm({
   const [summary, setSummary] = useState(false)
   // A field the director has typed in. Leaving one they never touched says nothing.
   const [edited, setEdited] = useState<Partial<Record<SquadField, true>>>({})
+  const [confirming, setConfirming] = useState<
+    { warnings: SessionWarning[]; failure?: string } | undefined
+  >()
 
   const idOf = (name: SquadField) => `${base}-${name}`
+  const check = (candidate: SquadFormValues) =>
+    checkChangedOnly
+      ? validateSquadChanges(initialValues, candidate, dates)
+      : validateSquad(candidate, dates)
   const invalid = squadFields.filter((name) => errors[name] !== undefined)
 
   function focusField(name: SquadField) {
@@ -99,29 +123,46 @@ export function SquadForm({
     return () => {
       // Tabbing through an empty box is not a mistake, unless a save has already failed.
       if (!edited[name] && !summary) return
-      setErrors((current) => ({ ...current, [name]: validateSquad(values, dates)[name] }))
+      setErrors((current) => ({ ...current, [name]: check(values)[name] }))
     }
   }
 
-  async function submit(event: SubmitEvent<HTMLFormElement>) {
+  function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     onAttempt()
-    const found = validateSquad(values, dates)
+    const found = check(values)
     if (Object.keys(found).length > 0) {
       show(found)
       return
     }
     // Stryker disable next-line BooleanLiteral,CallExpression: with the summary kept on, a box leaves its message only when it is wrong, and every box is right here.
     setSummary(false)
-    const result = await onSubmit(values)
+    void send(false)
+  }
+
+  async function send(confirmWarnings: boolean) {
+    const result = await onSubmit(values, confirmWarnings)
     if (result === undefined) return
-    if ('errors' in result) show(result.errors)
-    else onFailure(result.failure)
+    if ('errors' in result) {
+      // The dialog goes first, so the focus that `show` sets lands on the form.
+      setConfirming(undefined)
+      show(result.errors)
+    } else if ('warnings' in result) {
+      setConfirming({ warnings: result.warnings })
+    } else if (confirmWarnings) {
+      setConfirming((current) => current && { ...current, failure: result.failure })
+    } else {
+      onFailure(result.failure)
+    }
   }
 
   const describedBy = (name: SquadField) =>
     // Stryker disable next-line MethodExpression: without the filter the list ends in a space, which assistive technology ignores.
-    [`${idOf(name)}-hint`, errors[name] ? `${idOf(name)}-error` : undefined]
+    [
+      `${idOf(name)}-hint`,
+      ...noteIds(idOf(name), notes[name]),
+      errors[name] ? `${idOf(name)}-error` : undefined,
+    ]
       .filter(Boolean)
       .join(' ')
 
@@ -147,6 +188,7 @@ export function SquadForm({
         inputMode={name === 'entryFee' || name.endsWith('Ratio') ? 'decimal' : 'numeric'}
         autoComplete="off"
         value={values[name]}
+        readOnly={notes[name]?.lock !== undefined}
         aria-invalid={errors[name] ? true : undefined}
         aria-describedby={describedBy(name)}
         onChange={change(name)}
@@ -170,19 +212,14 @@ export function SquadForm({
           {spec.hint}
           {tournament}
         </p>
+        <FieldNoteLines id={idOf(name)} note={notes[name]} />
         {message(name)}
       </div>
     )
   }
 
   return (
-    <form
-      className={styles.form}
-      noValidate
-      onSubmit={(event) => {
-        void submit(event)
-      }}
-    >
+    <form className={styles.form} noValidate onSubmit={submit}>
       {summary && invalid.length > 0 && (
         <div role="alert" className={styles.summary}>
           <strong>
@@ -217,6 +254,7 @@ export function SquadForm({
           min={`${dates.startDate}T00:00`}
           max={`${dates.endDate}T23:59`}
           value={values.date}
+          readOnly={notes.date?.lock !== undefined}
           aria-invalid={errors.date ? true : undefined}
           aria-describedby={describedBy('date')}
           onChange={change('date')}
@@ -225,6 +263,7 @@ export function SquadForm({
         <p id={`${idOf('date')}-hint`} className={styles.hint}>
           Within the tournament dates: {formatDateRange(dates.startDate, dates.endDate)}.
         </p>
+        <FieldNoteLines id={idOf('date')} note={notes.date} />
         {message('date')}
       </div>
       <fieldset className={styles.group}>
@@ -246,12 +285,32 @@ export function SquadForm({
       </fieldset>
       <div className={styles.actions}>
         <button type="submit" disabled={pending} onMouseDown={keepFocus}>
-          {pending ? 'Saving…' : 'Add squad'}
+          {pending ? 'Saving…' : submitLabel}
         </button>
         <Link className={styles.cancel} to={cancelTo} onMouseDown={keepFocus}>
           Cancel
         </Link>
       </div>
+      {confirming && (
+        <ConfirmChangesDialog
+          items={confirming.warnings.map((warning) => ({
+            field: warning.field,
+            message: warning.message,
+            change: squadFields.includes(warning.field as SquadField)
+              ? describeChange(warning.field as SquadField, initialValues, values)
+              : '',
+          }))}
+          pending={pending}
+          failure={confirming.failure}
+          onConfirm={() => {
+            setConfirming((current) => current && { warnings: current.warnings })
+            void send(true)
+          }}
+          onClose={() => {
+            setConfirming(undefined)
+          }}
+        />
+      )}
     </form>
   )
 }

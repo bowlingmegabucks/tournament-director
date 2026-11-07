@@ -41,6 +41,13 @@ export interface NewSweeper {
   bonusPins: Record<string, number | null>
 }
 
+/**
+ * What `PATCH /v1/tournaments/{id}/sweepers/{sweeperId}` takes: only the fields that changed
+ * (SQD-23, D-184). `bonusPins` holds only the divisions whose box changed; a blank box is `null`
+ * and removes the row (SQD-29).
+ */
+export type SweeperChanges = Partial<NewSweeper>
+
 /** What the form holds: every box as text, so a half-typed value is not lost. */
 export interface SweeperFormValues {
   date: string

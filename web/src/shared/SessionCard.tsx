@@ -33,21 +33,45 @@ interface SessionCardProps {
   href: string
   /** The facts that differ between squads and sweepers. */
   facts: ReactNode
+  /** Beside the title, such as the Edit link (D-185). */
+  action?: ReactNode
   /** Anything below the facts. */
   children?: ReactNode
+}
+
+/**
+ * The "Edit" link of a card (D-185). The page decides when to show it: the user needs
+ * `squads.write` and the session and tournament must be open. The name carries the date so a
+ * screen reader can tell the links apart.
+ */
+export function EditSessionLink({ to, label }: Readonly<{ to: string; label: string }>) {
+  return (
+    <Link className={styles.editLink} to={to} aria-label={label}>
+      Edit
+    </Link>
+  )
 }
 
 /**
  * A squad or sweeper as a card (D-44). The date is the title, as in legacy, followed by Open or
  * Complete. It links to the session's page (D-60).
  */
-export function SessionCard({ session, href, facts, children }: Readonly<SessionCardProps>) {
+export function SessionCard({
+  session,
+  href,
+  facts,
+  action,
+  children,
+}: Readonly<SessionCardProps>) {
   return (
     <li className={styles.card}>
-      <h2 className={styles.title}>
-        <Link to={href}>{formatSessionDate(session.date)}</Link>
-        <span className={styles.status}>{session.complete ? 'Complete' : 'Open'}</span>
-      </h2>
+      <div className={styles.header}>
+        <h2 className={styles.title}>
+          <Link to={href}>{formatSessionDate(session.date)}</Link>
+          <span className={styles.status}>{session.complete ? 'Complete' : 'Open'}</span>
+        </h2>
+        {action}
+      </div>
       <dl className={styles.facts}>
         <Fact label="Lanes">{formatLanes(session.startingLane, session.numberOfLanes)}</Fact>
         <Fact label="Per pair">{formatPerPair(session.maxPerPair)}</Fact>

@@ -4,7 +4,14 @@ import { field } from '../../shared/field'
 import { readJson } from '../../shared/readJson'
 import { isSessionDate } from '../../shared/sessionFormat'
 import { TournamentNotFoundError } from '../../shared/tournamentQuery'
-import { squadFields, type NewSquad, type Squad, type SquadFieldErrors } from './types'
+import { patchSession } from '../../shared/sessionEditApi'
+import {
+  squadFields,
+  type NewSquad,
+  type Squad,
+  type SquadChanges,
+  type SquadFieldErrors,
+} from './types'
 
 const numbers = [
   'startingLane',
@@ -103,6 +110,22 @@ export async function createSquad(tournamentId: string, input: NewSquad): Promis
   if (response.status === 403) throw new Error('You do not have permission to add a squad.')
   if (!response.ok) throw new Error(`Failed to save the squad (${response.status})`)
   const squad = field(await readJson(response, 'Failed to save the squad'), 'squad')
+  if (!isSquad(squad)) throw new Error('Failed to save the squad (unexpected response)')
+  return squad
+}
+
+/**
+ * Change a squad (SQD-23, D-184): send only the fields that changed. Throws `SessionRejectedError`
+ * for a bad field or a refusal (400, 409 with `errors`) and `SessionWarningsError` when the director
+ * must confirm (409 with `warnings`).
+ */
+export async function updateSquad(
+  tournamentId: string,
+  squadId: string,
+  changes: SquadChanges,
+  confirmWarnings = false,
+): Promise<Squad> {
+  const squad = await patchSession('squads', tournamentId, squadId, changes, confirmWarnings)
   if (!isSquad(squad)) throw new Error('Failed to save the squad (unexpected response)')
   return squad
 }

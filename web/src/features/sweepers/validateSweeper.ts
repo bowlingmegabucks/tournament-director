@@ -11,10 +11,13 @@ import {
 } from '../../shared/sessionValidation'
 import {
   pinKey,
+  sweeperScalarFields,
   type NewSweeper,
   type Sweeper,
+  type SweeperChanges,
   type SweeperFieldErrors,
   type SweeperFormValues,
+  type SweeperScalarField,
 } from './types'
 
 /**
@@ -133,4 +136,86 @@ export function startingValues(sweepers: readonly Sweeper[] | undefined): Sweepe
     numberOfLanes: String(latest.numberOfLanes),
     maxPerPair: String(latest.maxPerPair),
   }
+}
+
+/**
+ * The edit form's starting values (D-185): the stored values as text. A division with no pins
+ * starts blank, which means 0.
+ */
+export function toFormValues(sweeper: Sweeper): SweeperFormValues {
+  return {
+    // The box takes `YYYY-MM-DDTHH:mm`; the API sends seconds too.
+    date: sweeper.date.slice(0, 16),
+    startingLane: String(sweeper.startingLane),
+    numberOfLanes: String(sweeper.numberOfLanes),
+    maxPerPair: String(sweeper.maxPerPair),
+    entryFee: String(sweeper.entryFee),
+    games: String(sweeper.games),
+    cashRatio: String(sweeper.cashRatio),
+    bonusPins: Object.fromEntries(
+      sweeper.bonusPins.map((pins) => [pins.divisionId, String(pins.bonusPinsPerGame)]),
+    ),
+  }
+}
+
+/** A blank pin box and a 0 mean the same: no bonus (D-176). Text that is not a number counts as itself. */
+const pinValue = (text: string | undefined) => {
+  const trimmed = (text ?? '').trim()
+  return trimmed === '' ? 0 : Number(trimmed)
+}
+
+/** The scalar boxes whose text differs from where the form started. */
+export function changedScalars(
+  initial: SweeperFormValues,
+  values: SweeperFormValues,
+): SweeperScalarField[] {
+  return sweeperScalarFields.filter((name) => values[name].trim() !== initial[name].trim())
+}
+
+/** The divisions whose pin box means something different from where the form started. */
+export function changedPins(
+  initial: SweeperFormValues,
+  values: SweeperFormValues,
+  divisionIds: readonly string[],
+): string[] {
+  return divisionIds.filter(
+    (id) => !Object.is(pinValue(values.bonusPins[id]), pinValue(initial.bonusPins[id])),
+  )
+}
+
+/**
+ * Check only the boxes the director changed (D-184): a stored value that breaks a limit must not
+ * block an edit of something else. The lane block ties the two lane boxes, so a change to the
+ * starting lane checks it too.
+ */
+export function validateSweeperChanges(
+  initial: SweeperFormValues,
+  values: SweeperFormValues,
+  dates: TournamentDates | undefined,
+  divisionIds: readonly string[],
+): SweeperFieldErrors {
+  const changed = new Set<string>(changedScalars(initial, values))
+  if (changed.has('startingLane')) changed.add('numberOfLanes')
+  for (const id of changedPins(initial, values, divisionIds)) changed.add(pinKey(id))
+  const errors: SweeperFieldErrors = {}
+  for (const [key, message] of Object.entries(validateSweeper(values, dates, divisionIds))) {
+    if (changed.has(key)) errors[key] = message
+  }
+  return errors
+}
+
+/** The request for values that passed `validateSweeperChanges`: only the boxes that changed. */
+export function toSweeperChanges(
+  initial: SweeperFormValues,
+  values: SweeperFormValues,
+  divisionIds: readonly string[],
+): SweeperChanges {
+  const all = toNewSweeper(values, divisionIds)
+  const changes: SweeperChanges = {}
+  for (const name of changedScalars(initial, values)) Object.assign(changes, { [name]: all[name] })
+  const pins = changedPins(initial, values, divisionIds)
+  if (pins.length > 0) {
+    changes.bonusPins = Object.fromEntries(pins.map((id) => [id, all.bonusPins[id] ?? null]))
+  }
+  return changes
 }

@@ -2,6 +2,7 @@ import { apiUrl } from '../../shared/apiUrl'
 import { apiFetch } from '../../shared/apiFetch'
 import { field } from '../../shared/field'
 import { readJson } from '../../shared/readJson'
+import { patchSession } from '../../shared/sessionEditApi'
 import { isSessionDate } from '../../shared/sessionFormat'
 import { TournamentNotFoundError } from '../../shared/tournamentQuery'
 import {
@@ -10,6 +11,7 @@ import {
   type BonusPins,
   type NewSweeper,
   type Sweeper,
+  type SweeperChanges,
   type SweeperFieldErrors,
 } from './types'
 
@@ -122,6 +124,22 @@ export async function createSweeper(tournamentId: string, input: NewSweeper): Pr
   if (response.status === 403) throw new Error('You do not have permission to add a sweeper.')
   if (!response.ok) throw new Error(`Failed to save the sweeper (${response.status})`)
   const sweeper = field(await readJson(response, 'Failed to save the sweeper'), 'sweeper')
+  if (!isSweeper(sweeper)) throw new Error('Failed to save the sweeper (unexpected response)')
+  return sweeper
+}
+
+/**
+ * Change a sweeper (SQD-23, SQD-29, D-184): send only the fields that changed. Throws
+ * `SessionRejectedError` for a bad field or a refusal (400, 409 with `errors`) and
+ * `SessionWarningsError` when the director must confirm (409 with `warnings`).
+ */
+export async function updateSweeper(
+  tournamentId: string,
+  sweeperId: string,
+  changes: SweeperChanges,
+  confirmWarnings = false,
+): Promise<Sweeper> {
+  const sweeper = await patchSession('sweepers', tournamentId, sweeperId, changes, confirmWarnings)
   if (!isSweeper(sweeper)) throw new Error('Failed to save the sweeper (unexpected response)')
   return sweeper
 }

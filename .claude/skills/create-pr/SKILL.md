@@ -1,6 +1,6 @@
 ---
 name: create-pr
-description: Create the GitHub pull request for the current branch with gh. Does what write-pr does (title, pr-description.md, labels), then creates the PR as ready for review, assigned to the signed-in gh user. Asks for the base branch if not given. Usage: /create-pr [base-branch]
+description: Create the GitHub pull request for the current branch with gh. Does what write-pr does (title, pr-description.md, labels), then creates the PR as ready for review, assigned to the signed-in gh user. Asks for the base branch and an optional milestone if not given. Usage: /create-pr [base-branch] [milestone]
 ---
 
 Write the PR title and description as `/write-pr` does, then create the PR with `gh`.
@@ -43,7 +43,17 @@ gh label create "<name>" --description "<description>" --color "<hex without #>"
 
 On a no, drop those labels from the PR. Existing labels need no confirmation here; they show in step 5.
 
-### 5. Confirm the PR
+### 5. Pick a milestone
+
+Take the milestone from the argument or the owner's message if given (`/create-pr <base> <milestone>`). If none, list the open ones and ask which to use, and say none is fine:
+
+```
+gh api repos/{owner}/{repo}/milestones --jq '.[].title'
+```
+
+A milestone is optional. If the owner names one that does not exist, say so and ask again (do not create it). If there are no open milestones, skip the question.
+
+### 6. Confirm the PR
 
 Show the owner:
 
@@ -51,22 +61,24 @@ Show the owner:
 - Base and head branches
 - Assignee (the signed-in user, from `gh api user --jq .login`)
 - Labels (existing ones plus any just created)
+- Milestone (or "none")
 - The body (`pr-description.md`)
 
 Ask for a yes. Do not create the PR before it.
 
-### 6. Create the PR
+### 7. Create the PR
 
 ```
-gh pr create --base <base> --title "<title>" --body-file pr-description.md --assignee "@me" --label "<a>" --label "<b>"
+gh pr create --base <base> --title "<title>" --body-file pr-description.md --assignee "@me" --label "<a>" --label "<b>" --milestone "<milestone>"
 ```
 
 - Always ready for review. Never pass `--draft`.
 - Pass `--label` only for labels that exist now. Omit the flag if there are none.
+- Pass `--milestone` only if the owner chose one.
 - Use `--body-file`, so the body is exactly `pr-description.md`.
 
-### 7. Clean up and reply
+### 8. Clean up and reply
 
 Once `gh` prints the PR link, delete `pr-description.md`. If creation failed, keep the file and show the error.
 
-Reply with the PR link, the title, the base, and the labels applied.
+Reply with the PR link, the title, the base, the labels applied, and the milestone.

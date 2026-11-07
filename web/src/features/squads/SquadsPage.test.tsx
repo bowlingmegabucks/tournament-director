@@ -3,7 +3,8 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
-import { createSquad, createTournament } from '../../mocks/data'
+import { createSettings, createSignedInUser, createSquad, createTournament } from '../../mocks/data'
+import { setMockUser } from '../../mocks/authHandlers'
 import { renderApp } from '../../test/renderApp'
 import type { Squad } from './types'
 
@@ -197,5 +198,64 @@ describe('SquadsPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Tournament not found')
     expect(calls).toBe(1)
+  })
+
+  describe('New squad link (SQD-01, D-167, D-171)', () => {
+    const serveSettings = (completed: boolean) => {
+      server.use(
+        http.get('/v1/tournaments/:id/settings', () =>
+          HttpResponse.json({ settings: createSettings({ completed }) }),
+        ),
+      )
+    }
+
+    it('shows a director a link to the form', async () => {
+      setMockUser(createSignedInUser({ roles: ['director'] }))
+      serve([])
+      serveSettings(false)
+
+      open()
+
+      expect(await screen.findByRole('link', { name: 'New squad' })).toHaveAttribute(
+        'href',
+        `/tournaments/${tournament.id}/squads/new`,
+      )
+    })
+
+    it('hides the link from a score keeper and from a signed-out visitor', async () => {
+      serve([])
+      serveSettings(false)
+      setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+
+      open()
+
+      await screen.findByText('No squads yet.')
+      expect(screen.queryByRole('link', { name: 'New squad' })).not.toBeInTheDocument()
+    })
+
+    it('hides the link on a complete tournament (D-171)', async () => {
+      setMockUser(createSignedInUser({ roles: ['director'] }))
+      serve([])
+      serveSettings(true)
+
+      open()
+
+      await screen.findByText('No squads yet.')
+      expect(screen.queryByRole('link', { name: 'New squad' })).not.toBeInTheDocument()
+    })
+
+    it('shows the link when the settings cannot be read, since the API still refuses (D-171)', async () => {
+      setMockUser(createSignedInUser({ roles: ['director'] }))
+      serve([])
+      server.use(
+        http.get('/v1/tournaments/:id/settings', () => new HttpResponse(null, { status: 500 })),
+      )
+
+      open()
+
+      expect(
+        await screen.findByRole('link', { name: 'New squad' }, { timeout: 3000 }),
+      ).toBeVisible()
+    })
   })
 })

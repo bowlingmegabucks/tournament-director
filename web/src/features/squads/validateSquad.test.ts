@@ -1,14 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createSquad } from '../../mocks/data'
 import type { SquadFormValues } from './types'
-import {
-  afterEndMessage,
-  beforeStartMessage,
-  emptySquadForm,
-  startingValues,
-  toNewSquad,
-  validateSquad,
-} from './validateSquad'
+import { emptySquadForm, startingValues, toNewSquad, validateSquad } from './validateSquad'
 
 const valid: SquadFormValues = {
   date: '2026-10-24T09:00',
@@ -58,8 +51,12 @@ describe('validateSquad', () => {
     )
 
     it('refuses the minute before the start day and after the end day', () => {
-      expect(errorsFor({ date: '2026-10-23T23:59' })).toEqual({ date: beforeStartMessage })
-      expect(errorsFor({ date: '2026-10-26T00:00' })).toEqual({ date: afterEndMessage })
+      expect(errorsFor({ date: '2026-10-23T23:59' })).toEqual({
+        date: 'Squad date must be after tournament start',
+      })
+      expect(errorsFor({ date: '2026-10-26T00:00' })).toEqual({
+        date: 'Squad date must be before tournament end',
+      })
     })
 
     it('accepts the first and last minute of the tournament', () => {
@@ -70,6 +67,26 @@ describe('validateSquad', () => {
     it('leaves the range to the API when the dates are not known', () => {
       expect(validateSquad({ ...valid, date: '2030-01-01T09:00' })).toEqual({})
     })
+  })
+
+  describe('what counts as a number', () => {
+    it.each([' 3 ', '03'])('reads %j as a number, spaces and all (SQD-06)', (startingLane) => {
+      expect(errorsFor({ startingLane })).toEqual({})
+    })
+
+    it.each(['.5', '60.', '.55', '-0'])(
+      'reads %j as a fee, a bare dot or a minus included (SQD-08)',
+      (entryFee) => {
+        expect(errorsFor({ entryFee })).not.toHaveProperty('entryFee', 'Enter a number')
+      },
+    )
+
+    it.each(['x5', '5x', '5 5', '1e3', '--5', '.', '-'])(
+      'refuses %j as not a number',
+      (entryFee) => {
+        expect(errorsFor({ entryFee })).toEqual({ entryFee: 'Enter a number' })
+      },
+    )
   })
 
   describe('starting lane (SQD-06, D-168)', () => {
@@ -172,6 +189,16 @@ describe('toNewSquad', () => {
     })
   })
 
+  it('reads a box of spaces as blank (D-170)', () => {
+    expect(
+      toNewSquad({ ...valid, entryFee: '   ', finalsRatio: ' ', cashRatio: '  ' }),
+    ).toMatchObject({
+      entryFee: null,
+      finalsRatio: null,
+      cashRatio: null,
+    })
+  })
+
   it('keeps a typed fee of 0 and the ratios (SQD-08)', () => {
     expect(
       toNewSquad({
@@ -194,6 +221,7 @@ describe('startingValues (D-172)', () => {
   it('copies lanes and bowlers per pair from the latest squad, and nothing else', () => {
     const squads = [
       createSquad({ startingLane: 1, numberOfLanes: 24, maxPerPair: 4 }),
+      createSquad({ startingLane: 9, numberOfLanes: 8, maxPerPair: 2 }),
       createSquad({
         startingLane: 5,
         numberOfLanes: 12,

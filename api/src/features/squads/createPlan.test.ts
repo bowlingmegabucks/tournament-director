@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  afterEndMessage,
-  beforeStartMessage,
-  completeMessage,
-  planCreate,
-  type CreateFacts,
-} from './createPlan.ts'
+import { planCreate, type CreateFacts } from './createPlan.ts'
 import type { NewSquad } from './createRequest.ts'
 
 const open: CreateFacts = { completed: false, startDate: '2026-10-24', endDate: '2026-10-25' }
@@ -31,14 +25,14 @@ describe('planCreate', () => {
   it('refuses the minute before the start day (SQD-03)', () => {
     expect(planCreate(open, input('2026-10-23T23:59:00'))).toEqual({
       kind: 'refused',
-      errors: { date: beforeStartMessage },
+      errors: { date: 'Squad date must be after tournament start' },
     })
   })
 
   it('refuses the first minute after the end day (SQD-03)', () => {
     expect(planCreate(open, input('2026-10-26T00:00:00'))).toEqual({
       kind: 'refused',
-      errors: { date: afterEndMessage },
+      errors: { date: 'Squad date must be before tournament end' },
     })
   })
 
@@ -50,7 +44,7 @@ describe('planCreate', () => {
   it('refuses a complete tournament before it looks at the date (D-171)', () => {
     expect(planCreate({ ...open, completed: true }, input('2026-12-01T09:00:00'))).toEqual({
       kind: 'refused',
-      errors: { tournament: completeMessage },
+      errors: { tournament: 'This tournament is complete and cannot be changed' },
     })
   })
 })

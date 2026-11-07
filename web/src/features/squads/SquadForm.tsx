@@ -111,6 +111,7 @@ export function SquadForm({
       show(found)
       return
     }
+    // Stryker disable next-line BooleanLiteral,CallExpression: with the summary kept on, a box leaves its message only when it is wrong, and every box is right here.
     setSummary(false)
     const result = await onSubmit(values)
     if (result === undefined) return
@@ -119,6 +120,7 @@ export function SquadForm({
   }
 
   const describedBy = (name: SquadField) =>
+    // Stryker disable next-line MethodExpression: without the filter the list ends in a space, which assistive technology ignores.
     [`${idOf(name)}-hint`, errors[name] ? `${idOf(name)}-error` : undefined]
       .filter(Boolean)
       .join(' ')

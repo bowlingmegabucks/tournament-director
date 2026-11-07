@@ -206,6 +206,22 @@ describe('createSquad (the API call)', () => {
     expect(failure).toMatchObject({ tournament: reason, errors: {} })
   })
 
+  it('names the failure when a 400 body is not JSON', async () => {
+    server.use(http.post(postPath, () => new HttpResponse('nope', { status: 400 })))
+
+    await expect(postSquad('t1', input)).rejects.toThrow(
+      'Failed to save the squad (response is not JSON)',
+    )
+  })
+
+  it('names the failure when a 201 body is not JSON', async () => {
+    server.use(http.post(postPath, () => new HttpResponse('nope', { status: 201 })))
+
+    await expect(postSquad('t1', input)).rejects.toThrow(
+      'Failed to save the squad (response is not JSON)',
+    )
+  })
+
   it('falls back on a plain message when a refusal sends none', async () => {
     server.use(http.post(postPath, () => HttpResponse.json({}, { status: 409 })))
 

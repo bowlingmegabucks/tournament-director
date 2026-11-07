@@ -39,6 +39,7 @@ function parse(text: string): Parsed {
 // 6.25 * 10 is not exactly 62.5 in floating point, so allow a tiny error (the API does the same).
 function hasAtMostDecimals(value: number, places: number): boolean {
   const scaled = value * 10 ** places
+  // Stryker disable next-line EqualityOperator: a difference of exactly 1e-6 cannot occur for two or fewer places.
   return Math.abs(scaled - Math.round(scaled)) < 1e-6
 }
 
@@ -82,6 +83,7 @@ function fee(text: string): string | undefined {
   return hasAtMostDecimals(parsed.value, 2) ? undefined : 'Use at most two decimal places'
 }
 
+// Stryker disable next-line Regex: without an anchor the text before or after still fails the round trip in `dayOf` (`new Date` rejects it).
 const DATE_TIME = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})$/
 
 /** `YYYY-MM-DDTHH:mm` of a real day and time, or `undefined`. */

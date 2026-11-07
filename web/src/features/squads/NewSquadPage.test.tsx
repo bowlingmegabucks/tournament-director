@@ -255,6 +255,140 @@ describe('NewSquadPage', () => {
     expect(screen.queryByText('Starting lane must be odd')).not.toBeInTheDocument()
   })
 
+  it('says what each lane box takes, and which boxes take decimals (SQD-04 to SQD-06, D-168)', async () => {
+    signIn()
+    serve({ squads: [] })
+
+    await openForm()
+
+    const lane = screen.getByLabelText('Starting lane (required)')
+    expect(lane).toHaveAccessibleDescription('An odd number, 1 to 199.')
+    expect(screen.getByLabelText('Number of lanes (required)')).toHaveAccessibleDescription(
+      'An even number, 2 to 200.',
+    )
+    expect(screen.getByLabelText('Bowlers per pair (required)')).toHaveAccessibleDescription(
+      '2 to 5. Matches the lane page.',
+    )
+    for (const label of ['Starting lane (required)', 'Number of lanes (required)']) {
+      expect(screen.getByLabelText(label)).toHaveAttribute('inputmode', 'numeric')
+    }
+    expect(screen.getByLabelText('Bowlers per pair (required)')).toHaveAttribute(
+      'inputmode',
+      'numeric',
+    )
+    for (const label of ['Entry fee', 'Finals ratio', 'Cash ratio']) {
+      expect(screen.getByLabelText(label)).toHaveAttribute('inputmode', 'decimal')
+    }
+  })
+
+  it('puts a $ before the fee box and nowhere else (D-170)', async () => {
+    signIn()
+    serve({ squads: [] })
+
+    await openForm()
+
+    expect(screen.getAllByText('$')).toHaveLength(1)
+  })
+
+  it('marks each wrong box invalid, the date included (SQD-03, SQD-06)', async () => {
+    signIn()
+    serve({ squads: [] })
+    const user = userEvent.setup()
+    await openForm()
+
+    await user.click(add())
+
+    expect(date()).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('Starting lane (required)')).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    )
+    expect(screen.getByLabelText('Entry fee')).not.toHaveAttribute('aria-invalid')
+  })
+
+  it('keeps the other messages when the director fixes one box (SQD-03, SQD-06)', async () => {
+    signIn()
+    serve({ squads: [] })
+    const user = userEvent.setup()
+    await openForm()
+    await user.click(add())
+    await screen.findByRole('alert')
+
+    pickDate('2026-10-24T09:00')
+
+    expect(
+      screen.queryByText('Date and time is required', { selector: 'p' }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText('Starting lane is required', { selector: 'p' })).toBeVisible()
+  })
+
+  it('drops the summary once every box is fixed (SQD-03 to SQD-06)', async () => {
+    signIn()
+    serve({ squads: [] })
+    const user = userEvent.setup()
+    await openForm()
+    await user.click(add())
+    await screen.findByRole('alert')
+
+    pickDate('2026-10-24T09:00')
+    await user.type(screen.getByLabelText('Starting lane (required)'), '1')
+    await user.type(screen.getByLabelText('Number of lanes (required)'), '2')
+    await user.type(screen.getByLabelText('Bowlers per pair (required)'), '4')
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('moves focus to a box when its message in the summary is followed (SQD-06)', async () => {
+    signIn()
+    serve({ squads: [] })
+    const user = userEvent.setup()
+    await openForm()
+    await user.click(add())
+    const alert = await screen.findByRole('alert')
+
+    const link = within(alert).getByRole('link', { name: 'Number of lanes is required' })
+    const notPrevented = fireEvent.click(link)
+
+    expect(notPrevented).toBe(false)
+    expect(screen.getByLabelText('Number of lanes (required)')).toHaveFocus()
+  })
+
+  it('keeps focus in the box when Add or Cancel is pressed with the mouse (D-172)', async () => {
+    signIn()
+    serve()
+    await openForm()
+
+    // A cancelled mousedown is how a page keeps the focus where it was.
+    expect(fireEvent.mouseDown(add())).toBe(false)
+    expect(fireEvent.mouseDown(screen.getByRole('link', { name: 'Cancel' }))).toBe(false)
+  })
+
+  it('stops the browser from sending the form itself (SQD-01)', async () => {
+    signIn()
+    serve()
+    await openForm()
+
+    const form = add().closest('form')
+    if (!form) throw new Error('No form')
+
+    expect(fireEvent.submit(form)).toBe(false)
+  })
+
+  it('lets the director dismiss the toast on the list (D-172)', async () => {
+    signIn()
+    serve()
+    const user = userEvent.setup()
+    await openForm()
+    pickDate('2026-10-24T09:00')
+    await user.click(add())
+    await screen.findByRole('status')
+
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
+
+    expect(screen.queryByRole('status', { name: /Squad created/ })).not.toBeInTheDocument()
+    expect(screen.queryByText('Squad created')).not.toBeInTheDocument()
+  })
+
   it('sends the typed values, goes to the list, and shows the toast (SQD-01 to SQD-08, D-172)', async () => {
     signIn()
     const served = serve()

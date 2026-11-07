@@ -53,7 +53,9 @@ export async function applyCreate(
 }
 
 const wideOpen: CreateFacts & TournamentDefaults = {
+  // Stryker disable next-line BooleanLiteral: the writer always sets `completed` from its options.
   completed: false,
+  // Stryker disable next-line StringLiteral: an empty start date is before no day, the same as 2000-01-01.
   startDate: '2000-01-01',
   endDate: '2099-12-31',
   entryFee: 50,

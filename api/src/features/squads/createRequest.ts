@@ -48,6 +48,7 @@ function ratio(label: string) {
   )
 }
 
+// Stryker disable next-line Regex: without `^` a prefixed value fails the round trip in `toLocalDateTime` all the same.
 const dateTimeShape = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::00(?:\.0+)?)?$/
 
 /** `YYYY-MM-DDTHH:mm`, with seconds only as `00`, and a real calendar day and time. */
@@ -69,8 +70,8 @@ const squadFields = {
       error: (issue) =>
         missing(issue.input) ? 'Date and time is required' : 'Enter a date and time',
     })
-    // Stryker disable next-line StringLiteral: an empty message falls back to the error function above, which says the same.
-    .min(1, 'Date and time is required')
+    // An empty string is "missing" to the error function above, so it gives the message.
+    .min(1)
     .transform((value, ctx) => {
       const normal = toLocalDateTime(value)
       if (normal === undefined) {

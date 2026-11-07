@@ -24,10 +24,10 @@ import type {
 const tournament = createTournament({ name: 'Spring Open' })
 const scratch = createDivision({ number: 1, name: 'Scratch' })
 const handicap = createDivision({ number: 2, name: 'Handicap', handicapPercentage: 90 })
-const morning = createSquad({ date: '2026-10-24T09:00:00' })
-const afternoon = createSquad({ date: '2026-10-24T13:00:00' })
+const morning = createSquad({ date: '2026-10-24T09:00:00', entryFee: 50 })
+const afternoon = createSquad({ date: '2026-10-24T13:00:00', entryFee: 60 })
 const finished = createSquad({ date: '2026-10-23T09:00:00', complete: true })
-const sweeper = createSweeper({ date: '2026-10-24T12:00:00' })
+const sweeper = createSweeper({ date: '2026-10-24T12:00:00', entryFee: 25 })
 const url = `/tournaments/${tournament.id}/registrations/new`
 
 const maria: BowlerResponse['bowler'] = {
@@ -301,7 +301,12 @@ describe('a new bowler (REG-02, REG-03, D-162)', () => {
 
     expect(screen.getByText('New registration in Scratch.')).toBeVisible()
     expect(screen.getByText(/Squads: Sat 10\/24\/2026 9:00 AM\./)).toBeVisible()
-    expect(screen.getByText(/A \$0 desk entry is recorded/)).toBeVisible()
+    expect(screen.getByText(/records a \$0 desk entry/)).toBeVisible()
+    expect(screen.getByRole('row', { name: 'Squad Sat 10/24/2026 9:00 AM $50.00' })).toBeVisible()
+    expect(
+      screen.getByRole('row', { name: 'Sweeper Sat 10/24/2026 12:00 PM $25.00' }),
+    ).toBeVisible()
+    expect(screen.getByRole('row', { name: 'Total to collect $75.00' })).toBeVisible()
     await next(user, /^Add registration$/)
 
     expect(await screen.findByText('Registration added for Ann Lee')).toBeVisible()
@@ -1448,5 +1453,67 @@ describe('the steps of a bowler already registered (D-165)', () => {
 
     expect(screen.getByLabelText(/Sat 10\/24\/2026 1:00 PM/)).toBeChecked()
     expect(screen.getByLabelText(/Sat 10\/24\/2026 12:00 PM/)).toBeDisabled()
+  })
+})
+
+describe('what to collect, on every way in (D-166, D-164)', () => {
+  it('shows the locked squad from the lane page with its fee in the total (REG-22)', async () => {
+    signIn()
+    serve()
+    const user = userEvent.setup()
+    await open(`${url}?squad=${afternoon.id}`)
+    await pickMaria(user)
+    await screen.findByLabelText('Street')
+    await next(user, /Next: registration/)
+    await user.selectOptions(screen.getByLabelText('Division (required)'), 'Scratch')
+    await next(user, /Next: review/)
+
+    expect(screen.getByRole('table', { name: 'What to collect' })).toBeVisible()
+    expect(screen.getByRole('row', { name: 'Squad Sat 10/24/2026 1:00 PM $60.00' })).toBeVisible()
+    expect(screen.getByRole('row', { name: 'Total to collect $60.00' })).toBeVisible()
+  })
+
+  it('adds the picked squad to the lane-page squad for a new bowler', async () => {
+    signIn()
+    serve()
+    const user = userEvent.setup()
+    await open(`${url}?squad=${afternoon.id}`)
+    await user.click(screen.getByRole('button', { name: 'New bowler' }))
+    await user.type(await screen.findByLabelText('First name (required)'), 'Ann')
+    await user.type(screen.getByLabelText('Last name (required)'), 'Lee')
+    await next(user, /Next: registration/)
+    await user.selectOptions(screen.getByLabelText('Division (required)'), 'Scratch')
+    await user.click(screen.getByLabelText(/Sat 10\/24\/2026 9:00 AM/))
+    await next(user, /Next: review/)
+
+    expect(screen.getByRole('row', { name: 'Total to collect $110.00' })).toBeVisible()
+  })
+
+  it('collects only for what is added when a registered bowler adds a squad from the lane page (REG-21)', async () => {
+    signIn()
+    serve({
+      bowler: {
+        bowler: maria,
+        registration: {
+          id: '00000000-0000-4000-8000-0000000000bb',
+          divisionId: handicap.id,
+          divisionName: 'Handicap',
+          average: 182,
+          superSweeper: false,
+          squadIds: [morning.id],
+          sweeperIds: [],
+          hasScores: false,
+        },
+      },
+    })
+    const user = userEvent.setup()
+    await open(`${url}?squad=${afternoon.id}`)
+    await pickMaria(user)
+    await screen.findByRole('heading', { name: 'Registration', level: 2 })
+    await next(user, /Next: review/)
+
+    const table = screen.getByRole('table', { name: 'What to collect for these additions' })
+    expect(within(table).queryByText(/9:00 AM/)).not.toBeInTheDocument()
+    expect(within(table).getByRole('row', { name: 'Total to collect $60.00' })).toBeVisible()
   })
 })

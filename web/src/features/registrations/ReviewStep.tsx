@@ -2,7 +2,8 @@ import { formatSessionDate } from '../../shared/sessionFormat'
 import type { Division } from '../divisions/types'
 import type { Squad } from '../squads/types'
 import type { Sweeper } from '../sweepers/types'
-import { bowlerLabels, changesOf, type RegistrationValues } from './deskForm'
+import { formatFee } from '../tournaments/format'
+import { bowlerLabels, changesOf, dueLines, totalDue, type RegistrationValues } from './deskForm'
 import type { BowlerRegistration, BowlerValues } from './types'
 import styles from './AddRegistration.module.css'
 
@@ -46,6 +47,7 @@ export function ReviewStep({
     registration.sweeperIds.filter((id) => !held.has(id)),
   )
   const changes = stored ? changesOf(stored, bowler) : []
+  const due = dueLines({ registration, existing, squads, sweepers })
   const moves = existing !== null && division !== undefined && existing.divisionId !== division.id
   return (
     <section className={styles.review} aria-labelledby="review-heading">
@@ -82,7 +84,40 @@ export function ReviewStep({
         {newSweepers.length === 0 ? 'No new sweepers.' : `Sweepers: ${newSweepers.join(', ')}.`}
         {registration.superSweeper && ' Super sweeper.'}
       </p>
-      <p className={styles.hint}>A $0 desk entry is recorded. No money is taken in this app.</p>
+      {due.length === 0 ? (
+        <p>Nothing to collect.</p>
+      ) : (
+        <table className={styles.due}>
+          <caption>{existing ? 'What to collect for these additions' : 'What to collect'}</caption>
+          <thead>
+            <tr>
+              <th scope="col">For</th>
+              <th scope="col" className={styles.amount}>
+                Amount
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {due.map((line) => (
+              <tr key={line.id}>
+                <th scope="row">
+                  {line.kind === 'squad' ? 'Squad' : 'Sweeper'} {formatSessionDate(line.date)}
+                </th>
+                <td className={styles.amount}>{formatFee(line.amount)}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row">Total to collect</th>
+              <td className={styles.amount}>{formatFee(totalDue(due))}</td>
+            </tr>
+          </tfoot>
+        </table>
+      )}
+      <p className={styles.hint}>
+        Take the money at the desk. This app records a $0 desk entry and does not track payments.
+      </p>
     </section>
   )
 }

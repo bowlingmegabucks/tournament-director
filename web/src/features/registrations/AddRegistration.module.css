@@ -247,3 +247,33 @@ button.step {
   justify-content: space-between;
   gap: var(--space-4);
 }
+
+.due {
+  border-collapse: collapse;
+  inline-size: 100%;
+}
+
+.due caption {
+  text-align: start;
+  font-weight: 600;
+  padding-block-end: var(--space-2);
+}
+
+.due th,
+.due td {
+  text-align: start;
+  padding: var(--space-2) 0;
+  border-block-end: var(--border-width) solid var(--color-border);
+}
+
+.due tfoot th,
+.due tfoot td {
+  font-weight: 700;
+  border-block-end: 0;
+}
+
+.due .amount {
+  text-align: end;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}

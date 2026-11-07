@@ -87,7 +87,9 @@ test('a new bowler with only names, one squad, and no USBC ID is added and shows
   await nextTo(page, 'review')
 
   await expect(page.getByText('New registration in Scratch.')).toBeVisible()
-  await expect(page.getByText(/A \$0 desk entry is recorded/)).toBeVisible()
+  await expect(page.getByText(/records a \$0 desk entry/)).toBeVisible()
+  await expect(page.getByRole('row', { name: 'Squad Sat 10/24/2026 1:00 PM $60.00' })).toBeVisible()
+  await expect(page.getByRole('row', { name: 'Total to collect $60.00' })).toBeVisible()
   await addButton(page).click()
 
   await expect(page.getByRole('heading', { name: 'Registrations', level: 1 })).toBeVisible()
@@ -124,6 +126,11 @@ test('a new bowler with every field, a sweeper, and the super sweeper (REG-06, R
   await nextTo(page, 'review')
   await expect(page.getByText(/in Open, average 195/)).toBeVisible()
   await expect(page.getByText('Super sweeper.')).toBeVisible()
+  // 1:00 PM $60 + Sunday $50 + the 6:00 PM sweeper $25.
+  await expect(
+    page.getByRole('row', { name: 'Sweeper Sat 10/24/2026 6:00 PM $25.00' }),
+  ).toBeVisible()
+  await expect(page.getByRole('row', { name: 'Total to collect $135.00' })).toBeVisible()
   await addButton(page).click()
 
   await expect(page.getByText('Registration added for Bea Chen, III')).toBeVisible()
@@ -266,6 +273,11 @@ test('a bowler already registered starts on Registration with what they hold loc
 
   await expect(page.getByText(/Adds to the existing registration in Open/)).toBeVisible()
   await expect(page.getByText(/Squads: Sun 10\/25\/2026 9:00 AM\./)).toBeVisible()
+  // Dana's two squads are held: only the new Sunday squad is collected.
+  await expect(
+    page.getByRole('table', { name: 'What to collect for these additions' }),
+  ).toBeVisible()
+  await expect(page.getByRole('row', { name: 'Total to collect $50.00' })).toBeVisible()
   await addButton(page, 'Add to registration').click()
 
   await expect(page.getByText('Registration added for Dana Abbott')).toBeVisible()
@@ -360,6 +372,8 @@ test('the lane page opens Add registration with that squad checked and locked (R
   await page.getByLabel('Division (required)').selectOption('Scratch')
   await nextTo(page, 'review')
   await expect(page.getByText(/Squads: Sat 10\/24\/2026 1:00 PM\./)).toBeVisible()
+  // The squad from the lane page is charged like any other (D-166).
+  await expect(page.getByRole('row', { name: 'Total to collect $60.00' })).toBeVisible()
   await addButton(page).click()
   await expect(page.getByText('Registration added for Maria Gonzalez')).toBeVisible()
   await expect(

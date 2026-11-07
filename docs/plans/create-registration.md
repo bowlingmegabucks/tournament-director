@@ -34,7 +34,7 @@ The vendor routes (`POST /v1/registrations` and the rest) are built. This run ad
 - D-10, D-117: no division move after scores.
 - D-108: squads and the division must belong to the tournament; no complete squads added.
 - D-130: a complete tournament refuses changes.
-- D-157 to D-165: the desk route, edits inside registration, append offer, division move, exact USBC ID only, names-only new bowler, placeholder payment, entry points.
+- D-157 to D-166: the desk route, edits inside registration, append offer, division move, exact USBC ID only, names-only new bowler, placeholder payment, entry points.
 - D-96: routes ask for permissions, not roles.
 
 ## Differs from legacy
@@ -109,7 +109,7 @@ Mockups: [index](create-registration-mockups/index.html), [Option A: one page](c
 - Route `/tournaments/:id/registrations/new` behind `RequirePermission` `registrations.write`. A complete tournament shows "This tournament is complete."
 - "Add registration" link on the Registrations page, and an "Add registration to this squad" link on the lane pages, both inside `<Can>`. The lane link passes `?squad=` or `?sweeper=`.
 - `AddRegistrationPage.tsx`: holds the step (Bowler, Registration, Review) and the form values. Back keeps what was typed. Step 1 has three stages: search, existing bowler, new bowler. Next on step 1 needs the names; Next on step 2 checks division and at least one squad on the client, and the server rechecks everything on Save. No copy of server data in `useState` beyond the editable form values.
-- `ReviewStep.tsx`: shows the bowler, each changed field as old against new (for a stored bowler), the division, average, squads, sweepers, and the line "A $0 desk entry is recorded". The one Add registration button is here. A server `400` names a field: the page goes back to the step that holds it, with the error summary focused.
+- `ReviewStep.tsx` (D-166): also a "What to collect" table: one row per new squad and sweeper with its fee and a total ("for these additions" on an append; "Nothing to collect." when nothing is new). `dueLines` and `totalDue` in `deskForm.ts` do the sums, in cents. Lane-page entry shows it too: same page. Shows the bowler, each changed field as old against new (for a stored bowler), the division, average, squads, sweepers, and the line "A $0 desk entry is recorded". The one Add registration button is here. A server `400` names a field: the page goes back to the step that holds it, with the error summary focused.
 - `BowlerSearch.tsx` with `useBowlerSearch`: four fields, results list with a Registered badge (text plus check, not color alone), "Pick" and "New bowler".
 - `useBowler(id, tournamentId)`: fills the form. When `registration` is not null the page jumps to step 2 (D-165): the notice shows and the squads and sweepers held show checked and locked. The progress list is clickable: "Bowler" returns to the filled, editable details (a link "Pick someone else" returns to the search). A field the desk changes shows on Review and goes in the `bowler` patch.
 - `BowlerFields.tsx`: the form fields (names required), per-field errors linked with `aria-describedby`. `validateBowler.ts` runs the names rule on the client; every other rule is the server's, shown per field from the `400`.

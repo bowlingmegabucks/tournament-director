@@ -1,3 +1,5 @@
+import type { Squad } from '../squads/types'
+import type { Sweeper } from '../sweepers/types'
 import type {
   BowlerRegistration,
   BowlerResponse,
@@ -189,3 +191,43 @@ export function changesOf(stored: BowlerValues, edited: BowlerValues): Change[] 
 
 export const bowlerFieldId = (key: keyof BowlerValues) => `bowler-${key}`
 export const errorKeyOf = (key: keyof BowlerValues) => `bowler.${key}`
+
+/** One squad or sweeper the desk collects for (D-166). */
+export interface DueLine {
+  kind: 'squad' | 'sweeper'
+  id: string
+  /** The session date as the API sends it. */
+  date: string
+  amount: number
+}
+
+interface DueInput {
+  registration: RegistrationValues
+  existing: BowlerRegistration | null
+  squads: Squad[]
+  sweepers: Sweeper[]
+}
+
+/**
+ * What the desk collects: the entry fee of each squad (its own fee, else the tournament's, which
+ * the API has already settled, TRN-12) and of each sweeper being added, in the order the lists
+ * come. A squad or sweeper the bowler already holds is not charged again (D-166). There is no
+ * super sweeper fee: it is a choice to enter every sweeper, whose fees are counted here.
+ */
+export function dueLines({ registration, existing, squads, sweepers }: DueInput): DueLine[] {
+  // Stryker disable next-line ArrayDeclaration: with no registration the set only gains a text no session has.
+  const held = new Set([...(existing?.squadIds ?? []), ...(existing?.sweeperIds ?? [])])
+  const lines = (kind: DueLine['kind'], chosen: string[], sessions: (Squad | Sweeper)[]) =>
+    sessions
+      .filter((session) => chosen.includes(session.id) && !held.has(session.id))
+      .map((session) => ({ kind, id: session.id, date: session.date, amount: session.entryFee }))
+  return [
+    ...lines('squad', registration.squadIds, squads),
+    ...lines('sweeper', registration.sweeperIds, sweepers),
+  ]
+}
+
+/** The total in whole cents, added as cents so 0.1 and 0.2 make 0.3 (D-166). */
+export function totalDue(lines: DueLine[]): number {
+  return lines.reduce((cents, line) => cents + Math.round(line.amount * 100), 0) / 100
+}

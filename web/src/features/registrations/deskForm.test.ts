@@ -3,6 +3,7 @@ import {
   bowlerLabels,
   buildRequest,
   changesOf,
+  dueLines,
   changedFields,
   checkBowlerStep,
   checkRegistrationStep,
@@ -12,8 +13,10 @@ import {
   overlayBowler,
   stepOfError,
   toBowlerValues,
+  totalDue,
   toRegistrationValues,
 } from './deskForm'
+import { createSquad, createSweeper } from '../../mocks/data'
 import type { BowlerRegistration, BowlerValues } from './types'
 
 const maria: BowlerValues = {
@@ -275,5 +278,56 @@ describe('spaces around what was typed or stored', () => {
     expect(checkBowlerStep({ ...emptyBowler, firstName: 'Ann', lastName: '   ' })).toEqual({
       'bowler.lastName': 'Last Name is Required',
     })
+  })
+})
+
+describe('what the desk collects (D-166, TRN-12)', () => {
+  const s1 = createSquad({ date: '2026-10-24T09:00:00', entryFee: 50 })
+  const s2 = createSquad({ date: '2026-10-24T13:00:00', entryFee: 60 })
+  const w1 = createSweeper({ date: '2026-10-24T12:00:00', entryFee: 25 })
+  const base = { ...emptyRegistration, squadIds: [s2.id, s1.id], sweeperIds: [w1.id] }
+
+  it('lists the squads then the sweepers, each in the order the lists come, with its own fee', () => {
+    expect(
+      dueLines({ registration: base, existing: null, squads: [s1, s2], sweepers: [w1] }),
+    ).toEqual([
+      { kind: 'squad', id: s1.id, date: s1.date, amount: 50 },
+      { kind: 'squad', id: s2.id, date: s2.date, amount: 60 },
+      { kind: 'sweeper', id: w1.id, date: w1.date, amount: 25 },
+    ])
+  })
+
+  it('leaves out what is not picked', () => {
+    const lines = dueLines({
+      registration: { ...emptyRegistration, squadIds: [s1.id] },
+      existing: null,
+      squads: [s1, s2],
+      sweepers: [w1],
+    })
+
+    expect(lines.map((line) => line.id)).toEqual([s1.id])
+  })
+
+  it('leaves out a squad and a sweeper the bowler already holds', () => {
+    const lines = dueLines({
+      registration: base,
+      existing: { ...held, squadIds: [s1.id], sweeperIds: [w1.id] },
+      squads: [s1, s2],
+      sweepers: [w1],
+    })
+
+    expect(lines.map((line) => line.id)).toEqual([s2.id])
+  })
+
+  it('adds whole cents', () => {
+    const lines = [0.1, 0.2, 60.1].map((amount, index) => ({
+      kind: 'squad' as const,
+      id: String(index),
+      date: '',
+      amount,
+    }))
+
+    expect(totalDue(lines)).toBe(60.4)
+    expect(totalDue([])).toBe(0)
   })
 })

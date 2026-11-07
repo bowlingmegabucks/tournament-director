@@ -108,6 +108,11 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 
 - [ ] User guide.
 - [ ] Walkthrough for the people who run tournaments.
+- [ ] Interactive API reference, in the style of [Scalar](https://scalar.com/): a page the API serves from its own OpenAPI document, where a developer reads each route and tries it with the API key. The registration site's developer is the first reader. Settle these when we build it:
+  - Where it lives (for example `/docs`), and who may open it. The vendor document at `/openapi/v1.json` is public today (D-114); a page that lists the web-only routes (tournament, division, squad, and sweeper commands) may need sign-in.
+  - Whether the document grows to cover the web-only routes, or a second document holds them. Today `openapi.ts` lists only the vendor routes, and a test keeps that list in step with the routes.
+  - How the page loads under the `helmet` headers (its scripts and styles need allowing), and that the "try it" button sends the `x-api-key` header and never stores the key.
+  - Check the Scalar docs (Context7) before we use its Express package; its API changes between releases.
 
 ## Release candidates
 

@@ -20,7 +20,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:mutation": "stryker run"
+    "test:mutation": "stryker run",
+    "test:mutation:fast": "stryker run --ignoreStatic"
   },
   "dependencies": {
     "@azure/monitor-opentelemetry-exporter": "1.0.0-beta.46",

@@ -122,6 +122,7 @@ The root `package.json` only holds shortcuts. It is not an npm workspace; `web/`
 | `npm run test:coverage`                 | Same, with coverage. Fails under 80%                                                              |
 | `npm run test:e2e`                      | Playwright against a built preview with mocks                                                     |
 | `npm run test:mutation`                 | Stryker mutation tests                                                                            |
+| `npm run test:mutation:fast`            | Same, with `--ignoreStatic` (skips slow static mutants; CI runs the full set)                     |
 
 `api/` also has `npm run start` (run the build) and `npm run dev` (watch mode with `.env`). Before you say a task is done, run lint, typecheck, test, and `format:check` in each folder you changed. Run e2e when you change UI flow.
 

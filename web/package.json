@@ -16,7 +16,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "test:mutation": "stryker run"
+    "test:mutation": "stryker run",
+    "test:mutation:fast": "stryker run --ignoreStatic"
   },
   "dependencies": {
     "@dnd-kit/react": "^0.5.1",

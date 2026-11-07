@@ -50,6 +50,8 @@ A squad has no game count. It always uses the tournament's `games`.
 | SQD-07 | Not complete                                                                              | "Cannot add a completed squad"                                             |
 | SQD-08 | Entry fee override has no rule beyond the screen (0 to 999.99)                            |                                                                            |
 
+**D-167 to D-173:** the new app adds a squad through `POST /v1/tournaments/{id}/squads` (`squads.write`). Max per pair is 2 to 5 (D-168, answers Q-10), starting lane odd 1 to 199, lanes even 2 to 200, ratios 1.1 to 99.9 with one decimal (D-170), date and time in one box inside the tournament dates (D-169), a complete tournament refuses (D-171).
+
 ## Validation when adding a sweeper
 
 | ID     | Rule                                                                                                                                                                                                         | Message                                                             | Status |

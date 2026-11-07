@@ -1,0 +1,35 @@
+/* Throwaway mockup styles. Real tokens and base styles; the app's CSS Modules are not used here. */
+main.mock { max-inline-size: var(--layout-width); margin: 0 auto; padding: var(--space-6) var(--space-4); }
+h2.state { margin-block: var(--space-8) var(--space-2); font-size: var(--font-size-lg); }
+p.cap { margin: 0 0 var(--space-3); color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.frame { padding: var(--space-4); border: var(--border-width) dashed var(--color-border); border-radius: var(--radius); }
+.crumbs { margin: 0 0 var(--space-2); color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.form { display: grid; gap: var(--space-4); max-inline-size: 32rem; }
+.group { display: grid; gap: var(--space-4); margin: 0; padding: var(--space-4); border: var(--border-width) solid var(--color-border); border-radius: var(--radius); }
+.group legend { padding-inline: var(--space-2); font-weight: 600; }
+.pair { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
+.field { display: grid; gap: var(--space-1); align-content: start; }
+.label { font-weight: 600; }
+.input { min-block-size: var(--target-min); padding-inline: var(--space-3); border: var(--border-width) solid var(--color-border); border-radius: var(--radius); background: var(--color-bg); color: var(--color-text); font: inherit; inline-size: 100%; }
+.input[aria-invalid='true'] { border-color: var(--color-danger); }
+.suffixed { display: flex; align-items: center; gap: var(--space-2); }
+.hint { margin: 0; color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.fieldError { margin: 0; color: var(--color-danger); font-size: var(--font-size-sm); }
+.summary { margin: 0; padding: var(--space-3) var(--space-4); border: var(--border-width) solid var(--color-danger); border-radius: var(--radius); }
+.summary ul { margin: var(--space-2) 0 0; padding-inline-start: var(--space-4); }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center; }
+.cancel { display: inline-flex; align-items: center; min-block-size: var(--target-min); padding: var(--space-2) var(--space-4); border: var(--border-width) solid var(--color-accent); border-radius: var(--radius); color: var(--color-accent); font-weight: 600; text-decoration: none; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4); }
+.linkButton { display: inline-flex; align-items: center; min-block-size: var(--target-min); padding: var(--space-2) var(--space-4); border-radius: var(--radius); background: var(--color-accent); color: var(--color-accent-text); font-weight: 600; text-decoration: none; }
+.list { display: grid; gap: var(--space-3); margin: 0 0 var(--space-6); padding: 0; list-style: none; }
+.card { padding: var(--space-4); background: var(--color-surface); border: var(--border-width) solid var(--color-border); border-radius: var(--radius); }
+.card h3 { margin: 0; font-size: var(--font-size-lg); }
+.status { margin-inline-start: var(--space-2); color: var(--color-text-muted); font-size: var(--font-size-sm); font-weight: 400; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: var(--space-2) var(--space-4); margin: var(--space-3) 0 0; }
+.facts dt { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.facts dd { margin: 0; }
+.toast { display: flex; gap: var(--space-4); align-items: center; justify-content: space-between; margin-block: var(--space-4); padding: var(--space-3) var(--space-4); border: var(--border-width) solid var(--color-success); border-radius: var(--radius); background: var(--color-surface); }
+.toast.error { border-color: var(--color-danger); }
+.toast button { min-block-size: var(--target-min); background: transparent; color: var(--color-text); border-color: var(--color-border); }
+.skeleton { block-size: 2.5rem; margin-block: var(--space-2); border-radius: var(--radius); background: var(--color-surface); border: var(--border-width) solid var(--color-border); }
+.error-block { padding: var(--space-4); border: var(--border-width) solid var(--color-danger); border-radius: var(--radius); }

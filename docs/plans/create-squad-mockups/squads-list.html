@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Squads mockup</title>
+    <link rel="stylesheet" href="../../../web/src/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../web/src/styles/base.css" />
+    <link rel="stylesheet" href="mockup.css" />
+  </head>
+  <body>
+    <main class="mock">
+      <h1>Squads page: states</h1>
+
+      <h2 class="state">1. Director or admin, open tournament</h2>
+      <p class="cap">"New squad" sits in <code>&lt;Can permission="squads.write"&gt;</code>, beside the heading (as New division). The squads below are sorted by date (SQD-20).</p>
+      <div class="frame">
+        <p class="crumbs">Northeast MegaBuck$ Classic 2026</p>
+        <div class="toolbar">
+          <h2 style="margin:0;font-size:var(--font-size-xl)">Squads</h2>
+          <a class="linkButton" href="new-squad-form.html">New squad</a>
+        </div>
+        <ul class="list" style="margin-block-start:var(--space-4)">
+          <li class="card">
+            <h3><a href="#">10/24/2026 9:00AM</a><span class="status">Open</span></h3>
+            <dl class="facts"><div><dt>Lanes</dt><dd>1 to 24 (24 lanes)</dd></div><div><dt>Per pair</dt><dd>4</dd></div><div><dt>Entry fee</dt><dd>$60.00 (override)</dd></div><div><dt>Finals ratio</dt><dd>6.0</dd></div><div><dt>Cash ratio</dt><dd>4.0</dd></div></dl>
+          </li>
+          <li class="card">
+            <h3><a href="#">10/24/2026 1:00PM</a><span class="status">Open</span></h3>
+            <dl class="facts"><div><dt>Lanes</dt><dd>1 to 24 (24 lanes)</dd></div><div><dt>Per pair</dt><dd>4</dd></div><div><dt>Entry fee</dt><dd>$50.00</dd></div><div><dt>Finals ratio</dt><dd>6.0</dd></div><div><dt>Cash ratio</dt><dd>4.0</dd></div></dl>
+          </li>
+        </ul>
+      </div>
+
+      <h2 class="state">2. Just after a save</h2>
+      <p class="cap">The form returns here with a "Squad created" toast that closes itself after 5 seconds (D-172). The new card appears in date order.</p>
+      <div class="frame">
+        <div class="toast" role="status"><span>Squad created</span><button type="button">Dismiss</button></div>
+        <div class="toolbar"><h2 style="margin:0;font-size:var(--font-size-xl)">Squads</h2><a class="linkButton" href="#">New squad</a></div>
+      </div>
+
+      <h2 class="state">3. Empty tournament</h2>
+      <p class="cap">The empty sentence stays; the link is still there to start.</p>
+      <div class="frame">
+        <div class="toolbar"><h2 style="margin:0;font-size:var(--font-size-xl)">Squads</h2><a class="linkButton" href="#">New squad</a></div>
+        <p>No squads yet.</p>
+      </div>
+
+      <h2 class="state">4. Complete tournament, score keeper, or signed out</h2>
+      <p class="cap">No link. A complete tournament hides it (D-171); anyone without <code>squads.write</code> never sees it (D-167). The API refuses either way.</p>
+      <div class="frame">
+        <h2 style="margin:0 0 var(--space-4);font-size:var(--font-size-xl)">Squads</h2>
+        <p>No squads yet.</p>
+      </div>
+    </main>
+  </body>
+</html>

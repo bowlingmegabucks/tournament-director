@@ -54,6 +54,10 @@ The owner is a .NET developer learning React and Node. Explain choices briefly a
 
 31. Game scores in results. **Done on branch `resultFix`:** squad, sweeper, and super sweeper tables list each game (G1 to Gn) with a "+/−" figure (total against 200 a game) after the name; handicap divisions and sweepers with bonus pins show Scratch Total, Total HDCP, and HDCP Total, and the super sweeper takes one line for each sweeper with Cumulative at the right. The API rows gained `scores` (and `sweeperScores`, `sweeperPins`). See [docs/requirements/results.md](docs/requirements/results.md#game-scores-squad-sweeper-super-sweeper).
 
+33. Create squad (first part of 0.7.0). **Done on branch `createSquad`:** a "New squad" link on the Squads page (needs the new permission `squads.write`, held by the director and admin; hidden on a complete tournament) opens `/tournaments/{id}/squads/new`. The API serves web-only `POST /v1/tournaments/{id}/squads` (`201`, per-field `400`, `409` for a date outside the tournament or a complete tournament). Max per pair is 2 to 5, a starting lane is odd (1 to 199), the number of lanes is even (2 to 200), and a blank fee or ratio uses the tournament's value (D-167 to D-173). Sweeper create, edit, delete, and complete come next in 0.7.0. See [docs/requirements/squads-and-sweepers.md](docs/requirements/squads-and-sweepers.md).
+
+34. Create sweeper (second part of 0.7.0). **Done on branch `createSquad`:** a "New sweeper" link on the Sweepers page (same `squads.write` permission, hidden on a complete tournament) opens `/tournaments/{id}/sweepers/new`. The API serves web-only `POST /v1/tournaments/{id}/sweepers` (`201`, per-field `400`, `409` for a date outside the tournament, a complete tournament, or a division that is not the tournament's). Games are 1 to 99, the fee above $0 up to $999.99, the cash ratio 1.1 to 99.9, and all three are required (D-175). The form has a bonus-pins box for each division (blank or 0 to 99; blank and 0 save no row, D-176), and the sweeper and its pin rows save in one transaction (D-178). The squad and sweeper forms share `sessionCreate.ts` (API) and `sessionValidation.ts` and `sessionForm.module.css` (web). Edit, delete, and complete come next in 0.7.0; Q-11 (pin presets) stays open. See [docs/requirements/squads-and-sweepers.md](docs/requirements/squads-and-sweepers.md).
+
 Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, TypeScript, testing, composition) and stricter ESLint rules.
 
 **Legacy migration.** We are porting the WinForms Tournament Manager feature by feature. [docs/migration/](docs/migration/README.md) documents every legacy rule with an ID (`REG-04`); use it instead of the old code. Before building a feature, check [decisions-and-questions.md](docs/migration/decisions-and-questions.md) for its open questions. Cite rule IDs in tests and PRs.
@@ -118,6 +122,7 @@ The root `package.json` only holds shortcuts. It is not an npm workspace; `web/`
 | `npm run test:coverage`                 | Same, with coverage. Fails under 80%                                                              |
 | `npm run test:e2e`                      | Playwright against a built preview with mocks                                                     |
 | `npm run test:mutation`                 | Stryker mutation tests                                                                            |
+| `npm run test:mutation:fast`            | Same, with `--ignoreStatic` (skips slow static mutants; CI runs the full set)                     |
 
 `api/` also has `npm run start` (run the build) and `npm run dev` (watch mode with `.env`). Before you say a task is done, run lint, typecheck, test, and `format:check` in each folder you changed. Run e2e when you change UI flow.
 
@@ -200,6 +205,7 @@ Claude loads a skill when the task matches its description. The rules above stay
 | `api-testing-patterns`          | Vitest + Supertest, factories, error-path tests, Stryker survivors in `api/`                             |
 | `api-observability`             | What to log, which level, when to add a metric or span, what never to log, checking it in Seq            |
 | `pull-request-prep`, `write-pr` | Review and describe a branch before the PR                                                               |
+| `create-pr`                     | Same as `write-pr`, then create the PR with `gh` (asks for the base branch, assigns you, sets labels)    |
 | `release-notes`                 | Write GitHub release notes for a new version (`release-notes.md`); marks 0.x as pre-release              |
 | `migrate-feature`               | Port a legacy feature: settle questions, plan, build, record in `docs/requirements/`                     |
 

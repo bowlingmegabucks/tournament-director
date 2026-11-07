@@ -3,7 +3,13 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
-import { createSweeper, createTournament } from '../../mocks/data'
+import {
+  createSettings,
+  createSignedInUser,
+  createSweeper,
+  createTournament,
+} from '../../mocks/data'
+import { setMockUser } from '../../mocks/authHandlers'
 import { renderApp } from '../../test/renderApp'
 import type { BonusPins, Sweeper } from './types'
 
@@ -213,5 +219,64 @@ describe('SweepersPage', () => {
 
     expect(await screen.findByText('No sweepers yet.', {}, { timeout: 3000 })).toBeVisible()
     expect(screen.queryByRole('link', { name: 'Super sweeper results' })).not.toBeInTheDocument()
+  })
+
+  describe('New sweeper link (SQD-10, D-174, D-171)', () => {
+    const serveSettings = (completed: boolean) => {
+      server.use(
+        http.get('/v1/tournaments/:id/settings', () =>
+          HttpResponse.json({ settings: createSettings({ completed }) }),
+        ),
+      )
+    }
+
+    it('shows a director a link to the form', async () => {
+      setMockUser(createSignedInUser({ roles: ['director'] }))
+      serve([])
+      serveSettings(false)
+
+      open()
+
+      expect(await screen.findByRole('link', { name: 'New sweeper' })).toHaveAttribute(
+        'href',
+        `/tournaments/${tournament.id}/sweepers/new`,
+      )
+    })
+
+    it('hides the link from a score keeper and from a signed-out visitor', async () => {
+      serve([])
+      serveSettings(false)
+      setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+
+      open()
+
+      await screen.findByText('No sweepers yet.')
+      expect(screen.queryByRole('link', { name: 'New sweeper' })).not.toBeInTheDocument()
+    })
+
+    it('hides the link on a complete tournament (D-171)', async () => {
+      setMockUser(createSignedInUser({ roles: ['director'] }))
+      serve([])
+      serveSettings(true)
+
+      open()
+
+      await screen.findByText('No sweepers yet.')
+      expect(screen.queryByRole('link', { name: 'New sweeper' })).not.toBeInTheDocument()
+    })
+
+    it('shows the link when the settings cannot be read, since the API still refuses (D-171)', async () => {
+      setMockUser(createSignedInUser({ roles: ['director'] }))
+      serve([])
+      server.use(
+        http.get('/v1/tournaments/:id/settings', () => new HttpResponse(null, { status: 500 })),
+      )
+
+      open()
+
+      expect(
+        await screen.findByRole('link', { name: 'New sweeper' }, { timeout: 3000 }),
+      ).toBeVisible()
+    })
   })
 })

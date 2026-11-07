@@ -26,3 +26,32 @@ export function planMutation(changed: readonly string[], patterns: readonly stri
   const files = changed.filter((file) => isMutated(file, patterns))
   return files.length === 0 ? { mode: 'none' } : { mode: 'some', files }
 }
+
+/**
+ * True when a lock file changed in more than its own version. `npm version` rewrites the root
+ * version in `package-lock.json` and nothing else, which changes no mutant. Text that is not JSON
+ * counts as a change.
+ */
+export function lockChangedBeyondVersion(before: string, after: string): boolean {
+  try {
+    return JSON.stringify(withoutVersion(before)) !== JSON.stringify(withoutVersion(after))
+  } catch {
+    return true
+  }
+}
+
+function withoutVersion(text: string): unknown {
+  const lock: unknown = JSON.parse(text)
+  if (typeof lock !== 'object' || lock === null) return lock
+  const copy: Record<string, unknown> = { ...lock }
+  delete copy.version
+  const packages = copy.packages
+  if (typeof packages === 'object' && packages !== null && '' in packages) {
+    const root: unknown = Reflect.get(packages, '')
+    if (typeof root === 'object' && root !== null) {
+      const { version: _version, ...rest } = root as Record<string, unknown>
+      copy.packages = { ...packages, '': rest }
+    }
+  }
+  return copy
+}

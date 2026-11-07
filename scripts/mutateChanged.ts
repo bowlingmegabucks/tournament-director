@@ -2,7 +2,7 @@
 // Prints `mode=full|none|some` and, for `some`, `mutate=<comma-separated files>`, for GITHUB_OUTPUT.
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
-import { planMutation } from './mutate.ts'
+import { lockChangedBeyondVersion, planMutation } from './mutate.ts'
 
 const [folder, base] = process.argv.slice(2)
 if (!folder || !base) throw new Error('Usage: mutateChanged.ts <folder> <base ref>')
@@ -22,6 +22,21 @@ const changed = execFileSync(
   .filter(Boolean)
   .map((file) => file.replace(`${folder}/`, ''))
 
-const plan = planMutation(changed, patterns)
+// A version bump rewrites the lock file but changes no mutant, so it must not force a full run.
+const lock = 'package-lock.json'
+function lockChanged(): boolean {
+  try {
+    const git = (args: string[]) => execFileSync('/usr/bin/git', args, { encoding: 'utf8' })
+    const mergeBase = git(['merge-base', base, 'HEAD']).trim()
+    const before = git(['show', `${mergeBase}:${folder}/${lock}`])
+    return lockChangedBeyondVersion(before, readFileSync(`${folder}/${lock}`, 'utf8'))
+  } catch {
+    return true
+  }
+}
+const relevant =
+  changed.includes(lock) && !lockChanged() ? changed.filter((f) => f !== lock) : changed
+
+const plan = planMutation(relevant, patterns)
 console.log(`mode=${plan.mode}`)
 if (plan.mode === 'some') console.log(`mutate=${plan.files.join(',')}`)

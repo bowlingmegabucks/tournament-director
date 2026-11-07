@@ -56,6 +56,12 @@ describe('roles (D-97)', () => {
     expect(permissionsOf('admin')).toContain('divisions.write')
   })
 
+  it('lets a director and an admin add a squad, not a score keeper (D-167)', () => {
+    expect(permissionsOf('scoreKeeper')).not.toContain('squads.write')
+    expect(permissionsOf('director')).toContain('squads.write')
+    expect(permissionsOf('admin')).toContain('squads.write')
+  })
+
   it('lets no one but the admin delete a tournament (D-132)', () => {
     for (const role of ['scoreKeeper', 'director']) {
       expect(permissionsOf(role)).not.toContain('tournaments.delete')

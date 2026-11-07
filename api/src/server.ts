@@ -7,6 +7,8 @@ import { createPrismaRegistrationRepository } from './features/registrations/pri
 import { createPrismaRegistrationWriter } from './features/registrations/prismaWriter.ts'
 import { createPrismaScoreRepository } from './features/scores/prismaRepository.ts'
 import { createPrismaSquadRepository } from './features/squads/prismaRepository.ts'
+import { createPrismaSquadWriter } from './features/squads/prismaWriter.ts'
+import { createPrismaSweeperWriter } from './features/sweepers/prismaWriter.ts'
 import { createPrismaSweeperRepository } from './features/sweepers/prismaRepository.ts'
 import { createPrismaTournamentRepository } from './features/tournaments/prismaRepository.ts'
 import { createInviteMailer } from './features/users/inviteMail.ts'
@@ -53,6 +55,8 @@ const app = createApp({
   lanes: createPrismaLaneRepository(database, logger),
   scores: createPrismaScoreRepository(database, logger),
   squads: createPrismaSquadRepository(database, logger),
+  squadWriter: createPrismaSquadWriter(database, logger),
+  sweeperWriter: createPrismaSweeperWriter(database, logger),
   sweepers: createPrismaSweeperRepository(database, logger),
   checkDatabase: () => pingDatabase(database, logger),
 })

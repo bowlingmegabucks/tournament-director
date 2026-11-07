@@ -112,6 +112,7 @@ jobs:
     with:
       folder: ${{ matrix.folder }}
       changed-only: true
+      ignore-static: true
 
   api-verify:
     name: API lint, test, build

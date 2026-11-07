@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { planMutation } from './mutate.ts'
+import { lockChangedBeyondVersion, planMutation } from './mutate.ts'
 
 const patterns = ['src/**/*.{ts,tsx}', '!src/**/*.test.{ts,tsx}', '!src/main.tsx', '!src/mocks/**']
 
@@ -35,5 +35,26 @@ describe('planMutation', () => {
 
   it('does not treat a nested file with the same name as a config file', () => {
     assert.deepEqual(planMutation(['src/package.json'], patterns), { mode: 'none' })
+  })
+})
+
+describe('lockChangedBeyondVersion', () => {
+  const lock = (version: string, dep = '1.0.0') =>
+    JSON.stringify({
+      name: 'web',
+      version,
+      packages: { '': { name: 'web', version, dependencies: { a: `^${dep}` } } },
+    })
+
+  it('ignores a change to the root version only', () => {
+    assert.equal(lockChangedBeyondVersion(lock('0.6.1'), lock('0.7.0')), false)
+  })
+
+  it('sees a changed dependency', () => {
+    assert.equal(lockChangedBeyondVersion(lock('0.6.1'), lock('0.7.0', '2.0.0')), true)
+  })
+
+  it('treats text that is not JSON as a change', () => {
+    assert.equal(lockChangedBeyondVersion('{', lock('0.7.0')), true)
   })
 })

@@ -17,6 +17,8 @@ import { SweeperResultsPage } from './features/results/SweeperResultsPage'
 import { ScoresPage } from './features/scores/ScoresPage'
 import { OpenLanes, SquadPortal, SweeperPortal } from './features/lanes/SessionPortal'
 import { RegistrationsPage } from './features/registrations/RegistrationsPage'
+import { NewSquadPage } from './features/squads/NewSquadPage'
+import { NewSweeperPage } from './features/sweepers/NewSweeperPage'
 import { SquadsPage } from './features/squads/SquadsPage'
 import { SweepersPage } from './features/sweepers/SweepersPage'
 import { HomePage } from './features/home/HomePage'
@@ -73,6 +75,14 @@ export default function App() {
             }
           />
           <Route path="squads" element={<SquadsPage />} />
+          <Route
+            path="squads/new"
+            element={
+              <RequirePermission permission="squads.write">
+                <NewSquadPage />
+              </RequirePermission>
+            }
+          />
           <Route path="squads/:sessionId" element={<SquadPortal />}>
             <Route index element={<OpenLanes />} />
             <Route
@@ -87,6 +97,14 @@ export default function App() {
             <Route path="results" element={<SquadResultsPage />} />
           </Route>
           <Route path="sweepers" element={<SweepersPage />} />
+          <Route
+            path="sweepers/new"
+            element={
+              <RequirePermission permission="squads.write">
+                <NewSweeperPage />
+              </RequirePermission>
+            }
+          />
           <Route path="sweepers/:sessionId" element={<SweeperPortal />}>
             <Route index element={<OpenLanes />} />
             <Route

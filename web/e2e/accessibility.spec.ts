@@ -183,6 +183,50 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('new squad form has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Squads')
+      await page.getByRole('link', { name: 'New squad' }).click()
+      await expect(page.getByRole('heading', { name: 'New squad', level: 1 })).toBeVisible()
+      await expect(page.getByLabel('Date and time (required)')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
+    test('new squad form with errors has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Squads')
+      await page.getByRole('link', { name: 'New squad' }).click()
+      await page.getByRole('button', { name: 'Add squad' }).click()
+      await expect(page.getByRole('alert')).toContainText('Fix')
+
+      await expectNoViolations(page)
+    })
+
+    test('new sweeper form has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Sweepers')
+      await page.getByRole('link', { name: 'New sweeper' }).click()
+      await expect(page.getByRole('heading', { name: 'New sweeper', level: 1 })).toBeVisible()
+      await expect(page.getByLabel('Date and time (required)')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
+    test('new sweeper form with errors has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Sweepers')
+      await page.getByRole('link', { name: 'New sweeper' }).click()
+      await page.getByRole('button', { name: 'Add sweeper' }).click()
+      await expect(page.getByRole('alert')).toContainText('Fix')
+
+      await expectNoViolations(page)
+    })
+
     test('new division confirm dialog has no WCAG 2.2 AA violations', async ({ page }) => {
       await openTournamentsSignedIn(page)
       await page.getByRole('article').first().getByRole('link').click()

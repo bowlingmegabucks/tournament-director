@@ -11,7 +11,9 @@ import { createInMemoryRegistrationRepository } from '../features/registrations/
 import { createInMemoryRegistrationWriter } from '../features/registrations/writer.ts'
 import { createInMemoryScoreRepository } from '../features/scores/repository.ts'
 import { createInMemorySquadRepository } from '../features/squads/repository.ts'
+import { createInMemorySquadWriter } from '../features/squads/writer.ts'
 import { createInMemorySweeperRepository } from '../features/sweepers/repository.ts'
+import { createInMemorySweeperWriter } from '../features/sweepers/writer.ts'
 import { createInMemoryTournamentRepository } from '../features/tournaments/repository.ts'
 import { createInMemoryTournamentWriter } from '../features/tournaments/writer.ts'
 
@@ -30,7 +32,9 @@ export function createTestApp(overrides: Partial<AppDependencies> = {}): Express
     lanes: createInMemoryLaneRepository([]),
     scores: createInMemoryScoreRepository([]),
     squads: createInMemorySquadRepository([]),
+    squadWriter: createInMemorySquadWriter().writer,
     sweepers: createInMemorySweeperRepository([]),
+    sweeperWriter: createInMemorySweeperWriter().writer,
     checkDatabase: () => Promise.resolve(),
     ...overrides,
   })

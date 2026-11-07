@@ -146,7 +146,7 @@ git commit -m "Plan <feature> migration"
 1. Follow the plan's steps. Load the skills that fit: `api-patterns` and `api-testing-patterns` for `api/`; `react-patterns`, `typescript-standards`, `testing-patterns`, `ui-standards` for `web/`.
 2. Cite the rule ID in each test name: `it("rejects an empty name (TRN-01)")`.
 3. If the build shows the plan is wrong, stop. Tell the owner, agree a change, and update the plan file (and decisions, if it is a new choice) before you go on.
-4. Before you call it done, run lint, typecheck, test, and `format:check` in each folder you changed (`npm run check` at the root does both). Run `npm run test:e2e` in `web/` if the UI flow changed. Run `npm run test:mutation` for new logic and fix survivors.
+4. Before you call it done, run lint, typecheck, test, and `format:check` in each folder you changed (`npm run check` at the root does both). Run `npm run test:e2e` in `web/` if the UI flow changed. Run `npm run test:mutation:fast` (skips the slow static mutants; CI runs the full `test:mutation`) for new logic and fix survivors.
 5. Commit in small steps with imperative messages that cite rules: `Add tournament create route (TRN-01 to TRN-09)`.
 
 ## Phase 5: Record

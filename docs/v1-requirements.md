@@ -14,6 +14,7 @@ Feature-level work (ports of legacy rules) lives in [docs/migration/](migration/
 | 0.4.0   | Lock-down of public read routes, vendor routes (API key), cutover to `api.bowlingmegabucks.com`. |
 | 0.5.0   | Commands begin: create, edit, and delete tournament.                                             |
 | 0.6.0   | Division commands: create first, then edit and delete.                                           |
+| 0.7.0   | Squad and sweeper commands: create squad, create sweeper, then edit, delete, and complete.       |
 | Then    | Commands, one feature area per release.                                                          |
 | 1.0.0   | Every item below is checked.                                                                     |
 
@@ -34,6 +35,11 @@ Version numbers follow content, not a countdown. 0.10.0 is fine.
   - [x] Edit a division, warning when registered bowlers may no longer fit (`editDivision`, `DIV-12`, D-146 to D-150).
   - [x] Delete a division: refused for a complete tournament or any registered bowler, the number gap closes (`deleteDivision`, `DIV-12`, D-151 to D-156).
   - [ ] Change a registered bowler's division in the new app, so a director can empty a division before deleting it (`REG-15`, Q-37, D-156). Built with the registrations edit feature.
+- [ ] Squad and sweeper commands (D-12, D-15; [squads-and-sweepers.md](requirements/squads-and-sweepers.md)), 0.7.0:
+  - [x] Create a squad: `squads.write`, max per pair 2 to 5, the date inside the tournament, blank fee and ratios use the tournament's, a complete tournament refuses (`createSquad`, `SQD-01` to `SQD-08`, D-167 to D-173).
+  - [x] Create a sweeper, with a bonus-pins box per division: `squads.write`, own fee, games, and cash ratio, pins blank or 0 to 99, one transaction (`createSweeper`, `SQD-10` to `SQD-13`, D-174 to D-178). Q-11 (pin presets) stays open.
+  - [ ] Edit and delete a squad or sweeper (`SQD-14`, D-12, D-15).
+  - [ ] Complete a squad or sweeper, and lock a complete session on the server (`SQD-15` to `SQD-18`, D-10).
 
 ## Data and cutover
 

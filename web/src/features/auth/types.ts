@@ -9,6 +9,7 @@ export type KnownPermission =
   | 'tournaments.write'
   | 'tournaments.delete'
   | 'divisions.write'
+  | 'squads.write'
   | 'bowlers.ssn'
   | 'users.manage'
 

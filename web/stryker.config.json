@@ -11,6 +11,7 @@
     "!src/test/**",
     "!src/vite-env.d.ts"
   ],
+  "vitest": { "configFile": "vitest.stryker.config.ts" },
   "incremental": true,
   "reporters": ["clear-text", "html"],
   "dashboard": { "module": "web" },

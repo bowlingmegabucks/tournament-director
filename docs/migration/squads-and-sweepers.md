@@ -39,18 +39,18 @@ A squad has no game count. It always uses the tournament's `games`.
 
 ## Validation when adding a squad
 
-| ID     | Rule                                                                                      | Message                                                                    |
-| ------ | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| SQD-01 | Tournament exists and matches                                                             | "Tournament Id is required", "Tournament Id does not match"                |
-| SQD-02 | Finals ratio, if set, > 1. Cash ratio, if set, > 1                                        | "Finals ratio must be greater than 1", "Cash ratio must be greater than 1" |
-| SQD-03 | Date is on or after tournament start (00:00) and on or before tournament end (end of day) | "Squad date must be after tournament start", "...before tournament end"    |
-| SQD-04 | Max per pair > 0                                                                          | "Max per pair must be greater than 0"                                      |
-| SQD-05 | Number of lanes > 0 and even                                                              | "Number of lanes must be greater than 0", "Number of lanes must be even"   |
-| SQD-06 | Starting lane > 0 and odd                                                                 | "Starting lane must be greater than 0", "Starting lane must be odd"        |
-| SQD-07 | Not complete                                                                              | "Cannot add a completed squad"                                             |
-| SQD-08 | Entry fee override has no rule beyond the screen (0 to 999.99)                            |                                                                            |
+| ID     | Rule                                                                                      | Message                                                                    | Status |
+| ------ | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------ |
+| SQD-01 | Tournament exists and matches                                                             | "Tournament Id is required", "Tournament Id does not match"                | Done |
+| SQD-02 | Finals ratio, if set, > 1. Cash ratio, if set, > 1                                        | "Finals ratio must be greater than 1", "Cash ratio must be greater than 1" | Done, differs (D-170) |
+| SQD-03 | Date is on or after tournament start (00:00) and on or before tournament end (end of day) | "Squad date must be after tournament start", "...before tournament end"    | Done, differs (D-169) |
+| SQD-04 | Max per pair > 0                                                                          | "Max per pair must be greater than 0"                                      | Done, differs (D-168) |
+| SQD-05 | Number of lanes > 0 and even                                                              | "Number of lanes must be greater than 0", "Number of lanes must be even"   | Done, differs (D-168) |
+| SQD-06 | Starting lane > 0 and odd                                                                 | "Starting lane must be greater than 0", "Starting lane must be odd"        | Done, differs (D-168) |
+| SQD-07 | Not complete                                                                              | "Cannot add a completed squad"                                             | Done, differs (D-171) |
+| SQD-08 | Entry fee override has no rule beyond the screen (0 to 999.99)                            |                                                                            | Done, differs (D-170) |
 
-**D-167 to D-173:** the new app adds a squad through `POST /v1/tournaments/{id}/squads` (`squads.write`). Max per pair is 2 to 5 (D-168, answers Q-10), starting lane odd 1 to 199, lanes even 2 to 200, ratios 1.1 to 99.9 with one decimal (D-170), date and time in one box inside the tournament dates (D-169), a complete tournament refuses (D-171).
+**D-167 to D-173:** built on branch `createSquad` (see [squads-and-sweepers.md](../requirements/squads-and-sweepers.md)). The new app adds a squad through `POST /v1/tournaments/{id}/squads` (`squads.write`). Max per pair is 2 to 5 (D-168, answers Q-10), starting lane odd 1 to 199, lanes even 2 to 200, ratios 1.1 to 99.9 with one decimal (D-170), date and time in one box inside the tournament dates (D-169), a complete tournament refuses (D-171).
 
 ## Validation when adding a sweeper
 

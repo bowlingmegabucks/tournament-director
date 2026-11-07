@@ -18,7 +18,7 @@ Source: `presentation/LaneAssignments/` (lane generation and cross logic live he
 | 4          | A, B         | C, D            | `1A 1B 2C 2D`        |
 | 5          | A, B         | C, D, E         | `1A 1B 2C 2D 2E`     |
 
-Any other value: the screen shows an error and disables itself. (Squad validation allows any value above 0, so 1 or 6 saves but cannot be assigned. See Q-10.)
+Any other value: the screen shows an error and disables itself. (Legacy squad validation allows any value above 0, so 1 or 6 saves but cannot be assigned. The new app's squad setup allows only 2 to 5: D-168, which answers Q-10.)
 
 **D-56:** the new app fills a pair in the order `A`, `C`, `B`, `D`, `E` (odd lane A, even lane C, odd lane B, even lane D, even lane E), takes the first free seat, never renumbers, and stops at 5. The letters above stay valid when stored (D-61).
 

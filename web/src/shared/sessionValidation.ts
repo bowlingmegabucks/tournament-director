@@ -69,6 +69,25 @@ export function numberOfLanesProblem(text: string): string | undefined {
   )
 }
 
+export const lastLane = 200
+
+/**
+ * The lanes run from the starting lane for the number of lanes, so the last one must exist (D-179).
+ * Shown on the number of lanes; `undefined` while either box does not hold a whole number.
+ */
+export function laneBlockProblem(startingLane: string, numberOfLanes: string): string | undefined {
+  const start = whole('Starting lane', startingLane)
+  const count = whole('Number of lanes', numberOfLanes)
+  if ('error' in start || 'error' in count) return undefined
+  // A value outside its own range has its own message already.
+  if (start.value < 1 || start.value >= lastLane || count.value < 2 || count.value > lastLane) {
+    return undefined
+  }
+  return start.value + count.value - 1 > lastLane
+    ? `Lanes must end at lane ${lastLane} or lower`
+    : undefined
+}
+
 export function perPairProblem(text: string): string | undefined {
   const parsed = whole('Max per pair', text)
   if ('error' in parsed) return parsed.error

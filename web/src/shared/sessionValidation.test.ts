@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   dateProblem,
   hasAtMostDecimals,
+  laneBlockProblem,
   numberOfLanesProblem,
   parse,
   perPairProblem,
@@ -85,5 +86,31 @@ describe('dateProblem (SQD-03, SQD-10)', () => {
 
   it('skips the range while the tournament dates have not loaded', () => {
     expect(dateProblem('2020-01-01T09:00', undefined, 'Squad')).toBeUndefined()
+  })
+})
+
+describe('laneBlockProblem (D-179)', () => {
+  it('passes lanes that end at 200 or lower', () => {
+    expect(laneBlockProblem('1', '200')).toBeUndefined()
+    expect(laneBlockProblem('199', '2')).toBeUndefined()
+    expect(laneBlockProblem('101', '100')).toBeUndefined()
+  })
+
+  it('refuses lanes that run past 200', () => {
+    expect(laneBlockProblem('199', '4')).toBe('Lanes must end at lane 200 or lower')
+    expect(laneBlockProblem('3', '200')).toBe('Lanes must end at lane 200 or lower')
+  })
+
+  it('says nothing while either box is blank or not a whole number', () => {
+    expect(laneBlockProblem('', '200')).toBeUndefined()
+    expect(laneBlockProblem('199', 'x')).toBeUndefined()
+    expect(laneBlockProblem('1.5', '200')).toBeUndefined()
+  })
+
+  it('leaves a value outside its own range to that range message', () => {
+    expect(laneBlockProblem('200', '200')).toBeUndefined()
+    expect(laneBlockProblem('0', '200')).toBeUndefined()
+    expect(laneBlockProblem('199', '202')).toBeUndefined()
+    expect(laneBlockProblem('199', '0')).toBeUndefined()
   })
 })

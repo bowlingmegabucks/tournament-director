@@ -28,6 +28,11 @@ export function NewSweeperPage() {
   // Read afresh, so a division added a moment ago has its box (D-177).
   // Stryker disable next-line ObjectLiteral: a query with the default stale time refetches on mount anyway; 'always' only states the intent.
   const divisions = useDivisions(id, { refetchOnMount: 'always' })
+  // Cached data is on screen at once, so wait for the read this visit started: until then a division
+  // deleted a moment ago would still have a box, and pins typed into it would be dropped.
+  const [openedAt] = useState(() => Date.now())
+  const divisionsStale =
+    divisions.data !== undefined && !divisions.error && divisions.dataUpdatedAt < openedAt
   const create = useCreateSweeper(id)
   const [failure, setFailure] = useState<string | undefined>()
   const listUrl = `/tournaments/${id}/sweepers`
@@ -39,7 +44,7 @@ export function NewSweeperPage() {
     </>
   )
 
-  if (settings.isPending || sweepers.isPending || divisions.isPending) {
+  if (settings.isPending || sweepers.isPending || divisions.isPending || divisionsStale) {
     return (
       <>
         {heading}

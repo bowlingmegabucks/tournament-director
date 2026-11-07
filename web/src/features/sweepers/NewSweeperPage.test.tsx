@@ -117,6 +117,23 @@ describe('NewSweeperPage', () => {
     )
   })
 
+  it('waits for a fresh division list, so a deleted division has no box (D-177)', async () => {
+    signIn()
+    serve()
+    const user = userEvent.setup()
+    renderApp(`/tournaments/${tournament.id}/divisions`)
+    await screen.findByText('Women')
+    // The division is deleted elsewhere; the Divisions page left the old list in the cache.
+    serve({ divisions: [open] })
+
+    await user.click(screen.getByRole('link', { name: 'Sweepers' }))
+    await user.click(await screen.findByRole('link', { name: 'New sweeper' }))
+    await screen.findByLabelText('Date and time (required)', {}, { timeout: 3000 })
+
+    expect(box('Open')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Women')).not.toBeInTheDocument()
+  })
+
   it('starts blank for the first sweeper, and when the list cannot be read (D-178)', async () => {
     signIn()
     serve({ sweepers: [] })

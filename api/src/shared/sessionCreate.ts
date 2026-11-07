@@ -24,7 +24,9 @@ export function required(label: string) {
 }
 
 export function whole(label: string) {
-  return required(label).refine((value) => Number.isInteger(value), { error: 'Enter a whole number' })
+  return required(label).refine((value) => Number.isInteger(value), {
+    error: 'Enter a whole number',
+  })
 }
 
 // Stryker disable next-line Regex: without `^` a prefixed value fails the round trip in `toLocalDateTime` all the same.
@@ -88,6 +90,9 @@ export function checkLaneBlock(
 ): void {
   const { startingLane, numberOfLanes } = value
   if (typeof startingLane !== 'number' || typeof numberOfLanes !== 'number') return
+  // A value its own check refused has its own message already.
+  if (startingLane < 1 || startingLane > lastLane - 1 || !Number.isInteger(startingLane)) return
+  if (numberOfLanes < 2 || numberOfLanes > lastLane || !Number.isInteger(numberOfLanes)) return
   if (startingLane + numberOfLanes - 1 > lastLane) {
     ctx.addIssue({ code: 'custom', path: ['numberOfLanes'], message: laneBlockMessage })
   }

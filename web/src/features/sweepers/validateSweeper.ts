@@ -1,6 +1,7 @@
 import {
   dateProblem,
   hasAtMostDecimals,
+  laneBlockProblem,
   numberOfLanesProblem,
   parse,
   perPairProblem,
@@ -75,7 +76,11 @@ export function validateSweeper(
   const problems: [string, string | undefined][] = [
     ['date', dateProblem(values.date, dates, 'Sweeper')],
     ['startingLane', startingLaneProblem(values.startingLane)],
-    ['numberOfLanes', numberOfLanesProblem(values.numberOfLanes)],
+    [
+      'numberOfLanes',
+      numberOfLanesProblem(values.numberOfLanes) ??
+        laneBlockProblem(values.startingLane, values.numberOfLanes),
+    ],
     ['maxPerPair', perPairProblem(values.maxPerPair)],
     ['entryFee', fee(values.entryFee)],
     ['games', games(values.games)],

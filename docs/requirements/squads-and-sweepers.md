@@ -37,7 +37,7 @@ What `POST /v1/tournaments/{id}/squads` takes, with its limits (D-168 to D-170).
 | -------------------------- | ------------------------------------ | -------- | ----------------------------------------------------------------------------------------------- |
 | `date`                     | `YYYY-MM-DDTHH:mm` (seconds only `00`) | yes      | The center's local time, a real day and time, within the tournament dates (`SQD-03`)            |
 | `startingLane`             | whole number, odd, 1 to 199          | yes      | `SQD-06`, D-168                                                                                 |
-| `numberOfLanes`            | whole number, even, 2 to 200         | yes      | `SQD-05`, D-168                                                                                 |
+| `numberOfLanes`            | whole number, even, 2 to 200; with the starting lane it must end at lane 200 or lower | yes      | `SQD-05`, D-168, D-179                                                                                 |
 | `maxPerPair`               | whole number, 2 to 5                 | yes      | `SQD-04`. Matches the lane page (D-56, answers Q-10)                                            |
 | `entryFee`                 | number, 0 to 999.99, two decimals    | no       | `SQD-08`. A typed 0 is set, not blank                                                           |
 | `finalsRatio`, `cashRatio` | number, 1.1 to 99.9, one decimal     | no       | `SQD-02`                                                                                        |

@@ -34,6 +34,12 @@ describe('parseCreateSquad', () => {
     })
   })
 
+  it('reads spaces as an override not set, as the form does (D-170)', () => {
+    expect(
+      parseCreateSquad({ ...valid, entryFee: '  ', finalsRatio: ' ', cashRatio: '\t' }),
+    ).toMatchObject({ success: true, data: { entryFee: null, finalsRatio: null, cashRatio: null } })
+  })
+
   it.each([undefined, null, ''])('reads %j as an override not set (D-170)', (blank) => {
     expect(
       parseCreateSquad({ ...valid, entryFee: blank, finalsRatio: blank, cashRatio: blank }),
@@ -74,7 +80,7 @@ describe('parseCreateSquad', () => {
 
   describe('starting lane', () => {
     it.each([1, 3, 199])('accepts %i (SQD-06)', (startingLane) => {
-      expect(parseCreateSquad({ ...valid, startingLane }).success).toBe(true)
+      expect(parseCreateSquad({ ...valid, startingLane, numberOfLanes: 2 }).success).toBe(true)
     })
 
     it.each([
@@ -111,6 +117,32 @@ describe('parseCreateSquad', () => {
       [undefined, 'Number of lanes is required'],
     ])('refuses %j (SQD-05, D-168)', (numberOfLanes, message) => {
       expect(errorsOf({ ...valid, numberOfLanes })).toEqual({ numberOfLanes: message })
+    })
+  })
+
+  describe('lanes that fit (D-179)', () => {
+    it.each([
+      [1, 200],
+      [199, 2],
+      [101, 100],
+    ])('accepts lane %i for %i lanes, ending at 200 or lower', (startingLane, numberOfLanes) => {
+      expect(parseCreateSquad({ ...valid, startingLane, numberOfLanes }).success).toBe(true)
+    })
+
+    it.each([
+      [3, 200],
+      [199, 4],
+      [101, 102],
+    ])('refuses lane %i for %i lanes, which pass lane 200', (startingLane, numberOfLanes) => {
+      expect(errorsOf({ ...valid, startingLane, numberOfLanes })).toEqual({
+        numberOfLanes: 'Lanes must end at lane 200 or lower',
+      })
+    })
+
+    it('leaves the message to the field check when a value is refused already', () => {
+      expect(errorsOf({ ...valid, startingLane: 201, numberOfLanes: 200 })).toEqual({
+        startingLane: 'Starting lane must be between 1 and 199',
+      })
     })
   })
 

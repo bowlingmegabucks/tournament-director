@@ -23,10 +23,16 @@ describe('validateSweeper', () => {
     expect(validateSweeper(valid, dates, divisions)).toEqual({})
   })
 
+  it('refuses lanes that run past lane 200, on the number of lanes (D-179)', () => {
+    expect(errorsFor({ startingLane: '199', numberOfLanes: '4' })).toEqual({
+      numberOfLanes: 'Lanes must end at lane 200 or lower',
+    })
+  })
+
   it('passes values at their limits', () => {
     expect(
       errorsFor({
-        startingLane: '199',
+        startingLane: '1',
         numberOfLanes: '200',
         maxPerPair: '5',
         entryFee: '999.99',

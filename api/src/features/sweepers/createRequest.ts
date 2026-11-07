@@ -1,5 +1,11 @@
 import { z } from 'zod'
-import { blankToNull, checkLaneBlock, required, sessionFields, whole } from '../../shared/sessionCreate.ts'
+import {
+  blankToNull,
+  checkLaneBlock,
+  required,
+  sessionFields,
+  whole,
+} from '../../shared/sessionCreate.ts'
 import { hasAtMostDecimals, type FieldErrors } from '../tournaments/createRequest.ts'
 
 export type { FieldErrors }

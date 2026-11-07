@@ -28,6 +28,17 @@ describe('parseCreateSweeper', () => {
     })
   })
 
+  it('refuses lanes that run past lane 200, on the number of lanes (D-179)', () => {
+    expect(errorsOf({ ...valid, startingLane: 199, numberOfLanes: 4 })).toEqual({
+      numberOfLanes: 'Lanes must end at lane 200 or lower',
+    })
+    expect(parseCreateSweeper({ ...valid, startingLane: 199, numberOfLanes: 2 }).success).toBe(true)
+  })
+
+  it('reads a fee typed as spaces as missing, as the form does (SQD-11)', () => {
+    expect(errorsOf({ ...valid, entryFee: '   ' })).toEqual({ entryFee: 'Entry fee is required' })
+  })
+
   it.each([undefined, null])('reads bonusPins %j as none (SQD-13)', (bonusPins) => {
     expect(parseCreateSweeper({ ...valid, bonusPins })).toMatchObject({
       success: true,

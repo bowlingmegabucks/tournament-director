@@ -25,6 +25,8 @@ import { createScoreRouter } from './features/scores/routes.ts'
 import type { ScoreRepository } from './features/scores/repository.ts'
 import { createSquadRouter } from './features/squads/routes.ts'
 import type { SquadRepository } from './features/squads/repository.ts'
+import { createSquadCreateRouter } from './features/squads/createRoutes.ts'
+import type { SquadWriter } from './features/squads/writer.ts'
 import { createSweeperRouter } from './features/sweepers/routes.ts'
 import type { SweeperRepository } from './features/sweepers/repository.ts'
 import { createTournamentDeleteRouter } from './features/tournaments/deleteRoutes.ts'
@@ -66,6 +68,8 @@ export interface AppDependencies {
   lanes: LaneRepository
   scores: ScoreRepository
   squads: SquadRepository
+  /** Adds squads (SQD-01 to SQD-08, D-167). */
+  squadWriter: SquadWriter
   sweepers: SweeperRepository
   /** Resolves when the database answers; rejects (a 503) when it does not. Feeds `GET /ready`. */
   checkDatabase: () => Promise<void>
@@ -88,6 +92,7 @@ export function createApp({
   lanes,
   scores,
   squads,
+  squadWriter,
   sweepers,
   checkDatabase,
   // Stryker disable next-line StringLiteral: the scope name only labels the metrics.
@@ -180,6 +185,12 @@ export function createApp({
         path: '/v1/tournaments/:id/squads',
         access: 'public',
         router: createSquadRouter(squads, tournaments),
+      },
+      {
+        path: '/v1/tournaments/:id/squads',
+        access: { permission: 'squads.write' }, // SQD-01 to SQD-08, D-167: the API key cannot reach it
+        methods: ['POST'],
+        router: createSquadCreateRouter(squadWriter, logger),
       },
       {
         path: '/v1/tournaments/:id/sweepers',

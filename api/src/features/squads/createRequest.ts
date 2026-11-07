@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { blankToNull, sessionFields } from '../../shared/sessionCreate.ts'
 import {
   describeFailure,
   hasAtMostDecimals,
@@ -22,20 +23,6 @@ export interface NewSquad {
   cashRatio: number | null
 }
 
-// A blank box reaches the API as "", a missing key, or null. All three mean "not set".
-const blankToNull = (value: unknown) => (value === undefined || value === '' ? null : value)
-
-// Wrong type or missing: the same words the form uses, so the two never disagree.
-const missing = (value: unknown) => value === undefined || value === null || value === ''
-
-function whole(label: string) {
-  return z
-    .number({
-      error: (issue) => (missing(issue.input) ? `${label} is required` : 'Enter a number'),
-    })
-    .refine((value) => Number.isInteger(value), { error: 'Enter a whole number' })
-}
-
 function ratio(label: string) {
   return z.preprocess(
     blankToNull,
@@ -48,51 +35,9 @@ function ratio(label: string) {
   )
 }
 
-// Stryker disable next-line Regex: without `^` a prefixed value fails the round trip in `toLocalDateTime` all the same.
-const dateTimeShape = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::00(?:\.0+)?)?$/
-
-/** `YYYY-MM-DDTHH:mm`, with seconds only as `00`, and a real calendar day and time. */
-function toLocalDateTime(value: string): string | undefined {
-  if (!dateTimeShape.test(value)) return undefined
-  const minute = value.slice(0, 16)
-  const parsed = new Date(`${minute}:00Z`)
-  // 2026-02-30 rolls over to March in `Date`; the round trip catches that.
-  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 16) !== minute) {
-    return undefined
-  }
-  return `${minute}:00`
-}
-
 /** The rule for each field (D-168 to D-170). Refused, never rounded (D-125). */
 const squadFields = {
-  date: z
-    .string({
-      error: (issue) =>
-        missing(issue.input) ? 'Date and time is required' : 'Enter a date and time',
-    })
-    // An empty string is "missing" to the error function above, so it gives the message.
-    .min(1)
-    .transform((value, ctx) => {
-      const normal = toLocalDateTime(value)
-      if (normal === undefined) {
-        ctx.addIssue({ code: 'custom', message: 'Enter a date and time' })
-        return z.NEVER
-      }
-      return normal
-    }),
-  startingLane: whole('Starting lane')
-    .refine((value) => value >= 1 && value <= 199, {
-      error: 'Starting lane must be between 1 and 199',
-    })
-    .refine((value) => value % 2 === 1, { error: 'Starting lane must be odd' }),
-  numberOfLanes: whole('Number of lanes')
-    .refine((value) => value >= 2 && value <= 200, {
-      error: 'Number of lanes must be between 2 and 200',
-    })
-    .refine((value) => value % 2 === 0, { error: 'Number of lanes must be even' }),
-  maxPerPair: whole('Max per pair').refine((value) => value >= 2 && value <= 5, {
-    error: 'Max per pair must be between 2 and 5',
-  }),
+  ...sessionFields,
   entryFee: z.preprocess(
     blankToNull,
     z

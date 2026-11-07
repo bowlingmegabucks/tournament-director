@@ -2,7 +2,7 @@ import { useId, useState } from 'react'
 import type { ChangeEvent, MouseEvent, SubmitEvent } from 'react'
 import { Link } from 'react-router'
 import { formatDateRange } from '../tournaments/format'
-import styles from './SquadForm.module.css'
+import styles from '../../shared/sessionForm.module.css'
 import { squadFields, type SquadField, type SquadFieldErrors, type SquadFormValues } from './types'
 import { validateSquad, type TournamentDates } from './validateSquad'
 

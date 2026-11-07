@@ -6,23 +6,13 @@ import { Toast } from '../../shared/Toast'
 import { Can } from '../auth/Can'
 import { DeleteDivisionButton } from './DeleteDivisionButton'
 import type { Tournament } from '../tournaments/types'
-import { useTournamentSettings } from '../tournaments/useTournamentSettings'
+import { useTournamentOpen } from '../tournaments/useTournamentOpen'
 import styles from './DivisionsPage.module.css'
 import { formatGender, formatHandicap, formatRange } from './format'
 import type { Division } from './types'
 import { useDivisions } from './useDivisions'
 
 const TOAST_MS = 5000
-
-/**
- * Whether the add and edit links may show: not while the settings load, and not on a complete
- * tournament (D-143, D-149, D-19). If the settings fail they show anyway: the API refuses a complete
- * tournament, and a slow start must not take the links away. Every caller shares one cached read.
- */
-function useTournamentOpen(id: string): boolean {
-  const settings = useTournamentSettings(id)
-  return !settings.isPending && settings.data?.completed !== true
-}
 
 /**
  * The Edit link and Delete button of one row, in a cell of their own. The cell sits inside `<Can>`,

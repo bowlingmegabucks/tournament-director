@@ -27,7 +27,7 @@ export interface NewSweeper {
 }
 
 /** The rule for each field (D-168, D-175, D-176). Refused, never rounded (D-125). */
-const sweeperFields = {
+export const sweeperFields = {
   ...sessionFields,
   entryFee: required('Entry fee')
     .refine((value) => value > 0, { error: 'Entry fee must be greater than $0' })
@@ -71,7 +71,10 @@ export type CreateSweeperResult =
   { success: true; data: NewSweeper } | { success: false; message: string; errors: FieldErrors }
 
 /** One message per field; a pin problem is keyed `bonusPins.<divisionId>` (D-176). */
-function describe(error: z.ZodError): { message: string; errors: FieldErrors } {
+export function describeSweeperFailure(error: z.ZodError): {
+  message: string
+  errors: FieldErrors
+} {
   const errors: FieldErrors = {}
   let general: string | undefined
   for (const issue of error.issues) {
@@ -102,6 +105,6 @@ function describe(error: z.ZodError): { message: string; errors: FieldErrors } {
 /** Run the create rules (SQD-10 to SQD-13, D-168, D-175, D-176). */
 export function parseCreateSweeper(body: unknown): CreateSweeperResult {
   const parsed = createSweeperSchema.safeParse(body)
-  if (!parsed.success) return { success: false, ...describe(parsed.error) }
+  if (!parsed.success) return { success: false, ...describeSweeperFailure(parsed.error) }
   return { success: true, data: parsed.data }
 }

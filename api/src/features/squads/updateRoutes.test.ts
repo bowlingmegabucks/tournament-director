@@ -209,7 +209,7 @@ describe(`PATCH ${url}`, () => {
     const { writer } = setup()
     const app = createSignedInTestApp({ squadWriter: writer, logger })
 
-    await request(app).patch(url).send({ maxPerPair: 3, entryFee: 70 })
+    await request(app).patch(url).send({ maxPerPair: 3, entryFee: 70.25 })
 
     const line = records().find((record) => record['msg'] === 'Squad updated')
     expect(line).toMatchObject({
@@ -219,7 +219,7 @@ describe(`PATCH ${url}`, () => {
       fields: ['maxPerPair', 'entryFee'],
     })
     expect(typeof line?.['actorId']).toBe('string')
-    expect(JSON.stringify(line)).not.toContain('70')
+    expect(JSON.stringify(line)).not.toContain('70.25')
   })
 
   it('does not log a save that changed nothing', async () => {

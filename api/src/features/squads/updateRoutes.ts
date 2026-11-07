@@ -25,9 +25,8 @@ function notFound(outcome: SessionNotFound): HttpError {
 }
 
 /**
- * Mounted at `/v1/tournaments/:id/squads` for `PATCH /:sessionId` and `GET /:sessionId/edit-info`,
- * behind `squads.write` (D-184, D-185). Web only: the legacy API has no such routes, so the vendor
- * sees no change (D-09). Which fields may change, and when, is `planSquadEdit` (D-180 to D-182);
+ * Mounted at `/v1/tournaments/:id/squads` for `PATCH /:sessionId` only, behind `squads.write` (D-184). Web only: the legacy API has no such
+ * routes, so the vendor sees no change (D-09). Which fields may change, and when, is `planSquadEdit` (D-180 to D-182);
  * this router only turns its answer into HTTP.
  */
 export function createSquadUpdateRouter(writer: SquadWriter, logger: Logger): Router {
@@ -69,7 +68,19 @@ export function createSquadUpdateRouter(writer: SquadWriter, logger: Logger): Ro
     res.json({ squad: outcome.updated })
   })
 
-  router.get('/:sessionId/edit-info', async (req, res) => {
+  return router
+}
+
+/**
+ * Mounted at `/v1/tournaments/:id/squads/:sessionId/edit-info` for `GET`, behind `squads.write`
+ * (D-185). It gets its own path so the group's permission check cannot reach the public
+ * `squads/:sessionId/...` reads (lanes, scores, results).
+ */
+export function createSquadEditInfoRouter(writer: SquadWriter): Router {
+  const router = Router({ mergeParams: true })
+
+  // Stryker disable next-line StringLiteral: '' and '/' match the same path.
+  router.get('/', async (req, res) => {
     const { id, sessionId } = idParams.parse(req.params)
     const info = await writer.getEditInfo(id, sessionId)
     if ('notFound' in info) throw notFound(info)

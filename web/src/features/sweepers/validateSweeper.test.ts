@@ -183,7 +183,9 @@ describe('startingValues (D-178)', () => {
       cashRatio: 6,
     })
 
-    expect(startingValues([early, late])).toEqual({
+    const middle = createSweeper({ startingLane: 3, numberOfLanes: 8, maxPerPair: 2 })
+
+    expect(startingValues([early, middle, late])).toEqual({
       ...emptySweeperForm,
       startingLane: '11',
       numberOfLanes: '10',

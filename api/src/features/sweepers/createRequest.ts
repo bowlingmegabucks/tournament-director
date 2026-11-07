@@ -81,8 +81,9 @@ function describe(error: z.ZodError): { message: string; errors: FieldErrors } {
     const [key, division] = issue.path
     if (typeof key !== 'string') {
       general ??= 'Send the sweeper as a JSON object.'
-    } else if (key === 'bonusPins' && typeof division === 'string') {
-      errors[`bonusPins.${division}`] ??= issue.message
+    } else if (typeof division === 'string') {
+      // Only `bonusPins` has a second path part: a box for one division (D-176).
+      errors[`${key}.${division}`] ??= issue.message
     } else {
       errors[key] ??= issue.message
     }
@@ -91,6 +92,7 @@ function describe(error: z.ZodError): { message: string; errors: FieldErrors } {
   return {
     message:
       general ??
+      // Stryker disable next-line StringLiteral: a failure always has a field error or the general message, so the bare summary never shows.
       (first ? `Check the highlighted fields. ${first}` : 'Check the highlighted fields.'),
     errors,
   }

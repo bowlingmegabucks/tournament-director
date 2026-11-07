@@ -179,6 +179,19 @@ describe('NewSweeperPage', () => {
     expect(box('Entry fee (required)')).toHaveAttribute('inputmode', 'decimal')
     expect(box('Cash ratio (required)')).toHaveAttribute('inputmode', 'decimal')
     expect(box('Open')).toHaveAccessibleDescription('0 to 99. Leave blank for none.')
+    // No empty paragraph waits for a message.
+    for (const paragraph of within(
+      screen.getByRole('group', { name: 'Bonus pins per game' }),
+    ).getAllByRole('paragraph')) {
+      expect(paragraph).not.toBeEmptyDOMElement()
+    }
+    expect(box('Starting lane (required)')).toHaveAccessibleDescription('An odd number, 1 to 199.')
+    expect(box('Number of lanes (required)')).toHaveAccessibleDescription(
+      'An even number, 2 to 200.',
+    )
+    expect(box('Bowlers per pair (required)')).toHaveAccessibleDescription(
+      '2 to 5. Matches the lane page.',
+    )
   })
 
   it('shows a bonus-pins box for each division, in the order sent (SQD-13, DIV-14)', async () => {
@@ -202,7 +215,9 @@ describe('NewSweeperPage', () => {
     const user = userEvent.setup()
     await openForm()
 
-    expect(screen.getByText(/This tournament has no divisions yet/)).toBeVisible()
+    expect(screen.getByText(/This tournament has no divisions yet/)).toHaveTextContent(
+      'This tournament has no divisions yet, so no bonus pins apply. Add a division first if you want them.',
+    )
     expect(screen.getByRole('link', { name: 'Add a division' })).toHaveAttribute(
       'href',
       `/tournaments/${tournament.id}/divisions/new`,
@@ -369,6 +384,87 @@ describe('NewSweeperPage', () => {
     await user.click(screen.getByRole('button', { name: 'Dismiss' }))
 
     expect(screen.queryByText('Sweeper created')).not.toBeInTheDocument()
+  })
+
+  it('moves focus to a box when its message in the summary is followed, and stops the link jumping (SQD-12)', async () => {
+    signIn()
+    serve({ sweepers: [] })
+    const user = userEvent.setup()
+    await openForm()
+    await user.click(add())
+    const alert = await screen.findByRole('alert')
+
+    const link = within(alert).getByRole('link', { name: 'Games is required' })
+
+    expect(fireEvent.click(link)).toBe(false)
+    expect(box('Games (required)')).toHaveFocus()
+  })
+
+  it('keeps focus in the box when Add or Cancel is pressed with the mouse (D-178)', async () => {
+    signIn()
+    serve()
+    await openForm()
+
+    // A cancelled mousedown is how a page keeps the focus where it was.
+    expect(fireEvent.mouseDown(add())).toBe(false)
+    expect(fireEvent.mouseDown(screen.getByRole('link', { name: 'Cancel' }))).toBe(false)
+  })
+
+  it('stops the browser from sending the form itself (SQD-10)', async () => {
+    signIn()
+    serve()
+    await openForm()
+
+    const form = add().closest('form')
+    if (!form) throw new Error('No form')
+
+    expect(fireEvent.submit(form)).toBe(false)
+  })
+
+  it('marks each wrong box invalid, the date and a pins box included (SQD-10, SQD-13)', async () => {
+    signIn()
+    serve({ sweepers: [] })
+    const user = userEvent.setup()
+    await openForm()
+    pickDate('2026-10-26T09:00')
+    await user.type(box('Open'), '100')
+    await user.click(add())
+
+    await screen.findByRole('alert')
+
+    expect(date()).toHaveAttribute('aria-invalid', 'true')
+    expect(box('Open')).toHaveAttribute('aria-invalid', 'true')
+    expect(box('Entry fee (required)')).toHaveAttribute('aria-invalid', 'true')
+    expect(box('Games (required)')).toHaveAttribute('aria-invalid', 'true')
+    expect(box('Women')).not.toHaveAttribute('aria-invalid')
+  })
+
+  it('checks the date when the director leaves it (SQD-10)', async () => {
+    signIn()
+    serve()
+    await openForm()
+
+    pickDate('2026-10-26T09:00')
+    fireEvent.blur(date())
+
+    expect(await screen.findByText('Sweeper date must be before tournament end')).toBeVisible()
+    pickDate('2026-10-25T09:00')
+    expect(screen.queryByText('Sweeper date must be before tournament end')).not.toBeInTheDocument()
+  })
+
+  it('drops the summary once every box is fixed (SQD-10 to SQD-13)', async () => {
+    signIn()
+    serve()
+    const user = userEvent.setup()
+    await openForm()
+    await user.click(add())
+    expect(await screen.findByRole('alert')).toHaveTextContent('Fix 4 fields to save.')
+
+    await fillRequired(user)
+
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    })
   })
 
   it('sends a typed 0 as 0 (D-176)', async () => {

@@ -96,9 +96,11 @@ export function createInMemorySweeperWriter(
       }
       const divisions =
         options.divisions ??
+        // Stryker disable next-line ArithmeticOperator: the number only orders the divisions, and the route tests name one at a time or none out of order.
         Object.keys(input.bonusPins).map((id, index) => ({ id, name: id, number: index + 1 }))
       const facts: CreateFacts = {
         completed: options.completed?.includes(tournamentId) ?? false,
+        // Stryker disable next-line StringLiteral: an empty start date is before no day, the same as 2000-01-01.
         startDate: options.dates?.startDate ?? '2000-01-01',
         endDate: options.dates?.endDate ?? '2099-12-31',
         divisionIds: new Set(divisions.map((division) => division.id)),

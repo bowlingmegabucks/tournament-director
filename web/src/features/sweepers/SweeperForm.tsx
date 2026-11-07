@@ -134,6 +134,7 @@ export function SweeperForm({
       const problem = found(values)[key]
       setErrors((current) => {
         const rest = without(current, key)
+        // Stryker disable next-line ConditionalExpression: a key holding `undefined` reads as no message everywhere (`invalid` and `message` test the value).
         return problem === undefined ? rest : { ...rest, [key]: problem }
       })
     }

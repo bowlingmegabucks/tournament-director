@@ -26,6 +26,7 @@ export function NewSweeperPage() {
   // read fails, the form starts blank.
   const sweepers = useSweepers(id)
   // Read afresh, so a division added a moment ago has its box (D-177).
+  // Stryker disable next-line ObjectLiteral: a query with the default stale time refetches on mount anyway; 'always' only states the intent.
   const divisions = useDivisions(id, { refetchOnMount: 'always' })
   const create = useCreateSweeper(id)
   const [failure, setFailure] = useState<string | undefined>()

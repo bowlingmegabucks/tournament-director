@@ -3,7 +3,7 @@ import { http, HttpResponse, type JsonBodyType } from 'msw'
 import { server } from '../../mocks/server'
 import { createSweeper } from '../../mocks/data'
 import { TournamentNotFoundError } from '../../shared/tournamentQuery'
-import { fetchSweepers } from './api'
+import { createSweeper as postSweeper, fetchSweepers, SweeperRejectedError } from './api'
 
 const path = '/v1/tournaments/:id/sweepers'
 const pins = { divisionId: 'd1', divisionName: 'Open', bonusPinsPerGame: 10 }
@@ -140,5 +140,146 @@ describe('fetchSweepers', () => {
     respondWith({ sweepers: [{ ...createSweeper(), bonusPins: [entry] }] })
 
     await expect(fetchSweepers('t1')).rejects.toThrow('unexpected response')
+  })
+})
+
+describe('createSweeper (the API call)', () => {
+  const postPath = '/v1/tournaments/:id/sweepers'
+  const input = {
+    date: '2026-10-24T18:00',
+    startingLane: 1,
+    numberOfLanes: 24,
+    maxPerPair: 4,
+    entryFee: 20,
+    games: 3,
+    cashRatio: 5,
+    bonusPins: { d1: 10, d2: null },
+  }
+
+  it('posts the sweeper to its tournament and reads the stored one back (SQD-10)', async () => {
+    const stored = createSweeper({ bonusPins: [pins] })
+    let sent: unknown
+    let asked: unknown
+    server.use(
+      http.post(postPath, async ({ params, request }) => {
+        asked = params.id
+        sent = await request.json()
+        expect(request.headers.get('content-type')).toBe('application/json')
+        return HttpResponse.json({ sweeper: stored }, { status: 201 })
+      }),
+    )
+
+    await expect(postSweeper('t 1', input)).resolves.toEqual(stored)
+
+    expect(asked).toBe('t 1')
+    expect(sent).toEqual(input)
+  })
+
+  it('throws the field errors of a 400, pin boxes included, and ignores other keys (SQD-13)', async () => {
+    server.use(
+      http.post(postPath, () =>
+        HttpResponse.json(
+          {
+            message: 'Check the highlighted fields. Games must be between 1 and 99',
+            errors: {
+              games: 'Games must be between 1 and 99',
+              'bonusPins.d1': 'Bonus pins must be between 0 and 99',
+              bonusPins: 'Bonus pins must be keyed by division id',
+              other: 'x',
+              cashRatio: 7,
+            },
+          },
+          { status: 400 },
+        ),
+      ),
+    )
+
+    const failure = await postSweeper('t1', input).catch((error: unknown) => error)
+
+    expect(failure).toBeInstanceOf(SweeperRejectedError)
+    expect(failure).toMatchObject({
+      message: 'Check the highlighted fields. Games must be between 1 and 99',
+      errors: {
+        games: 'Games must be between 1 and 99',
+        'bonusPins.d1': 'Bonus pins must be between 0 and 99',
+        bonusPins: 'Bonus pins must be keyed by division id',
+      },
+      tournament: undefined,
+    })
+    expect((failure as SweeperRejectedError).errors).not.toHaveProperty('other')
+    expect((failure as SweeperRejectedError).errors).not.toHaveProperty('cashRatio')
+  })
+
+  it('throws the gone-division refusal of a 409 under bonusPins (D-177)', async () => {
+    const reason = 'A division no longer exists. Reload the page'
+    server.use(
+      http.post(postPath, () =>
+        HttpResponse.json({ message: reason, errors: { bonusPins: reason } }, { status: 409 }),
+      ),
+    )
+
+    const failure = await postSweeper('t1', input).catch((error: unknown) => error)
+
+    expect(failure).toMatchObject({ errors: { bonusPins: reason }, tournament: undefined })
+  })
+
+  it('throws the reason of a complete tournament apart from the fields (D-171)', async () => {
+    const reason = 'This tournament is complete and cannot be changed'
+    server.use(
+      http.post(postPath, () =>
+        HttpResponse.json({ message: reason, errors: { tournament: reason } }, { status: 409 }),
+      ),
+    )
+
+    const failure = await postSweeper('t1', input).catch((error: unknown) => error)
+
+    expect(failure).toBeInstanceOf(SweeperRejectedError)
+    expect(failure).toMatchObject({ tournament: reason, errors: {} })
+  })
+
+  it('names the failure when a 400 body is not JSON', async () => {
+    server.use(http.post(postPath, () => new HttpResponse('nope', { status: 400 })))
+
+    await expect(postSweeper('t1', input)).rejects.toThrow(
+      'Failed to save the sweeper (response is not JSON)',
+    )
+  })
+
+  it('names the failure when a 201 body is not JSON', async () => {
+    server.use(http.post(postPath, () => new HttpResponse('nope', { status: 201 })))
+
+    await expect(postSweeper('t1', input)).rejects.toThrow(
+      'Failed to save the sweeper (response is not JSON)',
+    )
+  })
+
+  it('falls back on a plain message when a refusal sends none, or an errors list that is not one', async () => {
+    server.use(http.post(postPath, () => HttpResponse.json({ errors: 'x' }, { status: 409 })))
+
+    await expect(postSweeper('t1', input)).rejects.toThrow('The sweeper was not accepted.')
+  })
+
+  it.each([
+    [404, TournamentNotFoundError, 'Tournament not found'],
+    [401, Error, 'Sign in to add a sweeper.'],
+    [403, Error, 'You do not have permission to add a sweeper.'],
+    [500, Error, 'Failed to save the sweeper (500)'],
+  ])('throws a plain error for status %i', async (status, type, message) => {
+    server.use(http.post(postPath, () => new HttpResponse(null, { status })))
+
+    const failure = await postSweeper('t1', input).catch((error: unknown) => error)
+
+    expect(failure).toBeInstanceOf(type)
+    expect(failure).toMatchObject({ message })
+  })
+
+  it('refuses an answer that is not a sweeper', async () => {
+    server.use(
+      http.post(postPath, () => HttpResponse.json({ sweeper: { id: 1 } }, { status: 201 })),
+    )
+
+    await expect(postSweeper('t1', input)).rejects.toThrow(
+      'Failed to save the sweeper (unexpected response)',
+    )
   })
 })

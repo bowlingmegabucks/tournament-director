@@ -44,6 +44,14 @@ describe('pins with spaces (SQD-29)', () => {
   })
 })
 
+describe('changedScalars with spaces in the starting text', () => {
+  it('ignores spaces around either side', () => {
+    expect(
+      changedScalars({ ...initial, entryFee: ' 20 ' }, { ...initial, entryFee: '20' }),
+    ).toEqual([])
+  })
+})
+
 describe('changedScalars and changedPins', () => {
   it('lists the scalar boxes whose trimmed text differs', () => {
     expect(changedScalars(initial, initial)).toEqual([])

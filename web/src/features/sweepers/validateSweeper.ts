@@ -158,11 +158,11 @@ export function toFormValues(sweeper: Sweeper): SweeperFormValues {
   }
 }
 
-/** A blank pin box and a 0 mean the same: no bonus (D-176). Text that is not a number counts as itself. */
-const pinValue = (text: string | undefined) => {
-  const trimmed = (text ?? '').trim()
-  return trimmed === '' ? 0 : Number(trimmed)
-}
+/**
+ * A blank pin box and a 0 mean the same: no bonus (D-176). `Number` reads blank or spaces as 0 and
+ * ignores spaces around a number; text that is not a number gives NaN, which matches nothing.
+ */
+const pinValue = (text: string | undefined) => Number(text ?? '')
 
 /** The scalar boxes whose text differs from where the form started. */
 export function changedScalars(

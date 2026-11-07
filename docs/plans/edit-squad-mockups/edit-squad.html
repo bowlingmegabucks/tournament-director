@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edit squad</title>
+<link rel="stylesheet" href="../../../web/src/styles/tokens.css">
+<link rel="stylesheet" href="../../../web/src/styles/base.css">
+<link rel="stylesheet" href="mock.css">
+</head>
+<body>
+<main>
+  <p class="note"><a href="index.html">Index</a> · Route: /tournaments/{id}/squads/{sessionId}/edit · Needs squads.write</p>
+
+  <section class="state">
+    <h2 class="state-title">1. Filled: entries, assignments, no scores</h2>
+    <nav class="crumbs" aria-label="Breadcrumb">Spring Open › Squads › Sat, Oct 24, 9:00 AM › Edit</nav>
+    <h1>Edit squad</h1>
+    <form class="form" novalidate>
+      <fieldset class="group">
+        <legend>When</legend>
+        <div class="field">
+          <label for="a-date">Date and time (required)</label>
+          <input class="input" id="a-date" type="datetime-local" value="2026-10-24T09:00" min="2026-10-23T00:00" max="2026-10-25T23:59" aria-describedby="a-date-hint a-date-note">
+          <p class="hint" id="a-date-hint">Within the tournament days, Oct 23 to Oct 25.</p>
+          <p class="confirm" id="a-date-note"><strong>Asks you to confirm:</strong> 12 bowlers are entered. They planned around this time. Tell them.</p>
+        </div>
+      </fieldset>
+      <fieldset class="group">
+        <legend>Lanes</legend>
+        <div class="pair">
+          <div class="field">
+            <label for="a-start">Starting lane (required)</label>
+            <input class="input" id="a-start" type="text" inputmode="numeric" value="1" aria-describedby="a-start-hint a-start-note">
+            <p class="hint" id="a-start-hint">An odd number, 1 to 199.</p>
+          </div>
+          <div class="field">
+            <label for="a-lanes">Number of lanes (required)</label>
+            <input class="input" id="a-lanes" type="text" inputmode="numeric" value="20" aria-describedby="a-lanes-hint a-start-note">
+            <p class="hint" id="a-lanes-hint">An even number, 2 to 200.</p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="a-per">Bowlers per pair (required)</label>
+          <input class="input" id="a-per" type="text" inputmode="numeric" value="4" aria-describedby="a-per-hint a-start-note">
+          <p class="hint" id="a-per-hint">2 to 5. Matches the lane page.</p>
+        </div>
+        <p class="confirm" id="a-start-note"><strong>Lane limits:</strong> Lanes 1 to 18 have bowlers assigned, so the range must keep them. The fullest pair holds 4 bowlers, so bowlers per pair cannot go below 4. <strong>Asks you to confirm</strong> a change to any of these: 12 bowlers have lane assignments.</p>
+      </fieldset>
+      <fieldset class="group">
+        <legend>Fee and ratios</legend>
+        <div class="field">
+          <label for="a-fee">Entry fee</label>
+          <input class="input" id="a-fee" type="text" inputmode="decimal" value="60" aria-describedby="a-fee-hint a-fee-note">
+          <p class="hint" id="a-fee-hint">0 to 999.99. Clear it to use the tournament's fee, $50.00.</p>
+          <p class="confirm" id="a-fee-note"><strong>Asks you to confirm:</strong> 12 bowlers are entered. They keep what they paid. New entries pay the new fee.</p>
+        </div>
+        <div class="pair">
+          <div class="field">
+            <label for="a-fin">Finals ratio</label>
+            <input class="input" id="a-fin" type="text" inputmode="decimal" value="" aria-describedby="a-fin-hint">
+            <p class="hint" id="a-fin-hint">1.1 to 99.9, one decimal. Tournament: 6.</p>
+          </div>
+          <div class="field">
+            <label for="a-cash">Cash ratio</label>
+            <input class="input" id="a-cash" type="text" inputmode="decimal" value="" aria-describedby="a-cash-hint">
+            <p class="hint" id="a-cash-hint">1.1 to 99.9, one decimal. Tournament: 4.</p>
+          </div>
+        </div>
+      </fieldset>
+      <div class="actions"><button type="submit">Save</button><a class="secondary" href="#">Cancel</a></div>
+    </form>
+    <p class="note">A box left blank means "use the tournament's value" and shows the value as a hint, as on the add form. Only a changed field is sent.</p>
+  </section>
+
+  <section class="state">
+    <h2 class="state-title">2. Scores saved in this squad: ratios ask to confirm</h2>
+    <h1>Edit squad</h1>
+    <form class="form" novalidate>
+      <fieldset class="group">
+        <legend>Fee and ratios</legend>
+        <div class="field">
+          <label for="b-fin">Finals ratio</label>
+          <input class="input" id="b-fin" type="text" inputmode="decimal" value="5" aria-describedby="b-fin-hint b-fin-note">
+          <p class="hint" id="b-fin-hint">1.1 to 99.9, one decimal. Tournament: 6.</p>
+          <p class="confirm" id="b-fin-note"><strong>Asks you to confirm:</strong> Scores are saved. Posted results change at once.</p>
+        </div>
+      </fieldset>
+    </form>
+    <p class="note">Same note on the cash ratio. A score in a different squad adds no note (D-180).</p>
+  </section>
+
+  <section class="state">
+    <h2 class="state-title">3. Validation errors (the add checks, in the browser)</h2>
+    <h1>Edit squad</h1>
+    <p class="summary" role="alert" tabindex="-1"><strong>Fix these and save again:</strong>
+      <ul>
+        <li><a href="#c-start">Starting lane must be odd</a></li>
+        <li><a href="#c-lanes">Lanes must end at lane 200 or lower</a></li>
+        <li><a href="#c-fee">Entry fee must be between $0 and $999.99</a></li>
+      </ul>
+    </p>
+    <form class="form" novalidate>
+      <fieldset class="group">
+        <legend>Lanes</legend>
+        <div class="pair">
+          <div class="field">
+            <label for="c-start">Starting lane (required)</label>
+            <input class="input" id="c-start" type="text" value="2" aria-invalid="true" aria-describedby="c-start-error">
+            <p class="fieldError" id="c-start-error">Starting lane must be odd</p>
+          </div>
+          <div class="field">
+            <label for="c-lanes">Number of lanes (required)</label>
+            <input class="input" id="c-lanes" type="text" value="200" aria-invalid="true" aria-describedby="c-lanes-error">
+            <p class="fieldError" id="c-lanes-error">Lanes must end at lane 200 or lower</p>
+          </div>
+        </div>
+      </fieldset>
+      <fieldset class="group">
+        <legend>Fee and ratios</legend>
+        <div class="field">
+          <label for="c-fee">Entry fee</label>
+          <input class="input" id="c-fee" type="text" value="1000" aria-invalid="true" aria-describedby="c-fee-error">
+          <p class="fieldError" id="c-fee-error">Entry fee must be between $0 and $999.99</p>
+        </div>
+      </fieldset>
+    </form>
+  </section>
+
+  <section class="state">
+    <h2 class="state-title">4. The API refuses (409): messages under the field</h2>
+    <h1>Edit squad</h1>
+    <p class="summary" role="alert" tabindex="-1"><strong>Fix these and save again:</strong>
+      <ul>
+        <li><a href="#d-lanes">Lane 19 has a bowler assigned. Move them first.</a></li>
+        <li><a href="#d-per">Pair 15-16 holds 4 bowlers. Move them first.</a></li>
+      </ul>
+    </p>
+    <form class="form" novalidate>
+      <fieldset class="group">
+        <legend>Lanes</legend>
+        <div class="field">
+          <label for="d-lanes">Number of lanes (required)</label>
+          <input class="input" id="d-lanes" type="text" value="16" aria-invalid="true" aria-describedby="d-lanes-error">
+          <p class="fieldError" id="d-lanes-error">Lane 19 has a bowler assigned. Move them first.</p>
+        </div>
+        <div class="field">
+          <label for="d-per">Bowlers per pair (required)</label>
+          <input class="input" id="d-per" type="text" value="3" aria-invalid="true" aria-describedby="d-per-error">
+          <p class="fieldError" id="d-per-error">Pair 15-16 holds 4 bowlers. Move them first.</p>
+        </div>
+      </fieldset>
+    </form>
+    <p class="note">Also possible: "Squad date must be before tournament end" under the date. Refusals cannot be confirmed away.</p>
+  </section>
+
+  <section class="state">
+    <h2 class="state-title">5. Confirm dialog (409 with warnings)</h2>
+    <div class="dialog" role="dialog" aria-labelledby="dlg-title" aria-modal="true">
+      <h3 id="dlg-title">Save these changes?</h3>
+      <ul>
+        <li><span class="what">Date</span>Sat, Oct 24, 9:00 AM → Sat, Oct 24, 1:00 PM<br>12 bowlers are entered. They planned around this time. Tell them.</li>
+        <li><span class="what">Entry fee</span>$60.00 → $75.00<br>12 bowlers are entered. They keep what they paid. New entries pay the new fee.</li>
+        <li><span class="what">Number of lanes</span>20 → 24<br>12 bowlers have lane assignments. They keep their lanes, but recap sheets use the lanes and bowlers per pair, so check them.</li>
+      </ul>
+      <div class="actions"><button type="button" class="secondary" autofocus>Go back</button><button type="button">Save anyway</button></div>
+    </div>
+    <p class="note">Go back has focus first, closes, and keeps what was typed. Escape does the same. Save anyway resends with confirmWarnings and disables both buttons while it runs.</p>
+  </section>
+
+  <section class="state">
+    <h2 class="state-title">6. Saved: back on the Squads list</h2>
+    <div class="toast" role="status"><span>Squad saved</span><button type="button" class="secondary">Dismiss</button></div>
+    <p class="note">Closes itself after a few seconds, as the other success toasts.</p>
+    <div class="toast error" role="alert" style="margin-block-start:var(--space-3)"><span>This squad is complete and cannot be changed</span><button type="button" class="secondary">Dismiss</button></div>
+    <p class="note">A refusal about the tournament or session after load (someone completed it meanwhile): an error toast that stays until dismissed.</p>
+  </section>
+
+  <section class="state">
+    <h2 class="state-title">7. Complete squad (or complete tournament), in place of the form</h2>
+    <nav class="crumbs" aria-label="Breadcrumb">Spring Open › Squads › Sat, Oct 24, 1:00 PM › Edit</nav>
+    <h1>Edit squad</h1>
+    <p class="banner info" role="status">This squad is complete and cannot be changed.</p>
+    <p><a href="#">Back to squads</a></p>
+    <p class="note">A complete tournament shows "This tournament is complete and cannot be changed." in the same place.</p>
+  </section>
+
+  <section class="state">
+    <h2 class="state-title">8. Loading, error, not found, no permission</h2>
+    <h1>Edit squad</h1>
+    <p class="loading" role="status">Loading…</p>
+    <div class="skeleton" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="banner" role="alert" style="margin-block-start:var(--space-4)"><p style="margin:0 0 var(--space-3)">Could not load the squad.</p><button type="button" class="secondary">Try again</button></div>
+    <p style="margin-block-start:var(--space-4)">That squad was not found. <a href="#">Back to squads</a></p>
+    <p>You do not have permission to view this page.</p>
+    <p class="note">Signed out goes to sign in first. Loading waits for the settings, the squad list, and edit-info.</p>
+  </section>
+</main>
+</body>
+</html>

@@ -48,6 +48,7 @@ export function createDeskRegistrationRouter(deps: RegisterDependencies, logger:
           })
         case 'failures': {
           const errors = toFieldErrors(result.failures)
+          // Stryker disable next-line StringLiteral: a refusal always carries a failure, so the fallback never shows.
           throw new FieldErrorsError(400, Object.values(errors)[0] ?? 'Invalid request', errors)
         }
       }

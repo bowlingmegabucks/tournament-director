@@ -7,7 +7,7 @@ import { createInMemorySweeperRepository } from '../sweepers/repository.ts'
 import { createInMemoryTournamentRepository } from '../tournaments/repository.ts'
 import { createCommonBowler } from './bowler.testData.ts'
 import { deskRegister, toFieldErrors } from './deskRegister.ts'
-import { parseDeskRequest, type DeskRequest } from './deskRequest.ts'
+import { parseDeskRequest, toDeskBowlerPatch, type DeskRequest } from './deskRequest.ts'
 import { validation } from './problem.ts'
 import {
   createInMemoryRegistrationWriter,
@@ -707,5 +707,178 @@ describe('the request (D-157)', () => {
       squadIds: 'Bowler must enter at least one squad',
       form: 'Odd',
     })
+  })
+})
+
+describe('the field each failure files under (D-157)', () => {
+  it.each([
+    ['Bowler.FirstNameRequired', 'bowler.firstName'],
+    ['Bowler.LastNameRequired', 'bowler.lastName'],
+    ['Bowler.MiddleInitialTooLong', 'bowler.middleInitial'],
+    ['Bowler.CityRequired', 'bowler.city'],
+    ['Bowler.StateRequired', 'bowler.state'],
+    ['Bowler.StateInvalid', 'bowler.state'],
+    ['Bowler.ZipCodeInvalid', 'bowler.zipCode'],
+    ['Bowler.EmailInvalid', 'bowler.email'],
+    ['Bowler.PhoneInvalid', 'bowler.phoneNumber'],
+    ['Bowler.DateOfBirthInvalid', 'bowler.dateOfBirth'],
+    ['Bowler.UsbcIdInvalid', 'bowler.usbcId'],
+    ['Registration.UsbcIdRequired', 'bowler.usbcId'],
+    ['Registration.DateOfBirthRequired', 'bowler.dateOfBirth'],
+    ['Registration.BowlerTooYoung', 'bowler.dateOfBirth'],
+    ['Registration.BowlerTooOld', 'bowler.dateOfBirth'],
+    ['Registration.GenderRequired', 'bowler.gender'],
+    ['Registration.GenderInvalid', 'bowler.gender'],
+    ['Registration.AverageRequired', 'average'],
+    ['Registration.AverageTooLow', 'average'],
+    ['Registration.AverageTooHigh', 'average'],
+    ['Registration.SquadsRequired', 'squadIds'],
+    ['Registration.InvalidSquadIds', 'squadIds'],
+    ['Registration.SquadComplete', 'squadIds'],
+    ['Squad.Conflict', 'squadIds'],
+    ['Registration.InvalidSweeperIds', 'sweeperIds'],
+    ['Registration.SweeperComplete', 'sweeperIds'],
+    ['Sweeper.Conflict', 'sweeperIds'],
+    ['Registration.SuperSweeperNeedsAllSweepers', 'superSweeper'],
+    ['Registration.DivisionNotInTournament', 'divisionId'],
+    ['Registration.DivisionLocked', 'divisionId'],
+    ['Division.NotFound', 'divisionId'],
+  ])('puts %s under %s', (code, field) => {
+    expect(toFieldErrors([validation(code, 'Said so')])).toEqual({ [field]: 'Said so' })
+  })
+})
+
+describe('the bowler named in an offer or a conflict (BWL-13, D-159, D-161)', () => {
+  it('names a bowler with no suffix without a comma', async () => {
+    const bowler = createCommonBowler({ usbcId: '1234-56789', suffix: '' })
+    const { deps, tournament, request } = setup({ seed: { bowlers: [bowler] } })
+
+    const result = await deskRegister(
+      deps,
+      tournament.id,
+      request({ bowler: { firstName: 'Joe', lastName: 'Fontaine', usbcId: '1234-56789' } }),
+    )
+
+    expect(result).toMatchObject({ kind: 'usbcIdOnFile', bowler: { name: 'Joseph Fontaine' } })
+  })
+
+  it('reads the division name of the registration, among several divisions (D-159)', async () => {
+    const bowler = createCommonBowler({ usbcId: '' })
+    const other = createDivision({ name: 'Seniors' })
+    const context = setup({ seed: { bowlers: [bowler] } })
+    context.state.divisions.push({ id: other.id, tournamentId: context.tournament.id })
+    context.state.registrations.push({
+      tournamentId: context.tournament.id,
+      registration: {
+        id: faker.string.uuid(),
+        bowlerId: bowler.id,
+        divisionId: context.division.id,
+        average: null,
+        superSweeper: false,
+        sessionIds: [],
+      },
+    })
+    const deps = {
+      ...context.deps,
+      divisions: createInMemoryDivisionRepository([
+        { tournamentId: context.tournament.id, division: other },
+        { tournamentId: context.tournament.id, division: context.division },
+      ]),
+    }
+
+    const result = await deskRegister(
+      deps,
+      context.tournament.id,
+      context.request({ bowlerId: bowler.id }),
+    )
+
+    expect(result).toMatchObject({
+      kind: 'alreadyRegistered',
+      existing: { divisionName: context.division.name },
+    })
+  })
+
+  it('gives an empty division name when the registration points at a division that is gone', async () => {
+    const bowler = createCommonBowler({ usbcId: '' })
+    const context = setup({ seed: { bowlers: [bowler] } })
+    context.state.registrations.push({
+      tournamentId: context.tournament.id,
+      registration: {
+        id: faker.string.uuid(),
+        bowlerId: bowler.id,
+        divisionId: faker.string.uuid(),
+        average: null,
+        superSweeper: false,
+        sessionIds: [],
+      },
+    })
+
+    const result = await deskRegister(
+      context.deps,
+      context.tournament.id,
+      context.request({ bowlerId: bowler.id }),
+    )
+
+    expect(result).toMatchObject({ kind: 'alreadyRegistered', existing: { divisionName: '' } })
+  })
+})
+
+describe('the desk bowler as a patch (D-05, D-157)', () => {
+  it('is empty when nothing was typed, whatever the null or missing boxes are', () => {
+    expect(toDeskBowlerPatch({})).toEqual({})
+    expect(
+      toDeskBowlerPatch({
+        firstName: null,
+        lastName: null,
+        street: null,
+        city: null,
+        state: null,
+        zipCode: null,
+        email: null,
+        usbcId: null,
+        gender: '',
+        dateOfBirth: '',
+      }),
+    ).toEqual({})
+  })
+
+  it('reads the gender words as Male and Female', () => {
+    expect(toDeskBowlerPatch({ gender: 'Male' })).toEqual({ gender: 'Male' })
+    expect(toDeskBowlerPatch({ gender: 'Female' })).toEqual({ gender: 'Female' })
+  })
+
+  it('keeps only the boxes with text, trimmed, and formats the phone and zip', () => {
+    expect(
+      toDeskBowlerPatch({
+        firstName: ' Ann ',
+        zipCode: '02101-1234',
+        phoneNumber: '+1 617-555-0100',
+        dateOfBirth: '1980-02-03',
+      }),
+    ).toEqual({
+      firstName: 'Ann',
+      zipCode: '021011234',
+      phoneNumber: '6175550100',
+      dateOfBirth: '1980-02-03',
+    })
+  })
+})
+
+describe('the request errors (D-157)', () => {
+  it('files a body that is not an object under form', () => {
+    expect(parseDeskRequest(null)).toMatchObject({
+      success: false,
+      errors: { form: expect.any(String) },
+    })
+  })
+
+  it('says Enter a number for an average that is text, and reads a missing one as null', () => {
+    const base = { divisionId: faker.string.uuid() }
+
+    expect(parseDeskRequest({ ...base, average: 'abc' })).toMatchObject({
+      success: false,
+      errors: { average: 'Enter a number' },
+    })
+    expect(parseDeskRequest(base)).toMatchObject({ success: true, data: { average: null } })
   })
 })

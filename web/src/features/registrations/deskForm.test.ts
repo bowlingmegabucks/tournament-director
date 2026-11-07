@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  bowlerLabels,
   buildRequest,
+  changesOf,
   changedFields,
   checkBowlerStep,
   checkRegistrationStep,
@@ -206,5 +208,72 @@ describe('where an error belongs', () => {
     expect(stepOfError('squadIds')).toBe(2)
     expect(stepOfError('average')).toBe(2)
     expect(stepOfError('form')).toBe(2)
+  })
+})
+
+describe('the fixed lists', () => {
+  it('starts every bowler box empty', () => {
+    expect(emptyBowler).toEqual({
+      firstName: '',
+      middleInitial: '',
+      lastName: '',
+      suffix: '',
+      street: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      email: '',
+      phoneNumber: '',
+      usbcId: '',
+      dateOfBirth: '',
+      gender: '',
+    })
+    expect(emptyRegistration).toEqual({
+      divisionId: '',
+      average: '',
+      squadIds: [],
+      sweeperIds: [],
+      superSweeper: false,
+    })
+  })
+
+  it('names each box as the form and Review do', () => {
+    expect(bowlerLabels).toEqual({
+      firstName: 'First name',
+      middleInitial: 'Middle initial',
+      lastName: 'Last name',
+      suffix: 'Suffix',
+      street: 'Street',
+      city: 'City',
+      state: 'State',
+      zipCode: 'Zip',
+      email: 'Email',
+      phoneNumber: 'Phone',
+      usbcId: 'USBC ID',
+      dateOfBirth: 'Date of birth',
+      gender: 'Gender',
+    })
+  })
+})
+
+describe('spaces around what was typed or stored', () => {
+  it('sees no change when only the spaces differ, in the change list and on Review', () => {
+    const stored = { ...maria, street: '14 Elm Street ' }
+    const edited = { ...maria, street: ' 14 Elm Street' }
+
+    expect(changedFields(stored, edited)).toEqual({})
+    expect(changesOf(stored, edited)).toEqual([])
+  })
+
+  it('lists a change with the new text trimmed and the stored text as it is', () => {
+    expect(changesOf(maria, { ...maria, city: ' Auburn ' })).toEqual([
+      { key: 'city', from: 'Worcester', to: 'Auburn' },
+    ])
+  })
+
+  it('treats a last name of only spaces as missing', () => {
+    expect(checkBowlerStep({ ...emptyBowler, firstName: 'Ann', lastName: '   ' })).toEqual({
+      'bowler.lastName': 'Last Name is Required',
+    })
   })
 })

@@ -899,3 +899,554 @@ describe('the Add registration links (D-157, D-164)', () => {
     })
   })
 })
+
+async function startNewBowler(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: 'New bowler' }))
+  await screen.findByRole('heading', { name: 'Bowler', level: 2 })
+}
+
+async function reachReview(user: ReturnType<typeof userEvent.setup>, first = 'Ann', last = 'Lee') {
+  await startNewBowler(user)
+  await user.type(screen.getByLabelText('First name (required)'), first)
+  await user.type(screen.getByLabelText('Last name (required)'), last)
+  await next(user, /Next: registration/)
+  await user.selectOptions(screen.getByLabelText('Division (required)'), 'Scratch')
+  await user.click(screen.getByLabelText(/Sat 10\/24\/2026 1:00 PM/))
+  await next(user, /Next: review/)
+}
+
+describe('the page itself (D-164)', () => {
+  it('titles the page with the tournament', async () => {
+    signIn()
+    serve()
+    await open()
+
+    expect(document.title).toBe('Add registration · Spring Open · Tournament Director')
+  })
+
+  it('shows a failed settings read with Try again, and recovers', async () => {
+    signIn()
+    serve()
+    let failing = true
+    server.use(
+      http.get('/v1/tournaments/:id/settings', () =>
+        failing
+          ? new HttpResponse(null, { status: 500 })
+          : HttpResponse.json({ settings: createSettings() }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderApp(url)
+    await screen.findByRole('button', { name: 'Try again' }, { timeout: 4000 })
+
+    failing = false
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+
+    expect(await screen.findByRole('form', { name: 'Find a bowler' })).toBeVisible()
+  })
+
+  it('shows a failed bowler read with Try again, and recovers', async () => {
+    signIn()
+    serve()
+    let failing = true
+    server.use(
+      http.get('/v1/bowlers/:id', () =>
+        failing
+          ? new HttpResponse(null, { status: 500 })
+          : HttpResponse.json({ bowler: maria, registration: null }),
+      ),
+    )
+    const user = userEvent.setup()
+    await open()
+    await user.type(screen.getByLabelText('Last name starts with'), 'Gon')
+    await user.click(screen.getByRole('button', { name: 'Search' }))
+    await user.click(await screen.findByRole('button', { name: /^Pick Maria Gonzalez/ }))
+    const retry = await screen.findByRole('button', { name: 'Try again' }, { timeout: 4000 })
+
+    failing = false
+    await user.click(retry)
+
+    expect(await screen.findByLabelText('Street')).toHaveValue('14 Elm Street')
+  })
+
+  it('offers Search again when the bowler is gone', async () => {
+    signIn()
+    serve()
+    server.use(
+      http.get('/v1/bowlers/:id', () =>
+        HttpResponse.json({ message: 'Bowler not found' }, { status: 404 }),
+      ),
+    )
+    const user = userEvent.setup()
+    await open()
+    await pickMaria(user)
+
+    await user.click(await screen.findByRole('button', { name: 'Search again' }))
+
+    expect(screen.getByRole('form', { name: 'Find a bowler' })).toBeVisible()
+  })
+
+  it('shows a failed squad list with Try again, and recovers', async () => {
+    signIn()
+    serve()
+    let failing = true
+    server.use(
+      http.get('/v1/tournaments/:id/squads', () =>
+        failing
+          ? new HttpResponse(null, { status: 500 })
+          : HttpResponse.json({ squads: [morning, afternoon, finished] }),
+      ),
+    )
+    const user = userEvent.setup()
+    await open()
+    await user.click(screen.getByRole('button', { name: 'New bowler' }))
+    const retry = await screen.findByRole('button', { name: 'Try again' }, { timeout: 4000 })
+
+    failing = false
+    await user.click(retry)
+
+    expect(await screen.findByLabelText('First name (required)')).toBeVisible()
+  })
+})
+
+describe('typing clears what was wrong (D-157)', () => {
+  it('clears a bowler error from the box that was typed in, and keeps the others', async () => {
+    signIn()
+    serve()
+    const user = userEvent.setup()
+    await open()
+    await startNewBowler(user)
+    await next(user, /Next: registration/)
+    expect(screen.getByLabelText('First name (required)')).toHaveAttribute('aria-invalid', 'true')
+
+    await user.type(screen.getByLabelText('First name (required)'), 'A')
+
+    expect(screen.getByLabelText('First name (required)')).not.toHaveAttribute('aria-invalid')
+    expect(screen.getByLabelText('Last name (required)')).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  it('clears the registration errors when the registration changes', async () => {
+    signIn()
+    serve({
+      posts: [
+        () =>
+          HttpResponse.json(
+            { message: 'x', errors: { squadIds: 'Invalid squad IDs' } },
+            { status: 400 },
+          ),
+      ],
+    })
+    const user = userEvent.setup()
+    await open()
+    await reachReview(user)
+    await next(user, /^Add registration$/)
+    await screen.findByRole('heading', { name: 'Registration', level: 2 })
+    expect(
+      screen.getByRole('group', { name: 'Squads (pick at least one)' }),
+    ).toHaveAccessibleDescription('Invalid squad IDs')
+
+    await user.click(screen.getByLabelText(/Sat 10\/24\/2026 9:00 AM/))
+
+    expect(screen.queryByText('Invalid squad IDs')).not.toBeInTheDocument()
+  })
+
+  it('moves focus to the box when its message in the summary is followed', async () => {
+    signIn()
+    serve()
+    const user = userEvent.setup()
+    await open()
+    await startNewBowler(user)
+    await next(user, /Next: registration/)
+
+    await user.click(screen.getByRole('link', { name: 'Last Name is Required' }))
+
+    expect(screen.getByLabelText('Last name (required)')).toHaveFocus()
+  })
+
+  it('counts one thing in the summary with the singular word', async () => {
+    signIn()
+    serve()
+    const user = userEvent.setup()
+    await open()
+    await startNewBowler(user)
+    await user.type(screen.getByLabelText('First name (required)'), 'Ann')
+
+    await next(user, /Next: registration/)
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Fix 1 thing to save.')
+  })
+})
+
+describe('saving (D-157, D-159)', () => {
+  it('names a bowler with a suffix in the toast', async () => {
+    signIn()
+    serve()
+    const user = userEvent.setup()
+    await open()
+    await startNewBowler(user)
+    await user.type(screen.getByLabelText('First name (required)'), 'Ann')
+    await user.type(screen.getByLabelText('Last name (required)'), 'Lee')
+    await user.type(screen.getByLabelText('Suffix'), 'Jr')
+    await next(user, /Next: registration/)
+    await user.selectOptions(screen.getByLabelText('Division (required)'), 'Scratch')
+    await user.click(screen.getByLabelText(/Sat 10\/24\/2026 1:00 PM/))
+    await next(user, /Next: review/)
+    await next(user, /^Add registration$/)
+
+    expect(await screen.findByText('Registration added for Ann Lee, Jr')).toBeVisible()
+  })
+
+  it('says Saving… and disables the buttons while the save runs', async () => {
+    signIn()
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    serve()
+    server.use(
+      http.post('/v1/tournaments/:id/registrations', async () => {
+        await gate
+        return HttpResponse.json(
+          { registrationId: crypto.randomUUID(), mode: 'created' },
+          { status: 201 },
+        )
+      }),
+    )
+    const user = userEvent.setup()
+    await open()
+    await reachReview(user)
+
+    await next(user, /^Add registration$/)
+
+    expect(await screen.findByRole('button', { name: 'Saving…' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled()
+    release()
+    await screen.findByText('Registration added for Ann Lee')
+  })
+
+  it('goes back from Review to Registration with Back', async () => {
+    signIn()
+    serve()
+    const user = userEvent.setup()
+    await open()
+    await reachReview(user)
+
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+
+    expect(screen.getByRole('heading', { name: 'Registration', level: 2 })).toBeVisible()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('dismisses the failure toast', async () => {
+    signIn()
+    serve({ posts: [() => new HttpResponse(null, { status: 500 })] })
+    const user = userEvent.setup()
+    await open()
+    await reachReview(user)
+    await next(user, /^Add registration$/)
+    const toast = await screen.findByRole('alert')
+
+    await user.click(within(toast).getByRole('button'))
+
+    await waitFor(() => {
+      expect(screen.queryByText('Failed to save the registration (500)')).not.toBeInTheDocument()
+    })
+  })
+
+  it('shows a refusal with no field named as a message on the form (D-130)', async () => {
+    signIn()
+    serve({
+      posts: [
+        () =>
+          HttpResponse.json(
+            { message: 'This tournament is complete.', errors: {} },
+            { status: 409 },
+          ),
+      ],
+    })
+    const user = userEvent.setup()
+    await open()
+    await reachReview(user)
+
+    await next(user, /^Add registration$/)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('This tournament is complete.')
+    expect(screen.getByRole('heading', { name: 'Review', level: 2 })).toBeVisible()
+  })
+
+  it('sends a refusal with a field on the form back to the step that holds it (REG-04)', async () => {
+    signIn()
+    serve({
+      posts: [
+        () =>
+          HttpResponse.json(
+            {
+              message: 'x',
+              errors: { average: 'Minimum average requirement for division not met' },
+            },
+            { status: 400 },
+          ),
+      ],
+    })
+    const user = userEvent.setup()
+    await open()
+    await reachReview(user)
+
+    await next(user, /^Add registration$/)
+
+    expect(await screen.findByRole('heading', { name: 'Registration', level: 2 })).toBeVisible()
+    expect(screen.getByLabelText('Average')).toHaveAccessibleDescription(
+      'Minimum average requirement for division not met',
+    )
+  })
+
+  it('shows a failure inside the already-registered dialog when the confirmed save fails (D-159)', async () => {
+    signIn()
+    const conflict = () =>
+      HttpResponse.json(
+        {
+          message: 'Bowler is already registered for this tournament.',
+          conflict: 'alreadyRegistered',
+          existing: {
+            registrationId: '00000000-0000-4000-8000-0000000000bb',
+            divisionId: handicap.id,
+            divisionName: 'Handicap',
+            squadIds: [],
+            sweeperIds: [],
+          },
+        },
+        { status: 409 },
+      )
+    serve({
+      posts: [
+        conflict,
+        () => new HttpResponse(null, { status: 500 }),
+        conflict,
+        () => new HttpResponse(null, { status: 500 }),
+      ],
+    })
+    const user = userEvent.setup()
+    await open()
+    await pickMaria(user)
+    await screen.findByLabelText('Street')
+    await next(user, /Next: registration/)
+    await user.selectOptions(screen.getByLabelText('Division (required)'), 'Handicap')
+    await user.click(screen.getByLabelText(/Sat 10\/24\/2026 1:00 PM/))
+    await next(user, /Next: review/)
+    await next(user, /^Add registration$/)
+    const dialog = await screen.findByRole('dialog', { name: 'Already registered' })
+
+    await user.click(within(dialog).getByRole('button', { name: 'Yes, add to registration' }))
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      'Failed to save the registration (500)',
+    )
+    expect(within(dialog).getByRole('button', { name: 'Yes, add to registration' })).toBeEnabled()
+  })
+
+  it('lists the new sweepers too in the already-registered dialog (D-159)', async () => {
+    signIn()
+    serve({
+      posts: [
+        () =>
+          HttpResponse.json(
+            {
+              message: 'x',
+              conflict: 'alreadyRegistered',
+              existing: {
+                registrationId: '00000000-0000-4000-8000-0000000000bb',
+                divisionId: handicap.id,
+                divisionName: 'Handicap',
+                squadIds: [],
+                sweeperIds: [],
+              },
+            },
+            { status: 409 },
+          ),
+      ],
+    })
+    const user = userEvent.setup()
+    await open()
+    await pickMaria(user)
+    await screen.findByLabelText('Street')
+    await next(user, /Next: registration/)
+    await user.selectOptions(screen.getByLabelText('Division (required)'), 'Handicap')
+    await user.click(screen.getByLabelText(/Sat 10\/24\/2026 1:00 PM/))
+    await user.click(screen.getByLabelText(/Sat 10\/24\/2026 12:00 PM/))
+    await next(user, /Next: review/)
+    await next(user, /^Add registration$/)
+
+    const dialog = await screen.findByRole('dialog', { name: 'Already registered' })
+
+    expect(within(dialog).getByText('Sweeper: Sat 10/24/2026 12:00 PM')).toBeVisible()
+  })
+})
+
+describe('keeping what the desk typed when the bowler is switched (D-161)', () => {
+  it('carries the division, the average, and the super sweeper onto the stored bowler', async () => {
+    signIn()
+    const served = serve({
+      posts: [
+        () =>
+          HttpResponse.json(
+            {
+              message: 'on file',
+              conflict: 'usbcIdOnFile',
+              bowler: { id: maria.id, name: 'Maria Gonzalez' },
+            },
+            { status: 409 },
+          ),
+        () =>
+          HttpResponse.json(
+            { registrationId: crypto.randomUUID(), mode: 'created' },
+            { status: 201 },
+          ),
+      ],
+    })
+    const user = userEvent.setup()
+    await open()
+    await startNewBowler(user)
+    await user.type(screen.getByLabelText('First name (required)'), 'Maria')
+    await user.type(screen.getByLabelText('Last name (required)'), 'Gonzalez')
+    await user.type(screen.getByLabelText('USBC ID'), '1234-56789')
+    await next(user, /Next: registration/)
+    await user.selectOptions(screen.getByLabelText('Division (required)'), 'Scratch')
+    await user.type(screen.getByLabelText('Average'), '201')
+    await user.click(screen.getByLabelText(/Sat 10\/24\/2026 1:00 PM/))
+    await user.click(screen.getByLabelText(/Sat 10\/24\/2026 12:00 PM/))
+    await user.click(screen.getByLabelText('Super sweeper', { exact: false }))
+    await next(user, /Next: review/)
+    await next(user, /^Add registration$/)
+    const dialog = await screen.findByRole('dialog', {
+      name: 'A bowler with this USBC ID is on file',
+    })
+
+    await user.click(within(dialog).getByRole('button', { name: 'Yes, use this bowler' }))
+
+    await screen.findByRole('heading', { name: 'Review', level: 2 })
+    expect(screen.getByText(/in Scratch, average 201/)).toBeVisible()
+    expect(screen.getByText(/Super sweeper\./)).toBeVisible()
+    await next(user, /^Add registration$/)
+    await screen.findByText('Registration added for Maria Gonzalez')
+    expect(served.posted[1]).toMatchObject({
+      bowlerId: maria.id,
+      divisionId: scratch.id,
+      average: 201,
+      sweeperIds: [sweeper.id],
+      superSweeper: true,
+    })
+  })
+
+  it('keeps the held squads and the stored division of a registered bowler it switches to', async () => {
+    signIn()
+    const registeredMaria: BowlerResponse = {
+      bowler: maria,
+      registration: {
+        id: '00000000-0000-4000-8000-0000000000bb',
+        divisionId: handicap.id,
+        divisionName: 'Handicap',
+        average: 182,
+        superSweeper: false,
+        squadIds: [morning.id],
+        sweeperIds: [],
+        hasScores: false,
+      },
+    }
+    const served = serve({
+      bowler: registeredMaria,
+      posts: [
+        () =>
+          HttpResponse.json(
+            {
+              message: 'on file',
+              conflict: 'usbcIdOnFile',
+              bowler: { id: maria.id, name: 'Maria Gonzalez' },
+            },
+            { status: 409 },
+          ),
+        () =>
+          HttpResponse.json(
+            { registrationId: crypto.randomUUID(), mode: 'appended' },
+            { status: 201 },
+          ),
+      ],
+    })
+    const user = userEvent.setup()
+    await open()
+    await startNewBowler(user)
+    await user.type(screen.getByLabelText('First name (required)'), 'Maria')
+    await user.type(screen.getByLabelText('Last name (required)'), 'Gonzalez')
+    await user.type(screen.getByLabelText('USBC ID'), '1234-56789')
+    await next(user, /Next: registration/)
+    await user.selectOptions(screen.getByLabelText('Division (required)'), 'Handicap')
+    await user.click(screen.getByLabelText(/Sat 10\/24\/2026 1:00 PM/))
+    await next(user, /Next: review/)
+    await next(user, /^Add registration$/)
+    const dialog = await screen.findByRole('dialog', {
+      name: 'A bowler with this USBC ID is on file',
+    })
+
+    await user.click(within(dialog).getByRole('button', { name: 'Yes, use this bowler' }))
+
+    await screen.findByRole('heading', { name: 'Review', level: 2 })
+    expect(
+      screen.getByText(/Adds to the existing registration in Handicap, average 182/),
+    ).toBeVisible()
+    await next(user, /^Add to registration$/)
+    await screen.findByText('Registration added for Maria Gonzalez')
+    expect(served.posted[1]).toMatchObject({
+      appendToExisting: true,
+      squadIds: [afternoon.id],
+    })
+  })
+})
+
+describe('the steps of a bowler already registered (D-165)', () => {
+  const heldRegistration: BowlerRegistration = {
+    id: '00000000-0000-4000-8000-0000000000bb',
+    divisionId: handicap.id,
+    divisionName: 'Handicap',
+    average: null,
+    superSweeper: true,
+    squadIds: [morning.id],
+    sweeperIds: [sweeper.id],
+    hasScores: false,
+  }
+
+  it('shows an empty average box when none is stored, and the super sweeper ticked', async () => {
+    signIn()
+    serve({ bowler: { bowler: maria, registration: heldRegistration } })
+    const user = userEvent.setup()
+    await open()
+    await pickMaria(user)
+
+    expect(await screen.findByLabelText('Average')).toHaveValue('')
+    expect(screen.getByLabelText('Super sweeper', { exact: false })).toBeChecked()
+  })
+
+  it('has no progress button for a step that has not been reached', async () => {
+    signIn()
+    serve({ bowler: { bowler: maria, registration: heldRegistration } })
+    const user = userEvent.setup()
+    await open()
+    await pickMaria(user)
+    await screen.findByRole('heading', { name: 'Registration', level: 2 })
+
+    expect(screen.getByRole('button', { name: '1. Bowler' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: '3. Review' })).not.toBeInTheDocument()
+    expect(screen.getByText('3. Review')).toBeVisible()
+    expect(screen.getByText('2. Registration')).toHaveAttribute('aria-current', 'step')
+  })
+
+  it('keeps a squad from the lane page and a sweeper from it, with those held', async () => {
+    signIn()
+    serve({ bowler: { bowler: maria, registration: heldRegistration } })
+    const user = userEvent.setup()
+    await open(`${url}?squad=${afternoon.id}&sweeper=${sweeper.id}`)
+    await pickMaria(user)
+    await screen.findByRole('heading', { name: 'Registration', level: 2 })
+
+    expect(screen.getByLabelText(/Sat 10\/24\/2026 1:00 PM/)).toBeChecked()
+    expect(screen.getByLabelText(/Sat 10\/24\/2026 12:00 PM/)).toBeDisabled()
+  })
+})

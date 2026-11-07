@@ -71,6 +71,20 @@ describe('searchBowlers (BWL-14)', () => {
     )
   })
 
+  it('leaves out a box that holds only spaces', async () => {
+    let query = ''
+    server.use(
+      http.get('/v1/bowlers', ({ request: sent }) => {
+        query = new URL(sent.url).search
+        return HttpResponse.json({ bowlers: [], more: false })
+      }),
+    )
+
+    await searchBowlers({ lastName: 'Gon', firstName: '   ', email: ' ', usbcId: '' }, 't1')
+
+    expect(new URLSearchParams(query).toString()).toBe('tournamentId=t1&lastName=Gon')
+  })
+
   it('reads a registered marker', async () => {
     const registered = { ...found, registered: { divisionName: 'Handicap' } }
     server.use(
@@ -100,6 +114,7 @@ describe('searchBowlers (BWL-14)', () => {
   it.each<[string, JsonBodyType]>([
     ['not an object', 'nope'],
     ['no more flag', { bowlers: [found] }],
+    ['a bowler list that is not a list', { bowlers: 'x', more: false }],
     ['a bowler with no name', { bowlers: [{ ...found, name: 3 }], more: false }],
     [
       'a registered marker of the wrong shape',
@@ -158,7 +173,25 @@ describe('fetchBowler (D-158, D-165)', () => {
   it.each([404, 400])('says not found on %s', async (status) => {
     server.use(http.get('/v1/bowlers/:id', () => new HttpResponse(null, { status })))
 
-    await expect(fetchBowler('b1', 't1')).rejects.toBeInstanceOf(BowlerNotFoundError)
+    const failure = fetchBowler('b1', 't1')
+
+    await expect(failure).rejects.toBeInstanceOf(BowlerNotFoundError)
+    await expect(failure).rejects.toThrow('Bowler not found')
+  })
+
+  it('rejects a body that is not JSON', async () => {
+    server.use(http.get('/v1/bowlers/:id', () => new HttpResponse('<html>')))
+
+    await expect(fetchBowler('b1', 't1')).rejects.toThrow(
+      'Failed to load the bowler (response is not JSON)',
+    )
+  })
+
+  it.each(['Male', 'Female', ''] as const)('reads the gender "%s"', async (gender) => {
+    const body = { ...detail, bowler: { ...detail.bowler, gender } }
+    server.use(http.get('/v1/bowlers/:id', () => HttpResponse.json(body)))
+
+    await expect(fetchBowler('b1', 't1')).resolves.toEqual(body)
   })
 
   it('fails on another status', async () => {
@@ -174,6 +207,86 @@ describe('fetchBowler (D-158, D-165)', () => {
     ],
     ['a missing field', { ...detail, bowler: { ...detail.bowler, city: undefined } }],
     ['a registration of the wrong shape', { ...detail, registration: { id: 'r1' } }],
+    [
+      'a registration with one id missing',
+      {
+        ...detail,
+        registration: {
+          id: 'r1',
+          divisionId: 'd',
+          divisionName: undefined,
+          average: null,
+          superSweeper: false,
+          hasScores: false,
+          squadIds: [],
+          sweeperIds: [],
+        },
+      },
+    ],
+    [
+      'a registration with a super sweeper that is not true or false',
+      {
+        ...detail,
+        registration: {
+          id: 'r1',
+          divisionId: 'd',
+          divisionName: 'n',
+          average: null,
+          superSweeper: 'yes',
+          hasScores: false,
+          squadIds: [],
+          sweeperIds: [],
+        },
+      },
+    ],
+    [
+      'a registration with hasScores that is not true or false',
+      {
+        ...detail,
+        registration: {
+          id: 'r1',
+          divisionId: 'd',
+          divisionName: 'n',
+          average: null,
+          superSweeper: false,
+          hasScores: 'no',
+          squadIds: [],
+          sweeperIds: [],
+        },
+      },
+    ],
+    [
+      'a registration whose squads are not a list of text',
+      {
+        ...detail,
+        registration: {
+          id: 'r1',
+          divisionId: 'd',
+          divisionName: 'n',
+          average: null,
+          superSweeper: false,
+          hasScores: false,
+          squadIds: [1],
+          sweeperIds: [],
+        },
+      },
+    ],
+    [
+      'a registration whose sweepers are not a list of text',
+      {
+        ...detail,
+        registration: {
+          id: 'r1',
+          divisionId: 'd',
+          divisionName: 'n',
+          average: null,
+          superSweeper: false,
+          hasScores: false,
+          squadIds: [],
+          sweeperIds: 'w1',
+        },
+      },
+    ],
     [
       'an average that is text',
       {
@@ -236,9 +349,9 @@ describe('createDeskRegistration (D-157)', () => {
       const failure = createDeskRegistration('t1', request)
 
       await expect(failure).rejects.toBeInstanceOf(DeskRejectedError)
-      await expect(failure).rejects.toMatchObject({
-        message: 'First Name is Required',
-        errors: { 'bowler.firstName': 'First Name is Required' },
+      await expect(failure).rejects.toMatchObject({ message: 'First Name is Required' })
+      await expect(failure).rejects.toHaveProperty('errors', {
+        'bowler.firstName': 'First Name is Required',
       })
     }
   })
@@ -299,6 +412,70 @@ describe('createDeskRegistration (D-157)', () => {
 
     await expect(failure).rejects.toBeInstanceOf(UsbcIdOnFileError)
     await expect(failure).rejects.toMatchObject({ bowler: { id: 'b1', name: 'Maria Gonzalez' } })
+  })
+
+  it.each<[string, unknown]>([
+    ['no division id', { registrationId: 'r', divisionName: 'n', squadIds: [], sweeperIds: [] }],
+    ['no division name', { registrationId: 'r', divisionId: 'd', squadIds: [], sweeperIds: [] }],
+    [
+      'squads that are not text',
+      { registrationId: 'r', divisionId: 'd', divisionName: 'n', squadIds: [1], sweeperIds: [] },
+    ],
+    [
+      'sweepers that are not a list',
+      { registrationId: 'r', divisionId: 'd', divisionName: 'n', squadIds: [], sweeperIds: 'w' },
+    ],
+    ['nothing', undefined],
+  ])(
+    'treats an already-registered conflict with %s as a plain rejection',
+    async (_name, existing) => {
+      server.use(
+        http.post('/v1/tournaments/:id/registrations', () =>
+          HttpResponse.json(
+            { message: 'x', conflict: 'alreadyRegistered', existing },
+            { status: 409 },
+          ),
+        ),
+      )
+
+      await expect(createDeskRegistration('t1', request)).rejects.toBeInstanceOf(DeskRejectedError)
+    },
+  )
+
+  it.each<[string, unknown]>([
+    ['no id', { name: 'Maria' }],
+    ['no name', { id: 'b1' }],
+    ['nothing', undefined],
+  ])('treats a USBC ID conflict with %s as a plain rejection', async (_name, bowler) => {
+    server.use(
+      http.post('/v1/tournaments/:id/registrations', () =>
+        HttpResponse.json({ message: 'x', conflict: 'usbcIdOnFile', bowler }, { status: 409 }),
+      ),
+    )
+
+    await expect(createDeskRegistration('t1', request)).rejects.toBeInstanceOf(DeskRejectedError)
+  })
+
+  it('rejects a refusal body that is not JSON, and a success body that is not JSON', async () => {
+    server.use(
+      http.post(
+        '/v1/tournaments/:id/registrations',
+        () => new HttpResponse('<html>', { status: 400 }),
+      ),
+    )
+    await expect(createDeskRegistration('t1', request)).rejects.toThrow(
+      'Failed to save the registration (response is not JSON)',
+    )
+
+    server.use(
+      http.post(
+        '/v1/tournaments/:id/registrations',
+        () => new HttpResponse('<html>', { status: 201 }),
+      ),
+    )
+    await expect(createDeskRegistration('t1', request)).rejects.toThrow(
+      'Failed to save the registration (response is not JSON)',
+    )
   })
 
   it('treats a conflict with a broken body as a plain rejection', async () => {

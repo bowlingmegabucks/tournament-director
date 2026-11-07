@@ -63,8 +63,12 @@ export function parseDeskRequest(body: unknown): ParsedDeskRequest {
     const key = issue.path.join('.') || 'form'
     errors[key] ??= issue.message
   }
+  // Stryker disable next-line StringLiteral: a failed parse always has an issue, so the fallback never shows.
   return { success: false, message: Object.values(errors)[0] ?? 'Invalid request', errors }
 }
+
+/** The desk sends a word; `toBowlerPatch` reads "F" as Female and any other value sent as Male (D-113). */
+const vendorGender: Record<string, string | undefined> = { Female: 'F', Male: 'M', '': undefined }
 
 /**
  * The desk's flat bowler fields as the vendor shape, so `toBowlerPatch` applies the same
@@ -80,6 +84,7 @@ export function toDeskBowlerPatch(bowler: DeskBowler): BowlerPatch {
       street: bowler.street ?? '',
       city: bowler.city ?? '',
       state: bowler.state ?? '',
+      // Stryker disable next-line StringLiteral: any text without digits normalizes to the same empty zip.
       zipCode: bowler.zipCode ?? '',
     },
     email: bowler.email ?? '',
@@ -87,7 +92,8 @@ export function toDeskBowlerPatch(bowler: DeskBowler): BowlerPatch {
     usbcId: bowler.usbcId ?? '',
     dateOfBirth: bowler.dateOfBirth,
     // `toBowlerPatch` reads "F" as Female and anything sent as Male (D-113). The desk sends a word.
-    gender: bowler.gender === 'Female' ? 'F' : bowler.gender === 'Male' ? 'M' : undefined,
+    // Stryker disable next-line StringLiteral: an unknown key reads as undefined, as the empty one does.
+    gender: vendorGender[bowler.gender ?? ''],
   }
   return toBowlerPatch(input)
 }

@@ -152,6 +152,7 @@ interface BuildInput {
 /** The request body. Squads and sweepers already held are left out: only the new ones go (REG-11). */
 export function buildRequest(input: BuildInput): DeskRegistrationRequest {
   const { stored, bowler, registration, existing } = input
+  // Stryker disable next-line ArrayDeclaration: with no registration the set only gains a text no session has.
   const held = new Set([...(existing?.squadIds ?? []), ...(existing?.sweeperIds ?? [])])
   const average = registration.average.trim()
   const request: DeskRegistrationRequest = {

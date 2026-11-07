@@ -35,6 +35,7 @@ export function ReviewStep({
   sweepers,
 }: Readonly<ReviewStepProps>) {
   const division = divisions.find((candidate) => candidate.id === registration.divisionId)
+  // Stryker disable next-line ArrayDeclaration: with no registration the set only gains a text no session has.
   const held = new Set([...(existing?.squadIds ?? []), ...(existing?.sweeperIds ?? [])])
   const newSquads = labelOf(
     squads,

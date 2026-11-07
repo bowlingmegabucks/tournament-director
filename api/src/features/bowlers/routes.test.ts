@@ -158,7 +158,8 @@ describe('GET /v1/bowlers (BWL-14, D-157)', () => {
     const blank = await request(app).get('/v1/bowlers').query({ lastName: '  ', email: '' })
 
     expect(none.status).toBe(400)
-    expect(none.body).toEqual({ message: needFilterMessage })
+    expect(none.body).toEqual({ message: 'Enter at least one search field.' })
+    expect(needFilterMessage).toBe('Enter at least one search field.')
     expect(blank.status).toBe(400)
   })
 
@@ -340,6 +341,43 @@ describe('GET /v1/bowlers/{id} (D-157, D-158, D-165)', () => {
 
     expect(old.body).toMatchObject({ registration: { hasScores: false } })
     expect(now.body).toMatchObject({ registration: { hasScores: true } })
+  })
+
+  it('names the right division among several, and leaves the name empty when it is gone', async () => {
+    const { overrides, state, bowler, division, squad } = world()
+    const other = createDivision({ name: 'Seniors' })
+    state.registrations.push({
+      tournamentId,
+      registration: {
+        id: faker.string.uuid(),
+        bowlerId: bowler.id,
+        divisionId: division.id,
+        average: null,
+        superSweeper: false,
+        sessionIds: [squad.id],
+      },
+    })
+    const withOther = {
+      ...overrides,
+      divisions: createInMemoryDivisionRepository([
+        { tournamentId, division: other },
+        { tournamentId, division },
+      ]),
+    }
+    const without = {
+      ...overrides,
+      divisions: createInMemoryDivisionRepository([{ tournamentId, division: other }]),
+    }
+
+    const named = await request(createSignedInTestApp(withOther))
+      .get(`/v1/bowlers/${bowler.id}`)
+      .query({ tournamentId })
+    const gone = await request(createSignedInTestApp(without))
+      .get(`/v1/bowlers/${bowler.id}`)
+      .query({ tournamentId })
+
+    expect(named.body).toMatchObject({ registration: { divisionName: 'Handicap' } })
+    expect(gone.body).toMatchObject({ registration: { divisionName: '' } })
   })
 
   it('answers 404 for an unknown bowler and 400 for a bad id', async () => {

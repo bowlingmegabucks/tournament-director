@@ -1,8 +1,12 @@
 import { useState } from 'react'
-import { useOutletContext, useParams } from 'react-router'
+import { useLocation, useNavigate, useOutletContext, useParams } from 'react-router'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
+import { Toast } from '../../shared/Toast'
+import { field } from '../../shared/field'
 import type { Tournament } from '../tournaments/types'
+import { AddRegistrationLink } from './AddRegistrationLink'
+import addStyles from './AddRegistration.module.css'
 import { filterRegistrations } from './filter'
 import { RegistrationSummary } from './RegistrationSummary'
 import { SessionsDialog } from './SessionsDialog'
@@ -48,6 +52,10 @@ export function RegistrationsPage() {
   const { id = '' } = useParams()
   const tournament = useOutletContext<Tournament>()
   const { data, isPending, error, refetch } = useRegistrations(id)
+  const location = useLocation()
+  const navigate = useNavigate()
+  // The add page sets this as it moves here (D-164). Clearing it keeps a reload quiet.
+  const added = field(location.state, 'added')
   const [filter, setFilter] = useState('')
   // The popup keeps only which registration and which list. Its content is read from the live data
   // at render, so a refetch cannot leave the count and the popup disagreeing.
@@ -61,7 +69,10 @@ export function RegistrationsPage() {
   return (
     <>
       <title>{`Registrations · ${tournament.name} · Tournament Director`}</title>
-      <h1>Registrations</h1>
+      <div className={addStyles.titlebar}>
+        <h1>Registrations</h1>
+        <AddRegistrationLink tournamentId={id}>Add registration</AddRegistrationLink>
+      </div>
       {isPending && <Loading label="Loading registrations…" rows={6} />}
       {error && (
         <QueryError
@@ -189,6 +200,17 @@ export function RegistrationsPage() {
             />
           )}
         </>
+      )}
+      {typeof added === 'string' && (
+        <Toast
+          kind="success"
+          autoDismissMs={5000}
+          onDismiss={() => {
+            void navigate('.', { replace: true, state: null })
+          }}
+        >
+          {`Registration added for ${added}`}
+        </Toast>
       )}
     </>
   )

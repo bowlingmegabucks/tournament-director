@@ -1,0 +1,249 @@
+.stack {
+  display: grid;
+  gap: var(--space-4);
+  max-inline-size: 40rem;
+}
+
+.group {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  min-inline-size: 0;
+}
+
+.group legend {
+  padding-inline: var(--space-2);
+  font-weight: 600;
+}
+
+.pair {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+  align-content: start;
+}
+
+.label {
+  font-weight: 600;
+}
+
+.input {
+  min-block-size: var(--target-min);
+  padding-inline: var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  box-sizing: border-box;
+  inline-size: 100%;
+}
+
+.input[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.fieldError {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+.summary {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--color-danger);
+  border-radius: var(--radius);
+}
+
+.summaryList {
+  margin: var(--space-2) 0 0;
+  padding-inline-start: var(--space-4);
+}
+
+.notice {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.secondary {
+  background: transparent;
+  color: var(--color-accent);
+  border: var(--border-width) solid var(--color-accent);
+}
+
+.cancel {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--target-min);
+  padding: var(--space-2) var(--space-4);
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.step {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--target-min);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text-muted);
+}
+
+.step[aria-current='step'] {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+button.step {
+  background: transparent;
+  color: var(--color-accent);
+  font-weight: 400;
+}
+
+.checks {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.checks legend {
+  padding: 0;
+  font-weight: 600;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--target-min);
+}
+
+.check input {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  flex: none;
+}
+
+.off {
+  color: var(--color-text-muted);
+}
+
+.badge {
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.registered {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.results {
+  display: grid;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.result {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.resultActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.review {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.review h3,
+.review p {
+  margin: 0;
+}
+
+.changes {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}
+
+/* A link that looks like the primary button (base.css styles <button>). */
+.addLink {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--target-min);
+  padding: var(--space-2) var(--space-4);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius);
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.titlebar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}

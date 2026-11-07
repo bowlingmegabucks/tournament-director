@@ -1,0 +1,87 @@
+import { formatSessionDate } from '../../shared/sessionFormat'
+import type { Division } from '../divisions/types'
+import type { Squad } from '../squads/types'
+import type { Sweeper } from '../sweepers/types'
+import { bowlerLabels, changesOf, type RegistrationValues } from './deskForm'
+import type { BowlerRegistration, BowlerValues } from './types'
+import styles from './AddRegistration.module.css'
+
+interface ReviewStepProps {
+  heading: string
+  name: string
+  bowler: BowlerValues
+  /** The stored values of a picked bowler, to show what changed. */
+  stored: BowlerValues | undefined
+  registration: RegistrationValues
+  existing: BowlerRegistration | null
+  divisions: Division[]
+  squads: Squad[]
+  sweepers: Sweeper[]
+}
+
+const labelOf = (list: { id: string; date: string }[], ids: string[]) =>
+  ids.flatMap((id) => list.find((session) => session.id === id)?.date ?? []).map(formatSessionDate)
+
+/** Everything about to be saved, once, before the one Add button (D-158, D-160, D-165). */
+export function ReviewStep({
+  heading,
+  name,
+  bowler,
+  stored,
+  registration,
+  existing,
+  divisions,
+  squads,
+  sweepers,
+}: Readonly<ReviewStepProps>) {
+  const division = divisions.find((candidate) => candidate.id === registration.divisionId)
+  const held = new Set([...(existing?.squadIds ?? []), ...(existing?.sweeperIds ?? [])])
+  const newSquads = labelOf(
+    squads,
+    registration.squadIds.filter((id) => !held.has(id)),
+  )
+  const newSweepers = labelOf(
+    sweepers,
+    registration.sweeperIds.filter((id) => !held.has(id)),
+  )
+  const changes = stored ? changesOf(stored, bowler) : []
+  const moves = existing !== null && division !== undefined && existing.divisionId !== division.id
+  return (
+    <section className={styles.review} aria-labelledby="review-heading">
+      <h3 id="review-heading">{heading}</h3>
+      <p>
+        <strong>{name}</strong>
+        {bowler.usbcId.trim() !== '' && ` · ${bowler.usbcId.trim()}`}
+      </p>
+      {changes.length > 0 && (
+        <div>
+          <p>Changes to the bowler:</p>
+          <ul className={styles.changes}>
+            {changes.map((change) => (
+              <li key={change.key}>
+                {bowlerLabels[change.key]}: {change.from.trim() === '' ? 'not set' : change.from} →{' '}
+                {change.to}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <p>
+        {existing ? 'Adds to the existing registration' : 'New registration'}
+        {division && ` in ${division.name}`}
+        {registration.average.trim() !== '' && `, average ${registration.average.trim()}`}.
+      </p>
+      {moves && (
+        <p>
+          Moves the registration from {existing.divisionName} to {division.name}.
+        </p>
+      )}
+      <p>
+        {newSquads.length === 0 ? 'No new squads.' : `Squads: ${newSquads.join(', ')}.`}{' '}
+        {newSweepers.length === 0 ? 'No new sweepers.' : `Sweepers: ${newSweepers.join(', ')}.`}
+        {registration.superSweeper && ' Super sweeper.'}
+      </p>
+      <p className={styles.hint}>A $0 desk entry is recorded. No money is taken in this app.</p>
+    </section>
+  )
+}

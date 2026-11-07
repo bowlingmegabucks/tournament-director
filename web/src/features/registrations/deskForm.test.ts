@@ -1,0 +1,210 @@
+import { describe, expect, it } from 'vitest'
+import {
+  buildRequest,
+  changedFields,
+  checkBowlerStep,
+  checkRegistrationStep,
+  emptyBowler,
+  emptyRegistration,
+  filledFields,
+  overlayBowler,
+  stepOfError,
+  toBowlerValues,
+  toRegistrationValues,
+} from './deskForm'
+import type { BowlerRegistration, BowlerValues } from './types'
+
+const maria: BowlerValues = {
+  ...emptyBowler,
+  firstName: 'Maria',
+  lastName: 'Gonzalez',
+  street: '14 Elm Street',
+  city: 'Worcester',
+  usbcId: '1234-56789',
+  gender: 'Female',
+}
+
+const held: BowlerRegistration = {
+  id: 'r1',
+  divisionId: 'd1',
+  divisionName: 'Handicap',
+  average: 182,
+  superSweeper: false,
+  squadIds: ['s1'],
+  sweeperIds: ['w1'],
+  hasScores: false,
+}
+
+describe('what the desk changed (D-05, D-158)', () => {
+  it('lists only the fields that differ, trimmed', () => {
+    expect(changedFields(maria, { ...maria, street: ' 88 Pine Road ', city: 'Worcester' })).toEqual(
+      {
+        street: '88 Pine Road',
+      },
+    )
+  })
+
+  it('treats a blank box as no change, never a clear (D-05)', () => {
+    expect(changedFields(maria, { ...maria, street: '  ', email: '' })).toEqual({})
+  })
+
+  it('lists every filled box of a new bowler', () => {
+    expect(filledFields({ ...emptyBowler, firstName: 'Ann', lastName: ' Lee ' })).toEqual({
+      firstName: 'Ann',
+      lastName: 'Lee',
+    })
+  })
+
+  it('overlays only the typed boxes on the stored bowler', () => {
+    expect(overlayBowler(maria, { ...emptyBowler, street: '88 Pine Road', city: ' ' })).toEqual({
+      ...maria,
+      street: '88 Pine Road',
+    })
+  })
+
+  it('copies a stored bowler into the form values, without the id', () => {
+    const values = toBowlerValues({ ...maria, id: 'b1' })
+
+    expect(values).toEqual(maria)
+    expect(values).not.toHaveProperty('id')
+  })
+})
+
+describe('step checks (D-162, REG-03, REG-16)', () => {
+  it('asks for both names, with the legacy words', () => {
+    expect(checkBowlerStep({ ...emptyBowler, firstName: '  ' })).toEqual({
+      'bowler.firstName': 'First Name is Required',
+      'bowler.lastName': 'Last Name is Required',
+    })
+    expect(checkBowlerStep(maria)).toEqual({})
+  })
+
+  it('asks for a division and a squad', () => {
+    expect(checkRegistrationStep(emptyRegistration)).toEqual({
+      divisionId: 'Pick a division',
+      squadIds: 'Bowler must enter at least one squad',
+    })
+    expect(
+      checkRegistrationStep({ ...emptyRegistration, divisionId: 'd', squadIds: ['s'] }),
+    ).toEqual({})
+  })
+
+  it.each([
+    ['0', 'Average must be greater than 0.'],
+    ['-5', 'Average must be greater than 0.'],
+    ['301', 'Average must be less than or equal to 300.'],
+    ['1.5', 'Enter a whole number'],
+    ['abc', 'Enter a whole number'],
+  ])('refuses the average %s', (average, message) => {
+    const errors = checkRegistrationStep({
+      ...emptyRegistration,
+      divisionId: 'd',
+      squadIds: ['s'],
+      average,
+    })
+
+    expect(errors).toEqual({ average: message })
+  })
+
+  it.each(['', ' ', '1', '300'])('accepts the average "%s"', (average) => {
+    expect(
+      checkRegistrationStep({ ...emptyRegistration, divisionId: 'd', squadIds: ['s'], average }),
+    ).toEqual({})
+  })
+})
+
+describe('the request (D-157, D-165)', () => {
+  const registration = { ...emptyRegistration, divisionId: 'd1', squadIds: ['s2'], average: '190' }
+
+  it('sends a new bowler as its filled boxes, with no id and no append flag', () => {
+    const request = buildRequest({
+      stored: undefined,
+      bowler: { ...emptyBowler, firstName: 'Ann', lastName: 'Lee' },
+      registration,
+      existing: null,
+      confirmAppend: false,
+    })
+
+    expect(request).toEqual({
+      divisionId: 'd1',
+      average: 190,
+      squadIds: ['s2'],
+      sweeperIds: [],
+      superSweeper: false,
+      bowler: { firstName: 'Ann', lastName: 'Lee' },
+    })
+  })
+
+  it('sends a stored bowler by id with only the changes', () => {
+    const request = buildRequest({
+      stored: { id: 'b1', values: maria },
+      bowler: { ...maria, street: '88 Pine Road' },
+      registration,
+      existing: null,
+      confirmAppend: false,
+    })
+
+    expect(request.bowlerId).toBe('b1')
+    expect(request.bowler).toEqual({ street: '88 Pine Road' })
+    expect(request).not.toHaveProperty('appendToExisting')
+  })
+
+  it('leaves out the squads and sweepers already held, and flags the append', () => {
+    const request = buildRequest({
+      stored: { id: 'b1', values: maria },
+      bowler: maria,
+      registration: { ...registration, squadIds: ['s1', 's2'], sweeperIds: ['w1', 'w2'] },
+      existing: held,
+      confirmAppend: false,
+    })
+
+    expect(request.squadIds).toEqual(['s2'])
+    expect(request.sweeperIds).toEqual(['w2'])
+    expect(request.appendToExisting).toBe(true)
+    expect(request.bowler).toEqual({})
+  })
+
+  it('flags the append after the desk confirmed it at the fallback dialog (D-159)', () => {
+    const request = buildRequest({
+      stored: { id: 'b1', values: maria },
+      bowler: maria,
+      registration,
+      existing: null,
+      confirmAppend: true,
+    })
+
+    expect(request.appendToExisting).toBe(true)
+  })
+
+  it('sends a blank average as null', () => {
+    expect(
+      buildRequest({
+        stored: undefined,
+        bowler: emptyBowler,
+        registration: { ...registration, average: ' ' },
+        existing: null,
+        confirmAppend: false,
+      }).average,
+    ).toBeNull()
+  })
+
+  it('starts the form from the stored registration', () => {
+    expect(toRegistrationValues(held)).toEqual({
+      divisionId: 'd1',
+      average: '182',
+      squadIds: ['s1'],
+      sweeperIds: ['w1'],
+      superSweeper: false,
+    })
+    expect(toRegistrationValues({ ...held, average: null }).average).toBe('')
+  })
+})
+
+describe('where an error belongs', () => {
+  it('puts the bowler fields on step 1 and the rest on step 2', () => {
+    expect(stepOfError('bowler.email')).toBe(1)
+    expect(stepOfError('squadIds')).toBe(2)
+    expect(stepOfError('average')).toBe(2)
+    expect(stepOfError('form')).toBe(2)
+  })
+})

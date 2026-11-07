@@ -14,6 +14,7 @@ import { countBowlers, formatSpots, formatTotals } from './format'
 import styles from './LanesPage.module.css'
 import { OtherPositions } from './OtherPositions'
 import { PairZone } from './PairZone'
+import { AddRegistrationLink } from '../registrations/AddRegistrationLink'
 import { RecapDialog } from '../recapSheets/RecapDialog'
 import { applyMoves, type Move } from './tempMoves'
 import type { LaneBowler, LanePage, SessionKind } from './types'
@@ -115,14 +116,21 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
               <strong>{formatSpots(view)}</strong>
             </li>
           </ul>
-          <button
-            type="button"
-            onClick={() => {
-              setRecapOpen(true)
-            }}
-          >
-            Recap sheets
-          </button>
+          <span className={styles.stripActions}>
+            {!readOnly && (
+              <AddRegistrationLink tournamentId={id} session={{ kind, id: sessionId }}>
+                {`Add registration to this ${kind}`}
+              </AddRegistrationLink>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setRecapOpen(true)
+              }}
+            >
+              Recap sheets
+            </button>
+          </span>
         </div>
         {readOnly && <p className={styles.note}>This {kind} is complete. Lanes cannot change.</p>}
         <div className={styles.layout}>

@@ -62,7 +62,16 @@ test('every page fits a phone with no sideways scroll, signed in as a director (
   ] as const) {
     await menuLink(page, list)
     await fits(page, list)
-    const sessions = page.getByRole('main').getByRole('link', { name: /\d{1,2}:\d{2} [AP]M/ })
+    // The edit form (SQD-27) must fit a phone too.
+    await page
+      .getByRole('link', { name: /^Edit (squad|sweeper) / })
+      .first()
+      .click()
+    await fits(page, `${list} edit form`)
+    await menuLink(page, list)
+    const sessions = page
+      .getByRole('main')
+      .getByRole('link', { name: /^[A-Z][a-z]{2} \d{2}\/\d{2}\/\d{4} \d{1,2}:\d{2} [AP]M$/ })
     await expect(sessions.first()).toBeVisible()
     const count = await sessions.count()
     for (let index = 0; index < count; index++) {

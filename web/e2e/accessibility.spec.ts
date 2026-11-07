@@ -285,6 +285,65 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('edit squad form has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Squads')
+      await page.getByRole('link', { name: 'Edit squad Sat 10/24/2026 1:00 PM' }).click()
+      await expect(page.getByRole('heading', { name: 'Edit squad', level: 1 })).toBeVisible()
+      await expect(page.getByLabel('Entry fee')).toHaveValue('60')
+      await expect(page.getByText('Asks you to confirm:').first()).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
+    test('edit squad form with errors has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Squads')
+      await page.getByRole('link', { name: 'Edit squad Sun 10/25/2026 9:00 AM' }).click()
+      await page.getByLabel('Starting lane (required)').fill('2')
+      await page.getByRole('button', { name: 'Save changes' }).click()
+      await expect(page.getByRole('alert')).toContainText('Fix')
+
+      await expectNoViolations(page)
+    })
+
+    test('edit squad confirm dialog has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Squads')
+      await page.getByRole('link', { name: 'Edit squad Sat 10/24/2026 1:00 PM' }).click()
+      await page.getByLabel('Entry fee').fill('75')
+      await page.getByRole('button', { name: 'Save changes' }).click()
+      await expect(page.getByRole('dialog', { name: 'Save these changes?' })).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
+    test('edit sweeper form has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Sweepers')
+      await page.getByRole('link', { name: 'Edit sweeper Sat 10/24/2026 6:00 PM' }).click()
+      await expect(page.getByRole('heading', { name: 'Edit sweeper', level: 1 })).toBeVisible()
+      await expect(page.getByLabel('Games (required)')).toHaveAttribute('readonly', '')
+
+      await expectNoViolations(page)
+    })
+
+    test('edit sweeper confirm dialog has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Sweepers')
+      await page.getByRole('link', { name: 'Edit sweeper Sat 10/24/2026 6:00 PM' }).click()
+      await page.getByLabel('Cash ratio (required)').fill('3.5')
+      await page.getByRole('button', { name: 'Save changes' }).click()
+      await expect(page.getByRole('dialog', { name: 'Save these changes?' })).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
     test('delete division dialog has no WCAG 2.2 AA violations', async ({ page }) => {
       await openTournamentsSignedIn(page)
       await page.getByRole('article').first().getByRole('link').click()
@@ -403,7 +462,7 @@ for (const colorScheme of colorSchemes) {
         .getByRole('navigation', { name: /Northeast MegaBuck/ })
         .getByRole('link', { name: 'Squads' })
         .click()
-      await page.getByRole('link', { name: /1:00 PM/ }).click()
+      await page.getByRole('link', { name: /^[A-Z][a-z]{2} \d{2}\/\d{2}\/\d{4} 1:00 PM$/ }).click()
       await page.getByRole('link', { name: 'Scores' }).click()
       await expect(page.getByRole('heading', { level: 2, name: 'Lanes 1-2' })).toBeVisible()
       await expectNoViolations(page)
@@ -422,7 +481,7 @@ for (const colorScheme of colorSchemes) {
         .getByRole('link', { name: 'Squads' })
         .click()
       await page
-        .getByRole('link', { name: /9:00 AM/ })
+        .getByRole('link', { name: /^[A-Z][a-z]{2} \d{2}\/\d{2}\/\d{4} 9:00 AM$/ })
         .first()
         .click()
       await page.getByRole('link', { name: 'Results' }).click()
@@ -446,7 +505,7 @@ for (const colorScheme of colorSchemes) {
         .getByRole('navigation', { name: /Northeast MegaBuck/ })
         .getByRole('link', { name: 'Sweepers' })
         .click()
-      await page.getByRole('link', { name: /6:00 PM/ }).click()
+      await page.getByRole('link', { name: /^[A-Z][a-z]{2} \d{2}\/\d{2}\/\d{4} 6:00 PM$/ }).click()
       await page.getByRole('link', { name: 'Results' }).click()
       await expect(page.getByRole('table', { name: 'Sweeper results' })).toBeVisible()
       await expectNoViolations(page)
@@ -485,7 +544,7 @@ for (const colorScheme of colorSchemes) {
         .getByRole('navigation', { name: /Northeast MegaBuck/ })
         .getByRole('link', { name: 'Squads' })
         .click()
-      await page.getByRole('link', { name: /1:00 PM/ }).click()
+      await page.getByRole('link', { name: /^[A-Z][a-z]{2} \d{2}\/\d{2}\/\d{4} 1:00 PM$/ }).click()
       await expect(page.getByRole('heading', { name: 'Unassigned (4)' })).toBeVisible()
       await expectNoViolations(page)
 
@@ -506,7 +565,7 @@ for (const colorScheme of colorSchemes) {
         .getByRole('navigation', { name: /Northeast MegaBuck/ })
         .getByRole('link', { name: 'Squads' })
         .click()
-      await page.getByRole('link', { name: /1:00 PM/ }).click()
+      await page.getByRole('link', { name: /^[A-Z][a-z]{2} \d{2}\/\d{2}\/\d{4} 1:00 PM$/ }).click()
       await page.getByRole('button', { name: 'Recap sheets' }).click()
       await expect(page.getByRole('button', { name: 'Print all' })).toBeVisible()
 
@@ -531,7 +590,7 @@ for (const colorScheme of colorSchemes) {
         .getByRole('link', { name: 'Squads' })
         .click()
       await page
-        .getByRole('link', { name: /9:00 AM/ })
+        .getByRole('link', { name: /^[A-Z][a-z]{2} \d{2}\/\d{2}\/\d{4} 9:00 AM$/ })
         .first()
         .click()
       await expect(page.getByText('This squad is complete. Lanes cannot change.')).toBeVisible()

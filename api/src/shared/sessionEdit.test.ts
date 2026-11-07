@@ -11,10 +11,11 @@ import {
   sessionWarnings,
   toSessionEditInfo,
   type SessionEditContext,
+  type SessionEditFacts,
 } from './sessionEdit.ts'
 
 const context = (
-  over: Partial<SessionEditContext> & { facts?: Partial<SessionEditContext['facts']> } = {},
+  over: Omit<Partial<SessionEditContext>, 'facts'> & { facts?: Partial<SessionEditFacts> } = {},
 ): SessionEditContext => ({
   tournament: { completed: false, startDate: '2026-10-23', endDate: '2026-10-25' },
   complete: false,
@@ -25,7 +26,10 @@ const context = (
 
 describe('changedFields', () => {
   it('keeps only the fields whose value differs and ignores left-out ones (SQD-23)', () => {
-    expect(changedFields({ a: 1, b: 2, c: null }, { a: 1, b: 3, c: 4 })).toEqual({ b: 3, c: 4 })
+    expect(changedFields({ a: 1, b: 2, c: null as number | null }, { a: 1, b: 3, c: 4 })).toEqual({
+      b: 3,
+      c: 4,
+    })
     expect(changedFields({ a: 1, b: null as number | null }, { b: null })).toEqual({})
   })
   it('counts a cleared override as a change (D-183)', () => {

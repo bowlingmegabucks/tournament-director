@@ -85,7 +85,7 @@ export const laneBlockMessage = `Lanes must end at lane ${lastLane} or lower`
  * `superRefine`. It skips a value another check already refused.
  */
 export function checkLaneBlock(
-  value: { startingLane: unknown; numberOfLanes: unknown },
+  value: { startingLane?: unknown; numberOfLanes?: unknown },
   ctx: z.RefinementCtx,
 ): void {
   const { startingLane, numberOfLanes } = value

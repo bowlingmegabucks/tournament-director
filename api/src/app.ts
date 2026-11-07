@@ -26,6 +26,7 @@ import type { ScoreRepository } from './features/scores/repository.ts'
 import { createSquadRouter } from './features/squads/routes.ts'
 import type { SquadRepository } from './features/squads/repository.ts'
 import { createSquadCreateRouter } from './features/squads/createRoutes.ts'
+import { createSquadUpdateRouter } from './features/squads/updateRoutes.ts'
 import type { SquadWriter } from './features/squads/writer.ts'
 import { createSweeperRouter } from './features/sweepers/routes.ts'
 import type { SweeperRepository } from './features/sweepers/repository.ts'
@@ -196,6 +197,12 @@ export function createApp({
         access: { permission: 'squads.write' }, // SQD-01 to SQD-08, D-167: the API key cannot reach it
         methods: ['POST'],
         router: createSquadCreateRouter(squadWriter, logger),
+      },
+      {
+        path: '/v1/tournaments/:id/squads',
+        access: { permission: 'squads.write' }, // SQD-23, D-184, D-185: edit and its edit-info read; no API key
+        methods: ['PATCH', 'GET'],
+        router: createSquadUpdateRouter(squadWriter, logger),
       },
       {
         path: '/v1/tournaments/:id/sweepers',

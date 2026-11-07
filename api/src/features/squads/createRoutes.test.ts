@@ -240,6 +240,7 @@ describe(`POST ${url}`, () => {
 
   it('passes a storage outage on as 503 (SQD-01)', async () => {
     const writer: SquadWriter = {
+      ...createInMemorySquadWriter().writer,
       create: () => Promise.reject(new HttpError(503, 'Database unavailable')),
     }
 

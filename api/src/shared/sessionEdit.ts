@@ -80,6 +80,11 @@ export interface SessionEditContext {
   facts: SessionEditFacts
 }
 
+/** Which id an edit could not find. A session of another tournament counts as not found. */
+export interface SessionNotFound {
+  notFound: 'tournament' | 'session'
+}
+
 export interface EditWarning {
   field: string
   message: string

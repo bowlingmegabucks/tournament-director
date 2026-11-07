@@ -109,7 +109,9 @@ export async function deskRegister(
   }
   if (existing && knownBowler && existing.divisionId !== request.divisionId) {
     // D-160, REG-15: a move is fine until the bowler has any score.
-    if ((await writer.findScoredSessionIds(knownBowler.id)).length > 0) {
+    const scored = await writer.findSessions(await writer.findScoredSessionIds(knownBowler.id))
+    // Scores from an earlier tournament do not lock this one.
+    if (scored.some((session) => session.tournamentId === tournament.id)) {
       return failures([
         validation(
           'Registration.DivisionLocked',

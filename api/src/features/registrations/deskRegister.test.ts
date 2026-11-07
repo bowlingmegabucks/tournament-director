@@ -550,6 +550,35 @@ describe('a bowler already registered here (REG-01, REG-10 to REG-14, D-159, D-1
     ])
   })
 
+  it('lets a score from another tournament pass: only this tournament locks a move (D-160)', async () => {
+    const other = createDivision()
+    const elsewhere = session('squad', faker.string.uuid())
+    const { deps, state, tournament, request, bowler, squads } = registered({
+      seed: { sessions: [elsewhere] },
+    })
+    state.divisions.push({ id: other.id, tournamentId: tournament.id })
+    state.scores.push({ bowlerId: bowler.id, sessionId: elsewhere.id })
+    const moved = {
+      ...deps,
+      divisions: createInMemoryDivisionRepository([
+        { tournamentId: tournament.id, division: other },
+      ]),
+    }
+
+    const result = await deskRegister(
+      moved,
+      tournament.id,
+      request({
+        divisionId: other.id,
+        bowlerId: bowler.id,
+        appendToExisting: true,
+        squadIds: [squads[1]?.id],
+      }),
+    )
+
+    expect(result).toMatchObject({ ok: true, mode: 'appended' })
+  })
+
   it('lets a bowler with scores add a squad in the same division (D-160)', async () => {
     const { deps, state, tournament, request, bowler, squads } = registered()
     state.scores.push({ bowlerId: bowler.id, sessionId: squads[0]?.id ?? '' })

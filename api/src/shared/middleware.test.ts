@@ -2,7 +2,7 @@ import express from 'express'
 import request from 'supertest'
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
-import { FieldErrorsError, HttpError, WarningsError } from './errors.ts'
+import { ConflictError, FieldErrorsError, HttpError, WarningsError } from './errors.ts'
 import { createCapturedLogger } from '../test/logger.ts'
 import { createErrorHandler } from './middleware.ts'
 import type { Logger } from './logger.ts'
@@ -33,6 +33,19 @@ describe('errorHandler', () => {
 
     expect(response.status).toBe(409)
     expect(response.body).toEqual({ message: 'Already there', errors: { name: 'Taken' } })
+  })
+
+  it('sends the message and the body of a ConflictError as a 409 (D-159)', async () => {
+    const error = new ConflictError('Already registered', { conflict: 'alreadyRegistered', n: 1 })
+
+    const response = await request(appThatThrows(error)).get('/boom')
+
+    expect(response.status).toBe(409)
+    expect(response.body).toEqual({
+      message: 'Already registered',
+      conflict: 'alreadyRegistered',
+      n: 1,
+    })
   })
 
   it('sends the message and the warnings of a WarningsError', async () => {

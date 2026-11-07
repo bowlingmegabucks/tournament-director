@@ -18,6 +18,7 @@ import type { LaneRepository } from './features/lanes/repository.ts'
 import { createRecapSheetRouter } from './features/recapSheets/routes.ts'
 import { createRegistrationRouter } from './features/registrations/routes.ts'
 import type { RegistrationRepository } from './features/registrations/repository.ts'
+import { createDeskRegistrationRouter } from './features/registrations/deskRoutes.ts'
 import { createVendorRegistrationRouter } from './features/registrations/vendorRoutes.ts'
 import type { RegistrationWriter } from './features/registrations/writer.ts'
 import { createFinalsRouter, createResultsRouter } from './features/results/routes.ts'
@@ -158,6 +159,11 @@ export function createApp({
     writer: registrationWriter,
     logger,
   })
+
+  const deskRegistrations = createDeskRegistrationRouter(
+    { tournaments, divisions, sweepers, writer: registrationWriter },
+    logger,
+  )
 
   // Every group declares its access (D-27). Anything not mounted here is a 404.
   mountRoutes(
@@ -392,7 +398,14 @@ export function createApp({
       {
         path: '/v1/tournaments/:id/registrations',
         access: { permission: 'registrations.read' }, // D-46, D-52: signed in; the API key cannot reach it
+        methods: ['GET'],
         router: createRegistrationRouter(registrations, tournaments, divisions, squads, sweepers),
+      },
+      {
+        path: '/v1/tournaments/:id/registrations',
+        access: { permission: 'registrations.write' }, // D-157, D-105: the API key cannot reach it
+        methods: ['POST'],
+        router: deskRegistrations,
       },
       {
         path: '/v1/registrations',

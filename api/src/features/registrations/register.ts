@@ -91,7 +91,7 @@ function checkOverlap(
  * for every caller (D-107). Other-tournament ids and complete squads are a 400 too (D-108). A
  * payment code already on file means the caller is retrying: answer with that registration (D-109).
  */
-async function findDivision(
+export async function findDivision(
   { divisions, writer }: RegisterDependencies,
   divisionId: string,
   tournamentId: string,

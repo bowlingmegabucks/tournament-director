@@ -1,6 +1,6 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express'
 import { ZodError } from 'zod'
-import { FieldErrorsError, HttpError, WarningsError } from './errors.ts'
+import { ConflictError, FieldErrorsError, HttpError, WarningsError } from './errors.ts'
 import type { Logger } from './logger.ts'
 import { requestLogger } from './requestLogging.ts'
 
@@ -22,6 +22,10 @@ export function createErrorHandler(logger: Logger): ErrorRequestHandler {
     }
     if (err instanceof WarningsError) {
       res.status(err.status).json({ message: err.message, warnings: err.warnings, ...err.extra })
+      return
+    }
+    if (err instanceof ConflictError) {
+      res.status(err.status).json({ message: err.message, ...err.body })
       return
     }
     if (err instanceof HttpError) {

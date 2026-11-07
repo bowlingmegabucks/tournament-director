@@ -19,6 +19,11 @@ on:
         required: false
         default: false
         type: boolean
+      ignore-static:
+        description: Skip static mutants (code that runs when a module loads). They cost the most time.
+        required: false
+        default: false
+        type: boolean
     secrets:
       STRYKER_DASHBOARD_API_KEY:
         required: false
@@ -90,6 +95,7 @@ jobs:
         env:
           MUTATE: ${{ steps.plan.outputs.mutate }}
           REPORT: ${{ inputs.report }}
+          IGNORE_STATIC: ${{ inputs.ignore-static }}
           STRYKER_DASHBOARD_API_KEY: ${{ secrets.STRYKER_DASHBOARD_API_KEY }}
         run: |
           reporters=clear-text,html,json
@@ -102,6 +108,9 @@ jobs:
           fi
           args=()
           if [ -n "$MUTATE" ]; then args=(--mutate "$MUTATE"); fi
+          # Static mutants are 6% of the mutants and about 40% of the time. Pull requests skip them;
+          # main runs them all.
+          if [ "$IGNORE_STATIC" = true ]; then args+=(--ignoreStatic); fi
           # The runner has 4 cores; Stryker's default leaves one idle.
           npm run test:mutation -- --incremental --concurrency "$(nproc)" --reporters "$reporters" "${args[@]}"
 

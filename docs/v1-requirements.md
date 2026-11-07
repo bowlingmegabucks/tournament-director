@@ -38,7 +38,8 @@ Version numbers follow content, not a countdown. 0.10.0 is fine.
 - [ ] Squad and sweeper commands (D-12, D-15; [squads-and-sweepers.md](requirements/squads-and-sweepers.md)), 0.7.0:
   - [x] Create a squad: `squads.write`, max per pair 2 to 5, the date inside the tournament, blank fee and ratios use the tournament's, a complete tournament refuses (`createSquad`, `SQD-01` to `SQD-08`, D-167 to D-173).
   - [x] Create a sweeper, with a bonus-pins box per division: `squads.write`, own fee, games, and cash ratio, pins blank or 0 to 99, one transaction (`createSweeper`, `SQD-10` to `SQD-13`, D-174 to D-178). Q-11 (pin presets) stays open.
-  - [ ] Edit and delete a squad or sweeper (`SQD-14`, D-12, D-15).
+  - [x] Edit a squad or sweeper, with free, confirmed, and refused fields by what depends on them in that session, a stranded-lane check, and bonus-pin edits (`editSquad`, `SQD-23` to `SQD-30`, D-180 to D-185).
+  - [ ] Delete a squad or sweeper (`SQD-14`, D-15).
   - [ ] Complete a squad or sweeper, and lock a complete session on the server (`SQD-15` to `SQD-18`, D-10).
 
 ## Data and cutover

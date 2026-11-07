@@ -7,18 +7,24 @@ import type { FieldErrors } from '../features/tournaments/createRequest.ts'
  * Each feature adds its own money fields and its own subject word for the messages.
  */
 
-// A blank box reaches the API as "", a missing key, or null. All three mean "not set".
-export const blankToNull = (value: unknown) => (value === undefined || value === '' ? null : value)
+// A blank box reaches the API as "", spaces, a missing key, or null. All mean "not set"; the form
+// trims the text the same way.
+export const blankToNull = (value: unknown) =>
+  value === undefined || (typeof value === 'string' && value.trim() === '') ? null : value
 
 // Wrong type or missing: the same words the form uses, so the two never disagree.
-export const missing = (value: unknown) => value === undefined || value === null || value === ''
+export const missing = (value: unknown) =>
+  value === undefined || value === null || (typeof value === 'string' && value.trim() === '')
+
+/** A required number: missing and wrong type each have their own message. */
+export function required(label: string) {
+  return z.number({
+    error: (issue) => (missing(issue.input) ? `${label} is required` : 'Enter a number'),
+  })
+}
 
 export function whole(label: string) {
-  return z
-    .number({
-      error: (issue) => (missing(issue.input) ? `${label} is required` : 'Enter a number'),
-    })
-    .refine((value) => Number.isInteger(value), { error: 'Enter a whole number' })
+  return required(label).refine((value) => Number.isInteger(value), { error: 'Enter a whole number' })
 }
 
 // Stryker disable next-line Regex: without `^` a prefixed value fails the round trip in `toLocalDateTime` all the same.
@@ -66,6 +72,25 @@ export const sessionFields = {
   maxPerPair: whole('Max per pair').refine((value) => value >= 2 && value <= 5, {
     error: 'Max per pair must be between 2 and 5',
   }),
+}
+
+export const lastLane = 200
+export const laneBlockMessage = `Lanes must end at lane ${lastLane} or lower`
+
+/**
+ * The lanes run from the starting lane for the number of lanes, so the last one must exist (D-179).
+ * Each field has its own range; this is the check across the two. Add it to the create schema with
+ * `superRefine`. It skips a value another check already refused.
+ */
+export function checkLaneBlock(
+  value: { startingLane: unknown; numberOfLanes: unknown },
+  ctx: z.RefinementCtx,
+): void {
+  const { startingLane, numberOfLanes } = value
+  if (typeof startingLane !== 'number' || typeof numberOfLanes !== 'number') return
+  if (startingLane + numberOfLanes - 1 > lastLane) {
+    ctx.addIssue({ code: 'custom', path: ['numberOfLanes'], message: laneBlockMessage })
+  }
 }
 
 export const completeMessage = 'This tournament is complete and cannot be changed'

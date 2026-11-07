@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { missing, blankToNull, sessionFields, whole } from '../../shared/sessionCreate.ts'
+import { blankToNull, checkLaneBlock, required, sessionFields, whole } from '../../shared/sessionCreate.ts'
 import { hasAtMostDecimals, type FieldErrors } from '../tournaments/createRequest.ts'
 
 export type { FieldErrors }
@@ -19,11 +19,6 @@ export interface NewSweeper {
   cashRatio: number
   bonusPins: Record<string, number>
 }
-
-const required = (label: string) =>
-  z.number({
-    error: (issue) => (missing(issue.input) ? `${label} is required` : 'Enter a number'),
-  })
 
 /** The rule for each field (D-168, D-175, D-176). Refused, never rounded (D-125). */
 const sweeperFields = {
@@ -64,7 +59,7 @@ const sweeperFields = {
 }
 
 /** Strict: a key we do not know is refused, `complete` included (SQD-07, D-171). */
-const createSweeperSchema = z.strictObject(sweeperFields)
+const createSweeperSchema = z.strictObject(sweeperFields).superRefine(checkLaneBlock)
 
 export type CreateSweeperResult =
   { success: true; data: NewSweeper } | { success: false; message: string; errors: FieldErrors }

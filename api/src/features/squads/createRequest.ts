@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { blankToNull, sessionFields } from '../../shared/sessionCreate.ts'
+import { blankToNull, checkLaneBlock, sessionFields } from '../../shared/sessionCreate.ts'
 import {
   describeFailure,
   hasAtMostDecimals,
@@ -56,7 +56,7 @@ const squadFields = {
  * The create body. Strict: a key we do not know is refused, `complete` included, since a new
  * squad is always open (SQD-07, D-171).
  */
-const createSquadSchema = z.strictObject(squadFields)
+const createSquadSchema = z.strictObject(squadFields).superRefine(checkLaneBlock)
 
 export type CreateSquadResult =
   { success: true; data: NewSquad } | { success: false; message: string; errors: FieldErrors }

@@ -14,6 +14,7 @@ import {
   createDemoSquads,
   createSquad,
   createDemoSweepers,
+  createSweeper,
   createDemoTournaments,
   createSettings,
   createTournament,
@@ -22,6 +23,7 @@ import { authHandlers } from './authHandlers'
 import { userHandlers } from './userHandlers'
 import type { DivisionChanges, NewDivision } from '../features/divisions/types'
 import type { NewSquad } from '../features/squads/types'
+import type { NewSweeper } from '../features/sweepers/types'
 import type {
   NewTournament,
   TournamentChanges,
@@ -360,4 +362,42 @@ export const handlers = [
       ? HttpResponse.json({ sweepers })
       : HttpResponse.json({ message: 'Tournament not found' }, { status: 404 }),
   ),
+  // SQD-10 to SQD-13: the browser has checked the field rules; the mock refuses a date outside the
+  // tournament and a division it does not know, and answers the list shape with the nonzero pins.
+  // It never completes a tournament, so the API tests cover that refusal (D-171).
+  http.post('/v1/tournaments/:id/sweepers', async ({ params, request }) => {
+    const tournament = tournaments.find((candidate) => candidate.id === params['id'])
+    if (!tournament) return notFound()
+    const input = (await request.json()) as NewSweeper
+    const day = input.date.slice(0, 10)
+    if (day < tournament.startDate || day > tournament.endDate) {
+      const message =
+        day < tournament.startDate
+          ? 'Sweeper date must be after tournament start'
+          : 'Sweeper date must be before tournament end'
+      return HttpResponse.json({ message, errors: { date: message } }, { status: 409 })
+    }
+    if (Object.keys(input.bonusPins).some((id) => !divisions.some((entry) => entry.id === id))) {
+      const message = 'A division no longer exists. Reload the page'
+      return HttpResponse.json({ message, errors: { bonusPins: message } }, { status: 409 })
+    }
+    const created = createSweeper({
+      date: `${input.date}:00`,
+      startingLane: input.startingLane,
+      numberOfLanes: input.numberOfLanes,
+      maxPerPair: input.maxPerPair,
+      entryFee: input.entryFee,
+      games: input.games,
+      cashRatio: input.cashRatio,
+      bonusPins: divisions.flatMap((division) => {
+        const pins = input.bonusPins[division.id] ?? 0
+        return pins === 0
+          ? []
+          : [{ divisionId: division.id, divisionName: division.name, bonusPinsPerGame: pins }]
+      }),
+    })
+    sweepers.push(created)
+    sweepers.sort((a, b) => a.date.localeCompare(b.date))
+    return HttpResponse.json({ sweeper: created }, { status: 201 })
+  }),
 ]

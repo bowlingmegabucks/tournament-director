@@ -8,7 +8,7 @@ The vendor routes (`POST /v1/registrations` and the rest) are built. This run ad
 
 | Rule | Bucket | Note |
 | --- | --- | --- |
-| REG-01 | In | Desk: `409` with the existing registration, then an offer to append (D-159). Search marks registered bowlers. |
+| REG-01 | In | Desk: `409` with the existing registration, then an offer to append (D-159). Search marks registered bowlers, and picking one skips the Bowler step (D-165). |
 | REG-02, BWL-01 to BWL-10, BWL-07a | In | Shared checks run on the edited or new bowler. Vendor-only requirements (address, email, USBC ID) do not apply (D-162). |
 | REG-03 to REG-06 | In | Shared checks. |
 | REG-07, BWL-16a | In | Existing bowler is patched (D-05, D-158). |
@@ -34,7 +34,7 @@ The vendor routes (`POST /v1/registrations` and the rest) are built. This run ad
 - D-10, D-117: no division move after scores.
 - D-108: squads and the division must belong to the tournament; no complete squads added.
 - D-130: a complete tournament refuses changes.
-- D-157 to D-164: the desk route, edits inside registration, append offer, division move, exact USBC ID only, names-only new bowler, placeholder payment, entry points.
+- D-157 to D-165: the desk route, edits inside registration, append offer, division move, exact USBC ID only, names-only new bowler, placeholder payment, entry points.
 - D-96: routes ask for permissions, not roles.
 
 ## Differs from legacy
@@ -111,10 +111,10 @@ Mockups: [index](create-registration-mockups/index.html), [Option A: one page](c
 - `AddRegistrationPage.tsx`: holds the step (Bowler, Registration, Review) and the form values. Back keeps what was typed. Step 1 has three stages: search, existing bowler, new bowler. Next on step 1 needs the names; Next on step 2 checks division and at least one squad on the client, and the server rechecks everything on Save. No copy of server data in `useState` beyond the editable form values.
 - `ReviewStep.tsx`: shows the bowler, each changed field as old against new (for a stored bowler), the division, average, squads, sweepers, and the line "A $0 desk entry is recorded". The one Add registration button is here. A server `400` names a field: the page goes back to the step that holds it, with the error summary focused.
 - `BowlerSearch.tsx` with `useBowlerSearch`: four fields, results list with a Registered badge (text plus check, not color alone), "Pick" and "New bowler".
-- `useBowler(id, tournamentId)`: fills the form and shows the "already registered" notice.
+- `useBowler(id, tournamentId)`: fills the form. When `registration` is not null the page jumps to step 2 (D-165): the notice shows, the bowler's details are not edited, and the squads and sweepers held show checked and locked. Back from step 2 returns to the search.
 - `BowlerFields.tsx`: the form fields (names required), per-field errors linked with `aria-describedby`. `validateBowler.ts` runs the names rule on the client; every other rule is the server's, shown per field from the `400`.
 - `RegistrationFields.tsx`: division select (by number), average, squad and sweeper checkboxes (complete ones greyed out and disabled; already-held ones checked and locked on append; the session from `?squad=` or `?sweeper=` checked and locked, with the hint "Added from the lane page"), super sweeper.
-- `AlreadyRegisteredDialog.tsx` and `UsbcIdOnFileDialog.tsx`, on the shared dialog parts (`Dialog.module.css`, `dialogParts.ts`), like `ConfirmChangesDialog`. The division-move text goes in the first one.
+- `AlreadyRegisteredDialog.tsx` and `UsbcIdOnFileDialog.tsx`, on the shared dialog parts (`Dialog.module.css`, `dialogParts.ts`), like `ConfirmChangesDialog`. For a bowler picked as registered, the Review step is the confirmation (D-165): it says "Adds to the existing registration" and names a division move, and the web sends `appendToExisting: true`. The already-registered dialog opens only when the server answers `409 alreadyRegistered` to a save that did not send the flag (someone registered the bowler after the pick, or a new-bowler entry hit a registered USBC ID owner).
 - `useCreateRegistration` mutation: on `409 alreadyRegistered` opens the dialog; Yes sends again with `appendToExisting: true`. On `409 usbcIdOnFile` opens the second dialog; Yes switches to the stored bowler (`bowlerId`) with the typed fields as the patch. On success invalidates the registrations list and the tournament summary, shows a success Toast, and navigates to the Registrations page.
 - States on every data view: search loading (`Loading`), empty, error with Try again; the form: saving (button disabled, `Saving…`), invalid (error summary with focus moved to it).
 - Focus: on a step change focus goes to the step's heading; after a failed save, to the error summary; after Pick, to the first form field.
@@ -133,6 +133,7 @@ No schema change. Writes go through the existing `RegistrationWriter` (one trans
 | REG-10 to REG-14, D-159 | `deskRegister.test.ts`: with the flag, new squads added, bowler patched, payment added. A squad already held is a `400`. `prismaWriter.db.test.ts` (desk append, one transaction). |
 | D-160, REG-12, REG-15 | `deskRegister.test.ts`: division moves with no scores; refused with a score. Page test for the move text in the dialog. |
 | REG-07, BWL-16a, D-05, D-158 | `deskRegister.test.ts`: patch changes only sent fields; blank changes none. Page test: edit address, save, request carries only changed fields. |
+| D-165 | `AddRegistrationPage.test.tsx`: picking a registered bowler lands on step 2 with the notice and the held squads locked; Review says "Adds to the existing registration" and, for a different division, names the move; the request carries `appendToExisting: true` and no `bowler` patch; the dialog opens only on an unexpected `409`. Lane-page entry with a registered bowler: squad locked, held squads locked. |
 | BWL-15, D-161 | `deskRegister.test.ts`: new bowler with a stored USBC ID gives `usbc-id-on-file`. Page test: Yes switches to the stored bowler with the typed edits. |
 | REG-02, BWL-01 to BWL-10, D-162 | `deskRegister.test.ts`: name-only new bowler saves; missing name is a `400` with its message; address rules run when a street is given. `validateBowler.test.ts`. |
 | REG-04, REG-05 | `deskRegister.test.ts`: handicap division without a USBC ID is a `400`; average and age checks. |
@@ -165,6 +166,7 @@ No schema change. Writes go through the existing `RegistrationWriter` (one trans
 - Duplicate detection by name (D-161). Exact USBC ID only.
 - Recording real payments (D-163, proposed feature).
 - A database constraint for one registration per bowler per tournament (Q-26). Two desks cannot check in one bowler at once: a bowler stands in one line. The check in code is enough for the desk.
+- Editing a registered bowler's details inside this flow (D-165): use the later bowler edit (BWL-16).
 - Changing a division from the list, editing or deleting a registration, super sweeper add or remove (Later, registrations edit).
 - SSN entry or verify (Q-22).
 - Any change to the vendor routes or their OpenAPI document (D-09, D-114). The new routes are web-only and not in `openapi.ts`.

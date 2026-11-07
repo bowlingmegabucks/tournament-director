@@ -3,6 +3,7 @@ import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 import { apiKeyHeader } from '../../shared/auth/caller.ts'
 import { createDivision, testApiKey } from '../../test/factories.ts'
+import { createCapturedLogger } from '../../test/logger.ts'
 import { createSignedInTestApp, createTestApp } from '../../test/testApp.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
 import { createCommonBowler } from '../registrations/bowler.testData.ts'
@@ -275,6 +276,35 @@ describe('GET /v1/bowlers/{id} (D-157, D-158, D-165)', () => {
       bowler: { dateOfBirth: '', gender: '' },
       registration: null,
     })
+  })
+
+  it('logs who read which bowler, by id only (api-observability)', async () => {
+    const captured = createCapturedLogger()
+    const { overrides, bowler } = world()
+
+    await request(createSignedInTestApp({ ...overrides, logger: captured.logger }))
+      .get(`/v1/bowlers/${bowler.id}`)
+      .query({ tournamentId })
+
+    const line = captured
+      .records()
+      .find((record) => record['msg'] === 'Bowler details read at the desk')
+    expect(line).toMatchObject({ bowlerId: bowler.id, tournamentId })
+    expect(line?.['actorId']).toEqual(expect.any(String))
+    expect(JSON.stringify(line)).not.toContain(bowler.email)
+    expect(JSON.stringify(line)).not.toContain(bowler.lastName)
+  })
+
+  it('logs nothing for a bowler who is not found', async () => {
+    const captured = createCapturedLogger()
+
+    await request(createSignedInTestApp({ logger: captured.logger })).get(
+      `/v1/bowlers/${faker.string.uuid()}`,
+    )
+
+    expect(captured.records().some((r) => r['msg'] === 'Bowler details read at the desk')).toBe(
+      false,
+    )
   })
 
   it('never carries an SSN (BWL-17)', async () => {

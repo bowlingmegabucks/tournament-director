@@ -415,7 +415,7 @@ export function createApp({
       {
         path: '/v1/bowlers',
         access: { permission: 'bowlers.read' }, // BWL-14, D-157: contact details; the API key cannot reach it
-        router: createBowlerRouter(bowlers, registrationWriter, divisions),
+        router: createBowlerRouter(bowlers, registrationWriter, divisions, logger),
       },
       {
         path: '/v1/registrations',

@@ -1,6 +1,9 @@
 import { Router } from 'express'
 import { z } from 'zod'
+import { callerOf } from '../../shared/auth/caller.ts'
 import { HttpError } from '../../shared/errors.ts'
+import type { Logger } from '../../shared/logger.ts'
+import { requestLogger } from '../../shared/requestLogging.ts'
 import type { DivisionRepository } from '../divisions/repository.ts'
 import type { RegistrationWriter } from '../registrations/writer.ts'
 import type { BowlerRepository } from './repository.ts'
@@ -36,6 +39,7 @@ export function createBowlerRouter(
   bowlers: BowlerRepository,
   writer: RegistrationWriter,
   divisions: DivisionRepository,
+  logger: Logger,
 ): Router {
   const router = Router()
 
@@ -99,6 +103,11 @@ export function createBowlerRouter(
       },
       registration,
     }
+    // The detail holds contact details: record who read whose, by id only (no name, email, or phone).
+    requestLogger(res, logger).info(
+      { actorId: callerOf(res).user?.id, bowlerId: bowler.id, tournamentId },
+      'Bowler details read at the desk',
+    )
     res.json(response)
   })
 

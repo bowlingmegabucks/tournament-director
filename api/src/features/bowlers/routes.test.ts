@@ -222,6 +222,37 @@ describe('GET /v1/bowlers (BWL-14, D-157)', () => {
   })
 })
 
+describe('the search log (api-observability)', () => {
+  it('logs who searched, by which boxes, and how many came back, never the typed values', async () => {
+    const captured = createCapturedLogger()
+    const app = createSignedInTestApp({
+      bowlers: createInMemoryBowlerRepository([searchable()]),
+      logger: captured.logger,
+    })
+
+    await request(app)
+      .get('/v1/bowlers')
+      .query({ lastName: 'Gonzalez', email: 'maria@example.com', tournamentId })
+
+    const line = captured.records().find((record) => record['msg'] === 'Bowler search at the desk')
+    expect(line).toMatchObject({
+      tournamentId,
+      fields: ['lastName', 'email'],
+      resultCount: 1,
+    })
+    expect(line?.['actorId']).toEqual(expect.any(String))
+    expect(JSON.stringify(line)).not.toMatch(/Gonzalez|maria@example/)
+  })
+
+  it('logs nothing for a search that names no field', async () => {
+    const captured = createCapturedLogger()
+
+    await request(createSignedInTestApp({ logger: captured.logger })).get('/v1/bowlers')
+
+    expect(captured.records().some((r) => r['msg'] === 'Bowler search at the desk')).toBe(false)
+  })
+})
+
 describe('GET /v1/bowlers/{id} (D-157, D-158, D-165)', () => {
   function world() {
     const division = createDivision({ name: 'Handicap' })

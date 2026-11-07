@@ -16,6 +16,10 @@ const average = z.preprocess(
     .nullable(),
 )
 
+// The database column is Char(2). The legacy rules check the length only when a street is given,
+// so without this a long state with no street would reach the insert and answer 500.
+const state = z.string().trim().max(2, { error: 'State must be Postal Abbreviation' }).nullish()
+
 const deskBowlerSchema = z.object({
   firstName: text,
   middleInitial: text,
@@ -23,7 +27,7 @@ const deskBowlerSchema = z.object({
   suffix: text,
   street: text,
   city: text,
-  state: text,
+  state,
   zipCode: text,
   email: text,
   phoneNumber: text,

@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { tournamentKeys } from '../../shared/tournamentQuery'
 import { NoSearchFieldError, searchBowlers, type BowlerFilter } from './bowlerApi'
 
@@ -12,6 +12,7 @@ export const bowlerKeys = {
 /**
  * The desk's bowler search (BWL-14). It runs once a filter is submitted (`filter` is null before).
  * A result is never reused for long: a bowler registered a moment ago must show as Registered.
+ * The old rows do not stay while a new search runs: a Pick on one would answer the wrong search.
  */
 export function useBowlerSearch(tournamentId: string, filter: BowlerFilter | null) {
   return useQuery({
@@ -26,7 +27,6 @@ export function useBowlerSearch(tournamentId: string, filter: BowlerFilter | nul
     enabled: filter !== null,
     staleTime: 0,
     gcTime: 0,
-    placeholderData: keepPreviousData,
     // The page has Try again: a silent retry would only hide the error for a second.
     retry: false,
   })

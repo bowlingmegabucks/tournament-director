@@ -208,7 +208,12 @@ export async function createDeskRegistration(
     },
   )
   if (response.status === 400 || response.status === 409) throw await rejection(response)
-  if (response.status === 404) throw new TournamentNotFoundError()
+  if (response.status === 404) {
+    // The route answers 404 for a missing tournament and for a stored bowler removed meanwhile.
+    const body: unknown = await response.json().catch(() => null)
+    if (field(body, 'message') === 'Bowler not found') throw new BowlerNotFoundError()
+    throw new TournamentNotFoundError()
+  }
   if (response.status === 401) throw new Error('Sign in to add a registration.')
   if (response.status === 403) throw new Error('You do not have permission to add a registration.')
   if (!response.ok) throw new Error(`Failed to save the registration (${response.status})`)

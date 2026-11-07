@@ -6,8 +6,8 @@ import type { ExistingRegistration } from './types'
 interface AlreadyRegisteredDialogProps {
   name: string
   existing: ExistingRegistration
-  /** What the desk is about to add, as text. */
-  adding: string[]
+  /** What the desk is about to add: the session id (the key) and its label. */
+  adding: { id: string; label: string }[]
   pending: boolean
   failure: string | undefined
   onConfirm: () => void
@@ -40,7 +40,7 @@ export function AlreadyRegisteredDialog({
         </p>
         <ul>
           {adding.map((item) => (
-            <li key={item}>{item}</li>
+            <li key={item.id}>{item.label}</li>
           ))}
         </ul>
         {failure && (

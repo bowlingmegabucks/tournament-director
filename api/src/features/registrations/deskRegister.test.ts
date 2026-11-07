@@ -349,6 +349,29 @@ describe('an existing bowler (BWL-15, REG-07, D-05, D-158)', () => {
   })
 })
 
+describe('a state too long for its column', () => {
+  it('is a field error on the state box, with or without a street', () => {
+    const parsed = parseDeskRequest({
+      divisionId: faker.string.uuid(),
+      bowler: { firstName: 'Ann', lastName: 'Lee', city: 'Akron', state: 'Ohio' },
+    })
+
+    expect(parsed).toMatchObject({
+      success: false,
+      errors: { 'bowler.state': 'State must be Postal Abbreviation' },
+    })
+  })
+
+  it('accepts two letters, padded with spaces or not', () => {
+    const parsed = parseDeskRequest({
+      divisionId: faker.string.uuid(),
+      bowler: { firstName: 'Ann', lastName: 'Lee', state: ' OH ' },
+    })
+
+    expect(parsed.success).toBe(true)
+  })
+})
+
 describe('a new bowler whose USBC ID is on file (BWL-15, D-161)', () => {
   it('offers the stored bowler and saves nothing', async () => {
     const bowler = createCommonBowler({ usbcId: '1234-56789', suffix: 'Jr' })
@@ -390,6 +413,48 @@ describe('a new bowler whose USBC ID is on file (BWL-15, D-161)', () => {
     const result = await deskRegister(deps, tournament.id, request())
 
     expect(result.ok).toBe(true)
+  })
+})
+
+describe('a stored bowler given a USBC ID another bowler holds (BWL-15, D-161)', () => {
+  it('refuses the ID under its box, and saves nothing', async () => {
+    const holder = createCommonBowler({ usbcId: '1234-56789' })
+    const picked = createCommonBowler({ usbcId: '1111-22222' })
+    const { deps, state, tournament, request } = setup({ seed: { bowlers: [holder, picked] } })
+
+    const result = await deskRegister(
+      deps,
+      tournament.id,
+      request({ bowlerId: picked.id, bowler: { usbcId: '1234-56789' } }),
+    )
+
+    expect(result).toEqual({
+      ok: false,
+      kind: 'failures',
+      failures: [validation('Bowler.UsbcIdInUse', 'Another bowler already has this USBC ID.')],
+    })
+    expect(state.bowlers.find((b) => b.id === picked.id)?.usbcId).toBe('1111-22222')
+    expect(state.registrations).toHaveLength(0)
+  })
+
+  it('lets the bowler keep their own ID, and take an ID nobody holds', async () => {
+    const picked = createCommonBowler({ usbcId: '1111-22222' })
+    const { deps, tournament, request } = setup({ seed: { bowlers: [picked] } })
+
+    const same = await deskRegister(
+      deps,
+      tournament.id,
+      request({ bowlerId: picked.id, bowler: { usbcId: '1111-22222' } }),
+    )
+    expect(same.ok).toBe(true)
+
+    const other = setup({ seed: { bowlers: [picked] } })
+    const changed = await deskRegister(
+      other.deps,
+      other.tournament.id,
+      other.request({ bowlerId: picked.id, bowler: { usbcId: '9999-88888' } }),
+    )
+    expect(changed.ok).toBe(true)
   })
 })
 
@@ -723,6 +788,7 @@ describe('the field each failure files under (D-157)', () => {
     ['Bowler.PhoneInvalid', 'bowler.phoneNumber'],
     ['Bowler.DateOfBirthInvalid', 'bowler.dateOfBirth'],
     ['Bowler.UsbcIdInvalid', 'bowler.usbcId'],
+    ['Bowler.UsbcIdInUse', 'bowler.usbcId'],
     ['Registration.UsbcIdRequired', 'bowler.usbcId'],
     ['Registration.DateOfBirthRequired', 'bowler.dateOfBirth'],
     ['Registration.BowlerTooYoung', 'bowler.dateOfBirth'],

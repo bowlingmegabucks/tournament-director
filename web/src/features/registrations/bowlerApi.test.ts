@@ -507,6 +507,26 @@ describe('createDeskRegistration (D-157)', () => {
     await expect(failure).rejects.toThrow(message)
   })
 
+  it('tells a missing bowler from a missing tournament by the 404 message', async () => {
+    server.use(
+      http.post('/v1/tournaments/:id/registrations', () =>
+        HttpResponse.json({ message: 'Bowler not found' }, { status: 404 }),
+      ),
+    )
+
+    await expect(createDeskRegistration('t1', request)).rejects.toBeInstanceOf(BowlerNotFoundError)
+
+    server.use(
+      http.post('/v1/tournaments/:id/registrations', () =>
+        HttpResponse.json({ message: 'Tournament not found' }, { status: 404 }),
+      ),
+    )
+
+    await expect(createDeskRegistration('t1', request)).rejects.toBeInstanceOf(
+      TournamentNotFoundError,
+    )
+  })
+
   it.each<[string, JsonBodyType]>([
     ['no id', { mode: 'created' }],
     ['an unknown mode', { registrationId: 'r1', mode: 'maybe' }],

@@ -260,4 +260,34 @@ describe('BowlerSearch (BWL-14, D-157, D-159, D-161)', () => {
     expect(await screen.findByRole('heading', { name: '1 bowler found' })).toBeVisible()
     expect(screen.queryByText('Could not search for bowlers.')).not.toBeInTheDocument()
   })
+
+  it('clears the old rows and says Searching… while a new search runs', async () => {
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let calls = 0
+    server.use(
+      http.get('/v1/bowlers', async () => {
+        calls += 1
+        if (calls === 1) {
+          return HttpResponse.json({ bowlers: [result({ name: 'Old Smith' })], more: false })
+        }
+        await gate
+        return HttpResponse.json({ bowlers: [result({ name: 'New Smyth' })], more: false })
+      }),
+    )
+    const { user } = open()
+
+    await searchFor(user, 'Smi')
+    expect(await screen.findByText('Old Smith')).toBeVisible()
+
+    await user.clear(screen.getByLabelText('Last name starts with'))
+    await searchFor(user, 'Smy')
+
+    expect(await screen.findByText('Searching…')).toBeVisible()
+    expect(screen.queryByText('Old Smith')).not.toBeInTheDocument()
+    release()
+    expect(await screen.findByText('New Smyth')).toBeVisible()
+  })
 })

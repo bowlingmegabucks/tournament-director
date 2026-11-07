@@ -851,6 +851,50 @@ describe('opened from a lane page (REG-22, D-164)', () => {
   })
 })
 
+describe('a link that names a squad or sweeper this tournament lacks (REG-22)', () => {
+  it('drops the unknown squad, so the desk must still pick a visible one', async () => {
+    signIn()
+    const served = serve()
+    const user = userEvent.setup()
+    await open(`${url}?squad=${crypto.randomUUID()}`)
+    await user.click(screen.getByRole('button', { name: 'New bowler' }))
+    await user.type(await screen.findByLabelText('First name (required)'), 'Ann')
+    await user.type(screen.getByLabelText('Last name (required)'), 'Lee')
+    await next(user, /Next: registration/)
+    await user.selectOptions(screen.getByLabelText('Division (required)'), 'Scratch')
+
+    await next(user, /Next: review/)
+    expect(screen.getByRole('alert')).toHaveTextContent('Bowler must enter at least one squad')
+
+    await user.click(screen.getByLabelText(/Sat 10\/24\/2026 1:00 PM/))
+    await next(user, /Next: review/)
+    await next(user, /^Add registration$/)
+    await screen.findByText('Registration added for Ann Lee')
+    expect(served.posted[0]?.squadIds).toEqual([afternoon.id])
+  })
+})
+
+describe('a stored bowler removed before the save (D-157)', () => {
+  it('says the bowler is no longer on file, not that the tournament is missing', async () => {
+    signIn()
+    serve({
+      posts: [() => HttpResponse.json({ message: 'Bowler not found' }, { status: 404 })],
+    })
+    const user = userEvent.setup()
+    await open()
+    await pickMaria(user)
+    await screen.findByLabelText('Street')
+    await next(user, /Next: registration/)
+    await user.selectOptions(screen.getByLabelText('Division (required)'), 'Scratch')
+    await user.click(screen.getByLabelText(/Sat 10\/24\/2026 1:00 PM/))
+    await next(user, /Next: review/)
+    await next(user, /^Add registration$/)
+
+    expect(await screen.findByText(/That bowler is no longer on file/)).toBeVisible()
+    expect(screen.queryByText('Tournament not found')).not.toBeInTheDocument()
+  })
+})
+
 describe('who can reach it (D-157, D-130)', () => {
   it('shows a complete tournament a notice in place of the form', async () => {
     signIn()

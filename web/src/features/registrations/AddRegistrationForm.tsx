@@ -7,7 +7,12 @@ import { formatSessionDate } from '../../shared/sessionFormat'
 import { useDivisions } from '../divisions/useDivisions'
 import { useSquads } from '../squads/useSquads'
 import { useSweepers } from '../sweepers/useSweepers'
-import { AlreadyRegisteredError, DeskRejectedError, UsbcIdOnFileError } from './bowlerApi'
+import {
+  AlreadyRegisteredError,
+  BowlerNotFoundError,
+  DeskRejectedError,
+  UsbcIdOnFileError,
+} from './bowlerApi'
 import { BowlerFields } from './BowlerFields'
 import {
   bowlerFieldId,
@@ -121,7 +126,7 @@ export function AddRegistrationForm({
 
   const [step, setStep] = useState<Step>(carry ? 3 : existing ? 2 : 1)
   const [bowler, setBowler] = useState(() => initialBowler(detail, carry))
-  const [registration, setRegistration] = useState(() =>
+  const [typedRegistration, setRegistration] = useState(() =>
     initialRegistration(detail, carry, presetSquadId, presetSweeperId),
   )
   const [errors, setErrors] = useState<DeskFieldErrors>({})
@@ -146,6 +151,13 @@ export function AddRegistrationForm({
     return <Loading label="Loading…" rows={3} />
   }
 
+  // A link can name a squad or sweeper this tournament does not have. Drop it here, where the lists
+  // are known, so the desk never submits an id it cannot see or untick.
+  const registration: RegistrationValues = {
+    ...typedRegistration,
+    squadIds: typedRegistration.squadIds.filter((id) => squads.data.some((s) => s.id === id)),
+    sweeperIds: typedRegistration.sweeperIds.filter((id) => sweepers.data.some((s) => s.id === id)),
+  }
   const stored = detail ? toBowlerValues(detail.bowler) : undefined
   const name = nameOf(bowler)
   const listUrl = `/tournaments/${tournamentId}/registrations`
@@ -199,6 +211,10 @@ export function AddRegistrationForm({
       if (error instanceof AlreadyRegisteredError) {
         if (confirmAppend) setDialogFailure(error.message)
         else setConflict({ type: 'registered', existing: error.existing })
+      } else if (error instanceof BowlerNotFoundError) {
+        // Someone removed the stored bowler after the desk picked them.
+        setConflict(undefined)
+        setFailure('That bowler is no longer on file. Go back to the search and pick again.')
       } else if (error instanceof UsbcIdOnFileError) {
         setConflict({ type: 'usbc', bowler: error.bowler })
       } else if (error instanceof DeskRejectedError) {
@@ -247,12 +263,16 @@ export function AddRegistrationForm({
   const newItems = [
     ...registration.squadIds
       .filter((id) => !heldSquads.includes(id))
-      .flatMap((id) => squads.data.find((squad) => squad.id === id)?.date ?? [])
-      .map((date) => `Squad: ${formatSessionDate(date)}`),
+      .flatMap((id) => {
+        const squad = squads.data.find((found) => found.id === id)
+        return squad ? [{ id, label: `Squad: ${formatSessionDate(squad.date)}` }] : []
+      }),
     ...registration.sweeperIds
       .filter((id) => !heldSweepers.includes(id))
-      .flatMap((id) => sweepers.data.find((sweeper) => sweeper.id === id)?.date ?? [])
-      .map((date) => `Sweeper: ${formatSessionDate(date)}`),
+      .flatMap((id) => {
+        const sweeper = sweepers.data.find((found) => found.id === id)
+        return sweeper ? [{ id, label: `Sweeper: ${formatSessionDate(sweeper.date)}` }] : []
+      }),
   ]
 
   return (

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { act, renderHook, waitFor } from '@testing-library/react'
+import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import { bowlerKeys, useBowlerSearch } from './useBowlerSearch'
@@ -66,6 +66,46 @@ describe('useBowlerSearch (BWL-14)', () => {
 })
 
 describe('useBowler (D-165)', () => {
+  it('does not read again when the window is focused again, so the form keeps one picture', async () => {
+    let calls = 0
+    server.use(
+      http.get('/v1/bowlers/:id', () => {
+        calls += 1
+        return HttpResponse.json({
+          bowler: {
+            id: 'b1',
+            firstName: 'Maria',
+            middleInitial: '',
+            lastName: 'Gonzalez',
+            suffix: '',
+            street: '',
+            city: '',
+            state: '',
+            zipCode: '',
+            email: '',
+            phoneNumber: '',
+            usbcId: '',
+            dateOfBirth: '',
+            gender: '',
+          },
+          registration: null,
+        })
+      }),
+    )
+    const { result } = renderHook(() => useBowler('t1', 'b1'), { wrapper })
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
+
+    act(() => {
+      focusManager.setFocused(false)
+      focusManager.setFocused(true)
+    })
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(calls).toBe(1)
+  })
+
   it('waits for a bowler id', () => {
     const { result } = renderHook(() => useBowler('t1', undefined), { wrapper })
 

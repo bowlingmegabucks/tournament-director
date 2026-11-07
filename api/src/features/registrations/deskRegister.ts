@@ -6,6 +6,7 @@ import {
   type RegisterDependencies,
 } from './register.ts'
 import { toDeskBowlerPatch, type DeskRequest, type FieldErrors } from './deskRequest.ts'
+import { hasScoresIn, sessionIdsByKind } from './held.ts'
 import { validation, type Failure } from './problem.ts'
 import type { StoredRegistration } from './writer.ts'
 
@@ -41,18 +42,15 @@ async function describeExisting(
   tournamentId: string,
   existing: StoredRegistration,
 ): Promise<ExistingRegistration> {
-  const [sessions, divisions] = await Promise.all([
-    deps.writer.findSessions(existing.sessionIds),
+  const [held, divisions] = await Promise.all([
+    sessionIdsByKind(deps.writer, existing.sessionIds),
     deps.divisions.listByTournament(tournamentId),
   ])
   return {
     registrationId: existing.id,
     divisionId: existing.divisionId,
     divisionName: divisions.find((division) => division.id === existing.divisionId)?.name ?? '',
-    squadIds: sessions.filter((session) => session.kind === 'squad').map((session) => session.id),
-    sweeperIds: sessions
-      .filter((session) => session.kind === 'sweeper')
-      .map((session) => session.id),
+    ...held,
   }
 }
 
@@ -97,6 +95,17 @@ export async function deskRegister(
     }
   }
 
+  if (knownBowler && patch.usbcId !== undefined && patch.usbcId !== knownBowler.usbcId) {
+    // D-161 for a stored bowler: a changed ID may not be one another bowler already holds, or two
+    // records share it and the registration site refuses that ID (Bowler.Duplicate).
+    const holders = await writer.findBowlersByUsbcId(patch.usbcId)
+    if (holders.some((holder) => holder.id !== knownBowler.id)) {
+      return failures([
+        validation('Bowler.UsbcIdInUse', 'Another bowler already has this USBC ID.'),
+      ])
+    }
+  }
+
   const existing = knownBowler
     ? await writer.findRegistration(knownBowler.id, tournament.id)
     : undefined
@@ -109,9 +118,7 @@ export async function deskRegister(
   }
   if (existing && knownBowler && existing.divisionId !== request.divisionId) {
     // D-160, REG-15: a move is fine until the bowler has any score.
-    const scored = await writer.findSessions(await writer.findScoredSessionIds(knownBowler.id))
-    // Scores from an earlier tournament do not lock this one.
-    if (scored.some((session) => session.tournamentId === tournament.id)) {
+    if (await hasScoresIn(writer, knownBowler.id, tournament.id)) {
       return failures([
         validation(
           'Registration.DivisionLocked',
@@ -164,6 +171,7 @@ const fieldOfCode: Record<string, string> = {
   'Bowler.PhoneInvalid': 'bowler.phoneNumber',
   'Bowler.DateOfBirthInvalid': 'bowler.dateOfBirth',
   'Bowler.UsbcIdInvalid': 'bowler.usbcId',
+  'Bowler.UsbcIdInUse': 'bowler.usbcId',
   'Registration.UsbcIdRequired': 'bowler.usbcId',
   'Registration.DateOfBirthRequired': 'bowler.dateOfBirth',
   'Registration.BowlerTooYoung': 'bowler.dateOfBirth',

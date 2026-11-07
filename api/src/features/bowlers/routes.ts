@@ -5,6 +5,7 @@ import { HttpError } from '../../shared/errors.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { requestLogger } from '../../shared/requestLogging.ts'
 import type { DivisionRepository } from '../divisions/repository.ts'
+import { hasScoresIn, sessionIdsByKind } from '../registrations/held.ts'
 import type { RegistrationWriter } from '../registrations/writer.ts'
 import type { BowlerRepository } from './repository.ts'
 import type { BowlerFilter, BowlerResponse } from './types.ts'
@@ -52,7 +53,18 @@ export function createBowlerRouter(
       throw new HttpError(400, needFilterMessage)
     }
     const filter: BowlerFilter = { ...stripUndefined(fields), tournamentId }
-    res.json(await bowlers.search(filter))
+    const found = await bowlers.search(filter)
+    // Who searched, and by which boxes. Never the typed values: they are names, emails, and IDs.
+    requestLogger(res, logger).info(
+      {
+        actorId: callerOf(res).user?.id,
+        tournamentId,
+        fields: Object.keys(filter).filter((key) => key !== 'tournamentId'),
+        resultCount: found.bowlers.length,
+      },
+      'Bowler search at the desk',
+    )
+    res.json(found)
   })
 
   router.get('/:id', async (req, res) => {
@@ -64,13 +76,11 @@ export function createBowlerRouter(
     const stored = tournamentId ? await writer.findRegistration(id, tournamentId) : undefined
     let registration: BowlerResponse['registration'] = null
     if (stored && tournamentId) {
-      const [sessions, tournamentDivisions, scoredIds] = await Promise.all([
-        writer.findSessions(stored.sessionIds),
+      const [held, tournamentDivisions, hasScores] = await Promise.all([
+        sessionIdsByKind(writer, stored.sessionIds),
         divisions.listByTournament(tournamentId),
-        writer.findScoredSessionIds(id),
+        hasScoresIn(writer, id, tournamentId),
       ])
-      // Scores from an earlier tournament do not count here (D-160).
-      const scored = await writer.findSessions(scoredIds)
       registration = {
         id: stored.id,
         divisionId: stored.divisionId,
@@ -78,9 +88,8 @@ export function createBowlerRouter(
           tournamentDivisions.find((division) => division.id === stored.divisionId)?.name ?? '',
         average: stored.average,
         superSweeper: stored.superSweeper,
-        squadIds: sessions.filter((s) => s.kind === 'squad').map((s) => s.id),
-        sweeperIds: sessions.filter((s) => s.kind === 'sweeper').map((s) => s.id),
-        hasScores: scored.some((session) => session.tournamentId === tournamentId),
+        ...held,
+        hasScores,
       }
     }
 

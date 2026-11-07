@@ -21,7 +21,11 @@ function openAlready(overrides: Partial<Parameters<typeof AlreadyRegisteredDialo
     <AlreadyRegisteredDialog
       name="Maria Gonzalez"
       existing={existing}
-      adding={['Sat 1:00 PM squad', 'Sweeper']}
+      adding={[
+        { id: 'a', label: 'Sat 1:00 PM squad' },
+        { id: 'b', label: 'Sat 1:00 PM squad' },
+        { id: 'c', label: 'Sweeper' },
+      ]}
       pending={false}
       failure={undefined}
       onConfirm={onConfirm}
@@ -38,7 +42,9 @@ describe('AlreadyRegisteredDialog (D-159, D-165)', () => {
 
     expect(screen.getByRole('dialog', { name: 'Already registered' })).toBeVisible()
     expect(screen.getByText(/Maria Gonzalez is already registered/)).toHaveTextContent('Scratch')
+    // Two squads at one minute read the same and still list twice.
     expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Sat 1:00 PM squad',
       'Sat 1:00 PM squad',
       'Sweeper',
     ])

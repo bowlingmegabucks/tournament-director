@@ -13,6 +13,10 @@ export function useBowler(tournamentId: string, bowlerId: string | undefined) {
     enabled: bowlerId !== undefined,
     staleTime: 0,
     gcTime: 0,
+    // The form copies this once. A refetch on refocus would change the "held" squads under the desk;
+    // the server's already-registered answer (D-159) catches a registration made in the meantime.
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     retry: (count, error) => !(error instanceof BowlerNotFoundError) && count < 1,
   })
 }

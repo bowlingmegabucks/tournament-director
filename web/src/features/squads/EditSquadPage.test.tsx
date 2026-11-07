@@ -621,6 +621,166 @@ describe('EditSquadPage (SQD-27)', () => {
   })
 })
 
+describe('more of the edit page (SQD-27)', () => {
+  const other = createSquad({
+    date: '2026-10-24T13:00:00',
+    startingLane: 5,
+    numberOfLanes: 12,
+    entryFee: 80,
+    entryFeeOverridden: true,
+  })
+
+  it('starts the form from fresh data, not from what the list left in the cache', async () => {
+    signIn()
+    let fee = 60
+    serve()
+    server.use(
+      http.get('/v1/tournaments/:id/squads', () =>
+        HttpResponse.json({ squads: [{ ...squad, entryFee: fee }] }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderApp(listUrl)
+    const name = 'Edit squad Sat 10/24/2026 9:00 AM'
+    await user.click(await screen.findByRole('link', { name }))
+    await screen.findByLabelText('Entry fee')
+    await user.click(screen.getByRole('link', { name: 'Cancel' }))
+    await screen.findByRole('link', { name })
+    fee = 65
+
+    await user.click(screen.getByRole('link', { name }))
+
+    expect(await screen.findByLabelText('Entry fee')).toHaveValue('65')
+  })
+
+  it('opens the squad whose id is in the address, not the first in the list', async () => {
+    signIn()
+    serve({ squads: [squad, other] })
+
+    await openForm(`/tournaments/${tournament.id}/squads/${other.id}/edit`)
+
+    expect(box('Starting lane (required)')).toHaveValue('5')
+    expect(box('Entry fee')).toHaveValue('80')
+  })
+
+  it('lets the director dismiss the error toast', async () => {
+    signIn()
+    serve({ patch: () => new HttpResponse(null, { status: 503 }) })
+    const user = userEvent.setup()
+    await openForm()
+    await retype(user, 'Entry fee', '70')
+    await user.click(save())
+    await screen.findByRole('alert')
+
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('drops the old toast as soon as the director presses Save again, even when a check fails', async () => {
+    signIn()
+    serve({ patch: () => new HttpResponse(null, { status: 503 }) })
+    const user = userEvent.setup()
+    await openForm()
+    await retype(user, 'Entry fee', '70')
+    await user.click(save())
+    expect(await screen.findByRole('alert')).toHaveTextContent('Failed to save the squad (503)')
+
+    await retype(user, 'Entry fee', '1000')
+    await user.click(save())
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Fix 1 field to save.')
+    expect(screen.queryByText('Failed to save the squad (503)')).not.toBeInTheDocument()
+  })
+
+  it.each([{}, { somethingElse: 'x' }])(
+    'shows a refusal with no message for a box as a toast, not an empty summary (%j)',
+    async (errors) => {
+      signIn()
+      serve({
+        patch: () =>
+          HttpResponse.json({ message: 'Refused for a reason.', errors }, { status: 409 }),
+      })
+      const user = userEvent.setup()
+      await openForm()
+      await retype(user, 'Entry fee', '70')
+
+      await user.click(save())
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('Refused for a reason.')
+      expect(screen.queryByText(/Fix \d+ field/)).not.toBeInTheDocument()
+    },
+  )
+
+  it('recovers with Try again when the settings read fails', async () => {
+    signIn()
+    let fail = true
+    serve()
+    server.use(
+      http.get('/v1/tournaments/:id/settings', () =>
+        fail
+          ? new HttpResponse(null, { status: 500 })
+          : HttpResponse.json({ settings: createSettings() }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderApp(url)
+
+    const retry = await screen.findByRole('button', { name: 'Try again' }, { timeout: 5000 })
+    fail = false
+    await user.click(retry)
+
+    expect(await screen.findByLabelText('Entry fee')).toBeVisible()
+  })
+
+  it('shows the dialog again after Go back and a second Save', async () => {
+    signIn()
+    serve({
+      info: { entryCount: 12 },
+      patch: () =>
+        HttpResponse.json(
+          {
+            message: 'Confirm these changes to save them.',
+            warnings: [{ field: 'entryFee', message: 'They keep what they paid.' }],
+          },
+          { status: 409 },
+        ),
+    })
+    const user = userEvent.setup()
+    await openForm()
+    await retype(user, 'Entry fee', '75')
+    await user.click(save())
+    await screen.findByRole('dialog')
+    await user.click(screen.getByRole('button', { name: 'Go back' }))
+
+    await user.click(save())
+
+    expect(await screen.findByRole('dialog', { name: 'Save these changes?' })).toBeVisible()
+  })
+
+  it('shows only the message for a warning about something the form has no box for', async () => {
+    signIn()
+    serve({
+      patch: () =>
+        HttpResponse.json(
+          {
+            message: 'Confirm these changes to save them.',
+            warnings: [{ field: 'somethingElse', message: 'Check this.' }],
+          },
+          { status: 409 },
+        ),
+    })
+    const user = userEvent.setup()
+    await openForm()
+    await retype(user, 'Entry fee', '75')
+    await user.click(save())
+
+    const dialog = await screen.findByRole('dialog')
+
+    expect(within(dialog).getByRole('listitem')).toHaveTextContent(/^Check this\.$/)
+  })
+})
+
 describe('the Edit link on the Squads page (SQD-30, D-181, D-185)', () => {
   const second = createSquad({ date: '2026-10-24T13:00:00', complete: true })
   const cards = [squad, second]

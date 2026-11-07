@@ -224,3 +224,57 @@ describe('fetchSessionEditInfo (SQD-26)', () => {
     }
   })
 })
+
+describe('patchSession: what goes on the wire and how it fails (SQD-23)', () => {
+  it('sends the body as JSON', async () => {
+    let type: string | null = null
+    server.use(
+      http.patch(patchPath, ({ request }) => {
+        type = request.headers.get('content-type')
+        return HttpResponse.json({ squad: {} })
+      }),
+    )
+
+    await patchSession('squads', 't', 's', { a: 1 })
+
+    expect(type).toBe('application/json')
+  })
+
+  it('says which kind could not be read when a body is not JSON', async () => {
+    server.use(http.patch(patchPath, () => new HttpResponse('nope', { status: 409 })))
+    await expect(patchSession('squads', 't', 's', {})).rejects.toThrow(
+      'Failed to save the squad (response is not JSON)',
+    )
+
+    server.use(http.patch(patchPath, () => new HttpResponse('nope', { status: 200 })))
+    await expect(patchSession('sweepers', 't', 's', {})).rejects.toThrow(
+      'Failed to save the sweeper (response is not JSON)',
+    )
+  })
+
+  it('names the kind when the API sends no message', async () => {
+    server.use(http.patch(patchPath, () => HttpResponse.json({ errors: {} }, { status: 400 })))
+
+    await expect(patchSession('squads', 't', 's', {})).rejects.toThrow(
+      'The squad was not accepted.',
+    )
+    await expect(patchSession('sweepers', 't', 's', {})).rejects.toThrow(
+      'The sweeper was not accepted.',
+    )
+  })
+})
+
+describe('fetchSessionEditInfo: a body that is not JSON (SQD-26)', () => {
+  it('says which kind could not be read', async () => {
+    server.use(
+      http.get(
+        '/v1/tournaments/:id/:kind/:sessionId/edit-info',
+        () => new HttpResponse('nope', { status: 200 }),
+      ),
+    )
+
+    await expect(fetchSessionEditInfo('squads', 't', 's')).rejects.toThrow(
+      'Failed to load the squad (response is not JSON)',
+    )
+  })
+})

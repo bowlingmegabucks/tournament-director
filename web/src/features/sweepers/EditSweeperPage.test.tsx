@@ -619,6 +619,153 @@ describe('EditSweeperPage (SQD-27, SQD-29)', () => {
   })
 })
 
+describe('more of the edit page (SQD-27)', () => {
+  const other = createSweeper({
+    date: '2026-10-24T18:00:00',
+    startingLane: 5,
+    numberOfLanes: 12,
+    games: 6,
+    entryFee: 35,
+  })
+
+  it('starts the form from fresh data, not from what the list left in the cache', async () => {
+    signIn()
+    let fee = 20
+    serve()
+    server.use(
+      http.get('/v1/tournaments/:id/sweepers', () =>
+        HttpResponse.json({ sweepers: [{ ...sweeper, entryFee: fee }] }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderApp(listUrl)
+    const name = 'Edit sweeper Fri 10/23/2026 7:00 PM'
+    await user.click(await screen.findByRole('link', { name }))
+    await screen.findByLabelText('Entry fee (required)')
+    await user.click(screen.getByRole('link', { name: 'Cancel' }))
+    await screen.findByRole('link', { name })
+    fee = 25
+
+    await user.click(screen.getByRole('link', { name }))
+
+    expect(await screen.findByLabelText('Entry fee (required)')).toHaveValue('25')
+  })
+
+  it('opens the sweeper whose id is in the address, not the first in the list', async () => {
+    signIn()
+    serve({ sweepers: [sweeper, other] })
+
+    await openForm(`/tournaments/${tournament.id}/sweepers/${other.id}/edit`)
+
+    expect(box('Starting lane (required)')).toHaveValue('5')
+    expect(box('Games (required)')).toHaveValue('6')
+  })
+
+  it('links the no-divisions note to the Add division form', async () => {
+    signIn()
+    serve({ divisions: [], sweepers: [{ ...sweeper, bonusPins: [] }] })
+
+    await openForm()
+
+    expect(screen.getByRole('link', { name: 'Add a division' })).toHaveAttribute(
+      'href',
+      `/tournaments/${tournament.id}/divisions/new`,
+    )
+  })
+
+  it('lets the director dismiss the error toast', async () => {
+    signIn()
+    serve({ patch: () => new HttpResponse(null, { status: 503 }) })
+    const user = userEvent.setup()
+    await openForm()
+    await retype(user, 'Games (required)', '4')
+    await user.click(save())
+    await screen.findByRole('alert')
+
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('drops the old toast as soon as the director presses Save again, even when a check fails', async () => {
+    signIn()
+    serve({ patch: () => new HttpResponse(null, { status: 503 }) })
+    const user = userEvent.setup()
+    await openForm()
+    await retype(user, 'Games (required)', '4')
+    await user.click(save())
+    expect(await screen.findByRole('alert')).toHaveTextContent('Failed to save the sweeper (503)')
+
+    await retype(user, 'Entry fee (required)', '0')
+    await user.click(save())
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Fix 1 field to save.')
+    expect(screen.queryByText('Failed to save the sweeper (503)')).not.toBeInTheDocument()
+  })
+
+  it('shows a refusal with no box messages as a toast, not an empty summary', async () => {
+    signIn()
+    serve({
+      patch: () =>
+        HttpResponse.json({ message: 'Refused for a reason.', errors: {} }, { status: 409 }),
+    })
+    const user = userEvent.setup()
+    await openForm()
+    await retype(user, 'Games (required)', '4')
+
+    await user.click(save())
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Refused for a reason.')
+    expect(screen.queryByText(/Fix \d+ field/)).not.toBeInTheDocument()
+  })
+
+  it('recovers with Try again when the settings read fails', async () => {
+    signIn()
+    let fail = true
+    serve()
+    server.use(
+      http.get('/v1/tournaments/:id/settings', () =>
+        fail
+          ? new HttpResponse(null, { status: 500 })
+          : HttpResponse.json({ settings: createSettings() }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderApp(url)
+
+    const retry = await screen.findByRole('button', { name: 'Try again' }, { timeout: 5000 })
+    fail = false
+    await user.click(retry)
+
+    expect(await screen.findByLabelText('Games (required)')).toBeVisible()
+  })
+
+  it('shows the dialog again after Go back and a second Save', async () => {
+    signIn()
+    serve({
+      info: { hasScores: true },
+      patch: () =>
+        HttpResponse.json(
+          {
+            message: 'Confirm these changes to save them.',
+            warnings: [{ field: 'cashRatio', message: 'Posted results change.' }],
+          },
+          { status: 409 },
+        ),
+    })
+    const user = userEvent.setup()
+    await openForm()
+    await retype(user, 'Cash ratio (required)', '4')
+    await user.click(save())
+    await screen.findByRole('dialog')
+    await user.click(screen.getByRole('button', { name: 'Go back' }))
+
+    await user.click(save())
+
+    expect(await screen.findByRole('dialog', { name: 'Save these changes?' })).toBeVisible()
+  })
+})
+
 describe('the Edit link on the Sweepers page (SQD-30, D-181, D-185)', () => {
   const second = createSweeper({ date: '2026-10-24T18:00:00', complete: true })
   const cards = [sweeper, second]

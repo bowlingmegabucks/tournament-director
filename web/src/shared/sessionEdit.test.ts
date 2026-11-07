@@ -83,3 +83,39 @@ describe('noteIds', () => {
     expect(noteIds('x', undefined)).toEqual([undefined, undefined, undefined])
   })
 })
+
+describe('sharedNotes: lane facts that disagree (SQD-27)', () => {
+  it('adds no lane note unless there are assignments and both lane limits', () => {
+    expect(
+      sharedNotes({
+        ...none,
+        assignmentCount: 3,
+        lowestAssignedLane: null,
+        highestAssignedLane: 5,
+      }),
+    ).toEqual({})
+    expect(
+      sharedNotes({
+        ...none,
+        assignmentCount: 3,
+        lowestAssignedLane: 1,
+        highestAssignedLane: null,
+      }),
+    ).toEqual({})
+    expect(
+      sharedNotes({ ...none, assignmentCount: 0, lowestAssignedLane: 1, highestAssignedLane: 5 }),
+    ).toEqual({})
+  })
+
+  it('leaves out the pair limit when the fullest pair is unknown', () => {
+    const notes = sharedNotes({
+      ...none,
+      assignmentCount: 3,
+      lowestAssignedLane: 1,
+      highestAssignedLane: 5,
+      fullestPair: null,
+    })
+    expect(notes['maxPerPair']).toBeDefined()
+    expect(notes['maxPerPair']).not.toHaveProperty('limit')
+  })
+})

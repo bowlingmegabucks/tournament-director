@@ -31,7 +31,26 @@ describe('toFormValues (SQD-27, D-183)', () => {
   })
 })
 
+describe('toFormValues for a squad that overrides nothing (D-183)', () => {
+  it('leaves every override blank', () => {
+    const plain = toFormValues(
+      createSquad({
+        entryFeeOverridden: false,
+        finalsRatioOverridden: false,
+        cashRatioOverridden: false,
+      }),
+    )
+    expect([plain.entryFee, plain.finalsRatio, plain.cashRatio]).toEqual(['', '', ''])
+  })
+})
+
 describe('changedFields', () => {
+  it('ignores spaces around the starting text too', () => {
+    expect(changedFields({ ...initial, entryFee: ' 60 ' }, { ...initial, entryFee: '60' })).toEqual(
+      [],
+    )
+  })
+
   it('lists the boxes whose trimmed text differs, in form order', () => {
     expect(changedFields(initial, initial)).toEqual([])
     expect(

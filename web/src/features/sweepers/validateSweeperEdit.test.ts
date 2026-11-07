@@ -37,6 +37,13 @@ describe('toFormValues (SQD-27)', () => {
   })
 })
 
+describe('pins with spaces (SQD-29)', () => {
+  it('counts a pin of only spaces as blank, so as 0', () => {
+    expect(changedPins(initial, { ...initial, bonusPins: { o: '10', w: '  ' } }, ids)).toEqual([])
+    expect(changedPins(initial, { ...initial, bonusPins: { o: ' 10 ' } }, ids)).toEqual([])
+  })
+})
+
 describe('changedScalars and changedPins', () => {
   it('lists the scalar boxes whose trimmed text differs', () => {
     expect(changedScalars(initial, initial)).toEqual([])

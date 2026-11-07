@@ -20,6 +20,17 @@ const initial: SweeperFormValues = {
 const line = (field: string, values: Partial<SweeperFormValues>) =>
   describeChange(field, initial, { ...initial, ...values }, divisions)
 
+describe('describeChange: spaces around the typed text (SQD-28)', () => {
+  it('ignores them in a box and in a pin', () => {
+    expect(line('games', { games: ' 4 ' })).toBe('Games: 3 → 4')
+    expect(line('bonusPins.o', { bonusPins: { o: ' 8 ' } })).toBe('Open bonus pins: 10 → 8')
+    expect(line('bonusPins.o', { bonusPins: { o: '  ' } })).toBe('Open bonus pins: 10 → none')
+    expect(describeChange('games', initial, { ...initial, games: '  ' }, divisions)).toBe(
+      'Games: 3 → not set',
+    )
+  })
+})
+
 describe('describeChange (SQD-28)', () => {
   it('shows the date, money, and ratio as the cards do', () => {
     expect(line('date', { date: '2026-10-23T20:30' })).toBe(

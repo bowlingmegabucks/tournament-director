@@ -29,6 +29,8 @@ import { createSquadCreateRouter } from './features/squads/createRoutes.ts'
 import type { SquadWriter } from './features/squads/writer.ts'
 import { createSweeperRouter } from './features/sweepers/routes.ts'
 import type { SweeperRepository } from './features/sweepers/repository.ts'
+import { createSweeperCreateRouter } from './features/sweepers/createRoutes.ts'
+import type { SweeperWriter } from './features/sweepers/writer.ts'
 import { createTournamentDeleteRouter } from './features/tournaments/deleteRoutes.ts'
 import { createEditInfoRouter } from './features/tournaments/editInfoRoutes.ts'
 import { createTournamentCreateRouter } from './features/tournaments/createRoutes.ts'
@@ -71,6 +73,8 @@ export interface AppDependencies {
   /** Adds squads (SQD-01 to SQD-08, D-167). */
   squadWriter: SquadWriter
   sweepers: SweeperRepository
+  /** Adds sweepers (SQD-10 to SQD-13, D-174). */
+  sweeperWriter: SweeperWriter
   /** Resolves when the database answers; rejects (a 503) when it does not. Feeds `GET /ready`. */
   checkDatabase: () => Promise<void>
   /** Where custom metrics go. The default sends to the OpenTelemetry SDK, or nowhere if it is off. */
@@ -94,6 +98,7 @@ export function createApp({
   squads,
   squadWriter,
   sweepers,
+  sweeperWriter,
   checkDatabase,
   // Stryker disable next-line StringLiteral: the scope name only labels the metrics.
   meter = metrics.getMeter('tournament-director-api'),
@@ -196,6 +201,12 @@ export function createApp({
         path: '/v1/tournaments/:id/sweepers',
         access: 'public',
         router: createSweeperRouter(sweepers, tournaments),
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers',
+        access: { permission: 'squads.write' }, // SQD-10 to SQD-13, D-174: the API key cannot reach it
+        methods: ['POST'],
+        router: createSweeperCreateRouter(sweeperWriter, logger),
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/lanes',

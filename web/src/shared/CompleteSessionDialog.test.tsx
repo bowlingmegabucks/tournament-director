@@ -45,6 +45,8 @@ describe('CompleteSessionDialog, a squad (SQD-15, SQD-18, D-194)', () => {
 
     expect(squadDialog()).toHaveTextContent('Sat 10/24/2026 9:00 AM: 12 bowlers are entered.')
     expect(squadDialog()).toHaveTextContent('This cannot be undone.')
+    // Only a sweeper says nothing is filled in (D-191).
+    expect(squadDialog()).not.toHaveTextContent('No scores are filled in')
   })
 
   it('tells how many get zeros and for how many games', () => {
@@ -162,6 +164,8 @@ describe('CompleteSessionDialog, a sweeper (SQD-16, D-191, D-194)', () => {
     expect(sweeperDialog()).toHaveTextContent('This cannot be undone.')
     expect(screen.getByRole('button', { name: 'Complete sweeper' })).toBeEnabled()
     expect(screen.queryByRole('listitem')).not.toBeInTheDocument()
+    // A sweeper has no zeros to count (D-191).
+    expect(sweeperDialog()).not.toHaveTextContent('All have scores')
   })
 
   it('says no bowlers are entered, without the fill-in line, for an empty sweeper', () => {

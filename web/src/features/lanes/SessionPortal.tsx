@@ -83,9 +83,13 @@ function SessionPortalView({
   const listPath = `/tournaments/${tournament.id}/${kind}s`
   const { isPending: meIsPending } = useMe()
   const [notice, setNotice] = useState<CompleteNotice | undefined>()
-  const dismiss = useCallback(() => {
-    setNotice(undefined)
-  }, [])
+  const dismiss = useCallback(
+    () => {
+      setNotice(undefined)
+    },
+    // Stryker disable next-line ArrayDeclaration: `setNotice` never changes, so extra deps change nothing a test can see.
+    [],
+  )
 
   if (isPending) return <Loading label={`Loading ${kind}…`} />
   if (error) return <QueryError error={error} onRetry={onRetry} />

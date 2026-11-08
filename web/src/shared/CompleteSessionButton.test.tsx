@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { delay, http, HttpResponse } from 'msw'
 import { server } from '../mocks/server'
@@ -307,6 +307,114 @@ describe.each(kinds)(
         // The toast stays until dismissed.
         await user.click(screen.getByRole('button', { name: 'Dismiss' }))
         expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      })
+      describe('the dialog over time', () => {
+        const press = async (user: ReturnType<typeof userEvent.setup>) =>
+          user.click(
+            await within(await dialog()).findByRole('button', { name: `Complete ${word}` }),
+          )
+
+        it('closes the dialog after a complete even while the page still shows the session open', async () => {
+          const user = userEvent.setup()
+          const row = session()
+          // A 200 that leaves the list alone: only the button itself can close the dialog.
+          serve(row, {
+            complete: () =>
+              HttpResponse.json(
+                kind === 'squads' ? { squad: row, noShowCount: 0 } : { sweeper: row },
+              ),
+          })
+          open(row)
+          await user.click(await trigger())
+
+          await press(user)
+
+          await screen.findByRole('status')
+          expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+        })
+
+        it('forgets an old failure when the dialog closes', async () => {
+          const user = userEvent.setup()
+          const row = session()
+          serve(row, { complete: () => new HttpResponse(null, { status: 500 }) })
+          open(row)
+          await user.click(await trigger())
+          const first = await dialog()
+          await press(user)
+          await within(first).findByRole('alert')
+          await user.click(within(first).getByRole('button', { name: 'Cancel' }))
+
+          await user.click(await trigger())
+
+          expect(within(await dialog()).queryByRole('alert')).not.toBeInTheDocument()
+        })
+
+        it('clears a failure when the director tries again', async () => {
+          const user = userEvent.setup()
+          const row = session()
+          let release: () => void = () => undefined
+          const held = new Promise<void>((resolve) => {
+            release = resolve
+          })
+          let calls = 0
+          serve(row, {
+            complete: async () => {
+              calls += 1
+              if (calls === 1) return new HttpResponse(null, { status: 500 })
+              await held
+              return undefined
+            },
+          })
+          open(row)
+          await user.click(await trigger())
+          const opened = await dialog()
+          await press(user)
+          await within(opened).findByRole('alert')
+
+          await user.click(within(opened).getByRole('button', { name: `Complete ${word}` }))
+
+          await within(opened).findByRole('button', { name: 'Completing…' })
+          expect(within(opened).queryByRole('alert')).not.toBeInTheDocument()
+          release()
+          await screen.findByRole('status')
+        })
+
+        it('ignores a reply that lands after the dialog was closed', async () => {
+          const user = userEvent.setup()
+          const row = session()
+          let release: () => void = () => undefined
+          const held = new Promise<void>((resolve) => {
+            release = resolve
+          })
+          serve(row, {
+            complete: async () => {
+              await held
+              return HttpResponse.json(
+                { message: 'No', errors: { session: 'No' } },
+                { status: 409 },
+              )
+            },
+          })
+          open(row)
+          await user.click(await trigger())
+          const first = await dialog()
+          await press(user)
+          await within(first).findByRole('button', { name: 'Completing…' })
+          // Escape closes a native dialog; the Cancel button is off while the request runs.
+          act(() => {
+            ;(first as HTMLDialogElement).close()
+          })
+          await user.click(await trigger())
+          await dialog()
+
+          release()
+          await act(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 30))
+          })
+
+          expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+          expect(screen.getByRole('dialog')).toBeInTheDocument()
+        })
       })
     })
   },

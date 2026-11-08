@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import type { Logger } from '../../shared/logger.ts'
+import { createSessionDeleter } from '../../shared/sessionDeleteStore.ts'
 import { withRetry } from '../../shared/serializableRetry.ts'
 import { toSessionEditInfo, type SessionNotFound } from '../../shared/sessionEdit.ts'
 import { loadSessionEditFacts } from '../../shared/sessionFacts.ts'
@@ -235,6 +236,8 @@ export function createPrismaSweeperWriter(client: PrismaClient, logger: Logger):
   }
 
   return {
+    // Delete and delete-info (SQD-14, D-186 to D-189) are the same for a squad and a sweeper.
+    ...createSessionDeleter(client, logger, 'sweeper'),
     create: (tournamentId, input) =>
       withDatabaseErrors(logger, () => createOrRefuse(tournamentId, input)),
     update: (tournamentId, sweeperId, changes, { confirmWarnings }) =>

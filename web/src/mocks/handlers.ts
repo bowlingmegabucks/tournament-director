@@ -58,7 +58,30 @@ const noSessionFacts = {
 }
 
 const busySquadFacts = { ...noSessionFacts, entryCount: 12 }
+
 const scoredSweeperFacts = { ...noSessionFacts, hasScores: true }
+
+/** What the delete rules look at for a demo session (D-186). The busy squad has 12 bowlers; the scored sweeper has scores. */
+function deleteInfoOf(sessionId: string) {
+  return {
+    entryCount: sessionId === busySquadId ? 12 : 0,
+    scoreCount: sessionId === scoredSweeperId ? 30 : 0,
+  }
+}
+
+/** The `409` a delete answers when bowlers are entered or scores are saved (D-186). */
+function deleteRefusal(kind: 'squad' | 'sweeper', sessionId: string) {
+  const { entryCount, scoreCount } = deleteInfoOf(sessionId)
+  const errors: Record<string, string> = {}
+  if (entryCount > 0) {
+    errors['entries'] =
+      `${entryCount} bowlers are entered in this ${kind}. Remove them from the ${kind} first.`
+  }
+  if (scoreCount > 0)
+    errors['scores'] = `Scores are saved for this ${kind}, so it cannot be deleted.`
+  const message = Object.values(errors)[0]
+  return message ? HttpResponse.json({ message, errors }, { status: 409 }) : undefined
+}
 
 const notFound = () => HttpResponse.json({ message: 'Tournament not found' }, { status: 404 })
 
@@ -580,6 +603,36 @@ export const handlers = [
     applySweeperChanges(found, changes)
     sweepers.sort((a, b) => a.date.localeCompare(b.date))
     return HttpResponse.json({ sweeper: found })
+  }),
+  http.delete('/v1/tournaments/:id/squads/:sessionId', ({ params }) => {
+    if (!tournaments.some((candidate) => candidate.id === params['id'])) return notFound()
+    const at = squads.findIndex((candidate) => candidate.id === params['sessionId'])
+    if (at === -1) return HttpResponse.json({ message: 'Squad not found' }, { status: 404 })
+    const refusal = deleteRefusal('squad', String(params['sessionId']))
+    if (refusal) return refusal
+    squads.splice(at, 1)
+    return new HttpResponse(null, { status: 204 })
+  }),
+  http.get('/v1/tournaments/:id/squads/:sessionId/delete-info', ({ params }) => {
+    if (!tournaments.some((candidate) => candidate.id === params['id'])) return notFound()
+    return squads.some((candidate) => candidate.id === params['sessionId'])
+      ? HttpResponse.json({ deleteInfo: deleteInfoOf(String(params['sessionId'])) })
+      : HttpResponse.json({ message: 'Squad not found' }, { status: 404 })
+  }),
+  http.delete('/v1/tournaments/:id/sweepers/:sessionId', ({ params }) => {
+    if (!tournaments.some((candidate) => candidate.id === params['id'])) return notFound()
+    const at = sweepers.findIndex((candidate) => candidate.id === params['sessionId'])
+    if (at === -1) return HttpResponse.json({ message: 'Sweeper not found' }, { status: 404 })
+    const refusal = deleteRefusal('sweeper', String(params['sessionId']))
+    if (refusal) return refusal
+    sweepers.splice(at, 1)
+    return new HttpResponse(null, { status: 204 })
+  }),
+  http.get('/v1/tournaments/:id/sweepers/:sessionId/delete-info', ({ params }) => {
+    if (!tournaments.some((candidate) => candidate.id === params['id'])) return notFound()
+    return sweepers.some((candidate) => candidate.id === params['sessionId'])
+      ? HttpResponse.json({ deleteInfo: deleteInfoOf(String(params['sessionId'])) })
+      : HttpResponse.json({ message: 'Sweeper not found' }, { status: 404 })
   }),
   http.get('/v1/tournaments/:id/sweepers/:sessionId/edit-info', ({ params }) => {
     if (!tournaments.some((candidate) => candidate.id === params['id'])) return notFound()

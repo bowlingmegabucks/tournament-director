@@ -7,7 +7,7 @@ import { TournamentNotFoundError } from './tournamentQuery'
 
 export type SessionKind = 'squads' | 'sweepers'
 
-const word = (kind: SessionKind) => (kind === 'squads' ? 'squad' : 'sweeper')
+export const word = (kind: SessionKind) => (kind === 'squads' ? 'squad' : 'sweeper')
 
 /**
  * The API refused the edit (400 or 409). `errors` holds one message per key (a field name, or
@@ -80,7 +80,7 @@ async function rejection(response: Response, kind: SessionKind): Promise<Error> 
   )
 }
 
-const sessionUrl = (kind: SessionKind, tournamentId: string, sessionId: string) =>
+export const sessionUrl = (kind: SessionKind, tournamentId: string, sessionId: string) =>
   apiUrl(
     `/v1/tournaments/${encodeURIComponent(tournamentId)}/${kind}/${encodeURIComponent(sessionId)}`,
   )

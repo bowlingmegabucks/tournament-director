@@ -233,7 +233,13 @@ describe(`PATCH ${url}`, () => {
 
   it('passes a storage outage on as 503', async () => {
     const outage = () => Promise.reject(new HttpError(503, 'Database unavailable'))
-    const writer: SquadWriter = { create: outage, update: outage, getEditInfo: outage }
+    const writer: SquadWriter = {
+      create: outage,
+      update: outage,
+      getEditInfo: outage,
+      remove: outage,
+      getDeleteInfo: outage,
+    }
 
     const response = await request(createSignedInTestApp({ squadWriter: writer }))
       .patch(url)
@@ -327,7 +333,13 @@ describe(`GET ${url}/edit-info`, () => {
 
   it('passes a storage outage on as 503', async () => {
     const outage = () => Promise.reject(new HttpError(503, 'Database unavailable'))
-    const writer: SquadWriter = { create: outage, update: outage, getEditInfo: outage }
+    const writer: SquadWriter = {
+      create: outage,
+      update: outage,
+      getEditInfo: outage,
+      remove: outage,
+      getDeleteInfo: outage,
+    }
 
     const response = await request(createSignedInTestApp({ squadWriter: writer })).get(infoUrl)
 

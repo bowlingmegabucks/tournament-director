@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
@@ -256,6 +256,86 @@ describe('SquadsPage', () => {
       expect(
         await screen.findByRole('link', { name: 'New squad' }, { timeout: 3000 }),
       ).toBeVisible()
+    })
+  })
+
+  describe('Delete button (SQD-14, D-186, D-188)', () => {
+    /** Serves the settings. The returned function says whether they were fetched. */
+    const serveSettings = (completed: boolean) => {
+      let served = false
+      server.use(
+        http.get('/v1/tournaments/:id/settings', () => {
+          served = true
+          return HttpResponse.json({ settings: createSettings({ completed }) })
+        }),
+      )
+      return () => served
+    }
+
+    /** Waits for the user and the settings to load, so an absent button means hidden, not "not yet". */
+    async function settled(served?: () => boolean) {
+      await screen.findByRole('button', { name: 'Sign out' }, { timeout: 3000 })
+      // A score keeper never reads the settings, so there is nothing to wait for.
+      if (served) {
+        await waitFor(() => {
+          expect(served()).toBe(true)
+        })
+      }
+      await act(() => new Promise((resolve) => setTimeout(resolve, 100)))
+    }
+
+    it('shows a director a button on an open squad and none on a complete one', async () => {
+      setMockUser(createSignedInUser({ roles: ['director'] }))
+      serve([
+        createSquad({ date: '2026-10-24T09:00:00', complete: false }),
+        createSquad({ date: '2026-10-24T13:00:00', complete: true }),
+      ])
+      serveSettings(false)
+
+      open()
+
+      expect(
+        await screen.findByRole(
+          'button',
+          { name: 'Delete squad Sat 10/24/2026 9:00 AM' },
+          { timeout: 3000 },
+        ),
+      ).toBeVisible()
+      expect(screen.getAllByRole('button', { name: /^Delete squad / })).toHaveLength(1)
+    })
+
+    it('hides the button from a score keeper', async () => {
+      setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+      serve([createSquad({ date: '2026-10-24T09:00:00' })])
+      serveSettings(false)
+
+      open()
+
+      await cardOf('9:00 AM')
+      await settled()
+      expect(screen.queryByRole('button', { name: /^Delete squad / })).not.toBeInTheDocument()
+    })
+
+    it('hides the button on a complete tournament (D-188)', async () => {
+      setMockUser(createSignedInUser({ roles: ['director'] }))
+      serve([createSquad({ date: '2026-10-24T09:00:00' })])
+      const served = serveSettings(true)
+
+      open()
+
+      await cardOf('9:00 AM')
+      await settled(served)
+      expect(screen.queryByRole('button', { name: /^Delete squad / })).not.toBeInTheDocument()
+    })
+
+    it('says Squad deleted after a delete, then drops the toast (D-188)', async () => {
+      serve([createSquad({ date: '2026-10-24T09:00:00' })])
+
+      renderApp(`/tournaments/${tournament.id}/squads`, { deleted: true })
+
+      expect(await screen.findByText('Squad deleted')).toBeVisible()
+      await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+      expect(screen.queryByText('Squad deleted')).not.toBeInTheDocument()
     })
   })
 })

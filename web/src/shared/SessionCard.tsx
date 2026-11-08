@@ -33,7 +33,7 @@ interface SessionCardProps {
   href: string
   /** The facts that differ between squads and sweepers. */
   facts: ReactNode
-  /** Beside the title, such as the Edit link (D-185). */
+  /** Beside the title, such as the Edit link and Delete button (D-185, D-188). */
   action?: ReactNode
   /** Anything below the facts. */
   children?: ReactNode
@@ -70,7 +70,7 @@ export function SessionCard({
           <Link to={href}>{formatSessionDate(session.date)}</Link>
           <span className={styles.status}>{session.complete ? 'Complete' : 'Open'}</span>
         </h2>
-        {action}
+        {action && <div className={styles.actions}>{action}</div>}
       </div>
       <dl className={styles.facts}>
         <Fact label="Lanes">{formatLanes(session.startingLane, session.numberOfLanes)}</Fact>

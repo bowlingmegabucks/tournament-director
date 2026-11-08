@@ -10,6 +10,12 @@ import {
   type SessionEditInfo,
   type SessionNotFound,
 } from '../../shared/sessionEdit.ts'
+import {
+  applySessionDelete,
+  noSessionDeleteInfo,
+  type SessionDeleteInfo,
+  type SessionDeleter,
+} from '../../shared/sessionDelete.ts'
 import type { TournamentDefaults } from './squadRow.ts'
 import type { Squad } from './types.ts'
 import { planSquadEdit, type SquadEditContext, type StoredSquad } from './updatePlan.ts'
@@ -33,8 +39,8 @@ export type UpdateSquadOutcome =
   | { warnings: EditWarning[] }
   | { updated: Squad; changed: (keyof NewSquad)[] }
 
-/** What the create, edit, and edit-info routes need from storage. The Prisma version writes the legacy table. */
-export interface SquadWriter {
+/** What the create, edit, edit-info, delete, and delete-info routes need from storage. The Prisma version writes the legacy table. */
+export interface SquadWriter extends SessionDeleter {
   create(tournamentId: string, input: NewSquad): Promise<CreateSquadOutcome>
   update(
     tournamentId: string,
@@ -149,6 +155,8 @@ export function createInMemorySquadWriter(
     seed?: { tournamentId: string; squad: Squad }[]
     /** What depends on each squad (entries, scores, assigned lanes), by squad id. */
     editFacts?: Record<string, Partial<SessionEditFacts>>
+    /** Per squad id: what the delete rules look at (D-186). */
+    deleteInfo?: Record<string, Partial<SessionDeleteInfo>>
   } = {},
 ) {
   const stored: { tournamentId: string; squad: Squad }[] = (options.seed ?? []).map((entry) => ({
@@ -164,6 +172,29 @@ export function createInMemorySquadWriter(
     return entry ? { entry } : { notFound: 'session' }
   }
   const writer: SquadWriter = {
+    remove: async (tournamentId, squadId) => {
+      const found = locate(tournamentId, squadId)
+      if (!('entry' in found)) return found
+      const { entryCount, scoreCount } = noSessionDeleteInfo(options.deleteInfo?.[squadId])
+      return applySessionDelete(
+        {
+          completed: options.completed?.includes(tournamentId) ?? false,
+          complete: found.entry.squad.complete,
+          entryCount,
+          scoreCount,
+        },
+        'squad',
+        () => {
+          stored.splice(stored.indexOf(found.entry), 1)
+          return Promise.resolve()
+        },
+      )
+    },
+    getDeleteInfo: (tournamentId, squadId) => {
+      const found = locate(tournamentId, squadId)
+      if (!('entry' in found)) return Promise.resolve(found)
+      return Promise.resolve(noSessionDeleteInfo(options.deleteInfo?.[squadId]))
+    },
     getEditInfo: (tournamentId, squadId) => {
       const found = locate(tournamentId, squadId)
       if (!('entry' in found)) return Promise.resolve(found)

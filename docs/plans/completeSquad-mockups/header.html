@@ -1,0 +1,20 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Header mockups</title><link rel="stylesheet" href="../../../web/src/styles/tokens.css"><link rel="stylesheet" href="../../../web/src/styles/base.css"><link rel="stylesheet" href="mock.css"></head><body><main><h1>Page header</h1>
+<p>The button sits beside the title and status (D-22, D-195). It shows only with <code>squads.write</code>.</p>
+<section class="frame"><h3>Squad, open, director signed in</h3>
+<nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="#">Fall Classic</a></li><li><a href="#">Squads</a></li><li aria-current="page">Sat 10/24/2026 9:00 AM</li></ol></nav>
+<div class="head"><h1>Sat 10/24/2026 9:00 AM<span class="status">Open</span></h1><button type="button">Complete squad</button></div>
+<ul class="tabs"><li><a href="#">Lane assignments</a></li><li><a href="#">Scores</a></li><li><a href="#">Results</a></li></ul></section>
+<section class="frame"><h3>Sweeper, open, director signed in</h3>
+<div class="head"><h1>Sat 10/24/2026 1:00 PM<span class="status">Open</span></h1><button type="button">Complete sweeper</button></div></section>
+<section class="frame"><h3>Complete (or tournament complete): no button</h3>
+<div class="head"><h1>Sat 10/24/2026 9:00 AM<span class="status">Complete</span></h1></div></section>
+<section class="frame"><h3>Open, signed out or score keeper: no button</h3>
+<div class="head"><h1>Sat 10/24/2026 9:00 AM<span class="status">Open</span></h1></div></section>
+<section class="frame"><h3>After a squad is completed: status Complete, toast (closes itself)</h3>
+<div class="head"><h1>Sat 10/24/2026 9:00 AM<span class="status">Complete</span></h1></div>
+<p role="status" class="toast">Squad completed. 3 bowlers got zeros.</p>
+<h3>Sweeper, or a squad with no no-shows</h3>
+<p role="status" class="toast">Sweeper completed.</p><p role="status" class="toast">Squad completed.</p></section>
+<section class="frame"><h3>Refused (409), for example another director completed it first: error toast stays until dismissed</h3>
+<p role="alert" class="error">This squad is already complete.</p></section>
+</main></body></html>

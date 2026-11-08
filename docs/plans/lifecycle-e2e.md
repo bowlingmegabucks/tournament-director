@@ -42,7 +42,7 @@ The score set is designed: ties for first and at the cash line (scratch and hand
 0. **Setup.** Empty schema, the first admin from the app's own script, the other users made through the add-user page (the invite email lands in a local mail catcher, which also tests the set-password flow), then the earlier tournament and its 50 bowlers.
 1. **Tournament.** Create, edit a free field, check the overview.
 2. **Divisions.** Create three; check the list and numbering.
-3. **Squads and sweepers.** Create four squads and two sweepers with bonus pins; edit one of each; check the cards.
+3. **Squads and sweepers.** Create four squads and two sweepers with bonus pins; edit one of each; add a spare squad and a spare sweeper and delete them (`SQD-14`); check the cards.
 4. **Registration and money.** Desk registrations and payments in the UI, the registration site's through the API key, returning bowlers updated, some edits and deletes. Check counts for each squad, sweeper, and division, and each bowler's fees owed and paid, and the totals, against the hand-written fee table. _The desk path waits for the registration edit and payment screens (rule 3); only the registration site's API-key part can run now. The money checks wait for the same screens._
 5. **Lanes.** Assign every bowler, open the recap sheets, and move some. No one is left unassigned and no pair is over its maximum. _Moving waits for the saved lane move: today a move is on screen only (`tempMoves.ts`) and saves nothing._
 6. **Scores.** The director enters the designed scores squad by squad, edits one, and checks the Scores tab. _Waits for score entry._
@@ -60,6 +60,7 @@ Start with these; add one whenever a feature brings a new refusal.
 | --------- | ---------------------------------------------------- | --------------------------------------------- |
 | Divisions | Create a division with a name already used           | 409, list unchanged                           |
 | Squads    | Create a squad dated outside the tournament          | 409 with the message                          |
+| Squads    | Delete a squad that has entries (`SQD-14`, D-186)    | 409 with `errors`, the squad stays            |
 | Lanes     | Edit lanes so a saved pair no longer fits            | 409 with `errors` (after stage 5 saves lanes) |
 | Register  | Put a bowler in a division that does not fit (D-107) | 400 from the route; a refusal in the UI       |
 | Register  | Repeat a payment code (D-109, D-118)                 | A retry, no second entry                      |

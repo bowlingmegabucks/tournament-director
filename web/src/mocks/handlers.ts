@@ -59,6 +59,8 @@ const noSessionFacts = {
 
 const busySquadFacts = { ...noSessionFacts, entryCount: 12 }
 
+const scoredSweeperFacts = { ...noSessionFacts, hasScores: true }
+
 /** What the delete rules look at for a demo session (D-186). The busy squad has 12 bowlers; the scored sweeper has scores. */
 function deleteInfoOf(sessionId: string) {
   return {
@@ -80,7 +82,6 @@ function deleteRefusal(kind: 'squad' | 'sweeper', sessionId: string) {
   const message = Object.values(errors)[0]
   return message ? HttpResponse.json({ message, errors }, { status: 409 }) : undefined
 }
-const scoredSweeperFacts = { ...noSessionFacts, hasScores: true }
 
 const notFound = () => HttpResponse.json({ message: 'Tournament not found' }, { status: 404 })
 

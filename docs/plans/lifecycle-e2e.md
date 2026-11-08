@@ -18,7 +18,7 @@ The other suites check one screen or route at a time, on mocks or small data. Th
 6. **Assert at every step.** Each stage checks what it made, in the UI and, where the UI hides a number, in one API read.
 7. **Failures are scripted, not random.** Each sits at a fixed point, asserts one known error, and checks that nothing changed.
 8. **Stages run in order.** A failed stage skips the later ones, which need its data.
-9. **Test settings.** No live cache, a rate limit the run never meets, the real login page (not the dev quick-login buttons), and the web app and API on separate ports with CORS, like production.
+9. **Test settings.** No live cache, a rate limit the run never meets, the real login page (not the dev quick-login buttons), and the web app and API on separate ports with CORS, like production. The production build hides sign-in, so build it with `VITE_SHOW_SIGN_IN=true` and `VITE_API_BASE_URL` set to the test API, and check that `npm run check:dist` still passes with the flag on.
 10. **Evidence.** Traces, screenshots, video, and the report are kept when a run fails.
 
 ## Data
@@ -43,8 +43,8 @@ The score set is designed: ties for first and at the cash line (scratch and hand
 1. **Tournament.** Create, edit a free field, check the overview.
 2. **Divisions.** Create three; check the list and numbering.
 3. **Squads and sweepers.** Create four squads and two sweepers with bonus pins; edit one of each; check the cards.
-4. **Registration and money.** Desk registrations and payments in the UI, the registration site's through the API key, returning bowlers updated, some edits and deletes. Check counts for each squad, sweeper, and division, and each bowler's fees owed and paid, and the totals, against the hand-written fee table.
-5. **Lanes.** Assign every bowler, move some, open the recap sheets. No one is left unassigned and no pair is over its maximum.
+4. **Registration and money.** Desk registrations and payments in the UI, the registration site's through the API key, returning bowlers updated, some edits and deletes. Check counts for each squad, sweeper, and division, and each bowler's fees owed and paid, and the totals, against the hand-written fee table. _The desk path waits for the registration edit and payment screens (rule 3); only the registration site's API-key part can run now. The money checks wait for the same screens._
+5. **Lanes.** Assign every bowler, open the recap sheets, and move some. No one is left unassigned and no pair is over its maximum. _Moving waits for the saved lane move: today a move is on screen only (`tempMoves.ts`) and saves nothing._
 6. **Scores.** The director enters the designed scores squad by squad, edits one, and checks the Scores tab. _Waits for score entry._
 7. **Complete and results.** Complete every squad and sweeper; check each Results tab, At-large, Seeding, and Super sweeper, including "Unofficial results" before the last session completes (D-84, D-88). _Waits for score entry and Complete._
 8. **Complete the tournament.** It freezes (D-130), and delete is refused (D-133). _Waits for Complete._
@@ -56,18 +56,18 @@ Stages that wait on a missing feature stay in the plan and are skipped in the ru
 
 Start with these; add one whenever a feature brings a new refusal.
 
-| Stage     | Action                                               | Expect                                  |
-| --------- | ---------------------------------------------------- | --------------------------------------- |
-| Divisions | Create a division with a name already used           | 409, list unchanged                     |
-| Squads    | Create a squad dated outside the tournament          | 409 with the message                    |
-| Squads    | Edit lanes so a saved pair no longer fits            | 409 with `errors`                       |
-| Register  | Put a bowler in a division that does not fit (D-108) | 400 from the route; a refusal in the UI |
-| Register  | Repeat a payment code (D-109, D-118)                 | A retry, no second entry                |
-| Register  | Delete an entry that has a score (`REG-19`)          | 400, the entry stays                    |
-| Scores    | Enter a score above 300                              | Refused                                 |
-| Complete  | Edit a complete tournament                           | 409, every field frozen                 |
-| Delete    | Delete a tournament that has scores                  | 409, no override                        |
-| Access    | Score keeper opens a director-only action            | Link hidden; API refuses                |
+| Stage     | Action                                               | Expect                                        |
+| --------- | ---------------------------------------------------- | --------------------------------------------- |
+| Divisions | Create a division with a name already used           | 409, list unchanged                           |
+| Squads    | Create a squad dated outside the tournament          | 409 with the message                          |
+| Lanes     | Edit lanes so a saved pair no longer fits            | 409 with `errors` (after stage 5 saves lanes) |
+| Register  | Put a bowler in a division that does not fit (D-107) | 400 from the route; a refusal in the UI       |
+| Register  | Repeat a payment code (D-109, D-118)                 | A retry, no second entry                      |
+| Scores    | Delete an entry that has a score (`REG-19`)          | 400, the entry stays (waits for score entry)  |
+| Scores    | Enter a score above 300                              | Refused                                       |
+| Complete  | Edit a complete tournament                           | 409, every field frozen                       |
+| Delete    | Delete a tournament that has scores                  | 409, no override                              |
+| Access    | Score keeper opens a director-only action            | Link hidden; API refuses                      |
 
 ## Running it
 
@@ -78,7 +78,7 @@ Start with these; add one whenever a feature brings a new refusal.
 ## Open questions
 
 1. **The fee table.** It needs the legacy fee rules from [docs/migration/](../migration/README.md): tournament fee, squad fee, sweeper fee, handicap or super sweeper extras.
-2. **Desk payments in the UI.** There is no payment screen yet. Stage 4's money checks wait for the registrations edit feature (Q-37).
+2. **Desk payments in the UI.** There is no payment screen yet. Stage 4's desk path and money checks wait for registration edit and payment screens. No question in [decisions-and-questions.md](../migration/decisions-and-questions.md) covers them yet (Q-37 is about changing a bowler's division); open one before we build them.
 3. **Resume after a failure.** A snapshot per stage would let us rerun from stage N. Decide once we know how slow the run is.
 
 ## Done when

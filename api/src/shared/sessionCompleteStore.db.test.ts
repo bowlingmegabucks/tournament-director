@@ -6,6 +6,53 @@ import { legacyRows, type LegacyRows } from '../test/legacyRows.ts'
 import { createCapturedLogger } from '../test/logger.ts'
 import { resetDatabase } from '../test/resetDatabase.ts'
 
+/**
+ * The client, except that the first `times` calls of `squad.update` inside a transaction fail with
+ * `error`. The flag is the last write of a complete, so a failure there comes after the zeros: it
+ * shows whether they were rolled back with it (D-192).
+ */
+function failingFlag(real: PrismaClient, error: () => Error, times: number): PrismaClient {
+  let left = times
+  const bind = (target: object, member: unknown) =>
+    typeof member === 'function' ? (member as (...args: unknown[]) => unknown).bind(target) : member
+  const guardedTransaction = (tx: object) =>
+    new Proxy(tx, {
+      get(target, property) {
+        const member: unknown = Reflect.get(target, property, target)
+        if (property !== 'squad' || typeof member !== 'object' || member === null) {
+          return bind(target, member)
+        }
+        return new Proxy(member, {
+          get(delegate, method) {
+            const call: unknown = Reflect.get(delegate, method, delegate)
+            if (method !== 'update') return bind(delegate, call)
+            return (...args: unknown[]) => {
+              if (left > 0) {
+                left -= 1
+                return Promise.reject(error())
+              }
+              return (call as (...inner: unknown[]) => Promise<unknown>).apply(delegate, args)
+            }
+          },
+        })
+      },
+    })
+  return new Proxy(real, {
+    get(target, property) {
+      const member: unknown = Reflect.get(target, property, target)
+      if (property !== '$transaction') return bind(target, member)
+      return (run: (tx: object) => Promise<unknown>, options: unknown) =>
+        (target.$transaction as (...args: unknown[]) => Promise<unknown>).call(
+          target,
+          (tx: object) => run(guardedTransaction(tx)),
+          options,
+        )
+    },
+  })
+}
+
+const conflict = () => Object.assign(new Error('write conflict'), { code: 'P2034' })
+
 describe('Prisma complete squad and sweeper (SQD-15 to SQD-18, D-190 to D-192)', () => {
   let client: PrismaClient
   let rows: LegacyRows
@@ -155,6 +202,56 @@ describe('Prisma complete squad and sweeper (SQD-15 to SQD-18, D-190 to D-192)',
       },
     })
     expect(await isComplete('not-a-uuid')).toBe(false)
+  })
+
+  it('rolls the zeros back when the flag cannot be saved (SQD-15, D-192)', async () => {
+    const tournamentId = await rows.tournament()
+    const id = await rows.session(tournamentId, 'squad', '2026-10-24 09:00:00')
+    const { none } = await threeBowlers(tournamentId, id)
+    const broken = createPrismaSquadWriter(
+      failingFlag(client, () => new Error('disk full'), 1),
+      createCapturedLogger().logger,
+    )
+
+    await expect(broken.complete(tournamentId, id)).rejects.toThrow('disk full')
+
+    // The zeros are written before the flag, so only a rollback leaves none.
+    expect(await zerosOf(id)).toBe(0)
+    expect(await scoresOf(id, none)).toBe(0)
+    expect(await isComplete(id)).toBe(false)
+  })
+
+  it('retries a write conflict and saves the zeros once (SQD-15, D-192)', async () => {
+    const tournamentId = await rows.tournament()
+    const id = await rows.session(tournamentId, 'squad', '2026-10-24 09:00:00')
+    const { none } = await threeBowlers(tournamentId, id)
+    const conflicted = createPrismaSquadWriter(
+      failingFlag(client, conflict, 1),
+      createCapturedLogger().logger,
+    )
+
+    const outcome = await conflicted.complete(tournamentId, id)
+
+    // The first try wrote the zeros and lost the flag; without a rollback the second would hit a duplicate key.
+    expect(outcome).toMatchObject({ completed: { complete: true }, noShowCount: 1 })
+    expect(await scoresOf(id, none)).toBe(6)
+    expect(await zerosOf(id)).toBe(6)
+    expect(await isComplete(id)).toBe(true)
+  })
+
+  it('gives up after three conflicts and leaves the squad untouched (D-192)', async () => {
+    const tournamentId = await rows.tournament()
+    const id = await rows.session(tournamentId, 'squad', '2026-10-24 09:00:00')
+    await threeBowlers(tournamentId, id)
+    const conflicted = createPrismaSquadWriter(
+      failingFlag(client, conflict, 3),
+      createCapturedLogger().logger,
+    )
+
+    await expect(conflicted.complete(tournamentId, id)).rejects.toThrow('write conflict')
+
+    expect(await zerosOf(id)).toBe(0)
+    expect(await isComplete(id)).toBe(false)
   })
 
   it('reports the counts the dialog shows (D-194)', async () => {

@@ -20,6 +20,11 @@ function notFound(outcome: SessionNotFound, kind: SessionKind): HttpError {
   )
 }
 
+/** Tell a not-found answer from the info, which never holds a `notFound` key. */
+function isNotFound(value: unknown): value is SessionNotFound {
+  return typeof value === 'object' && value !== null && 'notFound' in value
+}
+
 /** The first message, for clients that show only one line. */
 // Stryker disable next-line StringLiteral: a refusal always carries a message, so the fallback never shows.
 const firstOf = (errors: Record<string, string>) => Object.values(errors)[0] ?? ''
@@ -80,9 +85,7 @@ export function createSessionCompleteInfoRouter<Info>(
   router.get('/', async (req, res) => {
     const { id, sessionId } = idParams.parse(req.params)
     const info = await completer.getCompleteInfo(id, sessionId)
-    if (typeof info === 'object' && info !== null && 'notFound' in info) {
-      throw notFound(info as SessionNotFound, kind)
-    }
+    if (isNotFound(info)) throw notFound(info, kind)
     res.json({ completeInfo: info })
   })
 

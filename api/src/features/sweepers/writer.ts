@@ -9,6 +9,12 @@ import {
   type SessionEditInfo,
   type SessionNotFound,
 } from '../../shared/sessionEdit.ts'
+import {
+  applySessionDelete,
+  noSessionDeleteInfo,
+  type SessionDeleteInfo,
+  type SessionDeleter,
+} from '../../shared/sessionDelete.ts'
 import type { Sweeper } from './types.ts'
 import { planSweeperEdit, type StoredSweeper, type SweeperEditContext } from './updatePlan.ts'
 import type { UpdateSweeper } from './updateRequest.ts'
@@ -31,8 +37,8 @@ export type UpdateSweeperOutcome =
   | { warnings: EditWarning[] }
   | { updated: Sweeper; changed: (keyof NewSweeper)[] }
 
-/** What the create, edit, and edit-info routes need from storage. The Prisma version writes the legacy tables. */
-export interface SweeperWriter {
+/** What the create, edit, edit-info, delete, and delete-info routes need from storage. The Prisma version writes the legacy tables. */
+export interface SweeperWriter extends SessionDeleter {
   create(tournamentId: string, input: NewSweeper): Promise<CreateSweeperOutcome>
   update(
     tournamentId: string,
@@ -171,6 +177,8 @@ export function createInMemorySweeperWriter(
     seed?: { tournamentId: string; sweeper: Sweeper }[]
     /** What depends on each sweeper (entries, scores, assigned lanes), by sweeper id. */
     editFacts?: Record<string, Partial<SessionEditFacts>>
+    /** Per sweeper id: what the delete rules look at (D-186). */
+    deleteInfo?: Record<string, Partial<SessionDeleteInfo>>
   } = {},
 ) {
   const stored: { tournamentId: string; sweeper: Sweeper }[] = (options.seed ?? []).map(
@@ -185,6 +193,29 @@ export function createInMemorySweeperWriter(
     return entry ? { entry } : { notFound: 'session' }
   }
   const writer: SweeperWriter = {
+    remove: async (tournamentId, sweeperId) => {
+      const found = locate(tournamentId, sweeperId)
+      if (!('entry' in found)) return found
+      const { entryCount, scoreCount } = noSessionDeleteInfo(options.deleteInfo?.[sweeperId])
+      return applySessionDelete(
+        {
+          completed: options.completed?.includes(tournamentId) ?? false,
+          complete: found.entry.sweeper.complete,
+          entryCount,
+          scoreCount,
+        },
+        'sweeper',
+        () => {
+          stored.splice(stored.indexOf(found.entry), 1)
+          return Promise.resolve()
+        },
+      )
+    },
+    getDeleteInfo: (tournamentId, sweeperId) => {
+      const found = locate(tournamentId, sweeperId)
+      if (!('entry' in found)) return Promise.resolve(found)
+      return Promise.resolve(noSessionDeleteInfo(options.deleteInfo?.[sweeperId]))
+    },
     getEditInfo: (tournamentId, sweeperId) => {
       const found = locate(tournamentId, sweeperId)
       if (!('entry' in found)) return Promise.resolve(found)

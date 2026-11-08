@@ -321,6 +321,29 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('complete squad dialog has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Squads')
+      await page.getByRole('link', { name: 'Sat 10/24/2026 1:00 PM', exact: true }).click()
+      await page.getByRole('button', { name: 'Complete squad' }).click()
+      const dialog = page.getByRole('dialog', { name: 'Complete this squad?' })
+      await expect(dialog).toContainText('12 bowlers are entered.')
+
+      await expectNoViolations(page)
+    })
+
+    test('complete sweeper dialog has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Sweepers')
+      await page.getByRole('link', { name: 'Sat 10/24/2026 6:00 PM', exact: true }).click()
+      await page.getByRole('button', { name: 'Complete sweeper' }).click()
+      await expect(page.getByRole('dialog', { name: 'Complete this sweeper?' })).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
     test('edit sweeper form has no WCAG 2.2 AA violations', async ({ page }) => {
       await openTournamentsSignedIn(page)
       await page.getByRole('article').first().getByRole('link').click()

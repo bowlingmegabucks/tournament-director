@@ -322,6 +322,20 @@ describe.each(kinds)('deleting a $word (SQD-14, D-186 to D-189)', ({ kind, word,
     expect(screen.queryByText(`${Word} deleted`)).not.toBeInTheDocument()
   })
 
+  it('closes the dialog after a delete even while the card is still listed', async () => {
+    setMockUser(createSignedInUser({ roles: ['director'] }))
+    // A 204 that leaves the list alone: only the button itself can close the dialog.
+    serve(pair(), { remove: () => new HttpResponse(null, { status: 204 }) })
+    const user = userEvent.setup()
+    open()
+
+    const dialog = await openDialog(user)
+    await user.click(await confirm(dialog))
+
+    await screen.findByText(`${Word} deleted`)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
   it('forgets an old failure when the dialog closes', async () => {
     setMockUser(createSignedInUser({ roles: ['director'] }))
     serve(pair(), { remove: () => new HttpResponse(null, { status: 500 }) })

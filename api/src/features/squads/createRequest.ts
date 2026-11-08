@@ -36,7 +36,7 @@ function ratio(label: string) {
 }
 
 /** The rule for each field (D-168 to D-170). Refused, never rounded (D-125). */
-const squadFields = {
+export const squadFields = {
   ...sessionFields,
   entryFee: z.preprocess(
     blankToNull,

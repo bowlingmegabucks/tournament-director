@@ -235,6 +235,7 @@ describe(`POST ${url}`, () => {
 
   it('passes a storage outage on as 503 (SQD-10)', async () => {
     const writer: SweeperWriter = {
+      ...createInMemorySweeperWriter().writer,
       create: () => Promise.reject(new HttpError(503, 'Database unavailable')),
     }
 

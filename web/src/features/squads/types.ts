@@ -37,6 +37,9 @@ export interface NewSquad {
   cashRatio: number | null
 }
 
+/** What `PATCH /v1/tournaments/{id}/squads/{squadId}` takes: only the fields that changed (SQD-23, D-184). */
+export type SquadChanges = Partial<NewSquad>
+
 /** What the form holds: every box as text, so a half-typed value is not lost. */
 export interface SquadFormValues {
   date: string

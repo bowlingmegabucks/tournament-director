@@ -99,3 +99,22 @@
   font-weight: 600;
   text-decoration: none;
 }
+
+/* The lines under a box on an edit form: a limit, a lock, or a confirmation (D-185). */
+.note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.noteLabel {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* A locked box reads as fixed, not as an error: dashed edge and the surface fill. */
+.input[readonly] {
+  border-style: dashed;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}

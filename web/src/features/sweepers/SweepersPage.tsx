@@ -2,14 +2,15 @@ import { Link, useLocation, useNavigate, useOutletContext, useParams } from 'rea
 import { field } from '../../shared/field'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
-import { Fact, SessionCard, SessionList } from '../../shared/SessionCard'
-import { formatFee, formatRatio } from '../../shared/sessionFormat'
+import { EditSessionLink, Fact, SessionCard, SessionList } from '../../shared/SessionCard'
+import { formatFee, formatRatio, formatSessionDate } from '../../shared/sessionFormat'
 import { Toast } from '../../shared/Toast'
 import { Can } from '../auth/Can'
 import type { Tournament } from '../tournaments/types'
 import { useTournamentOpen } from '../tournaments/useTournamentOpen'
 import { BonusPinsList } from './BonusPinsList'
 import styles from './SweepersPage.module.css'
+import type { Sweeper } from './types'
 import { useSweepers } from './useSweepers'
 
 const TOAST_MS = 5000
@@ -28,6 +29,20 @@ function NewSweeperLink({ id }: Readonly<{ id: string }>) {
 }
 
 /**
+ * The "Edit" link of one card. It sits inside `<Can>`, so a visitor without the permission never
+ * reads the settings. A complete sweeper or tournament has no link (D-181, D-19).
+ */
+function EditSweeperLink({ id, sweeper }: Readonly<{ id: string; sweeper: Sweeper }>) {
+  if (!useTournamentOpen(id) || sweeper.complete) return null
+  return (
+    <EditSessionLink
+      to={`/tournaments/${id}/sweepers/${sweeper.id}/edit`}
+      label={`Edit sweeper ${formatSessionDate(sweeper.date)}`}
+    />
+  )
+}
+
+/**
  * The sweepers of the tournament in the URL, as plain cards (SQD-22, SQD-20, D-44), with a link to
  * add one (D-174). A division with no bonus pins is not listed, so a missing name means 0 (D-45).
  */
@@ -40,6 +55,8 @@ export function SweepersPage() {
   const navigate = useNavigate()
   // The add form sets this state as it moves here (D-178). Clearing it keeps a reload quiet.
   const justCreated = field(location.state, 'created') === true
+  // The edit form sets this one the same way (SQD-27).
+  const justSaved = field(location.state, 'saved') === true
 
   return (
     <>
@@ -74,6 +91,11 @@ export function SweepersPage() {
               key={sweeper.id}
               session={sweeper}
               href={sweeper.id}
+              action={
+                <Can permission="squads.write">
+                  <EditSweeperLink id={id} sweeper={sweeper} />
+                </Can>
+              }
               facts={
                 <>
                   <Fact label="Entry fee">{formatFee(sweeper.entryFee)}</Fact>
@@ -87,7 +109,7 @@ export function SweepersPage() {
           ))}
         </SessionList>
       )}
-      {justCreated && (
+      {(justCreated || justSaved) && (
         <Toast
           kind="success"
           autoDismissMs={TOAST_MS}
@@ -96,7 +118,7 @@ export function SweepersPage() {
             void navigate('.', { replace: true, state: null })
           }}
         >
-          Sweeper created
+          {justSaved ? 'Sweeper saved' : 'Sweeper created'}
         </Toast>
       )}
     </>

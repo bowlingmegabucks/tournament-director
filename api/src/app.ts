@@ -26,10 +26,18 @@ import type { ScoreRepository } from './features/scores/repository.ts'
 import { createSquadRouter } from './features/squads/routes.ts'
 import type { SquadRepository } from './features/squads/repository.ts'
 import { createSquadCreateRouter } from './features/squads/createRoutes.ts'
+import {
+  createSquadEditInfoRouter,
+  createSquadUpdateRouter,
+} from './features/squads/updateRoutes.ts'
 import type { SquadWriter } from './features/squads/writer.ts'
 import { createSweeperRouter } from './features/sweepers/routes.ts'
 import type { SweeperRepository } from './features/sweepers/repository.ts'
 import { createSweeperCreateRouter } from './features/sweepers/createRoutes.ts'
+import {
+  createSweeperEditInfoRouter,
+  createSweeperUpdateRouter,
+} from './features/sweepers/updateRoutes.ts'
 import type { SweeperWriter } from './features/sweepers/writer.ts'
 import { createTournamentDeleteRouter } from './features/tournaments/deleteRoutes.ts'
 import { createEditInfoRouter } from './features/tournaments/editInfoRoutes.ts'
@@ -198,6 +206,18 @@ export function createApp({
         router: createSquadCreateRouter(squadWriter, logger),
       },
       {
+        path: '/v1/tournaments/:id/squads',
+        access: { permission: 'squads.write' }, // SQD-23, D-184: edit; no API key
+        methods: ['PATCH'],
+        router: createSquadUpdateRouter(squadWriter, logger),
+      },
+      {
+        path: '/v1/tournaments/:id/squads/:sessionId/edit-info',
+        access: { permission: 'squads.write' }, // SQD-26, D-185: no API key
+        methods: ['GET'],
+        router: createSquadEditInfoRouter(squadWriter),
+      },
+      {
         path: '/v1/tournaments/:id/sweepers',
         access: 'public',
         router: createSweeperRouter(sweepers, tournaments),
@@ -207,6 +227,18 @@ export function createApp({
         access: { permission: 'squads.write' }, // SQD-10 to SQD-13, D-174: the API key cannot reach it
         methods: ['POST'],
         router: createSweeperCreateRouter(sweeperWriter, logger),
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers',
+        access: { permission: 'squads.write' }, // SQD-23, D-184: edit; no API key
+        methods: ['PATCH'],
+        router: createSweeperUpdateRouter(sweeperWriter, logger),
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers/:sessionId/edit-info',
+        access: { permission: 'squads.write' }, // SQD-26, D-185: no API key
+        methods: ['GET'],
+        router: createSweeperEditInfoRouter(sweeperWriter),
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/lanes',

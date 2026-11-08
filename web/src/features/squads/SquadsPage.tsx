@@ -2,13 +2,14 @@ import { Link, useLocation, useNavigate, useOutletContext, useParams } from 'rea
 import { field } from '../../shared/field'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
-import { Fact, SessionCard, SessionList } from '../../shared/SessionCard'
-import { formatFee, formatRatio, withOverride } from '../../shared/sessionFormat'
+import { EditSessionLink, Fact, SessionCard, SessionList } from '../../shared/SessionCard'
+import { formatFee, formatRatio, formatSessionDate, withOverride } from '../../shared/sessionFormat'
 import { Toast } from '../../shared/Toast'
 import { Can } from '../auth/Can'
 import type { Tournament } from '../tournaments/types'
 import { useTournamentOpen } from '../tournaments/useTournamentOpen'
 import styles from './SquadsPage.module.css'
+import type { Squad } from './types'
 import { useSquads } from './useSquads'
 
 const TOAST_MS = 5000
@@ -26,6 +27,20 @@ function NewSquadLink({ id }: Readonly<{ id: string }>) {
   )
 }
 
+/**
+ * The "Edit" link of one card. It sits inside `<Can>`, so a visitor without the permission never
+ * reads the settings. A complete squad or tournament has no link (D-181, D-19).
+ */
+function EditSquadLink({ id, squad }: Readonly<{ id: string; squad: Squad }>) {
+  if (!useTournamentOpen(id) || squad.complete) return null
+  return (
+    <EditSessionLink
+      to={`/tournaments/${id}/squads/${squad.id}/edit`}
+      label={`Edit squad ${formatSessionDate(squad.date)}`}
+    />
+  )
+}
+
 /** The squads of the tournament in the URL, as plain cards (SQD-21, SQD-20, D-44), with a link to add one (D-167). */
 export function SquadsPage() {
   // Stryker disable next-line StringLiteral: the route always has an :id; this only satisfies the type.
@@ -36,6 +51,8 @@ export function SquadsPage() {
   const navigate = useNavigate()
   // The add form sets this state as it moves here (D-172). Clearing it keeps a reload quiet.
   const justCreated = field(location.state, 'created') === true
+  // The edit form sets this one the same way (SQD-27).
+  const justSaved = field(location.state, 'saved') === true
 
   return (
     <>
@@ -63,6 +80,11 @@ export function SquadsPage() {
               key={squad.id}
               session={squad}
               href={squad.id}
+              action={
+                <Can permission="squads.write">
+                  <EditSquadLink id={id} squad={squad} />
+                </Can>
+              }
               facts={
                 <>
                   <Fact label="Entry fee">
@@ -80,7 +102,7 @@ export function SquadsPage() {
           ))}
         </SessionList>
       )}
-      {justCreated && (
+      {(justCreated || justSaved) && (
         <Toast
           kind="success"
           autoDismissMs={TOAST_MS}
@@ -89,7 +111,7 @@ export function SquadsPage() {
             void navigate('.', { replace: true, state: null })
           }}
         >
-          Squad created
+          {justSaved ? 'Squad saved' : 'Squad created'}
         </Toast>
       )}
     </>

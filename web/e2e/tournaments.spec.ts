@@ -377,7 +377,7 @@ test('a sweeper card opens its lane page with bonus pins (LAN-11, D-60)', async 
     .getByRole('link', { name: 'Sweepers' })
     .click()
 
-  await page.getByRole('link', { name: /6:00 PM/ }).click()
+  await page.getByRole('link', { name: /^[A-Z][a-z]{2} \d{2}\/\d{2}\/\d{4} 6:00 PM$/ }).click()
 
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Sat 10/24/2026 6:00 PM')
   await expect(page.getByText('Open · avg 205 · +10 pins · super sweeper: N')).toBeVisible()
@@ -476,7 +476,7 @@ test('the Results tab of a sweeper is one list with a cash line (RES-22, RES-25a
     .getByRole('navigation', { name: /Northeast MegaBuck/ })
     .getByRole('link', { name: 'Sweepers' })
     .click()
-  await page.getByRole('link', { name: /6:00 PM/ }).click()
+  await page.getByRole('link', { name: /^[A-Z][a-z]{2} \d{2}\/\d{2}\/\d{4} 6:00 PM$/ }).click()
 
   await page.getByRole('link', { name: 'Results' }).click()
 
@@ -521,7 +521,7 @@ test('Print results prints a sweeper on one letter page (RES-33, D-78)', async (
     .getByRole('navigation', { name: /Northeast MegaBuck/ })
     .getByRole('link', { name: 'Sweepers' })
     .click()
-  await page.getByRole('link', { name: /6:00 PM/ }).click()
+  await page.getByRole('link', { name: /^[A-Z][a-z]{2} \d{2}\/\d{2}\/\d{4} 6:00 PM$/ }).click()
   await page.getByRole('link', { name: 'Results' }).click()
   await expect(page.getByRole('table', { name: 'Sweeper results' })).toBeVisible()
 

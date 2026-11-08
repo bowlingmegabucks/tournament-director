@@ -16,7 +16,7 @@ export interface LegacyRows {
   /** Bonus pins per game for one division in one sweeper (SQD-13). `null` is stored as NULL. */
   sweeperPins(sweeperId: string, divisionId: string, pins: number | null): Promise<void>
   /** Put a registration into a squad or sweeper (REG-24). */
-  squadEntry(registrationId: string, sessionId: string): Promise<void>
+  squadEntry(registrationId: string, sessionId: string, position?: string): Promise<void>
 }
 
 export function legacyRows(client: PrismaClient): LegacyRows {
@@ -90,12 +90,12 @@ export function legacyRows(client: PrismaClient): LegacyRows {
         amount,
       )
     },
-    async squadEntry(registrationId, sessionId) {
+    async squadEntry(registrationId, sessionId, position = '') {
       await run(
         'INSERT INTO SquadRegistration (RegistrationId, SquadId, LaneAssignment) VALUES (?, ?, ?)',
         registrationId,
         sessionId,
-        '',
+        position,
       )
     },
     async sweeperPins(sweeperId, divisionId, pins) {

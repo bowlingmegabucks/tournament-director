@@ -6,8 +6,9 @@ export const sweeperKeys = {
   list: (tournamentId: string) => [...tournamentKeys.detail(tournamentId), 'sweepers'] as const,
 }
 
-export function useSweepers(tournamentId: string) {
+export function useSweepers(tournamentId: string, options: { refetchOnMount?: 'always' } = {}) {
   return useQuery({
+    ...options,
     queryKey: sweeperKeys.list(tournamentId),
     queryFn: () => fetchSweepers(tournamentId),
     retry: retryUnlessNotFound,

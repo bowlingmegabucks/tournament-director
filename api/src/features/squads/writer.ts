@@ -1,8 +1,19 @@
 import { randomUUID } from 'node:crypto'
 import { planCreate, type CreateFacts } from './createPlan.ts'
 import type { FieldErrors, NewSquad } from './createRequest.ts'
+import {
+  noSessionEditFacts,
+  toSessionEditInfo,
+  type EditWarning,
+  type SessionEditContext,
+  type SessionEditFacts,
+  type SessionEditInfo,
+  type SessionNotFound,
+} from '../../shared/sessionEdit.ts'
 import type { TournamentDefaults } from './squadRow.ts'
 import type { Squad } from './types.ts'
+import { planSquadEdit, type SquadEditContext, type StoredSquad } from './updatePlan.ts'
+import type { UpdateSquad } from './updateRequest.ts'
 
 /** How a create ended (SQD-01 to SQD-08). Only `created` stored anything. */
 export type CreateSquadOutcome =
@@ -11,9 +22,28 @@ export type CreateSquadOutcome =
   | { refused: FieldErrors }
   | { created: Squad }
 
-/** What the create route needs from storage. The Prisma version writes the legacy table. */
+/** How an edit ended (SQD-23 to SQD-25). Only `updated` may have stored anything. */
+export type UpdateSquadOutcome =
+  | SessionNotFound
+  /** The merged lanes pass the last lane: 400 with `errors` (D-179). */
+  | { invalid: FieldErrors }
+  /** A complete tournament or squad, a date outside, or a stranded bowler: 409 with `errors` (D-181, D-182). */
+  | { refused: FieldErrors }
+  /** The director must confirm first: 409 with `warnings` (D-180). */
+  | { warnings: EditWarning[] }
+  | { updated: Squad; changed: (keyof NewSquad)[] }
+
+/** What the create, edit, and edit-info routes need from storage. The Prisma version writes the legacy table. */
 export interface SquadWriter {
   create(tournamentId: string, input: NewSquad): Promise<CreateSquadOutcome>
+  update(
+    tournamentId: string,
+    squadId: string,
+    changes: UpdateSquad,
+    options: { confirmWarnings: boolean },
+  ): Promise<UpdateSquadOutcome>
+  /** What the edit page shows before the director types (D-185). */
+  getEditInfo(tournamentId: string, squadId: string): Promise<SessionEditInfo | SessionNotFound>
 }
 
 /**
@@ -52,6 +82,48 @@ export async function applyCreate(
   return { created: await persist() }
 }
 
+/**
+ * The squad as the list reads it after an edit: a cleared fee or ratio shows the tournament's value
+ * (TRN-12, D-43, D-183).
+ */
+export function toEditedSquad(
+  id: string,
+  complete: boolean,
+  stored: StoredSquad,
+  defaults: TournamentDefaults,
+): Squad {
+  return { ...toCreatedSquad(id, stored, defaults), complete }
+}
+
+/**
+ * Plan an edit and, when it saves, hand the changes to `persist`. Both versions of the writer use
+ * this, so the rules live in one place (`planSquadEdit`) and storage only reads and writes.
+ */
+export async function applyUpdate(
+  id: string,
+  context: SquadEditContext,
+  defaults: TournamentDefaults,
+  sent: UpdateSquad,
+  confirmWarnings: boolean,
+  persist: (changes: UpdateSquad) => Promise<void>,
+): Promise<Exclude<UpdateSquadOutcome, SessionNotFound>> {
+  const plan = planSquadEdit(context, sent, confirmWarnings)
+  switch (plan.kind) {
+    case 'invalid':
+      return { invalid: plan.errors }
+    case 'refused':
+      return { refused: plan.errors }
+    case 'warn':
+      return { warnings: plan.warnings }
+    case 'save': {
+      const changed = Object.keys(plan.changes) as (keyof NewSquad)[]
+      if (changed.length > 0) await persist(plan.changes)
+      const stored = { ...context.stored, ...plan.changes }
+      return { updated: toEditedSquad(id, context.complete, stored, defaults), changed }
+    }
+  }
+}
+
 const wideOpen: CreateFacts & TournamentDefaults = {
   // Stryker disable next-line BooleanLiteral: the writer always sets `completed` from its options.
   completed: false,
@@ -73,10 +145,66 @@ export function createInMemorySquadWriter(
     completed?: string[]
     /** The dates, fee, ratios, and games every tournament has. */
     tournament?: Partial<typeof wideOpen>
+    /** Squads that exist before the test starts, for an edit. */
+    seed?: { tournamentId: string; squad: Squad }[]
+    /** What depends on each squad (entries, scores, assigned lanes), by squad id. */
+    editFacts?: Record<string, Partial<SessionEditFacts>>
   } = {},
 ) {
-  const stored: { tournamentId: string; squad: Squad }[] = []
+  const stored: { tournamentId: string; squad: Squad }[] = (options.seed ?? []).map((entry) => ({
+    tournamentId: entry.tournamentId,
+    squad: { ...entry.squad },
+  }))
+  const locate = (
+    tournamentId: string,
+    squadId: string,
+  ): SessionNotFound | { entry: (typeof stored)[number] } => {
+    if (options.known && !options.known.includes(tournamentId)) return { notFound: 'tournament' }
+    const entry = stored.find((e) => e.tournamentId === tournamentId && e.squad.id === squadId)
+    return entry ? { entry } : { notFound: 'session' }
+  }
   const writer: SquadWriter = {
+    getEditInfo: (tournamentId, squadId) => {
+      const found = locate(tournamentId, squadId)
+      if (!('entry' in found)) return Promise.resolve(found)
+      return Promise.resolve(
+        toSessionEditInfo({ ...noSessionEditFacts, ...options.editFacts?.[squadId] }),
+      )
+    },
+    update: (tournamentId, squadId, changes, { confirmWarnings }) => {
+      const found = locate(tournamentId, squadId)
+      if (!('entry' in found)) return Promise.resolve(found)
+      const { squad } = found.entry
+      const defaults = { ...wideOpen, ...options.tournament }
+      const current: StoredSquad = {
+        date: squad.date,
+        startingLane: squad.startingLane,
+        numberOfLanes: squad.numberOfLanes,
+        maxPerPair: squad.maxPerPair,
+        entryFee: squad.entryFeeOverridden ? squad.entryFee : null,
+        finalsRatio: squad.finalsRatioOverridden ? squad.finalsRatio : null,
+        cashRatio: squad.cashRatioOverridden ? squad.cashRatio : null,
+      }
+      const context: SquadEditContext = {
+        tournament: {
+          completed: options.completed?.includes(tournamentId) ?? false,
+          startDate: defaults.startDate,
+          endDate: defaults.endDate,
+        },
+        complete: squad.complete,
+        stored: current,
+        facts: { ...noSessionEditFacts, ...options.editFacts?.[squadId] },
+      } satisfies SessionEditContext & { stored: StoredSquad }
+      return applyUpdate(squadId, context, defaults, changes, confirmWarnings, () => {
+        found.entry.squad = toEditedSquad(
+          squadId,
+          squad.complete,
+          { ...current, ...changes },
+          defaults,
+        )
+        return Promise.resolve()
+      })
+    },
     create: (tournamentId, input) => {
       if (options.known && !options.known.includes(tournamentId)) {
         return Promise.resolve({ notFound: true })

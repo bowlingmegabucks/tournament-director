@@ -6,8 +6,9 @@ export const squadKeys = {
   list: (tournamentId: string) => [...tournamentKeys.detail(tournamentId), 'squads'] as const,
 }
 
-export function useSquads(tournamentId: string) {
+export function useSquads(tournamentId: string, options: { refetchOnMount?: 'always' } = {}) {
   return useQuery({
+    ...options,
     queryKey: squadKeys.list(tournamentId),
     queryFn: () => fetchSquads(tournamentId),
     retry: retryUnlessNotFound,

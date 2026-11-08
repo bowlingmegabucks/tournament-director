@@ -38,7 +38,8 @@ Version numbers follow content, not a countdown. 0.10.0 is fine.
 - [ ] Squad and sweeper commands (D-12, D-15; [squads-and-sweepers.md](requirements/squads-and-sweepers.md)), 0.7.0:
   - [x] Create a squad: `squads.write`, max per pair 2 to 5, the date inside the tournament, blank fee and ratios use the tournament's, a complete tournament refuses (`createSquad`, `SQD-01` to `SQD-08`, D-167 to D-173).
   - [x] Create a sweeper, with a bonus-pins box per division: `squads.write`, own fee, games, and cash ratio, pins blank or 0 to 99, one transaction (`createSweeper`, `SQD-10` to `SQD-13`, D-174 to D-178). Q-11 (pin presets) stays open.
-  - [ ] Edit and delete a squad or sweeper (`SQD-14`, D-12, D-15).
+  - [x] Edit a squad or sweeper, with free, confirmed, and refused fields by what depends on them in that session, a stranded-lane check, and bonus-pin edits (`editSquad`, `SQD-23` to `SQD-30`, D-180 to D-185).
+  - [ ] Delete a squad or sweeper (`SQD-14`, D-15).
   - [ ] Complete a squad or sweeper, and lock a complete session on the server (`SQD-15` to `SQD-18`, D-10).
 
 ## Data and cutover
@@ -102,12 +103,19 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 - [ ] Hosting tier decided (the free App Service tier is slow after idle).
 - [ ] Live score updates reach every open Scores tab, signed in or not, without polling (Q-33; polls every 15 s until then, D-72).
 - [ ] Load test with a full tournament's users and score entry.
+- [ ] Tournament lifecycle test: one UI-driven Playwright run on its own database and API (3 divisions, 4 squads, 2 sweepers, about 150 bowlers, 300 squad entries and 150 sweeper entries, scripted failures, hand-written expected results). Manual trigger, plus a job on `main` that deploy does not wait for. Built in stages as the features land. See [lifecycle-e2e.md](plans/lifecycle-e2e.md).
 - [ ] Several desk users can work at once: lane moves and new registrations show on every open screen (WebSockets or similar, Q-27), and two people racing for the last seat of a pair get one winner and a clear message for the other (Q-28).
 
 ## People
 
 - [ ] User guide.
 - [ ] Walkthrough for the people who run tournaments.
+- [ ] Interactive API reference, in the style of [Scalar](https://scalar.com/): a page the API serves from its own OpenAPI document, where a developer reads each route and tries it with the API key. The registration site's developer is the first reader. Settle these when we build it:
+  - Where it lives (for example `/docs`), and who may open it. The vendor document at `/openapi/v1.json` is public today (D-114); a page that lists the web-only routes (tournament, division, squad, and sweeper commands) may need sign-in.
+  - Tags on every route, so the reference can filter by them as Scalar does. One tag marks the routes the registration site calls (the vendor routes, D-09, such as `Registration site`); the others group the web-only routes by area (`Tournaments`, `Divisions`, `Squads`, `Sweepers`, `Users`). The vendor tag comes from the same list `openapi.ts` already keeps, so a route cannot carry it by mistake, and a test fails when a route has no tag.
+  - Whether the document grows to cover the web-only routes, or a second document holds them. Today `openapi.ts` lists only the vendor routes, and a test keeps that list in step with the routes.
+  - How the page loads under the `helmet` headers (its scripts and styles need allowing), and that the "try it" button sends the `x-api-key` header and never stores the key.
+  - Check the Scalar docs (Context7) before we use its Express package; its API changes between releases.
 
 ## Release candidates
 

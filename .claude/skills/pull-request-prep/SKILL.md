@@ -78,11 +78,11 @@ Trace every flag to a rule in one of these. For each issue, record:
 
 #### Severity levels
 
-| Level             | Meaning                                                                                                                                  |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| 🚫 **Blocker**    | Breaks a hard rule, fails a check, leaks a secret, ships code with no test, or risks a security or correctness bug. Fix before the PR.   |
+| Level             | Meaning                                                                                                                                      |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🚫 **Blocker**    | Breaks a hard rule, fails a check, leaks a secret, ships code with no test, or risks a security or correctness bug. Fix before the PR.       |
 | ⚠️ **Should Fix** | Breaks a convention but will not fail at runtime: wrong file name, index as `key`, missing empty state. Fix unless there is a reason not to. |
-| 💡 **Suggestion** | Helpful but not required: a cleaner abstraction, a simpler test, a docs note.                                                           |
+| 💡 **Suggestion** | Helpful but not required: a cleaner abstraction, a simpler test, a docs note.                                                                |
 
 #### Checklist
 
@@ -143,6 +143,7 @@ Trace every flag to a rule in one of these. For each issue, record:
 - [ ] `CLAUDE.md` commands table matches `package.json` scripts
 - [ ] New .NET-to-Node concepts the owner would meet are in `docs/dotnet-to-node.md`
 - [ ] Changed standards appear in both `CLAUDE.md` (summary) and the matching `docs/` file
+- [ ] `docs/plans/lifecycle-e2e.md` still matches the app. If the diff adds or changes a feature that a lifecycle stage uses (a screen, a route, a refusal, a fee or result rule, a permission), check each stage, the scripted failures table, the data counts, and the "waits for" notes. Update a stage that now can run, add a scripted failure for a new refusal, and list any expected-number change. Report a stale plan under 📄 Docs Updates.
 
 #### Follow-up review recommendations
 

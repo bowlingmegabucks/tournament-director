@@ -22,8 +22,8 @@ import {
 import { authHandlers } from './authHandlers'
 import { userHandlers } from './userHandlers'
 import type { DivisionChanges, NewDivision } from '../features/divisions/types'
-import type { NewSquad } from '../features/squads/types'
-import type { NewSweeper } from '../features/sweepers/types'
+import type { NewSquad, Squad, SquadChanges } from '../features/squads/types'
+import type { NewSweeper, Sweeper, SweeperChanges } from '../features/sweepers/types'
 import type {
   NewTournament,
   TournamentChanges,
@@ -38,12 +38,126 @@ const registeredDemoDivision = 'Scratch'
 const squads = createDemoSquads()
 const sweepers = createDemoSweepers(divisions)
 const registrations = createDemoRegistrationList(divisions, squads, sweepers)
+// The demo's second squad pretends 12 bowlers entered, and its first sweeper pretends scores are
+// saved, so the edit pages show their notes, a warning, and a lock in the browser (D-180).
+const busySquadId = squads[1]?.id
+const scoredSweeperId = sweepers[0]?.id
 
 const demoSettings = createSettings()
 // What each tournament made through the form was given, so the overview shows what was typed.
 const createdSettings = new Map<string, TournamentSettings>()
 
+// Entries, assignments, and scores are not kept: only the two demo sessions above pretend (D-180).
+const noSessionFacts = {
+  entryCount: 0,
+  assignmentCount: 0,
+  hasScores: false,
+  lowestAssignedLane: null,
+  highestAssignedLane: null,
+  fullestPair: null,
+}
+
+const busySquadFacts = { ...noSessionFacts, entryCount: 12 }
+const scoredSweeperFacts = { ...noSessionFacts, hasScores: true }
+
 const notFound = () => HttpResponse.json({ message: 'Tournament not found' }, { status: 404 })
+
+/** A `409` that names the date box when a date falls outside the tournament; else undefined. */
+function dateOutsideTournament(
+  date: string | undefined,
+  tournament: { startDate: string; endDate: string },
+  noun: string,
+) {
+  if (date === undefined) return undefined
+  const day = date.slice(0, 10)
+  if (day >= tournament.startDate && day <= tournament.endDate) return undefined
+  const message =
+    day < tournament.startDate
+      ? `${noun} date must be after tournament start`
+      : `${noun} date must be before tournament end`
+  return HttpResponse.json({ message, errors: { date: message } }, { status: 409 })
+}
+
+function confirmRefusal(warnings: { field: string; message: string }[]) {
+  return HttpResponse.json(
+    { message: 'Confirm these changes to save them.', warnings },
+    { status: 409 },
+  )
+}
+
+function busySquadWarnings(changes: SquadChanges) {
+  const warnings: { field: string; message: string }[] = []
+  if (changes.date !== undefined) {
+    warnings.push({
+      field: 'date',
+      message: '12 bowlers are entered. They planned around this time. Tell them.',
+    })
+  }
+  if (changes.entryFee !== undefined) {
+    warnings.push({
+      field: 'entryFee',
+      message: '12 bowlers are entered. They keep what they paid. New entries pay the new fee.',
+    })
+  }
+  return warnings
+}
+
+function applySquadChanges(
+  found: Squad,
+  changes: SquadChanges,
+  tournament: { entryFee: number },
+  settings: { finalsRatio: number; cashRatio: number },
+) {
+  if (changes.date !== undefined) found.date = `${changes.date}:00`
+  if (changes.startingLane !== undefined) found.startingLane = changes.startingLane
+  if (changes.numberOfLanes !== undefined) found.numberOfLanes = changes.numberOfLanes
+  if (changes.maxPerPair !== undefined) found.maxPerPair = changes.maxPerPair
+  if (changes.entryFee !== undefined) {
+    found.entryFee = changes.entryFee ?? tournament.entryFee
+    found.entryFeeOverridden = changes.entryFee !== null
+  }
+  if (changes.finalsRatio !== undefined) {
+    found.finalsRatio = changes.finalsRatio ?? settings.finalsRatio
+    found.finalsRatioOverridden = changes.finalsRatio !== null
+  }
+  if (changes.cashRatio !== undefined) {
+    found.cashRatio = changes.cashRatio ?? settings.cashRatio
+    found.cashRatioOverridden = changes.cashRatio !== null
+  }
+}
+
+function scoredSweeperWarnings(changes: SweeperChanges) {
+  const results = 'Scores are saved. Posted results change at once.'
+  const warnings: { field: string; message: string }[] = []
+  if (changes.cashRatio !== undefined) warnings.push({ field: 'cashRatio', message: results })
+  for (const id of Object.keys(changes.bonusPins ?? {})) {
+    const name = divisions.find((entry) => entry.id === id)?.name ?? 'Division'
+    warnings.push({
+      field: `bonusPins.${id}`,
+      message: `${name}: scores are saved. Posted results change at once.`,
+    })
+  }
+  return warnings
+}
+
+function applySweeperChanges(found: Sweeper, changes: SweeperChanges) {
+  if (changes.date !== undefined) found.date = `${changes.date}:00`
+  if (changes.startingLane !== undefined) found.startingLane = changes.startingLane
+  if (changes.numberOfLanes !== undefined) found.numberOfLanes = changes.numberOfLanes
+  if (changes.maxPerPair !== undefined) found.maxPerPair = changes.maxPerPair
+  if (changes.entryFee !== undefined) found.entryFee = changes.entryFee
+  if (changes.games !== undefined) found.games = changes.games
+  if (changes.cashRatio !== undefined) found.cashRatio = changes.cashRatio
+  if (changes.bonusPins === undefined) return
+  const stored = new Map(found.bonusPins.map((pin) => [pin.divisionId, pin.bonusPinsPerGame]))
+  for (const [id, pins] of Object.entries(changes.bonusPins)) stored.set(id, pins ?? 0)
+  found.bonusPins = divisions.flatMap((division) => {
+    const pins = stored.get(division.id) ?? 0
+    return pins === 0
+      ? []
+      : [{ divisionId: division.id, divisionName: division.name, bonusPinsPerGame: pins }]
+  })
+}
 
 export const handlers = [
   ...authHandlers,
@@ -281,6 +395,42 @@ export const handlers = [
     squads.sort((a, b) => a.date.localeCompare(b.date))
     return HttpResponse.json({ squad: created }, { status: 201 })
   }),
+  // SQD-23 edit: the browser has checked the field rules; the mock saves what was sent, refuses a date
+  // outside the tournament, and shows a cleared fee or ratio as the tournament's value. It knows no
+  // entries, assignments, or scores and never completes anything, so the API tests cover those
+  // rules (D-180).
+  http.patch('/v1/tournaments/:id/squads/:sessionId', async ({ params, request }) => {
+    const tournament = tournaments.find((candidate) => candidate.id === params['id'])
+    if (!tournament) return notFound()
+    const found = squads.find((candidate) => candidate.id === params['sessionId'])
+    if (!found) return HttpResponse.json({ message: 'Squad not found' }, { status: 404 })
+    const changes = (await request.json()) as SquadChanges & { confirmWarnings?: boolean }
+    const confirmed = changes.confirmWarnings === true
+    delete changes.confirmWarnings
+    const dateRefusal = dateOutsideTournament(changes.date, tournament, 'Squad')
+    if (dateRefusal) return dateRefusal
+    // The demo's busy squad warns about its date and fee until the director confirms (SQD-25).
+    if (found.id === busySquadId && !confirmed) {
+      const warnings = busySquadWarnings(changes)
+      if (warnings.length > 0) return confirmRefusal(warnings)
+    }
+    applySquadChanges(
+      found,
+      changes,
+      tournament,
+      createdSettings.get(tournament.id) ?? demoSettings,
+    )
+    squads.sort((a, b) => a.date.localeCompare(b.date))
+    return HttpResponse.json({ squad: found })
+  }),
+  http.get('/v1/tournaments/:id/squads/:sessionId/edit-info', ({ params }) => {
+    if (!tournaments.some((candidate) => candidate.id === params['id'])) return notFound()
+    return squads.some((candidate) => candidate.id === params['sessionId'])
+      ? HttpResponse.json({
+          editInfo: params['sessionId'] === busySquadId ? busySquadFacts : noSessionFacts,
+        })
+      : HttpResponse.json({ message: 'Squad not found' }, { status: 404 })
+  }),
   http.get('/v1/tournaments/:id/registrations', ({ params }) =>
     tournaments.some((candidate) => candidate.id === params.id)
       ? HttpResponse.json(registrations)
@@ -399,5 +549,44 @@ export const handlers = [
     sweepers.push(created)
     sweepers.sort((a, b) => a.date.localeCompare(b.date))
     return HttpResponse.json({ sweeper: created }, { status: 201 })
+  }),
+  // SQD-23 and SQD-29 edit: the mock saves what was sent, refuses a date outside the tournament and
+  // a division that is gone, and keeps only the nonzero pins, in division order. It knows no entries,
+  // assignments, or scores, so the API tests cover those rules (D-180).
+  http.patch('/v1/tournaments/:id/sweepers/:sessionId', async ({ params, request }) => {
+    const tournament = tournaments.find((candidate) => candidate.id === params['id'])
+    if (!tournament) return notFound()
+    const found = sweepers.find((candidate) => candidate.id === params['sessionId'])
+    if (!found) return HttpResponse.json({ message: 'Sweeper not found' }, { status: 404 })
+    const changes = (await request.json()) as SweeperChanges & { confirmWarnings?: boolean }
+    const confirmed = changes.confirmWarnings === true
+    delete changes.confirmWarnings
+    const dateRefusal = dateOutsideTournament(changes.date, tournament, 'Sweeper')
+    if (dateRefusal) return dateRefusal
+    const sentPins = changes.bonusPins ?? {}
+    if (Object.keys(sentPins).some((id) => !divisions.some((entry) => entry.id === id))) {
+      const message = 'A division no longer exists. Reload the page'
+      return HttpResponse.json({ message, errors: { bonusPins: message } }, { status: 409 })
+    }
+    // The demo's scored sweeper locks games and warns about the cash ratio and pins (D-180).
+    if (found.id === scoredSweeperId) {
+      if (changes.games !== undefined) {
+        const message = 'Scores are saved, so the number of games cannot change.'
+        return HttpResponse.json({ message, errors: { games: message } }, { status: 409 })
+      }
+      const warnings = scoredSweeperWarnings(changes)
+      if (warnings.length > 0 && !confirmed) return confirmRefusal(warnings)
+    }
+    applySweeperChanges(found, changes)
+    sweepers.sort((a, b) => a.date.localeCompare(b.date))
+    return HttpResponse.json({ sweeper: found })
+  }),
+  http.get('/v1/tournaments/:id/sweepers/:sessionId/edit-info', ({ params }) => {
+    if (!tournaments.some((candidate) => candidate.id === params['id'])) return notFound()
+    return sweepers.some((candidate) => candidate.id === params['sessionId'])
+      ? HttpResponse.json({
+          editInfo: params['sessionId'] === scoredSweeperId ? scoredSweeperFacts : noSessionFacts,
+        })
+      : HttpResponse.json({ message: 'Sweeper not found' }, { status: 404 })
   }),
 ]

@@ -239,6 +239,8 @@ describe(`PATCH ${url}`, () => {
       getEditInfo: outage,
       remove: outage,
       getDeleteInfo: outage,
+      complete: outage,
+      getCompleteInfo: outage,
     }
 
     const response = await request(createSignedInTestApp({ squadWriter: writer }))
@@ -339,6 +341,8 @@ describe(`GET ${url}/edit-info`, () => {
       getEditInfo: outage,
       remove: outage,
       getDeleteInfo: outage,
+      complete: outage,
+      getCompleteInfo: outage,
     }
 
     const response = await request(createSignedInTestApp({ squadWriter: writer })).get(infoUrl)

@@ -293,6 +293,8 @@ describe(`PATCH ${url}`, () => {
       getEditInfo: outage,
       remove: outage,
       getDeleteInfo: outage,
+      complete: outage,
+      getCompleteInfo: outage,
     }
 
     const response = await request(createSignedInTestApp({ sweeperWriter: writer }))
@@ -378,6 +380,8 @@ describe(`GET ${url}/edit-info`, () => {
       getEditInfo: outage,
       remove: outage,
       getDeleteInfo: outage,
+      complete: outage,
+      getCompleteInfo: outage,
     }
 
     expect(

@@ -27,6 +27,10 @@ import { createSquadRouter } from './features/squads/routes.ts'
 import type { SquadRepository } from './features/squads/repository.ts'
 import { createSquadCreateRouter } from './features/squads/createRoutes.ts'
 import {
+  createSquadCompleteInfoRouter,
+  createSquadCompleteRouter,
+} from './features/squads/completeRoutes.ts'
+import {
   createSquadDeleteInfoRouter,
   createSquadDeleteRouter,
 } from './features/squads/deleteRoutes.ts'
@@ -38,6 +42,10 @@ import type { SquadWriter } from './features/squads/writer.ts'
 import { createSweeperRouter } from './features/sweepers/routes.ts'
 import type { SweeperRepository } from './features/sweepers/repository.ts'
 import { createSweeperCreateRouter } from './features/sweepers/createRoutes.ts'
+import {
+  createSweeperCompleteInfoRouter,
+  createSweeperCompleteRouter,
+} from './features/sweepers/completeRoutes.ts'
 import {
   createSweeperDeleteInfoRouter,
   createSweeperDeleteRouter,
@@ -226,6 +234,18 @@ export function createApp({
         router: createSquadDeleteRouter(squadWriter, logger),
       },
       {
+        path: '/v1/tournaments/:id/squads',
+        access: { permission: 'squads.write' }, // SQD-15, D-193: complete; no API key
+        methods: ['POST'],
+        router: createSquadCompleteRouter(squadWriter, logger),
+      },
+      {
+        path: '/v1/tournaments/:id/squads/:sessionId/complete-info',
+        access: { permission: 'squads.write' }, // D-194: no API key
+        methods: ['GET'],
+        router: createSquadCompleteInfoRouter(squadWriter),
+      },
+      {
         path: '/v1/tournaments/:id/squads/:sessionId/delete-info',
         access: { permission: 'squads.write' }, // D-188: no API key
         methods: ['GET'],
@@ -259,6 +279,18 @@ export function createApp({
         access: { permission: 'squads.write' }, // SQD-14, D-187: delete; no API key
         methods: ['DELETE'],
         router: createSweeperDeleteRouter(sweeperWriter, logger),
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers',
+        access: { permission: 'squads.write' }, // SQD-16, D-193: complete; no API key
+        methods: ['POST'],
+        router: createSweeperCompleteRouter(sweeperWriter, logger),
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers/:sessionId/complete-info',
+        access: { permission: 'squads.write' }, // D-194: no API key
+        methods: ['GET'],
+        router: createSweeperCompleteInfoRouter(sweeperWriter),
       },
       {
         path: '/v1/tournaments/:id/sweepers/:sessionId/delete-info',

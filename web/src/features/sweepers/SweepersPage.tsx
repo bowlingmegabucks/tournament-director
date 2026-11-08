@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate, useOutletContext, useParams } from 'rea
 import { field } from '../../shared/field'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
+import { DeleteSessionButton } from '../../shared/DeleteSessionButton'
 import { EditSessionLink, Fact, SessionCard, SessionList } from '../../shared/SessionCard'
 import { formatFee, formatRatio, formatSessionDate } from '../../shared/sessionFormat'
 import { Toast } from '../../shared/Toast'
@@ -14,6 +15,12 @@ import type { Sweeper } from './types'
 import { useSweepers } from './useSweepers'
 
 const TOAST_MS = 5000
+
+/** What the toast says after an add, an edit, or a delete (D-172, SQD-27, D-188). */
+function toastText(created: boolean, deleted: boolean): string {
+  if (created) return 'Sweeper created'
+  return deleted ? 'Sweeper deleted' : 'Sweeper saved'
+}
 
 /**
  * The "New sweeper" link. It sits inside `<Can>`, so a visitor without the permission never reads
@@ -43,6 +50,16 @@ function EditSweeperLink({ id, sweeper }: Readonly<{ id: string; sweeper: Sweepe
 }
 
 /**
+ * The "Delete" button of one card. It sits inside `<Can>`, so a visitor without the permission
+ * never reads the settings. A complete sweeper or tournament has no button (D-186, D-188); the API
+ * decides all the same.
+ */
+function DeleteSweeperButton({ id, sweeper }: Readonly<{ id: string; sweeper: Sweeper }>) {
+  if (!useTournamentOpen(id) || sweeper.complete) return null
+  return <DeleteSessionButton kind="sweepers" tournamentId={id} session={sweeper} />
+}
+
+/**
  * The sweepers of the tournament in the URL, as plain cards (SQD-22, SQD-20, D-44), with a link to
  * add one (D-174). A division with no bonus pins is not listed, so a missing name means 0 (D-45).
  */
@@ -57,6 +74,8 @@ export function SweepersPage() {
   const justCreated = field(location.state, 'created') === true
   // The edit form sets this one the same way (SQD-27).
   const justSaved = field(location.state, 'saved') === true
+  // The delete button sets this one without leaving the page (D-188).
+  const justDeleted = field(location.state, 'deleted') === true
 
   return (
     <>
@@ -94,6 +113,7 @@ export function SweepersPage() {
               action={
                 <Can permission="squads.write">
                   <EditSweeperLink id={id} sweeper={sweeper} />
+                  <DeleteSweeperButton id={id} sweeper={sweeper} />
                 </Can>
               }
               facts={
@@ -109,7 +129,7 @@ export function SweepersPage() {
           ))}
         </SessionList>
       )}
-      {(justCreated || justSaved) && (
+      {(justCreated || justSaved || justDeleted) && (
         <Toast
           kind="success"
           autoDismissMs={TOAST_MS}
@@ -118,7 +138,7 @@ export function SweepersPage() {
             void navigate('.', { replace: true, state: null })
           }}
         >
-          {justSaved ? 'Sweeper saved' : 'Sweeper created'}
+          {toastText(justCreated, justDeleted)}
         </Toast>
       )}
     </>

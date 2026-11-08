@@ -367,6 +367,61 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('delete squad dialog has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Squads')
+      await page.getByRole('button', { name: 'Delete squad Sun 10/25/2026 9:00 AM' }).click()
+      await expect(page.getByRole('dialog', { name: 'Delete this squad?' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Delete squad', exact: true })).toBeEnabled()
+
+      await expectNoViolations(page)
+    })
+
+    test('delete squad dialog with a refusal has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Squads')
+      await page.getByRole('button', { name: 'Delete squad Sat 10/24/2026 1:00 PM' }).click()
+      await expect(page.getByText('12 bowlers are entered in')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
+    test('delete sweeper dialog has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Sweepers')
+      // The demo's two sweepers cannot be deleted, so add one first.
+      await page.getByRole('link', { name: 'New sweeper' }).click()
+      const min = await page.getByLabel('Date and time (required)').getAttribute('min')
+      if (!min) throw new Error('The date box has no minimum')
+      await page.getByLabel('Date and time (required)').fill(`${min.slice(0, 10)}T21:30`)
+      await page.getByLabel('Starting lane (required)').fill('3')
+      await page.getByLabel('Number of lanes (required)').fill('10')
+      await page.getByLabel('Bowlers per pair (required)').fill('5')
+      await page.getByLabel('Entry fee (required)').fill('35')
+      await page.getByLabel('Games (required)').fill('4')
+      await page.getByLabel('Cash ratio (required)').fill('6.5')
+      await page.getByRole('button', { name: 'Add sweeper' }).click()
+      await expect(page.getByText('Sweeper created')).toBeVisible()
+      await page.getByRole('button', { name: /^Delete sweeper .* 9:30 PM$/ }).click()
+      await expect(page.getByRole('dialog', { name: 'Delete this sweeper?' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Delete sweeper', exact: true })).toBeEnabled()
+
+      await expectNoViolations(page)
+    })
+
+    test('delete sweeper dialog with a refusal has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Sweepers')
+      await page.getByRole('button', { name: 'Delete sweeper Sat 10/24/2026 6:00 PM' }).click()
+      await expect(page.getByText('Scores are saved for')).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
     test('edit tournament form has no WCAG 2.2 AA violations', async ({ page }) => {
       await openTournamentsSignedIn(page)
       await page.getByRole('article').first().getByRole('link').click()

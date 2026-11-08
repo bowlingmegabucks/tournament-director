@@ -117,6 +117,19 @@ describe('Prisma complete squad and sweeper (SQD-15 to SQD-18, D-190 to D-192)',
     expect(await scoresOf(id, full)).toBe(6)
   })
 
+  it('ignores a stray score row outside games 1 to 6 when it picks the no-shows (SQD-15)', async () => {
+    const tournamentId = await rows.tournament()
+    const id = await rows.session(tournamentId, 'squad', '2026-10-24 09:00:00')
+    const { none } = await threeBowlers(tournamentId, id)
+    await rows.score(none, id, 9)
+
+    const outcome = await squads().complete(tournamentId, id)
+
+    expect(outcome).toMatchObject({ noShowCount: 1 })
+    // Games 1 to 6 at 0, beside the stray game 9.
+    expect(await scoresOf(id, none)).toBe(7)
+  })
+
   it('completes an empty squad and saves no zeros (D-192)', async () => {
     const tournamentId = await rows.tournament()
     const id = await rows.session(tournamentId, 'squad', '2026-10-24 09:00:00')

@@ -56,7 +56,8 @@ function CompleteButton({
   onCompleted: (result: { noShowCount: number }) => void
   onRefused: (reasons: string[]) => void
 }>) {
-  if (!useTournamentOpen(tournamentId) || session.complete) return null
+  const tournamentOpen = useTournamentOpen(tournamentId)
+  if (!tournamentOpen || session.complete) return null
   return (
     <CompleteSessionButton
       kind={kind === 'squad' ? 'squads' : 'sweepers'}

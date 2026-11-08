@@ -3,6 +3,7 @@ import type { Logger } from './logger.ts'
 import { withRetry } from './serializableRetry.ts'
 import {
   applySessionComplete,
+  planSessionComplete,
   squadCompleteInfo,
   zeroScores,
   type CompleteSessionOutcome,
@@ -49,20 +50,25 @@ const unreadable = (kind: SessionKind) => ({
 })
 
 /** Each entered bowler with the games saved in this session. Entries link to a registration; scores link to the bowler. */
-async function entriesOf(client: ReadClient, sessionId: string): Promise<EntryScores[]> {
+async function entriesOf(
+  client: ReadClient,
+  sessionId: string,
+  games: number,
+): Promise<EntryScores[]> {
   const entered = await client.squadRegistration.findMany({
     where: { squadId: sessionId },
     select: { registration: { select: { bowlerId: true } } },
   })
   const scores = await client.squadScore.findMany({
-    where: { squadId: sessionId },
+    // A stray row outside 1 to `games` (left by an earlier game count) is not a bowled game.
+    where: { squadId: sessionId, game: { gte: 1, lte: games } },
     select: { bowlerId: true },
   })
-  const games = new Map<string, number>()
-  for (const { bowlerId } of scores) games.set(bowlerId, (games.get(bowlerId) ?? 0) + 1)
+  const saved = new Map<string, number>()
+  for (const { bowlerId } of scores) saved.set(bowlerId, (saved.get(bowlerId) ?? 0) + 1)
   return entered.map(({ registration }) => ({
     bowlerId: registration.bowlerId,
-    savedGames: games.get(registration.bowlerId) ?? 0,
+    savedGames: saved.get(registration.bowlerId) ?? 0,
   }))
 }
 
@@ -105,6 +111,11 @@ export function createSessionCompleter<
         const row = await tx.squad.findFirst({ where: { id: sessionId, tournamentId, squadType } })
         if (!row) return { notFound: 'session' as const }
 
+        // A refusal comes first: it needs no read of the finished session.
+        const facts = { completed: tournament.completed, complete: row.complete }
+        const plan = planSessionComplete(facts, kind)
+        if (plan.kind === 'refused') return { refused: plan.errors }
+
         const defaults = {
           entryFee: tournament.entryFee.toNumber(),
           finalsRatio: tournament.finalsRatio.toNumber(),
@@ -118,10 +129,12 @@ export function createSessionCompleter<
           tournamentId,
           defaults,
         )
-        const facts = { completed: tournament.completed, complete: row.complete }
-        const entries = kind === 'squad' ? await entriesOf(tx, sessionId) : []
+        if (completed === undefined) {
+          logger.warn({ sessionId, tournamentId }, `Stored ${kind} breaks the read shape`)
+          return { refused: unreadable(kind) }
+        }
+        const entries = kind === 'squad' ? await entriesOf(tx, sessionId, tournament.games) : []
         const result = await applySessionComplete(facts, kind, entries, async (noShows) => {
-          if (completed === undefined) return
           if (noShows.length > 0) {
             await tx.squadScore.createMany({
               data: zeroScores(noShows, tournament.games).map(({ bowlerId, game }) => ({
@@ -135,10 +148,6 @@ export function createSessionCompleter<
           await tx.squad.update({ where: { id: sessionId }, data: { complete: true } })
         })
         if ('refused' in result) return result
-        if (completed === undefined) {
-          logger.warn({ sessionId, tournamentId }, `Stored ${kind} breaks the read shape`)
-          return { refused: unreadable(kind) }
-        }
         return { completed, noShowCount: result.noShowCount }
       },
       // The entries, the scores, and the writes must not interleave with a score or an entry (D-192).
@@ -160,7 +169,7 @@ export function createSessionCompleter<
           select: { id: true },
         })
         if (!row) return { notFound: 'session' }
-        const entries = await entriesOf(client, sessionId)
+        const entries = await entriesOf(client, sessionId, tournament.games)
         const info =
           kind === 'squad'
             ? squadCompleteInfo(entries, tournament.games)

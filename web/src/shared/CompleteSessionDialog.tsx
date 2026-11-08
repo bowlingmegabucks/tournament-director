@@ -103,7 +103,16 @@ export function CompleteSessionDialog({
   }
 
   return (
-    <dialog ref={showOnMount} className={styles.dialog} aria-labelledby={titleId} onClose={onClose}>
+    <dialog
+      ref={showOnMount}
+      className={styles.dialog}
+      aria-labelledby={titleId}
+      onCancel={(event) => {
+        // Escape must not close the dialog while the request runs: its outcome would go unseen.
+        if (pending) event.preventDefault()
+      }}
+      onClose={onClose}
+    >
       <div className={styles.content}>
         <h2 id={titleId} className={styles.title}>
           Complete this {name}?

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CompleteSessionDialog } from './CompleteSessionDialog'
 import type { SessionCompleteInfo } from './sessionCompleteApi'
@@ -182,5 +182,22 @@ describe('CompleteSessionDialog, a sweeper (SQD-16, D-191, D-194)', () => {
       'Sat 10/24/2026 9:00 AM will be completed. This cannot be undone.',
     )
     expect(sweeperDialog()).not.toHaveTextContent('get 0')
+  })
+})
+
+describe('CompleteSessionDialog, Escape while the request runs', () => {
+  const cancel = () => new Event('cancel', { cancelable: true })
+
+  it('does not close while pending, so a failure still shows', () => {
+    show({ info: squadInfo(), pending: true })
+
+    // fireEvent returns false when a handler called preventDefault.
+    expect(fireEvent(squadDialog(), cancel())).toBe(false)
+  })
+
+  it('closes on Escape when nothing is pending', () => {
+    show({ info: squadInfo() })
+
+    expect(fireEvent(squadDialog(), cancel())).toBe(true)
   })
 })

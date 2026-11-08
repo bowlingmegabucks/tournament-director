@@ -103,6 +103,7 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 - [ ] Hosting tier decided (the free App Service tier is slow after idle).
 - [ ] Live score updates reach every open Scores tab, signed in or not, without polling (Q-33; polls every 15 s until then, D-72).
 - [ ] Load test with a full tournament's users and score entry.
+- [ ] Tournament lifecycle test: one UI-driven Playwright run on its own database and API (3 divisions, 4 squads, 2 sweepers, about 80 bowlers, about 300 entries, scripted failures, hand-written expected results). Manual trigger, plus a job on `main` that deploy does not wait for. Built in stages as the features land. See [lifecycle-e2e.md](plans/lifecycle-e2e.md).
 - [ ] Several desk users can work at once: lane moves and new registrations show on every open screen (WebSockets or similar, Q-27), and two people racing for the last seat of a pair get one winner and a clear message for the other (Q-28).
 
 ## People

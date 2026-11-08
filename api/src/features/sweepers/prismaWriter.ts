@@ -199,17 +199,17 @@ export function createPrismaSweeperWriter(client: PrismaClient, logger: Logger):
               await tx.squad.update({ where: { id: sweeperId }, data: columns })
             }
             // A pin of 0 has no row (D-176); a row with a NULL or 0 is overwritten or removed.
-            for (const [divisionId, bonusPinsPerGame] of Object.entries(saved.bonusPins ?? {})) {
-              if (bonusPinsPerGame === 0) {
-                await tx.sweeperDivision.deleteMany({ where: { sweeperId, divisionId } })
-              } else {
-                await tx.sweeperDivision.upsert({
-                  where: { sweeperId_divisionId: { sweeperId, divisionId } },
-                  create: { sweeperId, divisionId, bonusPinsPerGame },
-                  update: { bonusPinsPerGame },
-                })
-              }
-            }
+            await Promise.all(
+              Object.entries(saved.bonusPins ?? {}).map(([divisionId, bonusPinsPerGame]) =>
+                bonusPinsPerGame === 0
+                  ? tx.sweeperDivision.deleteMany({ where: { sweeperId, divisionId } })
+                  : tx.sweeperDivision.upsert({
+                      where: { sweeperId_divisionId: { sweeperId, divisionId } },
+                      create: { sweeperId, divisionId, bonusPinsPerGame },
+                      update: { bonusPinsPerGame },
+                    }),
+              ),
+            )
           },
         )
       },

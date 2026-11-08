@@ -50,6 +50,26 @@ export const sweeperFieldOrder = [
 
 export const gamesLockedMessage = 'Scores are saved, so the number of games cannot change.'
 
+/** Warnings for the fields that change posted results once scores exist. */
+function scoreWarnings(
+  context: SweeperEditContext,
+  changes: UpdateSweeper,
+  pinChanges: Record<string, number>,
+): EditWarning[] {
+  const warnings: EditWarning[] = []
+  if (changes.cashRatio !== undefined) {
+    warnings.push({ field: 'cashRatio', message: resultsMessage })
+  }
+  for (const division of context.divisions) {
+    if (pinChanges[division.id] === undefined) continue
+    warnings.push({
+      field: `bonusPins.${division.id}`,
+      message: `${division.name}: scores are saved. Posted results change at once.`,
+    })
+  }
+  return warnings
+}
+
 /**
  * Decide what a sweeper edit does (SQD-24, SQD-25, SQD-29, D-180 to D-182, D-184). Order: no
  * change, frozen (complete tournament or sweeper), lane block, refusals, warnings. A refusal never
@@ -86,18 +106,7 @@ export function planSweeperEdit(
   const warnings: EditWarning[] = sessionWarnings(context, changes)
   const fee = changes.entryFee !== undefined ? feeWarning(context) : undefined
   if (fee) warnings.push(fee)
-  if (context.facts.hasScores) {
-    if (changes.cashRatio !== undefined) {
-      warnings.push({ field: 'cashRatio', message: resultsMessage })
-    }
-    for (const division of context.divisions) {
-      if (pinChanges[division.id] === undefined) continue
-      warnings.push({
-        field: `bonusPins.${division.id}`,
-        message: `${division.name}: scores are saved. Posted results change at once.`,
-      })
-    }
-  }
+  if (context.facts.hasScores) warnings.push(...scoreWarnings(context, changes, pinChanges))
   if (warnings.length > 0 && !confirmWarnings) {
     return { kind: 'warn', warnings: inFormOrder(warnings, sweeperFieldOrder) }
   }

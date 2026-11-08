@@ -145,6 +145,21 @@ export function EditSweeperPage() {
   )
 }
 
+/** Turn a failed save into what the form shows: warnings, box errors, or a toast. */
+function submitFailure(error: unknown) {
+  if (error instanceof SessionWarningsError) return { warnings: error.warnings }
+  if (error instanceof SessionRejectedError) {
+    // A reason that is not about a box (the tournament or sweeper turned complete) is a toast.
+    const reason = error.tournament ?? error.session
+    if (reason !== undefined) return { failure: reason }
+    if (Object.keys(error.errors).length > 0) return { errors: error.errors }
+  }
+  return {
+    // Stryker disable next-line StringLiteral: every failure the API call throws is an Error; the text only satisfies the type.
+    failure: error instanceof Error ? error.message : 'Failed to save the sweeper',
+  }
+}
+
 interface EditFormProps {
   tournament: Tournament
   sweeper: Sweeper
@@ -196,17 +211,7 @@ function EditForm({
             // The list shows the toast; router state outlives this page.
             await navigate(listUrl, { state: { saved: true } })
           } catch (error) {
-            if (error instanceof SessionWarningsError) return { warnings: error.warnings }
-            if (error instanceof SessionRejectedError) {
-              // A reason that is not about a box (the tournament or sweeper turned complete) is a toast.
-              if (error.tournament !== undefined) return { failure: error.tournament }
-              if (error.session !== undefined) return { failure: error.session }
-              if (Object.keys(error.errors).length > 0) return { errors: error.errors }
-            }
-            return {
-              // Stryker disable next-line StringLiteral: every failure the API call throws is an Error; the text only satisfies the type.
-              failure: error instanceof Error ? error.message : 'Failed to save the sweeper',
-            }
+            return submitFailure(error)
           }
           return undefined
         }}

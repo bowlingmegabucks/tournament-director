@@ -63,11 +63,15 @@ export function sharedNotes(info: SessionEditInfo): Record<string, FieldNote> {
     notes['maxPerPair'] = {
       confirm,
       ...(fullestPair !== null && {
-        limit: `The fullest pair holds ${fullestPair === 1 ? '1 bowler' : `${fullestPair} bowlers`}, so this cannot go below ${fullestPair}.`,
+        limit: `The fullest pair holds ${bowlerCount(fullestPair)}, so this cannot go below ${fullestPair}.`,
       }),
     }
   }
   return notes
+}
+
+function bowlerCount(count: number): string {
+  return count === 1 ? '1 bowler' : `${count} bowlers`
 }
 
 /** The ids of the note lines a box carries, for its `aria-describedby`. */

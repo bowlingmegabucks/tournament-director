@@ -22,8 +22,8 @@ import {
 import { authHandlers } from './authHandlers'
 import { userHandlers } from './userHandlers'
 import type { DivisionChanges, NewDivision } from '../features/divisions/types'
-import type { NewSquad, SquadChanges } from '../features/squads/types'
-import type { NewSweeper, SweeperChanges } from '../features/sweepers/types'
+import type { NewSquad, Squad, SquadChanges } from '../features/squads/types'
+import type { NewSweeper, Sweeper, SweeperChanges } from '../features/sweepers/types'
 import type {
   NewTournament,
   TournamentChanges,
@@ -61,6 +61,103 @@ const busySquadFacts = { ...noSessionFacts, entryCount: 12 }
 const scoredSweeperFacts = { ...noSessionFacts, hasScores: true }
 
 const notFound = () => HttpResponse.json({ message: 'Tournament not found' }, { status: 404 })
+
+/** A `409` that names the date box when a date falls outside the tournament; else undefined. */
+function dateOutsideTournament(
+  date: string | undefined,
+  tournament: { startDate: string; endDate: string },
+  noun: string,
+) {
+  if (date === undefined) return undefined
+  const day = date.slice(0, 10)
+  if (day >= tournament.startDate && day <= tournament.endDate) return undefined
+  const message =
+    day < tournament.startDate
+      ? `${noun} date must be after tournament start`
+      : `${noun} date must be before tournament end`
+  return HttpResponse.json({ message, errors: { date: message } }, { status: 409 })
+}
+
+function confirmRefusal(warnings: { field: string; message: string }[]) {
+  return HttpResponse.json(
+    { message: 'Confirm these changes to save them.', warnings },
+    { status: 409 },
+  )
+}
+
+function busySquadWarnings(changes: SquadChanges) {
+  const warnings: { field: string; message: string }[] = []
+  if (changes.date !== undefined) {
+    warnings.push({
+      field: 'date',
+      message: '12 bowlers are entered. They planned around this time. Tell them.',
+    })
+  }
+  if (changes.entryFee !== undefined) {
+    warnings.push({
+      field: 'entryFee',
+      message: '12 bowlers are entered. They keep what they paid. New entries pay the new fee.',
+    })
+  }
+  return warnings
+}
+
+function applySquadChanges(
+  found: Squad,
+  changes: SquadChanges,
+  tournament: { entryFee: number },
+  settings: { finalsRatio: number; cashRatio: number },
+) {
+  if (changes.date !== undefined) found.date = `${changes.date}:00`
+  if (changes.startingLane !== undefined) found.startingLane = changes.startingLane
+  if (changes.numberOfLanes !== undefined) found.numberOfLanes = changes.numberOfLanes
+  if (changes.maxPerPair !== undefined) found.maxPerPair = changes.maxPerPair
+  if (changes.entryFee !== undefined) {
+    found.entryFee = changes.entryFee ?? tournament.entryFee
+    found.entryFeeOverridden = changes.entryFee !== null
+  }
+  if (changes.finalsRatio !== undefined) {
+    found.finalsRatio = changes.finalsRatio ?? settings.finalsRatio
+    found.finalsRatioOverridden = changes.finalsRatio !== null
+  }
+  if (changes.cashRatio !== undefined) {
+    found.cashRatio = changes.cashRatio ?? settings.cashRatio
+    found.cashRatioOverridden = changes.cashRatio !== null
+  }
+}
+
+function scoredSweeperWarnings(changes: SweeperChanges) {
+  const results = 'Scores are saved. Posted results change at once.'
+  const warnings: { field: string; message: string }[] = []
+  if (changes.cashRatio !== undefined) warnings.push({ field: 'cashRatio', message: results })
+  for (const id of Object.keys(changes.bonusPins ?? {})) {
+    const name = divisions.find((entry) => entry.id === id)?.name ?? 'Division'
+    warnings.push({
+      field: `bonusPins.${id}`,
+      message: `${name}: scores are saved. Posted results change at once.`,
+    })
+  }
+  return warnings
+}
+
+function applySweeperChanges(found: Sweeper, changes: SweeperChanges) {
+  if (changes.date !== undefined) found.date = `${changes.date}:00`
+  if (changes.startingLane !== undefined) found.startingLane = changes.startingLane
+  if (changes.numberOfLanes !== undefined) found.numberOfLanes = changes.numberOfLanes
+  if (changes.maxPerPair !== undefined) found.maxPerPair = changes.maxPerPair
+  if (changes.entryFee !== undefined) found.entryFee = changes.entryFee
+  if (changes.games !== undefined) found.games = changes.games
+  if (changes.cashRatio !== undefined) found.cashRatio = changes.cashRatio
+  if (changes.bonusPins === undefined) return
+  const stored = new Map(found.bonusPins.map((pin) => [pin.divisionId, pin.bonusPinsPerGame]))
+  for (const [id, pins] of Object.entries(changes.bonusPins)) stored.set(id, pins ?? 0)
+  found.bonusPins = divisions.flatMap((division) => {
+    const pins = stored.get(division.id) ?? 0
+    return pins === 0
+      ? []
+      : [{ divisionId: division.id, divisionName: division.name, bonusPinsPerGame: pins }]
+  })
+}
 
 export const handlers = [
   ...authHandlers,
@@ -310,61 +407,19 @@ export const handlers = [
     const changes = (await request.json()) as SquadChanges & { confirmWarnings?: boolean }
     const confirmed = changes.confirmWarnings === true
     delete changes.confirmWarnings
-    if (changes.date !== undefined) {
-      const day = changes.date.slice(0, 10)
-      if (day < tournament.startDate || day > tournament.endDate) {
-        const message =
-          day < tournament.startDate
-            ? 'Squad date must be after tournament start'
-            : 'Squad date must be before tournament end'
-        return HttpResponse.json({ message, errors: { date: message } }, { status: 409 })
-      }
-    }
+    const dateRefusal = dateOutsideTournament(changes.date, tournament, 'Squad')
+    if (dateRefusal) return dateRefusal
     // The demo's busy squad warns about its date and fee until the director confirms (SQD-25).
     if (found.id === busySquadId && !confirmed) {
-      const warnings = [
-        ...(changes.date !== undefined
-          ? [
-              {
-                field: 'date',
-                message: '12 bowlers are entered. They planned around this time. Tell them.',
-              },
-            ]
-          : []),
-        ...(changes.entryFee !== undefined
-          ? [
-              {
-                field: 'entryFee',
-                message:
-                  '12 bowlers are entered. They keep what they paid. New entries pay the new fee.',
-              },
-            ]
-          : []),
-      ]
-      if (warnings.length > 0) {
-        return HttpResponse.json(
-          { message: 'Confirm these changes to save them.', warnings },
-          { status: 409 },
-        )
-      }
+      const warnings = busySquadWarnings(changes)
+      if (warnings.length > 0) return confirmRefusal(warnings)
     }
-    if (changes.date !== undefined) found.date = `${changes.date}:00`
-    const settings = createdSettings.get(tournament.id) ?? demoSettings
-    if (changes.startingLane !== undefined) found.startingLane = changes.startingLane
-    if (changes.numberOfLanes !== undefined) found.numberOfLanes = changes.numberOfLanes
-    if (changes.maxPerPair !== undefined) found.maxPerPair = changes.maxPerPair
-    if (changes.entryFee !== undefined) {
-      found.entryFee = changes.entryFee ?? tournament.entryFee
-      found.entryFeeOverridden = changes.entryFee !== null
-    }
-    if (changes.finalsRatio !== undefined) {
-      found.finalsRatio = changes.finalsRatio ?? settings.finalsRatio
-      found.finalsRatioOverridden = changes.finalsRatio !== null
-    }
-    if (changes.cashRatio !== undefined) {
-      found.cashRatio = changes.cashRatio ?? settings.cashRatio
-      found.cashRatioOverridden = changes.cashRatio !== null
-    }
+    applySquadChanges(
+      found,
+      changes,
+      tournament,
+      createdSettings.get(tournament.id) ?? demoSettings,
+    )
     squads.sort((a, b) => a.date.localeCompare(b.date))
     return HttpResponse.json({ squad: found })
   }),
@@ -506,16 +561,8 @@ export const handlers = [
     const changes = (await request.json()) as SweeperChanges & { confirmWarnings?: boolean }
     const confirmed = changes.confirmWarnings === true
     delete changes.confirmWarnings
-    if (changes.date !== undefined) {
-      const day = changes.date.slice(0, 10)
-      if (day < tournament.startDate || day > tournament.endDate) {
-        const message =
-          day < tournament.startDate
-            ? 'Sweeper date must be after tournament start'
-            : 'Sweeper date must be before tournament end'
-        return HttpResponse.json({ message, errors: { date: message } }, { status: 409 })
-      }
-    }
+    const dateRefusal = dateOutsideTournament(changes.date, tournament, 'Sweeper')
+    if (dateRefusal) return dateRefusal
     const sentPins = changes.bonusPins ?? {}
     if (Object.keys(sentPins).some((id) => !divisions.some((entry) => entry.id === id))) {
       const message = 'A division no longer exists. Reload the page'
@@ -527,38 +574,10 @@ export const handlers = [
         const message = 'Scores are saved, so the number of games cannot change.'
         return HttpResponse.json({ message, errors: { games: message } }, { status: 409 })
       }
-      const results = 'Scores are saved. Posted results change at once.'
-      const warnings = [
-        ...(changes.cashRatio !== undefined ? [{ field: 'cashRatio', message: results }] : []),
-        ...Object.keys(sentPins).map((id) => ({
-          field: `bonusPins.${id}`,
-          message: `${divisions.find((entry) => entry.id === id)?.name ?? 'Division'}: scores are saved. Posted results change at once.`,
-        })),
-      ]
-      if (warnings.length > 0 && !confirmed) {
-        return HttpResponse.json(
-          { message: 'Confirm these changes to save them.', warnings },
-          { status: 409 },
-        )
-      }
+      const warnings = scoredSweeperWarnings(changes)
+      if (warnings.length > 0 && !confirmed) return confirmRefusal(warnings)
     }
-    if (changes.date !== undefined) found.date = `${changes.date}:00`
-    if (changes.startingLane !== undefined) found.startingLane = changes.startingLane
-    if (changes.numberOfLanes !== undefined) found.numberOfLanes = changes.numberOfLanes
-    if (changes.maxPerPair !== undefined) found.maxPerPair = changes.maxPerPair
-    if (changes.entryFee !== undefined) found.entryFee = changes.entryFee
-    if (changes.games !== undefined) found.games = changes.games
-    if (changes.cashRatio !== undefined) found.cashRatio = changes.cashRatio
-    if (changes.bonusPins !== undefined) {
-      const stored = new Map(found.bonusPins.map((pin) => [pin.divisionId, pin.bonusPinsPerGame]))
-      for (const [id, pins] of Object.entries(sentPins)) stored.set(id, pins ?? 0)
-      found.bonusPins = divisions.flatMap((division) => {
-        const pins = stored.get(division.id) ?? 0
-        return pins === 0
-          ? []
-          : [{ divisionId: division.id, divisionName: division.name, bonusPinsPerGame: pins }]
-      })
-    }
+    applySweeperChanges(found, changes)
     sweepers.sort((a, b) => a.date.localeCompare(b.date))
     return HttpResponse.json({ sweeper: found })
   }),

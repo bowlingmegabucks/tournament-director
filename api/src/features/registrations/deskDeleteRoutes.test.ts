@@ -200,6 +200,15 @@ describe('DELETE /v1/tournaments/{id}/registrations/{registrationId} (REG-19, D-
     expect(state.payments).toEqual([])
   })
 
+  it('ignores a total sent without the confirm flag (D-210)', async () => {
+    const { overrides, url, state } = world({ payments: [sitePayment] })
+
+    const response = await request(createSignedInTestApp(overrides)).delete(`${url}?paid=160`)
+
+    expect(response.status).toBe(409)
+    expect(state.registrations).toHaveLength(1)
+  })
+
   it('warns again with the new total when it moved since the dialog opened (D-210)', async () => {
     const { overrides, url, state } = world({
       payments: [sitePayment, { confirmationCode: 'BowlingSite_def456', amount: 60 }],
@@ -314,7 +323,7 @@ describe('logging (D-214, api-observability)', () => {
 
   it('logs a refusal at warn with the reasons, and the read by id only', async () => {
     const captured = createCapturedLogger()
-    const { overrides, url } = world({ scored: true })
+    const { overrides, url, tournament, registrationId } = world({ scored: true })
     const app = createSignedInTestApp({ ...overrides, logger: captured.logger })
 
     await request(app).delete(url)
@@ -327,6 +336,8 @@ describe('logging (D-214, api-observability)', () => {
     const read = captured
       .records()
       .find((record) => record['msg'] === 'Registration read for delete at the desk')
+    expect(read).toMatchObject({ tournamentId: tournament.id, registrationId })
+    expect(read?.['actorId']).toEqual(expect.any(String))
     expect(JSON.stringify(read)).not.toMatch(/Joseph|Fontaine/)
   })
 

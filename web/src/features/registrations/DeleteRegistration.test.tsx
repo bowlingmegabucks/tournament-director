@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { http, HttpResponse } from 'msw'
+import { delay, http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import { setMockUser } from '../../mocks/authHandlers'
 import {
@@ -241,6 +241,110 @@ describe('deleting with no real payment (REG-19, D-209, D-213)', () => {
   })
 })
 
+describe('the dialog and its messages (D-213)', () => {
+  const remove = () =>
+    http.delete('/v1/tournaments/:id/registrations/:registrationId', async () => {
+      calls += 1
+      if (calls === 1) return new HttpResponse(null, { status: 503 })
+      await delay(300)
+      return new HttpResponse(null, { status: 204 })
+    })
+  let calls = 0
+
+  it('clears an earlier failure as soon as the next try starts', async () => {
+    signIn()
+    calls = 0
+    serve()
+    server.use(remove())
+    const user = userEvent.setup()
+    renderApp(list)
+
+    const dialog = await openDialog(user)
+    await user.click(await within(dialog).findByRole('button', { name: 'Delete registration' }))
+    expect(await within(dialog).findByText('Failed to delete the registration (503)')).toBeVisible()
+    await user.click(within(dialog).getByRole('button', { name: 'Delete registration' }))
+
+    expect(await within(dialog).findByRole('button', { name: 'Deleting…' })).toBeDisabled()
+    expect(within(dialog).queryByText('Failed to delete the registration (503)')).toBeNull()
+    expect(await screen.findByText('Maria Chen: Registration deleted.')).toBeVisible()
+  })
+
+  it('shows no old failure when the dialog is opened again', async () => {
+    signIn()
+    calls = 0
+    serve()
+    server.use(remove())
+    const user = userEvent.setup()
+    renderApp(list)
+
+    const dialog = await openDialog(user)
+    await user.click(await within(dialog).findByRole('button', { name: 'Delete registration' }))
+    expect(await within(dialog).findByText('Failed to delete the registration (503)')).toBeVisible()
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+
+    const again = await openDialog(user)
+
+    expect(
+      await within(again).findByText('Refund may be due, handled outside the app'),
+    ).toBeVisible()
+    expect(within(again).queryByText('Failed to delete the registration (503)')).toBeNull()
+  })
+
+  it('ignores a reply that lands after the dialog was closed', async () => {
+    signIn()
+    serve()
+    server.use(
+      http.delete('/v1/tournaments/:id/registrations/:registrationId', async () => {
+        await delay(300)
+        return HttpResponse.json(
+          { message: 'Cannot delete registration with scores.', errors: { scores: 'late' } },
+          { status: 409 },
+        )
+      }),
+    )
+    const user = userEvent.setup()
+    renderApp(list)
+
+    const dialog = await openDialog(user)
+    await user.click(await within(dialog).findByRole('button', { name: 'Delete registration' }))
+    // jsdom does not close a dialog on Escape, so close it as the browser would.
+    act(() => {
+      ;(dialog as HTMLDialogElement).close()
+    })
+    await delay(600)
+
+    expect(screen.queryByText('late')).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('reads the facts again on Try again', async () => {
+    signIn()
+    let reads = 0
+    serve()
+    server.use(
+      http.get('/v1/tournaments/:id/registrations/:registrationId/delete-info', () => {
+        reads += 1
+        // The first read and its one retry fail; the read after Try again works.
+        return reads <= 2
+          ? new HttpResponse(null, { status: 500 })
+          : HttpResponse.json({ deleteInfo: createDeleteInfo() })
+      }),
+    )
+    const user = userEvent.setup()
+    renderApp(list)
+
+    const dialog = await openDialog(user)
+    await user.click(
+      await within(dialog).findByRole('button', { name: 'Try again' }, { timeout: 5000 }),
+    )
+
+    expect(
+      await within(dialog).findByText('Refund may be due, handled outside the app'),
+    ).toBeVisible()
+    expect(reads).toBe(3)
+  })
+})
+
 describe('deleting with a real payment (D-210, D-212, D-213)', () => {
   it('needs the tick, then sends the confirm with the total shown', async () => {
     signIn()
@@ -344,6 +448,34 @@ describe('refusals (REG-19, D-211)', () => {
     expect(screen.getByRole('rowheader', { name: 'Maria Chen' })).toBeVisible()
   })
 
+  it('dismisses the refusal toast, and clears it when the dialog opens again', async () => {
+    signIn()
+    serve({
+      answers: [
+        () =>
+          HttpResponse.json(
+            { message: 'Cannot delete registration with scores.', errors: { scores: 'Gone.' } },
+            { status: 409 },
+          ),
+      ],
+    })
+    const user = userEvent.setup()
+    renderApp(list)
+
+    const dialog = await openDialog(user)
+    await user.click(await within(dialog).findByRole('button', { name: 'Delete registration' }))
+    expect(await screen.findByText('Gone.')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(screen.queryByText('Gone.')).not.toBeInTheDocument()
+
+    const again = await openDialog(user)
+    await user.click(await within(again).findByRole('button', { name: 'Delete registration' }))
+    expect(await screen.findByText('Gone.')).toBeVisible()
+    // The same row's button clears its own old toast as it opens the dialog.
+    await user.click(screen.getByRole('button', { name: "Delete Maria Chen's registration" }))
+    expect(screen.queryByText('Gone.')).not.toBeInTheDocument()
+  })
+
   it('shows Try again when the facts cannot be read, and keeps Delete off', async () => {
     signIn()
     server.use(
@@ -364,7 +496,14 @@ describe('refusals (REG-19, D-211)', () => {
 
     const dialog = await openDialog(user)
 
-    expect(await within(dialog).findByText(/Failed to load the registration \(500\)/)).toBeVisible()
+    // The read retries once after a second before it gives up.
+    expect(
+      await within(dialog).findByText(
+        /Failed to load the registration \(500\)/,
+        {},
+        { timeout: 5000 },
+      ),
+    ).toBeVisible()
     expect(within(dialog).getByRole('button', { name: 'Delete registration' })).toBeDisabled()
     expect(within(dialog).getByRole('button', { name: 'Try again' })).toBeVisible()
   })
@@ -423,6 +562,30 @@ describe('the edit page (D-214, D-215)', () => {
     expect(await screen.findByRole('heading', { name: 'Registrations', level: 1 })).toBeVisible()
     expect(await screen.findByText('Maria Gonzalez: Registration deleted.')).toBeVisible()
     expect(served.deletes).toEqual([''])
+  })
+
+  it('goes to the list when the registration was already deleted', async () => {
+    signIn()
+    serveEdit()
+    server.use(
+      http.delete('/v1/tournaments/:id/registrations/:registrationId', () =>
+        HttpResponse.json({ message: 'Registration not found' }, { status: 404 }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderApp(editUrl)
+
+    const zone = await screen.findByRole('region', { name: 'Danger zone' })
+    await user.click(within(zone).getByRole('button', { name: 'Delete registration' }))
+    const dialog = await screen.findByRole('dialog', {
+      name: "Delete Maria Gonzalez's registration?",
+    })
+    await user.click(await within(dialog).findByRole('button', { name: 'Delete registration' }))
+
+    expect(await screen.findByRole('heading', { name: 'Registrations', level: 1 })).toBeVisible()
+    expect(
+      await screen.findByText('Maria Gonzalez: Registration was already deleted.'),
+    ).toBeVisible()
   })
 
   it('shows no Danger zone to a score keeper, who cannot reach the page', async () => {

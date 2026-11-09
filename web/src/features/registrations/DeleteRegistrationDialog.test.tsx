@@ -58,7 +58,7 @@ describe('while it loads or when the read fails (D-212)', () => {
     show({ loadFailure: 'Failed to load the registration (500)', onRetry })
 
     expect(within(dialog()).getByRole('alert')).toHaveTextContent(
-      'Failed to load the registration (500)',
+      'Failed to load the registration (500) Try again',
     )
     expect(deleteButton()).toBeDisabled()
     await userEvent.setup().click(within(dialog()).getByRole('button', { name: 'Try again' }))

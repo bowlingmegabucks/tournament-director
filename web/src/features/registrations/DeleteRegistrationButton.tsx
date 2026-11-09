@@ -83,6 +83,7 @@ export function DeleteRegistrationButton({
   const closes = useRef(0)
 
   function close() {
+    // Stryker disable next-line AssignmentOperator: counting down also differs from the start value, so the guard works either way.
     closes.current += 1
     setOpen(false)
     setFailure(undefined)
@@ -93,6 +94,7 @@ export function DeleteRegistrationButton({
     const closesAtStart = closes.current
     try {
       await remove.mutateAsync(confirmPaid)
+      // Stryker disable next-line CallExpression: the row goes or the page leaves right after, which unmounts the dialog either way.
       close()
       await navigate(`/tournaments/${tournamentId}/registrations`, {
         state: { updated: `${bowlerName}: Registration deleted.` },
@@ -105,6 +107,7 @@ export function DeleteRegistrationButton({
       } else if (error instanceof RegistrationPaidWarningError) {
         // A payment arrived, or the first call had no total: read the new facts and ask again (D-210).
         setFailure('This registration changed. Review the new total and confirm again.')
+        // Stryker disable next-line ObjectLiteral: with no key every active read refreshes, and only this one is active, so the result is the same.
         void queryClient.invalidateQueries({
           queryKey: deleteInfoKeys.detail(tournamentId, registrationId),
         })

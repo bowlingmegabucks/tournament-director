@@ -70,6 +70,62 @@ describe('fetchDeleteInfo (D-212)', () => {
     await expect(fetchDeleteInfo('t1', 'r1')).rejects.toThrow(message)
   })
 
+  const withInfo = (changes: Record<string, unknown>) => ({
+    deleteInfo: { ...createDeleteInfo(), ...changes },
+  })
+  const goodEntry = () => createDeleteInfo().entries[0]
+
+  it.each([
+    ['a bowler name that is not text', withInfo({ bowlerName: 5 })],
+    ['a division name that is not text', withInfo({ divisionName: 5 })],
+    ['a tournamentComplete that is not a flag', withInfo({ tournamentComplete: 'no' })],
+    ['entries that are not a list', withInfo({ entries: 'none' })],
+    ['an entry id that is not text', withInfo({ entries: [{ ...goodEntry(), id: 1 }] })],
+    ['an entry kind that is not a kind', withInfo({ entries: [{ ...goodEntry(), kind: 'x' }] })],
+    ['an entry date that is not text', withInfo({ entries: [{ ...goodEntry(), date: 5 }] })],
+    [
+      'an entry fee that is not a number',
+      withInfo({ entries: [{ ...goodEntry(), entryFee: '60' }] }),
+    ],
+    [
+      'one bad entry among good ones',
+      withInfo({ entries: [goodEntry(), { ...goodEntry(), id: 1 }] }),
+    ],
+    ['an entries total that is not a number', withInfo({ entriesTotal: '85' })],
+    ['payments that are not a list', withInfo({ payments: 'none' })],
+    ['a payment system that is not text', withInfo({ payments: [{ system: 1, amount: 5 }] })],
+    [
+      'a payment amount that is not a number',
+      withInfo({ payments: [{ system: 'x', amount: '5' }] }),
+    ],
+    [
+      'one bad payment among good ones',
+      withInfo({
+        payments: [
+          { system: 'x', amount: 5 },
+          { system: 1, amount: 5 },
+        ],
+      }),
+    ],
+    ['a paid total that is not a number', withInfo({ paidTotal: null })],
+  ])('rejects a reply with %s', async (_name, body) => {
+    server.use(http.get(`${path}/delete-info`, () => HttpResponse.json(body)))
+
+    await expect(fetchDeleteInfo('t1', 'r1')).rejects.toThrow('unexpected response')
+  })
+
+  it('says so when a good status carries something that is not JSON', async () => {
+    server.use(http.get(`${path}/delete-info`, () => new HttpResponse('nope')))
+
+    await expect(fetchDeleteInfo('t1', 'r1')).rejects.toThrow('Failed to load the registration')
+  })
+
+  it('treats a 404 with no JSON as a missing tournament', async () => {
+    server.use(http.get(`${path}/delete-info`, () => new HttpResponse('nope', { status: 404 })))
+
+    await expect(fetchDeleteInfo('t1', 'r1')).rejects.toBeInstanceOf(TournamentNotFoundError)
+  })
+
   it.each([
     ['no deleteInfo', {}],
     ['a missing total', { deleteInfo: { ...createDeleteInfo(), paidTotal: undefined } }],
@@ -148,6 +204,58 @@ describe('deleteRegistration (REG-19, D-209 to D-211)', () => {
 
     expect(error).toBeInstanceOf(RegistrationDeleteRefusedError)
     expect(error).toMatchObject({ reasons: ['first', 'second'], message: 'first' })
+  })
+
+  it('keeps only the reasons that are text', async () => {
+    server.use(
+      http.delete(path, () =>
+        HttpResponse.json(
+          { message: 'm', errors: { a: 'Only this.', b: 5, c: null } },
+          { status: 409 },
+        ),
+      ),
+    )
+
+    const error: unknown = await deleteRegistration('t1', 'r1').catch((caught: unknown) => caught)
+
+    expect(error).toMatchObject({ reasons: ['Only this.'] })
+  })
+
+  it('falls back to the message when the errors hold no text', async () => {
+    server.use(
+      http.delete(path, () =>
+        HttpResponse.json({ message: 'Why not.', errors: {} }, { status: 409 }),
+      ),
+    )
+
+    const error: unknown = await deleteRegistration('t1', 'r1').catch((caught: unknown) => caught)
+
+    expect(error).toMatchObject({ reasons: ['Why not.'] })
+  })
+
+  it('names the delete in its own words when a 409 has no message', async () => {
+    server.use(http.delete(path, () => HttpResponse.json({}, { status: 409 })))
+
+    const error: unknown = await deleteRegistration('t1', 'r1').catch((caught: unknown) => caught)
+
+    expect(error).toMatchObject({
+      message: 'The registration cannot be deleted.',
+      reasons: ['The registration cannot be deleted.'],
+    })
+  })
+
+  it('says so when a 409 carries something that is not JSON', async () => {
+    server.use(http.delete(path, () => new HttpResponse('nope', { status: 409 })))
+
+    await expect(deleteRegistration('t1', 'r1')).rejects.toThrow(
+      'Failed to delete the registration',
+    )
+  })
+
+  it('treats a 404 with no JSON as a missing tournament', async () => {
+    server.use(http.delete(path, () => new HttpResponse('nope', { status: 404 })))
+
+    await expect(deleteRegistration('t1', 'r1')).rejects.toBeInstanceOf(TournamentNotFoundError)
   })
 
   it('falls back to the message when a 409 names no reasons', async () => {

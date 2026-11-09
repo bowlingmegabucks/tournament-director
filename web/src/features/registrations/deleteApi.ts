@@ -9,7 +9,8 @@ import type { DeleteEntry, DeleteInfo } from './types'
 const base = (tournamentId: string, registrationId: string) =>
   `/v1/tournaments/${encodeURIComponent(tournamentId)}/registrations/${encodeURIComponent(registrationId)}`
 
-const isNumber = (value: unknown) => typeof value === 'number' && Number.isFinite(value)
+// `Number.isFinite` is false for anything that is not a finite number, so no `typeof` check is needed.
+const isNumber = (value: unknown) => Number.isFinite(value)
 
 function isEntry(value: unknown): value is DeleteEntry {
   const kind = field(value, 'kind')
@@ -49,6 +50,7 @@ export async function fetchDeleteInfo(
 ): Promise<DeleteInfo> {
   const response = await apiFetch(apiUrl(`${base(tournamentId, registrationId)}/delete-info`))
   if (response.status === 404) {
+    // Stryker disable next-line ArrowFunction: `null` and `undefined` both fail the message check below.
     const body: unknown = await response.json().catch(() => null)
     if (field(body, 'message') === 'Registration not found') throw new RegistrationNotFoundError()
     throw new TournamentNotFoundError()
@@ -121,6 +123,7 @@ export async function deleteRegistration(
     throw new RegistrationDeleteRefusedError(text, reasonsOf(field(body, 'errors'), text))
   }
   if (response.status === 404) {
+    // Stryker disable next-line ArrowFunction: `null` and `undefined` both fail the message check below.
     const body: unknown = await response.json().catch(() => null)
     if (field(body, 'message') === 'Registration not found') throw new RegistrationNotFoundError()
     throw new TournamentNotFoundError()

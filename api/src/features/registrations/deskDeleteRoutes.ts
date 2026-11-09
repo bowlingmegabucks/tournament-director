@@ -64,6 +64,7 @@ export function createDeskDeleteRouter(deps: RegisterDependencies, logger: Logge
         { actorId, tournamentId: id, registrationId, reasons: Object.keys(plan.errors) },
         'Registration delete at the desk refused',
       )
+      // Stryker disable next-line StringLiteral: a refusal always has a reason, so the fallback never shows.
       const message = plan.errors.tournament ?? plan.errors.scores ?? ''
       throw new FieldErrorsError(409, message, plan.errors)
     }

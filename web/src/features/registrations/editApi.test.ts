@@ -84,6 +84,108 @@ describe('fetchEditInfo (D-197)', () => {
   })
 })
 
+describe('the edit info shape (D-197)', () => {
+  const serveBody = (body: object) =>
+    server.use(http.get(`${path}/edit-info`, () => HttpResponse.json(body)))
+
+  it.each([
+    ['no gender', { gender: '' }],
+    ['a male', { gender: 'Male' }],
+    ['a female', { gender: 'Female' }],
+  ])('accepts a bowler with %s', async (_name, bowler) => {
+    serveBody(createEditInfo({ bowler: bowler as { gender: '' | 'Male' | 'Female' } }))
+
+    await expect(fetchEditInfo('t1', 'r1')).resolves.toMatchObject({ bowler })
+  })
+
+  it.each([
+    ['no average', null],
+    ['an average', 175],
+  ])('accepts %s', async (_name, average) => {
+    serveBody(createEditInfo({ registration: { average } }))
+
+    await expect(fetchEditInfo('t1', 'r1')).resolves.toMatchObject({ registration: { average } })
+  })
+
+  it.each([
+    ['a bowler text field that is not text', (b: Record<string, unknown>) => (b['city'] = 5)],
+    ['a bowler without an id', (b: Record<string, unknown>) => delete b['id']],
+    ['a gender that is not known', (b: Record<string, unknown>) => (b['gender'] = 'X')],
+  ])('refuses %s', async (_name, change) => {
+    const body = JSON.parse(JSON.stringify(createEditInfo())) as { bowler: Record<string, unknown> }
+    change(body.bowler)
+    serveBody(body)
+
+    await expect(fetchEditInfo('t1', 'r1')).rejects.toThrow('(unexpected response)')
+  })
+
+  it.each([
+    ['an id that is not text', (r: Record<string, unknown>) => (r['id'] = 5)],
+    ['a division id that is not text', (r: Record<string, unknown>) => (r['divisionId'] = 5)],
+    ['an average that is text', (r: Record<string, unknown>) => (r['average'] = '175')],
+    ['an average that is missing', (r: Record<string, unknown>) => delete r['average']],
+    ['a super sweeper that is text', (r: Record<string, unknown>) => (r['superSweeper'] = 'yes')],
+    ['squad ids that are not a list', (r: Record<string, unknown>) => (r['squadIds'] = 'a')],
+    ['squad ids that are not text', (r: Record<string, unknown>) => (r['squadIds'] = [1])],
+    ['sweeper ids that are not a list', (r: Record<string, unknown>) => (r['sweeperIds'] = 'a')],
+    ['sweeper ids that are not text', (r: Record<string, unknown>) => (r['sweeperIds'] = [1])],
+  ])('refuses a registration with %s', async (_name, change) => {
+    const body = JSON.parse(JSON.stringify(createEditInfo())) as {
+      registration: Record<string, unknown>
+    }
+    change(body.registration)
+    serveBody(body)
+
+    await expect(fetchEditInfo('t1', 'r1')).rejects.toThrow('(unexpected response)')
+  })
+
+  it.each([
+    [
+      'scored sessions that are not a list',
+      (l: Record<string, unknown>) => (l['scoredSessionIds'] = 'a'),
+    ],
+    [
+      'scored sessions that are not text',
+      (l: Record<string, unknown>) => (l['scoredSessionIds'] = [1]),
+    ],
+    ['hasScores that is text', (l: Record<string, unknown>) => (l['hasScores'] = 'no')],
+    [
+      'hasSweeperScores that is text',
+      (l: Record<string, unknown>) => (l['hasSweeperScores'] = 'no'),
+    ],
+  ])('refuses locks with %s', async (_name, change) => {
+    const body = JSON.parse(JSON.stringify(createEditInfo())) as { locks: Record<string, unknown> }
+    change(body.locks)
+    serveBody(body)
+
+    await expect(fetchEditInfo('t1', 'r1')).rejects.toThrow('(unexpected response)')
+  })
+
+  it('says the response is not JSON, naming the failure', async () => {
+    server.use(http.get(`${path}/edit-info`, () => new HttpResponse('nope')))
+
+    await expect(fetchEditInfo('t1', 'r1')).rejects.toThrow(
+      'Failed to load the registration (response is not JSON)',
+    )
+  })
+
+  it('names the not-found error', async () => {
+    server.use(
+      http.get(`${path}/edit-info`, () =>
+        HttpResponse.json({ message: 'Registration not found' }, { status: 404 }),
+      ),
+    )
+
+    await expect(fetchEditInfo('t1', 'r1')).rejects.toThrow('Registration not found')
+  })
+
+  it('treats a 404 with no body as a missing tournament', async () => {
+    server.use(http.get(`${path}/edit-info`, () => new HttpResponse(null, { status: 404 })))
+
+    await expect(fetchEditInfo('t1', 'r1')).rejects.toBeInstanceOf(TournamentNotFoundError)
+  })
+})
+
 describe('patchRegistration (D-197, D-199, D-201)', () => {
   it('sends the request as JSON and returns the counts', async () => {
     let sent: unknown
@@ -251,6 +353,24 @@ describe('patchRegistration (D-197, D-199, D-201)', () => {
     server.use(http.patch(path, () => new HttpResponse(null, { status })))
 
     await expect(patchRegistration('t1', 'r1', {})).rejects.toThrow(message)
+  })
+
+  it('says the response is not JSON, naming the failure', async () => {
+    server.use(http.patch(path, () => new HttpResponse('nope', { status: 400 })))
+
+    await expect(patchRegistration('t1', 'r1', {})).rejects.toThrow(
+      'Failed to save the registration (response is not JSON)',
+    )
+  })
+
+  it.each([
+    [{ registrationId: 5, added: 1, removed: 1 }],
+    [{ registrationId: 'r1', added: 1 }],
+    [{ registrationId: 'r1', removed: 1 }],
+  ])('refuses a success body with a missing or wrong part: %j', async (body) => {
+    server.use(http.patch(path, () => HttpResponse.json(body)))
+
+    await expect(patchRegistration('t1', 'r1', {})).rejects.toThrow('(unexpected response)')
   })
 
   it('refuses a success body of the wrong shape', async () => {

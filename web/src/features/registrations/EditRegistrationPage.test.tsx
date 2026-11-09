@@ -626,3 +626,292 @@ describe('nothing changed', () => {
     expect(served.patched).toHaveLength(0)
   })
 })
+
+describe('the page frame (D-197)', () => {
+  it('sets the page title, and the not-found page links back to the list', async () => {
+    signIn()
+    serve()
+    await open()
+
+    await waitFor(() => {
+      expect(document.title).toBe('Edit registration · Spring Open · Tournament Director')
+    })
+    expect(screen.getByRole('link', { name: 'Cancel' })).toHaveAttribute(
+      'href',
+      `/tournaments/${tournament.id}/registrations`,
+    )
+  })
+
+  it('links the complete-tournament notice back to the list', async () => {
+    signIn()
+    serve({ completed: true })
+
+    renderApp(url)
+
+    expect(await screen.findByRole('link', { name: 'Back to registrations' })).toHaveAttribute(
+      'href',
+      `/tournaments/${tournament.id}/registrations`,
+    )
+  })
+
+  it('shows the bowler with a suffix, and trims the names', async () => {
+    signIn()
+    serve({
+      info: info({ bowler: { firstName: ' Maria ', lastName: ' Gonzalez ', suffix: ' Jr ' } }),
+    })
+    await open()
+
+    expect(screen.getByText(/Editing/)).toHaveTextContent('Editing Maria Gonzalez, Jr.')
+  })
+})
+
+describe('what a failed save shows (D-197, D-201)', () => {
+  const average = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.clear(screen.getByLabelText('Average'))
+    await user.type(screen.getByLabelText('Average'), '175')
+    await press(user, /Next: review/)
+  }
+  const warn = () =>
+    HttpResponse.json(
+      {
+        message: 'Confirm these changes to save them.',
+        warnings: [
+          {
+            field: 'average',
+            message: 'This bowler has scores. Handicap and results will change.',
+          },
+          { field: 'other', message: 'Something else.' },
+        ],
+      },
+      { status: 409 },
+    )
+
+  it('lets the director go back from the warnings, and shows a failed confirm inside the dialog', async () => {
+    signIn()
+    const served = serve({
+      info: info({ locks: { hasScores: true } }),
+      patches: [warn, () => new HttpResponse(null, { status: 500 })],
+    })
+    const user = userEvent.setup()
+    await open()
+    await average(user)
+    await press(user, 'Save changes')
+
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByText('Something else.')).toBeVisible()
+    await user.click(within(dialog).getByRole('button', { name: 'Save anyway' }))
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      'Failed to save the registration (500)',
+    )
+    await user.click(within(dialog).getByRole('button', { name: 'Go back' }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+    expect(screen.getByRole('heading', { name: 'Review', level: 2 })).toBeVisible()
+    expect(served.patched).toHaveLength(2)
+  })
+
+  it('clears the failure in the dialog when the director tries again', async () => {
+    signIn()
+    serve({
+      info: info({ locks: { hasScores: true } }),
+      patches: [
+        warn,
+        () => new HttpResponse(null, { status: 500 }),
+        () => HttpResponse.json({ registrationId, added: 0, removed: 0 }),
+      ],
+    })
+    const user = userEvent.setup()
+    await open()
+    await average(user)
+    await press(user, 'Save changes')
+    const dialog = await screen.findByRole('dialog')
+    await user.click(within(dialog).getByRole('button', { name: 'Save anyway' }))
+    await within(dialog).findByRole('alert')
+
+    await user.click(within(dialog).getByRole('button', { name: 'Save anyway' }))
+
+    expect(await screen.findByText('Maria Gonzalez: Registration updated.')).toBeVisible()
+  })
+
+  it('says the registration no longer exists, and the toast can be dismissed', async () => {
+    signIn()
+    serve({
+      patches: [() => HttpResponse.json({ message: 'Registration not found' }, { status: 404 })],
+    })
+    const user = userEvent.setup()
+    await open()
+    await user.click(box(/1:00 PM/))
+    await press(user, /Next: review/)
+
+    await press(user, 'Save changes')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This registration no longer exists.',
+    )
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(screen.queryByText('This registration no longer exists.')).not.toBeInTheDocument()
+  })
+
+  it('shows a refusal with no field on the Review step', async () => {
+    signIn()
+    serve({
+      patches: [
+        () => HttpResponse.json({ message: 'This tournament is complete.' }, { status: 409 }),
+      ],
+    })
+    const user = userEvent.setup()
+    await open()
+    await user.click(box(/1:00 PM/))
+    await press(user, /Next: review/)
+
+    await press(user, 'Save changes')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Fix 1 thing to save.')
+    expect(screen.getByRole('alert')).toHaveTextContent('This tournament is complete.')
+    expect(screen.getByRole('heading', { name: 'Review', level: 2 })).toBeVisible()
+  })
+
+  it('says Saving… while the save is out, and disables Back', async () => {
+    signIn()
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    server.use(
+      http.patch('/v1/tournaments/:id/registrations/:registrationId', async () => {
+        await gate
+        return HttpResponse.json({ registrationId, added: 1, removed: 0 })
+      }),
+    )
+    serve()
+    server.use(
+      http.patch('/v1/tournaments/:id/registrations/:registrationId', async () => {
+        await gate
+        return HttpResponse.json({ registrationId, added: 1, removed: 0 })
+      }),
+    )
+    const user = userEvent.setup()
+    await open()
+    await user.click(box(/1:00 PM/))
+    await press(user, /Next: review/)
+
+    await press(user, 'Save changes')
+
+    expect(await screen.findByRole('button', { name: 'Saving…' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled()
+    release()
+    expect(await screen.findByText('Maria Gonzalez: Registration updated. Added 1.')).toBeVisible()
+  })
+
+  it('lists the sweepers now entered, and says nothing of them when the answer has no record', async () => {
+    signIn()
+    serve({
+      reads: [info(), info()],
+      patches: [
+        () =>
+          HttpResponse.json(
+            {
+              message: 'changed',
+              conflict: 'changed',
+              existing: {
+                registrationId,
+                divisionId: handicap.id,
+                divisionName: 'Handicap',
+                squadIds: [morning.id],
+                sweeperIds: [noon.id, early.id, 'unknown'],
+              },
+            },
+            { status: 409 },
+          ),
+        () => HttpResponse.json({ message: 'changed', conflict: 'changed' }, { status: 409 }),
+      ],
+    })
+    const user = userEvent.setup()
+    await open()
+    await user.click(box(/1:00 PM/))
+    await press(user, /Next: review/)
+
+    await press(user, 'Save changes')
+
+    expect(
+      await screen.findByText(
+        /Now entered: Squad .*9:00 AM, Sweeper .*12:00 PM, Sweeper .*8:00 AM\./,
+      ),
+    ).toBeVisible()
+    await press(user, 'Save changes')
+    await waitFor(() => {
+      expect(screen.queryByText(/Now entered/)).not.toBeInTheDocument()
+    })
+    expect(screen.getByText('This registration changed.')).toBeVisible()
+  })
+})
+
+describe('errors on the steps (D-197)', () => {
+  it('clears the message for a bowler field when the desk types in it, and keeps the others', async () => {
+    signIn()
+    serve()
+    const user = userEvent.setup()
+    await open()
+    await press(user, 'Back to bowler details')
+    await user.clear(screen.getByLabelText('First name (required)'))
+    await user.clear(screen.getByLabelText('Last name (required)'))
+    await press(user, /Next: registration/)
+    expect(screen.getByRole('alert')).toHaveTextContent('Fix 2 things to save.')
+
+    await user.type(screen.getByLabelText('First name (required)'), 'M')
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Fix 1 thing to save.')
+    expect(screen.getByRole('alert')).toHaveTextContent('Last Name is Required')
+    expect(screen.getByRole('alert')).not.toHaveTextContent('First Name is Required')
+  })
+
+  it('drops the message for the registration step when the desk changes it', async () => {
+    signIn()
+    serve()
+    const user = userEvent.setup()
+    await open()
+    await user.clear(screen.getByLabelText('Average'))
+    await user.type(screen.getByLabelText('Average'), '301')
+    await press(user, /Next: review/)
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Average must be less than or equal to 300.',
+    )
+
+    await user.type(screen.getByLabelText('Average'), '0')
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('clears every message when the desk moves to another step', async () => {
+    signIn()
+    serve()
+    const user = userEvent.setup()
+    await open()
+    await user.clear(screen.getByLabelText('Average'))
+    await user.type(screen.getByLabelText('Average'), '301')
+    await press(user, /Next: review/)
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Average must be less than or equal to 300.',
+    )
+
+    await press(user, '1. Bowler')
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('leaves the headings alone: one focused heading per step', async () => {
+    signIn()
+    serve()
+    const user = userEvent.setup()
+    await open()
+
+    await press(user, /Next: review/)
+
+    expect(screen.getByRole('heading', { name: 'Review', level: 2 })).toHaveFocus()
+    expect(
+      screen.queryByRole('heading', { name: 'Registration', level: 2 }),
+    ).not.toBeInTheDocument()
+  })
+})

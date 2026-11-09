@@ -395,3 +395,168 @@ describe('moving to another squad (D-202)', () => {
     expect(screen.queryByText(/moved to another squad/)).not.toBeInTheDocument()
   })
 })
+
+describe('details of the dialog (D-197, D-202, D-203)', () => {
+  async function openMove(user: ReturnType<typeof userEvent.setup>) {
+    const dialog = await openActions(user)
+    await user.click(await within(dialog).findByRole('button', { name: 'Move to another squad…' }))
+    return dialog
+  }
+
+  it('says why Move and Remove are off when the squad is complete but the page was not told', async () => {
+    serve({ squads: [{ ...source, complete: true }, later] })
+    const user = userEvent.setup()
+    await open()
+
+    const dialog = await openActions(user)
+
+    const move = await within(dialog).findByRole('button', { name: 'Move to another squad…' })
+    expect(move).toBeDisabled()
+    expect(move).toHaveAccessibleDescription('Cannot move or remove: This squad is complete.')
+  })
+
+  it('shows no reason when nothing is locked', async () => {
+    serve()
+    const user = userEvent.setup()
+    await open()
+
+    const dialog = await openActions(user)
+
+    expect(
+      await within(dialog).findByRole('button', { name: 'Move to another squad…' }),
+    ).toBeEnabled()
+    expect(within(dialog).queryByText(/Cannot move or remove/)).not.toBeInTheDocument()
+    expect(
+      within(dialog).getByRole('button', { name: 'Move to another squad…' }),
+    ).not.toHaveAttribute('aria-describedby')
+  })
+
+  it('shows the first message of a refusal, or its summary when it names no field', async () => {
+    serve({
+      patches: [
+        () => HttpResponse.json({ message: 'Nope.', errors: {} }, { status: 400 }),
+        () =>
+          HttpResponse.json(
+            { message: 'Summary', errors: { squadIds: 'First field message', other: 'Second' } },
+            { status: 400 },
+          ),
+      ],
+    })
+    const user = userEvent.setup()
+    await open()
+    const dialog = await openActions(user)
+    await user.click(await within(dialog).findByRole('button', { name: 'Remove from this squad…' }))
+
+    await user.click(within(dialog).getByRole('button', { name: 'Remove from squad' }))
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Nope.')
+    await user.click(within(dialog).getByRole('button', { name: 'Remove from squad' }))
+
+    await waitFor(() => {
+      expect(within(dialog).getByRole('alert')).toHaveTextContent('First field message')
+    })
+  })
+
+  it('says Removing… and Moving… while the save is out, and locks the buttons', async () => {
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    serve()
+    server.use(
+      http.patch('/v1/tournaments/:id/registrations/:registrationId', async () => {
+        await gate
+        return HttpResponse.json({ registrationId: maria.registrationId, added: 0, removed: 1 })
+      }),
+    )
+    const user = userEvent.setup()
+    await open()
+    const dialog = await openActions(user)
+    await user.click(await within(dialog).findByRole('button', { name: 'Remove from this squad…' }))
+
+    await user.click(within(dialog).getByRole('button', { name: 'Remove from squad' }))
+
+    expect(await within(dialog).findByRole('button', { name: 'Removing…' })).toBeDisabled()
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeDisabled()
+    release()
+    expect(await screen.findByText('Maria Gonzalez removed from this squad.')).toBeVisible()
+  })
+
+  it('says Moving… while a move is out', async () => {
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    serve()
+    server.use(
+      http.patch('/v1/tournaments/:id/registrations/:registrationId', async () => {
+        await gate
+        return HttpResponse.json({ registrationId: maria.registrationId, added: 1, removed: 1 })
+      }),
+    )
+    const user = userEvent.setup()
+    await open()
+    const dialog = await openMove(user)
+    await user.click(within(dialog).getByRole('radio', { name: /1:00 PM/ }))
+
+    await user.click(within(dialog).getByRole('button', { name: 'Move' }))
+
+    expect(await within(dialog).findByRole('button', { name: 'Moving…' })).toBeDisabled()
+    release()
+    expect(await screen.findByText('Maria Gonzalez moved to another squad.')).toBeVisible()
+  })
+
+  it('does not offer the squad it moves from, even if the registration did not list it', async () => {
+    serve({
+      info: createEditInfo({
+        registration: { id: maria.registrationId, squadIds: [held.id], sweeperIds: [] },
+      }),
+    })
+    const user = userEvent.setup()
+    await open()
+
+    const dialog = await openMove(user)
+
+    const values = within(dialog)
+      .getAllByRole('radio')
+      .map((radio) => radio.getAttribute('value'))
+    expect(values).not.toContain(source.id)
+    expect(values).toContain(later.id)
+  })
+
+  it('reads the summary in full, and clears an old failure when the desk goes back', async () => {
+    serve({
+      patches: [() => HttpResponse.json({ message: 'Nope.', errors: {} }, { status: 400 })],
+    })
+    const user = userEvent.setup()
+    await open()
+    const dialog = await openMove(user)
+    await user.click(within(dialog).getByRole('radio', { name: /1:00 PM/ }))
+    expect(
+      within(dialog).getByText(
+        /From .*9:00 AM.*\$75\.00.* to .*1:00 PM.*\$80\.00.*\)\.\s+Maria Gonzalez lands in the unassigned list\./,
+      ),
+    ).toBeVisible()
+    await user.click(within(dialog).getByRole('button', { name: 'Move' }))
+    await within(dialog).findByRole('alert')
+
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Move to another squad…' }))
+
+    expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('does not list a complete squad as chosen, and a complete target cannot be picked', async () => {
+    serve()
+    const user = userEvent.setup()
+    await open()
+    const dialog = await openMove(user)
+
+    const closed = within(dialog).getByRole('radio', { name: /6:00 PM/ })
+
+    expect(closed).toBeDisabled()
+    expect(closed).not.toBeChecked()
+    await user.click(within(dialog).getByRole('radio', { name: /1:00 PM/ }))
+    expect(within(dialog).getByRole('radio', { name: /1:00 PM/ })).toBeChecked()
+    expect(within(dialog).getByRole('radio', { name: /\$70\.00/ })).not.toBeChecked()
+  })
+})

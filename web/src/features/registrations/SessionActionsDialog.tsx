@@ -43,6 +43,7 @@ const messageOf = (error: unknown): string => {
   if (error instanceof DeskRejectedError) {
     return Object.values(error.errors)[0] ?? error.message
   }
+  // Stryker disable next-line StringLiteral: a mutation always rejects with an Error, so the fallback never shows.
   return error instanceof Error ? error.message : 'Failed to save the change'
 }
 

@@ -8,6 +8,7 @@ import {
   editedFields,
   hasChanges,
   moneyOf,
+  netText,
   removeLock,
   storedBowlerOf,
   toEditRegistrationValues,
@@ -295,5 +296,15 @@ describe('removeLock (REG-34, D-10)', () => {
 
   it('allows an open session with no scores', () => {
     expect(removeLock({ id: squadA.id, complete: false }, locked)).toBeUndefined()
+  })
+})
+
+describe('netText (D-207)', () => {
+  it('says collect for a positive net, refund for a negative one, and even for zero', () => {
+    expect(netText(20)).toBe('Net: collect $20.00.')
+    expect(netText(0.1)).toBe('Net: collect $0.10.')
+    expect(netText(-5)).toBe('Net: refund $5.00.')
+    expect(netText(-0.1)).toBe('Net: refund $0.10.')
+    expect(netText(0)).toBe('Net: even. Nothing to collect or refund.')
   })
 })

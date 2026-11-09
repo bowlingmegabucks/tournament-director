@@ -85,6 +85,7 @@ function outcomeOf(error: unknown): Outcome {
       at: Math.min(...keys.map(stepOfError)) as Step,
     }
   }
+  // Stryker disable next-line StringLiteral: a mutation always rejects with an Error, so the fallback never shows.
   const message = error instanceof Error ? error.message : 'Failed to save the registration'
   return { kind: 'failure', message }
 }
@@ -288,7 +289,8 @@ export function EditRegistrationForm({
             onChange={(values) => {
               setRegistration(values)
               setRemovalConfirmed(false)
-              setErrors((current) => keepErrors(current, (key) => key.startsWith('bowler.')))
+              // Errors on this step are for this step: moving to another step already cleared the rest.
+              setErrors({})
             }}
           />
           <Actions listUrl={listUrl}>

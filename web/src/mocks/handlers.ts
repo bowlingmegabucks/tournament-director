@@ -21,6 +21,7 @@ import {
 } from './data'
 import { authHandlers } from './authHandlers'
 import { userHandlers } from './userHandlers'
+import { createRegistrationHandlers } from './registrationHandlers'
 import type { DivisionChanges, NewDivision } from '../features/divisions/types'
 import type { NewSquad, Squad, SquadChanges } from '../features/squads/types'
 import type { NewSweeper, Sweeper, SweeperChanges } from '../features/sweepers/types'
@@ -44,6 +45,8 @@ const busySquadId = squads[1]?.id
 const scoredSweeperId = sweepers[0]?.id
 
 const demoSettings = createSettings()
+// The demo's past tournaments are complete, so the e2e tests can see what a complete one refuses (D-130).
+const completedIds = new Set(tournaments.slice(1).map((tournament) => tournament.id))
 // What each tournament made through the form was given, so the overview shows what was typed.
 const createdSettings = new Map<string, TournamentSettings>()
 
@@ -185,6 +188,7 @@ function applySweeperChanges(found: Sweeper, changes: SweeperChanges) {
 export const handlers = [
   ...authHandlers,
   ...userHandlers,
+  ...createRegistrationHandlers({ tournaments, divisions, squads, registrations }),
   http.get('/v1/tournaments', () => HttpResponse.json({ tournaments })),
   // TRN-19: the browser has checked the rules; the mock only refuses a duplicate, as the API does.
   http.post('/v1/tournaments', async ({ request }) => {
@@ -255,7 +259,7 @@ export const handlers = [
       ? HttpResponse.json({
           settings: {
             ...(createdSettings.get(String(params.id)) ?? demoSettings),
-            completed: false,
+            completed: completedIds.has(String(params.id)),
           },
         })
       : notFound(),

@@ -3,13 +3,21 @@ import type { Division } from '../divisions/types.ts'
 import type { DivisionRepository } from '../divisions/repository.ts'
 import type { SweeperRepository } from '../sweepers/repository.ts'
 import type { TournamentRepository } from '../tournaments/repository.ts'
-import { mergeBowler, toBowlerPatch, toNewBowler } from './bowler.ts'
+import type { Tournament } from '../tournaments/types.ts'
+import {
+  mergeBowler,
+  toBowlerPatch,
+  toNewBowler,
+  type BowlerData,
+  type BowlerPatch,
+  type StoredBowler,
+} from './bowler.ts'
 import { checkBowler } from './bowlerRules.ts'
 import { checkEligibility } from './eligibility.ts'
 import { toNewPayment } from './payment.ts'
 import { other, validation, type Failure } from './problem.ts'
 import type { RegistrationInput } from './request.ts'
-import type { RegistrationWriter, StoredRegistration, StoredSession } from './writer.ts'
+import type { NewPayment, RegistrationWriter, StoredRegistration, StoredSession } from './writer.ts'
 
 export interface RegisterDependencies {
   tournaments: TournamentRepository
@@ -83,7 +91,7 @@ function checkOverlap(
  * for every caller (D-107). Other-tournament ids and complete squads are a 400 too (D-108). A
  * payment code already on file means the caller is retrying: answer with that registration (D-109).
  */
-async function findDivision(
+export async function findDivision(
   { divisions, writer }: RegisterDependencies,
   divisionId: string,
   tournamentId: string,
@@ -109,7 +117,7 @@ export async function register(
   deps: RegisterDependencies,
   input: RegistrationInput,
 ): Promise<RegisterResult> {
-  const { tournaments, sweepers, writer } = deps
+  const { tournaments, writer } = deps
   const now = deps.now?.() ?? new Date()
   const newId = deps.newId ?? randomUUID
 
@@ -140,13 +148,65 @@ export async function register(
   const existing = knownBowler
     ? await writer.findRegistration(knownBowler.id, tournament.id)
     : undefined
-  const mode = existing ? 'append' : 'create'
 
   const patch = toBowlerPatch(input.bowler)
-  const bowler = knownBowler ? mergeBowler(knownBowler, patch) : toNewBowler(input.bowler)
+  return completeRegistration(deps, {
+    tournament,
+    division,
+    knownBowler,
+    existing,
+    patch,
+    newBowler: () => toNewBowler(input.bowler),
+    rawPhone: input.bowler.phoneNumber,
+    divisionId: input.divisionId,
+    squadIds: unique(input.squads),
+    sweeperIds: unique(input.sweepers),
+    superSweeper: input.superSweeper,
+    average: input.average ?? null,
+    payment,
+    now,
+    newId,
+  })
+}
 
-  const squadIds = unique(input.squads)
-  const sweeperIds = unique(input.sweepers)
+/** What `completeRegistration` needs once the caller has found the tournament, division, and bowler. */
+export interface CompleteRegistrationInput {
+  tournament: Tournament
+  division: Division
+  /** The stored bowler, or `undefined` for a new one. */
+  knownBowler: StoredBowler | undefined
+  /** The bowler's registration in this tournament, if any. Present means append. */
+  existing: StoredRegistration | undefined
+  /** The fields to change on a stored bowler (D-05). */
+  patch: BowlerPatch
+  /** Builds the new bowler when `knownBowler` is undefined. */
+  newBowler: () => BowlerData
+  /** The phone as sent, for BWL-07. */
+  rawPhone: string | null | undefined
+  divisionId: string
+  squadIds: string[]
+  sweeperIds: string[]
+  superSweeper: boolean
+  /** `null` keeps the old average on an append (REG-12). */
+  average: number | null
+  payment: NewPayment | null
+  now: Date
+  newId: () => string
+}
+
+/**
+ * The checks and the save the registration site and the desk share (REG-02 to REG-06, REG-10 to
+ * REG-14, REG-32, REG-33). The caller has already settled who the bowler is and whether this is a
+ * create or an append.
+ */
+export async function completeRegistration(
+  { sweepers, writer }: RegisterDependencies,
+  input: CompleteRegistrationInput,
+): Promise<RegisterResult> {
+  const { tournament, division, knownBowler, existing, patch, squadIds, sweeperIds, now } = input
+  const mode = existing ? 'append' : 'create'
+  const bowler = knownBowler ? mergeBowler(knownBowler, patch) : input.newBowler()
+
   const found = await writer.findSessions([
     ...squadIds,
     ...sweeperIds,
@@ -166,7 +226,7 @@ export async function register(
   const failures: Failure[] = [
     ...checkBowler(bowler, {
       today: now.toISOString().slice(0, 10),
-      rawPhone: input.bowler.phoneNumber,
+      rawPhone: input.rawPhone,
     }),
     ...checkOverlap('squad', squadIds, existing),
     ...checkOverlap('sweeper', sweeperIds, existing),
@@ -195,11 +255,11 @@ export async function register(
   }
   if (failures.length > 0) return fail(mode, failures)
 
-  const registrationId = existing?.id ?? newId()
+  const registrationId = existing?.id ?? input.newId()
   await writer.save({
     bowler: knownBowler
       ? { id: knownBowler.id, isNew: false, patch }
-      : { id: newId(), isNew: true, data: bowler },
+      : { id: input.newId(), isNew: true, data: bowler },
     registration: {
       id: registrationId,
       isNew: existing === undefined,
@@ -208,7 +268,7 @@ export async function register(
       superSweeper: input.superSweeper,
     },
     addSessionIds: [...squadIds, ...sweeperIds],
-    payment,
+    payment: input.payment,
   })
   return { ok: true, registrationId, mode }
 }

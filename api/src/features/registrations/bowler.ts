@@ -100,6 +100,11 @@ export function toBowlerPatch(input: BowlerInput): BowlerPatch {
   return patch
 }
 
+/** A new desk bowler: the fields sent on top of empty text, and no gender unless one was picked (D-162). */
+export function toNewDeskBowler(patch: BowlerPatch): BowlerData {
+  return { ...emptyBowler, ...patch }
+}
+
 /** A new bowler: the fields sent, empty text for the rest, and Male when no gender came (D-113). */
 export function toNewBowler(input: BowlerInput): BowlerData {
   return { ...emptyBowler, gender: 'Male', ...toBowlerPatch(input) }

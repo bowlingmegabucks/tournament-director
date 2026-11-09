@@ -7,6 +7,8 @@ import { createPrismaDivisionRepository } from '../divisions/prismaRepository.ts
 import { createPrismaSweeperRepository } from '../sweepers/prismaRepository.ts'
 import { createPrismaTournamentRepository } from '../tournaments/prismaRepository.ts'
 import { createPrismaRegistrationWriter } from './prismaWriter.ts'
+import { deskRegister } from './deskRegister.ts'
+import { parseDeskRequest } from './deskRequest.ts'
 import { register } from './register.ts'
 import { parseCreateRequest } from './request.ts'
 import { deleteRegistration } from './delete.ts'
@@ -210,6 +212,84 @@ describe('Prisma registration writer', () => {
       phoneNumber: '6175550100',
     })
     expect(await ssnOf(bowlerId)).toBe(legacySsn)
+  })
+
+  it('adds at the desk, then appends on confirm, with a 43-character Manual_ payment (REG-08, REG-10, PAY-01a, D-159, D-163)', async () => {
+    const { logger, writer } = setup()
+    const tournamentId = await insertTournament()
+    const divisionId = await insertDivision(tournamentId)
+    const squadOne = await insertSession(tournamentId, 0)
+    const squadTwo = await insertSession(tournamentId, 0)
+    const deps = {
+      tournaments: createPrismaTournamentRepository(client, logger),
+      divisions: createPrismaDivisionRepository(client, logger),
+      sweepers: createPrismaSweeperRepository(client, logger),
+      writer,
+    }
+    const ask = (extra: Record<string, unknown>) => {
+      const parsed = parseDeskRequest({
+        divisionId,
+        squadIds: [squadOne],
+        bowler: { firstName: 'Ann', lastName: 'Lee' },
+        ...extra,
+      })
+      if (!parsed.success) throw new Error('bad test input')
+      return parsed.data
+    }
+
+    const created = await deskRegister(deps, tournamentId, ask({}))
+    if (!created.ok) throw new Error('create failed')
+    const [bowler] = await client.bowler.findMany({ where: { firstName: 'Ann' } })
+    if (!bowler) throw new Error('bowler missing')
+    const refused = await deskRegister(
+      deps,
+      tournamentId,
+      ask({ bowlerId: bowler.id, squadIds: [squadTwo] }),
+    )
+    const appended = await deskRegister(
+      deps,
+      tournamentId,
+      ask({
+        bowlerId: bowler.id,
+        squadIds: [squadTwo],
+        appendToExisting: true,
+        bowler: { city: 'Boston', state: 'MA', street: '1 Main St', zipCode: '02101' },
+      }),
+    )
+
+    expect(refused).toMatchObject({ ok: false, kind: 'alreadyRegistered' })
+    expect(appended).toEqual({
+      ok: true,
+      registrationId: created.registrationId,
+      mode: 'appended',
+    })
+    const links = await client.squadRegistration.count({
+      where: { registrationId: created.registrationId },
+    })
+    expect(links).toBe(2)
+    const payments = await client.payment.findMany({
+      where: { registrationId: created.registrationId },
+    })
+    expect(payments).toHaveLength(2)
+    for (const payment of payments) {
+      expect(payment.confirmationCode).toMatch(/^Manual_[0-9a-f-]{36}$/)
+      expect(Number(payment.amount)).toBe(0)
+    }
+    expect(await client.bowler.findUnique({ where: { id: bowler.id } })).toMatchObject({
+      city: 'Boston',
+      zipCode: '02101',
+    })
+  })
+
+  it('finds a bowler by id, and none for an unknown id (BWL-15, D-157)', async () => {
+    const { writer } = setup()
+    const bowlerId = await insertLegacyBowler('1234-56789', 1)
+
+    const stored = await writer.findBowlerById(bowlerId)
+
+    expect(stored).toMatchObject({ id: bowlerId, usbcId: '1234-56789' })
+    expect(stored).not.toHaveProperty('socialSecurityNumber')
+    expect(await writer.findBowlerById(crypto.randomUUID())).toBeUndefined()
   })
 
   it('writes one transaction: a duplicate payment code leaves nothing behind (REG-07)', async () => {

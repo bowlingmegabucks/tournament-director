@@ -1276,6 +1276,7 @@ const allPermissions = [
   'tournaments.delete',
   'divisions.write',
   'squads.write',
+  'bowlers.read',
   'bowlers.ssn',
   'users.manage',
 ]

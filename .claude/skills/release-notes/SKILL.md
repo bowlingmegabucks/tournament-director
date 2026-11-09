@@ -41,11 +41,9 @@ The PR body is the main source. These repos write `Summary` / `What Changed` / `
 
 Write for someone who uses or runs the app, not someone reading a diff. Say what the product does now, not which files changed. Follow the writing rules in the global `CLAUDE.md`: short words, active voice, no stock figures of speech.
 
-The file opens with the title as an H1 and has no intro sentence.
+The file has no title line and no intro sentence. The title goes in the publish command (steps 5 and 6), and GitHub shows it as the release name. The file opens with the first `###` section.
 
 ```markdown
-# <new-version>: <title phrase>
-
 ### <Feature area> (#<pr>[, #<pr>...])
 
 <1-3 sentences or a short bullet list, in plain language.>
@@ -70,7 +68,7 @@ Rules:
 
 ### 5. Derive the title
 
-Form: `<new-version>: <title phrase>`. The phrase has 3 to 6 words and names the theme of the release, for example `v0.1.0: First Working Release`. Propose it from the content; do not ask for it.
+Form: `<new-version>: <title phrase>`. The phrase has 3 to 6 words and names the theme of the release, for example `v0.1.0: First Working Release`. Propose it from the content; do not ask for it. Put it in the publish command only, never in `release-notes.md`.
 
 ### 6. Reply
 
@@ -78,10 +76,10 @@ Tell the user:
 
 - `release-notes.md` is written at the repo root, and which ref and range it covers.
 - Any commits left out and why.
-- The publish command, with the title from the H1 line (minus `# `). Add `--prerelease` when the major version is 0, and `--target main`:
+- The publish command, every time, with the title from step 5. Add `--prerelease` when the major version is 0, and `--target main`:
 
   ```
-  gh release create <new-version> --target main --title "<title>" --notes-file release-notes.md [--prerelease]
+  gh release create <new-version> --target main --title "<new-version>: <title phrase>" --notes-file release-notes.md [--prerelease]
   ```
 
   Do not run it. Publishing is the owner's step, and it creates the tag.

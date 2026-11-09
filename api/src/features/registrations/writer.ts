@@ -56,6 +56,8 @@ export interface SaveRegistration {
 export interface RegistrationWriter {
   /** Every bowler with this exact USBC id. More than one means bad data. */
   findBowlersByUsbcId(usbcId: string): Promise<StoredBowler[]>
+  /** One bowler by id, or `undefined` (the desk picks a bowler from search, D-157). */
+  findBowlerById(id: string): Promise<StoredBowler | undefined>
   /** The bowler's registration in the tournament (REG-01). */
   findRegistration(bowlerId: string, tournamentId: string): Promise<StoredRegistration | undefined>
   /** The tournament a division belongs to, or `undefined` for an unknown division. */
@@ -96,6 +98,7 @@ export function createInMemoryRegistrationWriter(seed: InMemoryWriterSeed = {}) 
   const writer: RegistrationWriter = {
     findBowlersByUsbcId: (usbcId) =>
       Promise.resolve(state.bowlers.filter((bowler) => bowler.usbcId === usbcId)),
+    findBowlerById: (id) => Promise.resolve(state.bowlers.find((bowler) => bowler.id === id)),
     findRegistration: (bowlerId, tournamentId) =>
       Promise.resolve(
         state.registrations.find(

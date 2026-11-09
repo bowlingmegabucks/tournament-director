@@ -80,3 +80,10 @@
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius);
 }
+
+.stripActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}

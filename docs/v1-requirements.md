@@ -41,6 +41,7 @@ Version numbers follow content, not a countdown. 0.10.0 is fine.
   - [x] Edit a squad or sweeper, with free, confirmed, and refused fields by what depends on them in that session, a stranded-lane check, and bonus-pin edits (`editSquad`, `SQD-23` to `SQD-30`, D-180 to D-185).
   - [x] Delete a squad or sweeper: `squads.write`, refused for a complete tournament or session, any entered bowler, or any saved score, one serializable transaction (`deleteSquad`, `SQD-14`, D-186 to D-189).
   - [x] Complete a squad or sweeper: `squads.write`, a dialog that counts the no-show zeros, one serializable transaction, a repeat refused (`completeSquad`, `SQD-15` to `SQD-18`, D-190 to D-195). Score save and lane move refuse a complete session when those routes are built (`SCR-14`, D-10).
+- [x] Add a registration at the desk: bowler search, a stored or new bowler, three steps with a fee table, append for a registered bowler, from the Registrations page or a lane page (`createRegistration`, `REG-01` to `REG-08`, `REG-10` to `REG-14`, `REG-22`, `BWL-14`, `BWL-15`, D-157 to D-166; [add-registration.md](requirements/add-registration.md)).
 
 ## Data and cutover
 

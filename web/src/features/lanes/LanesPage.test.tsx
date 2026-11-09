@@ -111,6 +111,61 @@ describe('LanesPage', () => {
     ])
   })
 
+  it('links to Add registration with this squad pre-selected (REG-22, D-164)', async () => {
+    const page = filled()
+    serve(page)
+
+    open(page)
+
+    expect(
+      await screen.findByRole(
+        'link',
+        { name: 'Add registration to this squad' },
+        { timeout: 3000 },
+      ),
+    ).toHaveAttribute(
+      'href',
+      `/tournaments/${tournament.id}/registrations/new?squad=${page.session.id}`,
+    )
+  })
+
+  it('links a sweeper with the sweeper pre-selected (REG-22, D-164)', async () => {
+    const page = createLanePage({
+      session: { ...filled().session, kind: 'sweeper' },
+      unassigned: [carl],
+    })
+    serve(page)
+
+    open(page)
+
+    expect(
+      await screen.findByRole(
+        'link',
+        { name: 'Add registration to this sweeper' },
+        { timeout: 3000 },
+      ),
+    ).toHaveAttribute(
+      'href',
+      `/tournaments/${tournament.id}/registrations/new?sweeper=${page.session.id}`,
+    )
+  })
+
+  it('has no Add registration link on a complete squad or for a score keeper (REG-33, D-157)', async () => {
+    const complete = { ...filled(), session: { ...filled().session, complete: true } }
+    serve(complete)
+    const { unmount } = open(complete)
+    await screen.findByRole('heading', { name: 'Unassigned (2)' }, { timeout: 3000 })
+    expect(screen.queryByRole('link', { name: /Add registration/ })).not.toBeInTheDocument()
+    unmount()
+
+    setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+    const page = filled()
+    serve(page)
+    open(page)
+    await screen.findByRole('heading', { name: 'Unassigned (2)' }, { timeout: 3000 })
+    expect(screen.queryByRole('link', { name: /Add registration/ })).not.toBeInTheDocument()
+  })
+
   it('lists the bowlers of a pair with their positions, in the order sent (LAN-04)', async () => {
     const page = filled()
     serve(page)

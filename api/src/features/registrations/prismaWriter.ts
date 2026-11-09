@@ -34,6 +34,13 @@ export function createPrismaRegistrationWriter(
       return rows.map(toStoredBowler)
     },
 
+    async findBowlerById(id) {
+      const row = await withDatabaseErrors(logger, () =>
+        client.bowler.findUnique({ where: { id } }),
+      )
+      return row ? toStoredBowler(row) : undefined
+    },
+
     async findRegistration(bowlerId, tournamentId) {
       const row = await withDatabaseErrors(logger, () =>
         client.registration.findFirst({

@@ -110,9 +110,9 @@ describe('useDeleteInfo (D-212)', () => {
     })
     first.unmount()
     await waitFor(() => {
-      expect(client.getQueryCache().find({ queryKey: deleteInfoKeys.detail('t1', 'r1') })).toBe(
-        undefined,
-      )
+      expect(
+        client.getQueryCache().find({ queryKey: deleteInfoKeys.detail('t1', 'r1') }),
+      ).toBeUndefined()
     })
 
     renderHook(() => useDeleteInfo('t1', 'r1'), { wrapper: wrap })

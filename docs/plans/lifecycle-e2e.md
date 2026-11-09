@@ -43,8 +43,8 @@ The score set is designed: ties for first and at the cash line (scratch and hand
 1. **Tournament.** Create, edit a free field, check the overview.
 2. **Divisions.** Create three; check the list and numbering.
 3. **Squads and sweepers.** Create four squads and two sweepers with bonus pins; edit one of each; add a spare squad and a spare sweeper and delete them (`SQD-14`); check the cards.
-4. **Registration and money.** Desk registrations and payments in the UI, the registration site's through the API key, returning bowlers updated, some edits and deletes. Check counts for each squad, sweeper, and division, and each bowler's fees owed and paid, and the totals, against the hand-written fee table. _The desk path waits for the registration edit and payment screens (rule 3); only the registration site's API-key part can run now. The money checks wait for the same screens._
-5. **Lanes.** Assign every bowler, open the recap sheets, and move some. No one is left unassigned and no pair is over its maximum. _Moving waits for the saved lane move: today a move is on screen only (`tempMoves.ts`) and saves nothing._
+4. **Registration and money.** Desk registrations and payments in the UI, the registration site's through the API key, returning bowlers updated, some edits and deletes. **Edits (`REG-15` to `REG-21`, D-197 to D-207):** a prepaid site bowler arrives at the desk and adds a squad; one bowler switches squads on the edit page; one drops a squad (check the refund line); one changes division and one changes average before scores; one adds and removes the super sweeper. Check counts for each squad, sweeper, and division, and each bowler's fees owed and paid, and the totals, against the hand-written fee table. _The desk path waits for the registration edit and payment screens (rule 3); only the registration site's API-key part can run now. The money checks wait for the same screens._
+5. **Lanes.** Assign every bowler, open the recap sheets, and move some. No one is left unassigned and no pair is over its maximum. **Move to a later squad (D-202):** from a squad's lane page, move one bowler to a later squad of the same kind before any score. Check the bowler is gone from the first squad's lanes, lands in the later squad's unassigned list, and that both squads' counts, the summary, and the fee lines change as the hand-written table says. _Moving waits for the saved lane move: today a move is on screen only (`tempMoves.ts`) and saves nothing._
 6. **Scores.** The director enters the designed scores squad by squad, edits one, and checks the Scores tab. _Waits for score entry._
 7. **Complete and results.** Complete every squad and sweeper; check each Results tab, At-large, Seeding, and Super sweeper, including "Unofficial results" before the last session completes (D-84, D-88). _Complete squad and sweeper exist (`SQD-15`, `SQD-16`); the stage still waits for score entry. Completing a squad with no scores saves zeros for each entered bowler (D-190)._
 8. **Complete the tournament.** It freezes (D-130), and delete is refused (D-133). _Waits for Complete tournament (D-196)._
@@ -66,6 +66,10 @@ Start with these; add one whenever a feature brings a new refusal.
 | Register  | Repeat a payment code (D-109, D-118)                 | A retry, no second entry                      |
 | Scores    | Delete an entry that has a score (`REG-19`)          | 400, the entry stays (waits for score entry)  |
 | Scores    | Enter a score above 300                              | Refused                                       |
+| Scores    | Remove or move a bowler out of a squad where they have a score (`REG-34`, D-203) | 400, the entry and the lane stay (waits for score entry) |
+| Complete  | Move a bowler out of a complete squad, or into one (D-10, D-202) | 400, nothing changes |
+| Register  | Remove a sweeper while the bowler is in the super sweeper (D-203) | 400 "Remove the Super Sweeper first." |
+| Register  | The site adds a squad while the desk edit is open, then the desk saves (D-199) | 409 `changed`; the site's squad is kept |
 | Complete  | Complete a squad that is already complete (D-192)    | 409 with `errors`, no second set of zeros     |
 | Complete  | Edit a complete tournament                           | 409, every field frozen                       |
 | Delete    | Delete a tournament that has scores                  | 409, no override                              |
@@ -80,7 +84,7 @@ Start with these; add one whenever a feature brings a new refusal.
 ## Open questions
 
 1. **The fee table.** It needs the legacy fee rules from [docs/migration/](../migration/README.md): tournament fee, squad fee, sweeper fee, handicap or super sweeper extras.
-2. **Desk payments in the UI.** There is no payment screen yet. Stage 4's desk path and money checks wait for registration edit and payment screens. No question in [decisions-and-questions.md](../migration/decisions-and-questions.md) covers them yet (Q-37 is about changing a bowler's division); open one before we build them.
+2. **Desk payments in the UI.** There is no payment screen yet. Stage 4's desk path and money checks wait for the payment screens (registration edit is built on branch `editRegistration`). No question in [decisions-and-questions.md](../migration/decisions-and-questions.md) covers them yet (Q-37 is about changing a bowler's division); open one before we build them.
 3. **Resume after a failure.** A snapshot per stage would let us rerun from stage N. Decide once we know how slow the run is.
 
 ## Done when

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Edit registration: Review</title>
+  <link rel="stylesheet" href="../../../web/src/styles/tokens.css" />
+  <link rel="stylesheet" href="../../../web/src/styles/base.css" />
+  <link rel="stylesheet" href="mockup.css" />
+</head>
+<body><main>
+<p><a href="index.html">All mockups</a></p>
+<h1>Edit registration</h1>
+<ol class="steps" aria-label="Steps">
+  <li><button type="button" class="step">1. Bowler</button></li>
+  <li><button type="button" class="step">2. Registration</button></li>
+  <li class="step" aria-current="step">3. Review</li>
+</ol>
+
+<h2 class="state">Switch a squad, add a sweeper, change a phone</h2>
+<div class="frame stack">
+  <h3>Review changes for Maria Gonzalez</h3>
+  <div><h4>Bowler</h4><ul><li>Phone: 5551234567 → (cleared)</li></ul></div>
+  <div><h4>Registration</h4><ul><li>Average: 182 → 175</li><li>Division stays Handicap</li></ul></div>
+  <table class="table"><caption>Collect</caption>
+    <thead><tr><th scope="col">Added</th><th scope="col" class="amount">Fee</th></tr></thead>
+    <tbody><tr><td>Squad: Sat Nov 14, 1:00 PM</td><td class="amount">$75.00</td></tr>
+      <tr><td>Sweeper: Sun Nov 15, 8:00 AM</td><td class="amount">$20.00</td></tr></tbody>
+    <tfoot><tr><th scope="row">To collect</th><td class="amount">$95.00</td></tr></tfoot></table>
+  <table class="table"><caption>Refund may be due (handled outside the app)</caption>
+    <thead><tr><th scope="col">Removed</th><th scope="col" class="amount">Fee</th></tr></thead>
+    <tbody><tr><td>Squad: Sat Nov 14, 9:00 AM</td><td class="amount">$75.00</td></tr></tbody>
+    <tfoot><tr><th scope="row">To refund</th><td class="amount">$75.00</td></tr></tfoot></table>
+  <p><strong>Net: collect $20.00.</strong></p>
+  <p class="note">Records a $0 desk placeholder for the added entries. The app tracks no payment.</p>
+  <label class="check"><input type="checkbox" /> I understand this removes Sat Nov 14, 9:00 AM from the registration and frees its lane.</label>
+  <div class="actions"><button type="button" class="secondary">Back</button><button type="button" disabled>Save changes</button></div>
+</div>
+
+<h2 class="state">Pure removal: net refund</h2>
+<div class="frame stack">
+  <table class="table"><caption>Refund may be due (handled outside the app)</caption>
+    <tbody><tr><td>Sweeper: Sat Nov 14, 12:00 PM</td><td class="amount">$20.00</td></tr></tbody>
+    <tfoot><tr><th scope="row">To refund</th><td class="amount">$20.00</td></tr></tfoot></table>
+  <p><strong>Net: refund $20.00.</strong></p>
+</div>
+
+<h2 class="state">Nothing changed</h2>
+<div class="frame"><p>No changes yet. Go back and change something.</p><button type="button" disabled>Save changes</button></div>
+
+<h2 class="state">Average warning after scores (409 with warnings)</h2>
+<div class="frame"><div class="dialog" role="dialog" aria-labelledby="w1">
+  <h3 id="w1">Change the average?</h3>
+  <p>This bowler has scores. Handicap and results will change.</p>
+  <div class="actions"><button type="button" class="secondary">Cancel</button><button type="button">Save anyway</button></div></div></div>
+
+<h2 class="state">Stale record (409, D-199)</h2>
+<div class="frame"><div class="notice warn" role="alert"><p><strong>This registration changed.</strong> Review and save again.</p>
+  <p class="note">Now entered: Sat Nov 14, 9:00 AM and Sat Nov 14, 1:00 PM (added a moment ago).</p>
+  <button type="button">Reload registration</button></div></div>
+
+<h2 class="state">Saving, success</h2>
+<div class="frame stack"><button type="button" disabled>Saving…</button>
+  <div role="status" class="notice">Registration updated. Added 2, removed 1.</div>
+  <p class="note">After a save the page goes to Registrations with this toast.</p></div>
+</main></body></html>

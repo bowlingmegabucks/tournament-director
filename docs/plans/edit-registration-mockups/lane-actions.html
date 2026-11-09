@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lane page: Remove and Move</title>
+  <link rel="stylesheet" href="../../../web/src/styles/tokens.css" />
+  <link rel="stylesheet" href="../../../web/src/styles/base.css" />
+  <link rel="stylesheet" href="mockup.css" />
+</head>
+<body><main>
+<p><a href="index.html">All mockups</a></p>
+<h1>Lane assignments · Sat Nov 14, 9:00 AM</h1>
+<p class="note">Buttons show only with <code>registrations.write</code> and hide on a complete session or tournament (D-198).</p>
+
+<h2 class="state">Unassigned list with the new buttons</h2>
+<div class="frame">
+<ul class="cards">
+  <li class="card"><div><strong>Maria Gonzalez</strong></div><span class="note">Handicap · avg 182 · +21</span>
+    <div class="row-actions"><button type="button" class="secondary">Assign to lanes</button><a class="link" href="#">Edit</a><button type="button" class="secondary">Move…</button><button type="button" class="danger">Remove</button></div></li>
+  <li class="card"><strong>Joe Keller, Jr</strong><span class="note">Seniors 55+ · avg 201 · +0</span>
+    <div class="row-actions"><button type="button" class="secondary">Assign to lanes</button><a class="link" href="#">Edit</a><button type="button" class="secondary">Move…</button><button type="button" class="danger">Remove</button></div></li>
+</ul></div>
+
+<h2 class="state">Remove dialog</h2>
+<div class="frame"><div class="dialog" role="dialog" aria-labelledby="r1">
+  <h3 id="r1">Remove Maria Gonzalez from this squad?</h3>
+  <p>Her entry for Sat Nov 14, 9:00 AM ends and her lane is freed. <strong>Refund may be due: $75.00</strong>, handled outside the app.</p>
+  <div class="actions"><button type="button" class="secondary">Cancel</button><button type="button" class="danger">Remove from squad</button></div></div></div>
+
+<h2 class="state">Remove refused (message stays in the dialog)</h2>
+<div class="frame stack">
+  <div class="notice error" role="alert">Bowler has already bowled in removed squads.</div>
+  <div class="notice error" role="alert">Cannot remove a squad or sweeper that is already complete.</div>
+  <div class="notice error" role="alert">Bowler must enter at least one squad. To drop the whole entry, delete the registration (coming next).</div>
+  <div class="notice error" role="alert">Remove the Super Sweeper first, then remove this sweeper.</div>
+</div>
+
+<h2 class="state">Move dialog</h2>
+<div class="frame"><div class="dialog" role="dialog" aria-labelledby="m1">
+  <h3 id="m1">Move Maria Gonzalez to another squad</h3>
+  <fieldset><legend>Move to</legend>
+    <label class="check"><input type="radio" name="t" checked /> Sat Nov 14, 1:00 PM · $75.00</label>
+    <label class="check"><input type="radio" name="t" /> Sun Nov 15, 9:00 AM · $80.00</label>
+    <label class="check off"><input type="radio" name="t" disabled /> Fri Nov 13, 6:00 PM · complete</label>
+  </fieldset>
+  <p>From Sat Nov 14, 9:00 AM ($75.00) to Sat Nov 14, 1:00 PM ($75.00). <strong>Even: nothing to collect or refund.</strong> She lands in the unassigned list.</p>
+  <div class="actions"><button type="button" class="secondary">Cancel</button><button type="button">Move</button></div></div></div>
+
+<h2 class="state">Move: fee difference and no target</h2>
+<div class="frame stack">
+  <p>From $75.00 to $80.00. <strong>Collect $5.00.</strong></p>
+  <p>From $80.00 to $75.00. <strong>Refund may be due: $5.00</strong> (outside the app).</p>
+  <p>No other open squad to move to.</p>
+</div>
+
+<h2 class="state">Saving, stale</h2>
+<div class="frame stack"><button type="button" disabled>Moving…</button>
+  <div class="notice warn" role="alert">This registration changed. Close this and try again.</div></div>
+</main></body></html>

@@ -1,0 +1,41 @@
+/* Shared by the throwaway mockups. Tokens only, no raw colors. */
+main { max-inline-size: var(--layout-width); margin: 0 auto; padding: var(--space-4); }
+h2.state { margin-block: var(--space-8) var(--space-2); font-size: var(--font-size-lg); }
+.frame { border: var(--border-width) dashed var(--color-border); border-radius: var(--radius); padding: var(--space-4); margin-block: var(--space-2) var(--space-6); max-inline-size: var(--content-width); }
+.frame.narrow { max-inline-size: 20rem; }
+.note { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.stack { display: grid; gap: var(--space-4); }
+.titlebar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4); }
+.secondary { background: transparent; color: var(--color-accent); }
+.danger { background: transparent; color: var(--color-danger); border-color: var(--color-danger); }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+.link { display: inline-flex; align-items: center; min-block-size: var(--target-min); font-weight: 600; }
+.field { display: grid; gap: var(--space-1); }
+.field input, .field select { min-block-size: var(--target-min); padding: var(--space-2) var(--space-3); border: var(--border-width) solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); color: var(--color-text); font: inherit; }
+.field input[aria-invalid='true'] { border-color: var(--color-danger); }
+.fieldError { margin: 0; color: var(--color-danger); font-size: var(--font-size-sm); }
+.hint { margin: 0; color: var(--color-text-muted); font-size: var(--font-size-sm); }
+fieldset { display: grid; gap: var(--space-1); margin: 0; padding: 0; border: 0; min-inline-size: 0; }
+legend { padding: 0; font-weight: 600; }
+.check { display: flex; gap: var(--space-2); align-items: center; min-block-size: var(--target-min); }
+.check.off { color: var(--color-text-muted); }
+.badge { display: inline-block; padding: 0 var(--space-2); border: var(--border-width) solid var(--color-border); border-radius: var(--radius); font-size: var(--font-size-sm); color: var(--color-text-muted); }
+.steps { display: flex; flex-wrap: wrap; gap: var(--space-2); list-style: none; margin: 0; padding: 0; }
+.step { display: inline-flex; align-items: center; min-block-size: var(--target-min); padding: var(--space-2) var(--space-3); border: var(--border-width) solid var(--color-border); border-radius: var(--radius); color: var(--color-text-muted); }
+.step[aria-current='step'] { border-color: var(--color-accent); color: var(--color-text); font-weight: 600; }
+button.step { background: transparent; color: var(--color-accent); font-weight: 400; }
+.notice { padding: var(--space-3) var(--space-4); border: var(--border-width) solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
+.notice.warn { border-color: var(--color-accent); }
+.notice.error { border-color: var(--color-danger); }
+.table { border-collapse: collapse; inline-size: 100%; }
+.table caption { text-align: start; font-weight: 600; padding-block-end: var(--space-2); }
+.table th, .table td { text-align: start; padding: var(--space-2) var(--space-2) var(--space-2) 0; border-block-end: var(--border-width) solid var(--color-border); vertical-align: top; }
+.table .amount { text-align: end; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.table tfoot th, .table tfoot td { font-weight: 700; border-block-end: 0; }
+.dialog { max-inline-size: 28rem; padding: var(--space-4); border: var(--border-width) solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); box-shadow: var(--shadow-elevated); }
+.dialog h3 { margin-block: 0 var(--space-2); }
+.cards { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.card { display: grid; gap: var(--space-1); padding: var(--space-3); border: var(--border-width) solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
+.card .row-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.card .row-actions button { min-block-size: var(--target-min); }
+@media (min-width: 40rem) { .table.wide td[data-label]::before { content: none; } }

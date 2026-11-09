@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Edit registration</title>
+  <link rel="stylesheet" href="../../../web/src/styles/tokens.css" />
+  <link rel="stylesheet" href="../../../web/src/styles/base.css" />
+  <link rel="stylesheet" href="mockup.css" />
+</head>
+<body><main>
+<p><a href="index.html">All mockups</a></p>
+<h1>Edit registration</h1>
+<p><strong>Maria Gonzalez</strong> · 2045-1187 · Spring Open 2026</p>
+<ol class="steps" aria-label="Steps">
+  <li><button type="button" class="step">1. Bowler</button></li>
+  <li class="step" aria-current="step">2. Registration</li>
+  <li class="step">3. Review</li>
+</ol>
+
+<h2 class="state">Loaded</h2>
+<div class="frame stack">
+  <div class="field"><label for="d1">Division</label>
+    <select id="d1"><option>Handicap</option><option>Scratch</option><option>Seniors 55+</option></select>
+    <p class="hint">Cannot change once the bowler has a score.</p></div>
+  <div class="field"><label for="a1">Average (1 to 300, blank for none)</label><input id="a1" inputmode="numeric" value="182" /></div>
+  <fieldset><legend>Squads (at least one)</legend>
+    <label class="check"><input type="checkbox" checked /> Sat Nov 14, 9:00 AM <span class="badge">Entered</span></label>
+    <label class="check"><input type="checkbox" /> Sat Nov 14, 1:00 PM</label>
+    <label class="check"><input type="checkbox" /> Sun Nov 15, 9:00 AM</label>
+    <p class="hint">To switch squads, uncheck one and check another. Review shows both.</p>
+  </fieldset>
+  <fieldset><legend>Sweepers</legend>
+    <label class="check"><input type="checkbox" checked /> Sat Nov 14, 12:00 PM <span class="badge">Entered</span></label>
+    <label class="check"><input type="checkbox" /> Sun Nov 15, 8:00 AM</label>
+  </fieldset>
+  <label class="check"><input type="checkbox" /> Super sweeper (needs every sweeper)</label>
+  <div class="actions"><a class="link" href="#">Cancel</a><button type="button">Review changes</button></div>
+</div>
+
+<h2 class="state">Sessions locked by scores or completion</h2>
+<div class="frame stack">
+  <fieldset><legend>Squads (at least one)</legend>
+    <label class="check off"><input type="checkbox" checked disabled aria-describedby="l1" /> Fri Nov 13, 6:00 PM <span class="badge">Has scores</span></label>
+    <p id="l1" class="hint">Cannot remove: this bowler has scores in this squad.</p>
+    <label class="check off"><input type="checkbox" checked disabled aria-describedby="l2" /> Sat Nov 14, 9:00 AM <span class="badge">Complete</span></label>
+    <p id="l2" class="hint">Cannot remove: this squad is complete.</p>
+    <label class="check off"><input type="checkbox" disabled /> Sat Nov 14, 1:00 PM <span class="badge">Complete</span></label>
+    <p class="hint">Cannot add: this squad is complete.</p>
+  </fieldset>
+  <label class="check off"><input type="checkbox" checked disabled aria-describedby="l3" /> Super sweeper</label>
+  <p id="l3" class="hint">Cannot change: this bowler has sweeper scores.</p>
+  <div class="field"><label for="d2">Division</label><select id="d2" disabled><option>Handicap</option></select>
+    <p class="hint">Cannot change after scores have been recorded.</p></div>
+</div>
+
+<h2 class="state">Bowler step: an emptied box clears the field (D-206)</h2>
+<div class="frame stack">
+  <div class="field"><label for="p1">Phone</label><input id="p1" value="" />
+    <p class="hint">Stored: 5551234567. Leave empty to clear it.</p></div>
+  <div class="field"><label for="u1">USBC ID (required in a handicap division)</label>
+    <input id="u1" aria-invalid="true" value="" aria-describedby="u1e" />
+    <p id="u1e" class="fieldError">USBC Id is required for Handicap Divisions</p></div>
+</div>
+
+<h2 class="state">Validation errors (back on the step that holds the field)</h2>
+<div class="frame stack">
+  <div class="notice error" role="alert"><strong>Fix these and save again.</strong>
+    <ul><li>Maximum average requirement for division not met</li><li>Super Sweeper cannot be enrolled when not all sweepers are registered.</li></ul></div>
+  <div class="notice error" role="alert">Remove the Super Sweeper first, then remove this sweeper.</div>
+</div>
+
+<h2 class="state">Loading</h2>
+<div class="frame"><p role="status">Loading registration…</p></div>
+
+<h2 class="state">Error</h2>
+<div class="frame"><div class="notice error" role="alert"><p>Could not load this registration.</p><button type="button">Try again</button></div></div>
+
+<h2 class="state">Not found, and complete tournament</h2>
+<div class="frame stack">
+  <p>Registration not found. <a href="#">Back to registrations</a></p>
+  <div class="notice">This tournament is complete. Registrations cannot be changed. <a href="#">Back to registrations</a></div>
+</div>
+</main></body></html>

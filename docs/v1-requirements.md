@@ -34,7 +34,7 @@ Version numbers follow content, not a countdown. 0.10.0 is fine.
   - [x] Create a division: the server numbers it, a name is unique in the tournament, a complete tournament refuses, a percent over 100 confirms (`createDivision`, `DIV-01` to `DIV-11`, `DIV-15`, D-138 to D-145).
   - [x] Edit a division, warning when registered bowlers may no longer fit (`editDivision`, `DIV-12`, D-146 to D-150).
   - [x] Delete a division: refused for a complete tournament or any registered bowler, the number gap closes (`deleteDivision`, `DIV-12`, D-151 to D-156).
-  - [ ] Change a registered bowler's division in the new app, so a director can empty a division before deleting it (`REG-15`, Q-37, D-156). Built with the registrations edit feature.
+  - [x] Change a registered bowler's division in the new app, so a director can empty a division before deleting it (`REG-15`, Q-37, D-156, D-205). Built with edit registration.
 - [x] Squad and sweeper commands (D-12, D-15; [squads-and-sweepers.md](requirements/squads-and-sweepers.md)), 0.7.0:
   - [x] Create a squad: `squads.write`, max per pair 2 to 5, the date inside the tournament, blank fee and ratios use the tournament's, a complete tournament refuses (`createSquad`, `SQD-01` to `SQD-08`, D-167 to D-173).
   - [x] Create a sweeper, with a bonus-pins box per division: `squads.write`, own fee, games, and cash ratio, pins blank or 0 to 99, one transaction (`createSweeper`, `SQD-10` to `SQD-13`, D-174 to D-178). Q-11 (pin presets) stays open.
@@ -42,6 +42,8 @@ Version numbers follow content, not a countdown. 0.10.0 is fine.
   - [x] Delete a squad or sweeper: `squads.write`, refused for a complete tournament or session, any entered bowler, or any saved score, one serializable transaction (`deleteSquad`, `SQD-14`, D-186 to D-189).
   - [x] Complete a squad or sweeper: `squads.write`, a dialog that counts the no-show zeros, one serializable transaction, a repeat refused (`completeSquad`, `SQD-15` to `SQD-18`, D-190 to D-195). Score save and lane move refuse a complete session when those routes are built (`SCR-14`, D-10).
 - [x] Add a registration at the desk: bowler search, a stored or new bowler, three steps with a fee table, append for a registered bowler, from the Registrations page or a lane page (`createRegistration`, `REG-01` to `REG-08`, `REG-10` to `REG-14`, `REG-22`, `BWL-14`, `BWL-15`, D-157 to D-166; [add-registration.md](requirements/add-registration.md)).
+- [x] Edit a registration at the desk: add or drop a squad or sweeper, switch squads, move the division, change the average, turn super sweeper on or off, correct the bowler; Move and Remove from a lane page; a stale-save guard and a collect, refund, and net Review (`editRegistration`, `REG-15` to `REG-18`, `REG-20`, `REG-21`, `REG-25`, `BWL-16`, `BWL-18`, D-197 to D-207; [edit-registration.md](requirements/edit-registration.md)).
+- [ ] Delete a registration at the desk (`REG-19` screen, D-208, Q-35). Its own slice.
 
 ## Data and cutover
 

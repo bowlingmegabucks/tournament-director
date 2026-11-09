@@ -137,11 +137,15 @@ test('on a narrow screen the card leaves out a blank super sweeper (REG-23, D-47
   await menuLink(page, 'Registrations')
   await expect(page.getByRole('heading', { name: 'Registrations', level: 1 })).toBeVisible()
 
-  const lastCell = (name: string) =>
-    page.getByRole('rowheader', { name }).locator('xpath=..').locator('td').last()
+  // The Edit link adds a last cell (D-197), so find the super sweeper cell by its label.
+  const superSweeperCell = (name: string) =>
+    page
+      .getByRole('rowheader', { name })
+      .locator('xpath=..')
+      .locator('td[data-label="Super sweeper"]')
 
-  await expect(lastCell('Dana Abbott')).toBeVisible()
-  await expect(lastCell('Ray Baptiste, Jr')).toBeHidden()
+  await expect(superSweeperCell('Dana Abbott')).toBeVisible()
+  await expect(superSweeperCell('Ray Baptiste, Jr')).toBeHidden()
 })
 
 test('a squad count opens a popup that lists the squads, and Escape closes it (REG-28)', async ({

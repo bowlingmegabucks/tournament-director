@@ -742,6 +742,85 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('edit-registration page, every step, and the locks have no WCAG 2.2 AA violations', async ({
+      page,
+    }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Registrations')
+      await expectNoViolations(page)
+
+      // Dana holds a complete squad and sweeper: disabled boxes with their reasons in words.
+      await page.getByRole('link', { name: 'Edit Dana Abbott' }).click()
+      await expect(page.getByRole('heading', { name: 'Registration', level: 2 })).toBeVisible()
+      await expect(page.getByText('Cannot remove: this one is complete.').first()).toBeVisible()
+      await expectNoViolations(page)
+
+      // Bowler step, then an error, then Review with collect, refund, net, and the tick.
+      await page.getByRole('button', { name: '1. Bowler' }).click()
+      await expectNoViolations(page)
+      await page.getByLabel('First name (required)').fill('')
+      await page.getByRole('button', { name: 'Next: registration' }).click()
+      await expect(page.getByRole('alert')).toContainText('First Name is Required')
+      await expectNoViolations(page)
+      await page.getByLabel('First name (required)').fill('Dana')
+      await page.getByRole('button', { name: 'Next: registration' }).click()
+      await page.getByLabel(/Sat 10\/24\/2026 1:00 PM/).uncheck()
+      await page.getByLabel(/Sun 10\/25\/2026 9:00 AM/).check()
+      await page.getByRole('button', { name: 'Next: review' }).click()
+      await expect(page.getByText('Net: refund $10.00.')).toBeVisible()
+      await expectNoViolations(page)
+    })
+
+    test('edit-registration changed notice and the empty review have no WCAG 2.2 AA violations', async ({
+      page,
+    }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Registrations')
+      await page
+        .getByRole('row')
+        .filter({ hasText: '5560-11902' })
+        .getByRole('link', { name: /^Edit/ })
+        .click()
+      await page.getByRole('button', { name: 'Next: review' }).click()
+      await expect(page.getByText(/No changes yet/)).toBeVisible()
+      await expectNoViolations(page)
+
+      await page.getByRole('button', { name: 'Back', exact: true }).click()
+      await page.getByLabel('Average').fill('175')
+      await page.getByRole('button', { name: 'Next: review' }).click()
+      await page.getByRole('button', { name: 'Save changes' }).click()
+      await expect(page.getByText('This registration changed.')).toBeVisible()
+      await expectNoViolations(page)
+    })
+
+    test('lane page registration actions (menu, move, remove) have no WCAG 2.2 AA violations', async ({
+      page,
+    }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Squads')
+      await page.getByRole('link', { name: /^[A-Z][a-z]{2} \d{2}\/\d{2}\/\d{4} 1:00 PM$/ }).click()
+      await expect(page.getByRole('heading', { name: 'Unassigned (4)' })).toBeVisible()
+      await expectNoViolations(page)
+
+      await page.getByRole('button', { name: 'Registration actions: Tom Delgado' }).click()
+      const dialog = page.getByRole('dialog', { name: 'Registration actions for Tom Delgado' })
+      await expect(dialog.getByRole('link', { name: 'Edit registration' })).toBeVisible()
+      await expectNoViolations(page)
+
+      await dialog.getByRole('button', { name: 'Move to another squad…' }).click()
+      await dialog.getByRole('radio', { name: /Sun 10\/25\/2026 9:00 AM/ }).check()
+      await expectNoViolations(page)
+
+      await dialog.getByRole('button', { name: 'Cancel' }).click()
+      await dialog.getByRole('button', { name: 'Remove from this squad…' }).click()
+      await dialog.getByRole('button', { name: 'Remove from squad' }).click()
+      await expect(dialog.getByRole('alert')).toContainText('Bowler must enter at least one squad')
+      await expectNoViolations(page)
+    })
+
     test('add-registration dialogs have no WCAG 2.2 AA violations', async ({ page }) => {
       await openTournamentsSignedIn(page)
       await page.getByRole('article').first().getByRole('link').click()

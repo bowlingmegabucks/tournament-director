@@ -15,6 +15,10 @@ interface SessionsProps {
   held: string[]
   /** Came from the lane page: checked and locked (REG-22, D-164). */
   preset: string | undefined
+  /** Edit page: on the registration now, still free to untick (D-197). Shows a badge. */
+  entered?: string[]
+  /** Edit page: a session that cannot be changed, with the reason in words (REG-34, D-10). */
+  reasons?: Record<string, string>
   error: string | undefined
   errorId: string
   onToggle: (id: string, on: boolean) => void
@@ -27,6 +31,8 @@ function Sessions({
   chosen,
   held,
   preset,
+  entered = [],
+  reasons = {},
   error,
   errorId,
   onToggle,
@@ -42,23 +48,37 @@ function Sessions({
       {sessions.map((session) => {
         const isHeld = held.includes(session.id)
         const isPreset = session.id === preset
-        const locked = isHeld || isPreset
-        const closed = session.complete && !isHeld
+        const isEntered = entered.includes(session.id)
+        const reason = reasons[session.id]
+        const locked = isHeld || isPreset || reason !== undefined
+        const closed = session.complete && !isHeld && !isEntered
+        const reasonId = `${session.id}-reason`
         return (
-          <label className={`${styles.check} ${closed ? styles.off : ''}`} key={session.id}>
-            <input
-              type="checkbox"
-              checked={locked || chosen.includes(session.id)}
-              disabled={locked || closed}
-              onChange={(event) => {
-                onToggle(session.id, event.target.checked)
-              }}
-            />
-            <span>{formatSessionDate(session.date)}</span>
-            {closed && <span className={styles.badge}>Complete</span>}
-            {isHeld && <span className={styles.badge}>Already entered</span>}
-            {isPreset && !isHeld && <span className={styles.badge}>Added from the lane page</span>}
-          </label>
+          <div key={session.id}>
+            <label className={`${styles.check} ${closed || reason ? styles.off : ''}`}>
+              <input
+                type="checkbox"
+                checked={locked || chosen.includes(session.id)}
+                disabled={locked || closed}
+                aria-describedby={reason ? reasonId : undefined}
+                onChange={(event) => {
+                  onToggle(session.id, event.target.checked)
+                }}
+              />
+              <span>{formatSessionDate(session.date)}</span>
+              {closed && <span className={styles.badge}>Complete</span>}
+              {isHeld && <span className={styles.badge}>Already entered</span>}
+              {isEntered && <span className={styles.badge}>Entered</span>}
+              {isPreset && !isHeld && (
+                <span className={styles.badge}>Added from the lane page</span>
+              )}
+            </label>
+            {reason && (
+              <p id={reasonId} className={styles.hint}>
+                {reason}
+              </p>
+            )}
+          </div>
         )
       })}
       {hint && <p className={styles.hint}>{hint}</p>}
@@ -83,6 +103,16 @@ interface RegistrationFieldsProps {
   presetSweeperId: string | undefined
   legend: string
   hint?: string
+  /** Edit page only (D-197): the sessions on the registration, and what is locked and why. */
+  edit?: {
+    enteredSquadIds: string[]
+    enteredSweeperIds: string[]
+    reasons: Record<string, string>
+    /** Why the division cannot change (REG-15), or `undefined`. */
+    divisionLock: string | undefined
+    /** Why super sweeper cannot change (REG-18), or `undefined`. */
+    superSweeperLock: string | undefined
+  }
   onChange: (values: RegistrationValues) => void
 }
 
@@ -102,6 +132,7 @@ export function RegistrationFields({
   presetSweeperId,
   legend,
   hint,
+  edit,
   onChange,
 }: Readonly<RegistrationFieldsProps>) {
   const divisionError = errors['divisionId']
@@ -119,8 +150,16 @@ export function RegistrationFields({
           id="registration-division"
           className={styles.input}
           value={values.divisionId}
+          disabled={edit?.divisionLock !== undefined}
           aria-invalid={divisionError ? true : undefined}
-          aria-describedby={divisionError ? 'registration-division-error' : undefined}
+          aria-describedby={
+            [
+              divisionError ? 'registration-division-error' : undefined,
+              edit?.divisionLock ? 'registration-division-lock' : undefined,
+            ]
+              .filter(Boolean)
+              .join(' ') || undefined
+          }
           onChange={(event) => {
             onChange({ ...values, divisionId: event.target.value })
           }}
@@ -132,6 +171,11 @@ export function RegistrationFields({
             </option>
           ))}
         </select>
+        {edit?.divisionLock && (
+          <p id="registration-division-lock" className={styles.hint}>
+            {edit.divisionLock}
+          </p>
+        )}
         {divisionError && (
           <p id="registration-division-error" className={styles.fieldError}>
             {divisionError}
@@ -171,6 +215,8 @@ export function RegistrationFields({
         chosen={values.squadIds}
         held={heldSquadIds}
         preset={presetSquadId}
+        entered={edit?.enteredSquadIds}
+        reasons={edit?.reasons}
         error={errors['squadIds']}
         errorId="registration-squads-error"
         onToggle={(id, on) => {
@@ -183,6 +229,8 @@ export function RegistrationFields({
         chosen={values.sweeperIds}
         held={heldSweeperIds}
         preset={presetSweeperId}
+        entered={edit?.enteredSweeperIds}
+        reasons={edit?.reasons}
         error={errors['sweeperIds']}
         errorId="registration-sweepers-error"
         onToggle={(id, on) => {
@@ -194,6 +242,8 @@ export function RegistrationFields({
           <input
             type="checkbox"
             checked={values.superSweeper}
+            disabled={edit?.superSweeperLock !== undefined}
+            aria-describedby={edit?.superSweeperLock ? 'registration-super-lock' : undefined}
             onChange={(event) => {
               onChange({ ...values, superSweeper: event.target.checked })
             }}
@@ -201,6 +251,11 @@ export function RegistrationFields({
           <span>Super sweeper</span>
           <span className={styles.badge}>Needs every sweeper</span>
         </label>
+        {edit?.superSweeperLock && (
+          <p id="registration-super-lock" className={styles.hint}>
+            {edit.superSweeperLock}
+          </p>
+        )}
         {errors['superSweeper'] && (
           <p className={styles.fieldError} role="alert">
             {errors['superSweeper']}

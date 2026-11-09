@@ -12,6 +12,8 @@ interface BowlerRowProps {
   compact: boolean
   /** The "Assign to lanes" or "Move" button was pressed (D-58). */
   onAssign: (bowler: LaneBowler) => void
+  /** The "Registration" button was pressed: edit, move to another session, or remove (D-197). Left out for a user who may not. */
+  onManage?: (bowler: LaneBowler) => void
 }
 
 function Details({
@@ -48,6 +50,7 @@ function DraggableRow({
   kind,
   compact,
   onAssign,
+  onManage,
 }: Readonly<Omit<BowlerRowProps, 'readOnly'>>) {
   const { ref, handleRef, isDragSource } = useDraggable({ id: bowler.registrationId })
   const placed = bowler.position !== ''
@@ -78,6 +81,18 @@ function DraggableRow({
         >
           {placed ? 'Move' : 'Assign to lanes'}
         </button>
+        {onManage && (
+          <button
+            type="button"
+            className={styles.secondary}
+            aria-label={`Registration actions: ${bowler.name}`}
+            onClick={() => {
+              onManage(bowler)
+            }}
+          >
+            Registration
+          </button>
+        )}
       </div>
     </li>
   )

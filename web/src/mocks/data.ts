@@ -4,7 +4,7 @@ import type { Division } from '../features/divisions/types'
 import type { LaneBowler, LanePage, LanePair } from '../features/lanes/types'
 import type { SessionKind } from '../shared/session'
 import type { RecapSheet, RecapSheets } from '../features/recapSheets/types'
-import type { Registration, RegistrationList } from '../features/registrations/types'
+import type { EditInfo, Registration, RegistrationList } from '../features/registrations/types'
 import type {
   AtLargeDivision,
   AtLargeResults,
@@ -1302,5 +1302,49 @@ export function createSignedInUser(overrides: Partial<SignedInUser> = {}): Signe
     roles,
     permissions: roles.flatMap((role) => permissionsByRole[role] ?? []),
     ...overrides,
+  }
+}
+
+/** What `GET .../registrations/{id}/edit-info` returns (D-197): Maria Gonzalez in one squad and one sweeper. */
+export function createEditInfo(
+  overrides: {
+    bowler?: Partial<EditInfo['bowler']>
+    registration?: Partial<EditInfo['registration']>
+    locks?: Partial<EditInfo['locks']>
+  } = {},
+): EditInfo {
+  return {
+    bowler: {
+      id: faker.string.uuid(),
+      firstName: 'Maria',
+      middleInitial: '',
+      lastName: 'Gonzalez',
+      suffix: '',
+      street: '14 Elm Street',
+      city: 'Worcester',
+      state: 'MA',
+      zipCode: '01604',
+      email: 'maria@example.com',
+      phoneNumber: '5085550142',
+      usbcId: '1234-56789',
+      dateOfBirth: '1984-03-09',
+      gender: 'Female',
+      ...overrides.bowler,
+    },
+    registration: {
+      id: faker.string.uuid(),
+      divisionId: faker.string.uuid(),
+      average: 182,
+      superSweeper: false,
+      squadIds: [],
+      sweeperIds: [],
+      ...overrides.registration,
+    },
+    locks: {
+      scoredSessionIds: [],
+      hasScores: false,
+      hasSweeperScores: false,
+      ...overrides.locks,
+    },
   }
 }

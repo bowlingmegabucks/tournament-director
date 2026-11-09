@@ -17,6 +17,7 @@ import { SweeperResultsPage } from './features/results/SweeperResultsPage'
 import { ScoresPage } from './features/scores/ScoresPage'
 import { OpenLanes, SquadPortal, SweeperPortal } from './features/lanes/SessionPortal'
 import { AddRegistrationPage } from './features/registrations/AddRegistrationPage'
+import { EditRegistrationPage } from './features/registrations/EditRegistrationPage'
 import { RegistrationsPage } from './features/registrations/RegistrationsPage'
 import { EditSquadPage } from './features/squads/EditSquadPage'
 import { NewSquadPage } from './features/squads/NewSquadPage'
@@ -151,6 +152,14 @@ export default function App() {
             element={
               <RequirePermission permission="registrations.write">
                 <AddRegistrationPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="registrations/:registrationId/edit"
+            element={
+              <RequirePermission permission="registrations.write">
+                <EditRegistrationPage />
               </RequirePermission>
             }
           />

@@ -21,6 +21,7 @@ import type { BowlerRepository } from './features/bowlers/repository.ts'
 import { createRegistrationRouter } from './features/registrations/routes.ts'
 import type { RegistrationRepository } from './features/registrations/repository.ts'
 import { createDeskRegistrationRouter } from './features/registrations/deskRoutes.ts'
+import { createEditRegistrationRouter } from './features/registrations/editRoutes.ts'
 import { createVendorRegistrationRouter } from './features/registrations/vendorRoutes.ts'
 import type { RegistrationWriter } from './features/registrations/writer.ts'
 import { createFinalsRouter, createResultsRouter } from './features/results/routes.ts'
@@ -166,6 +167,11 @@ export function createApp({
   })
 
   const deskRegistrations = createDeskRegistrationRouter(
+    { tournaments, divisions, sweepers, writer: registrationWriter },
+    logger,
+  )
+
+  const editRegistrations = createEditRegistrationRouter(
     { tournaments, divisions, sweepers, writer: registrationWriter },
     logger,
   )
@@ -411,6 +417,12 @@ export function createApp({
         access: { permission: 'registrations.write' }, // D-157, D-105: the API key cannot reach it
         methods: ['POST'],
         router: deskRegistrations,
+      },
+      {
+        path: '/v1/tournaments/:id/registrations',
+        access: { permission: 'registrations.write' }, // D-197, D-198: the API key cannot reach it
+        methods: ['GET', 'PATCH'],
+        router: editRegistrations,
       },
       {
         path: '/v1/bowlers',

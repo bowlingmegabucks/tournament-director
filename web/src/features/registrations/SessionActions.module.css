@@ -1,0 +1,57 @@
+.menu {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.menu button {
+  inline-size: 100%;
+  text-align: start;
+}
+
+/* A link that looks like the outline button next to it. */
+.link {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--target-min);
+  padding: var(--space-2) var(--space-4);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.targets {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.targets legend {
+  padding: 0;
+  font-weight: 600;
+}
+
+.target {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-block-size: var(--target-min);
+}
+
+.off {
+  color: var(--color-text-muted);
+}
+
+.badge {
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}

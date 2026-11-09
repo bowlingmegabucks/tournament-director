@@ -131,3 +131,51 @@ export interface ExistingRegistration {
   squadIds: string[]
   sweeperIds: string[]
 }
+
+/** `GET /v1/tournaments/{id}/registrations/{registrationId}/edit-info` (D-197). The API's `editRoutes.ts` sends these fields: change both together. */
+export interface EditInfo {
+  bowler: BowlerValues & { id: string }
+  registration: {
+    id: string
+    divisionId: string
+    average: number | null
+    superSweeper: boolean
+    squadIds: string[]
+    sweeperIds: string[]
+  }
+  locks: {
+    /** Sessions where this bowler has a score: they cannot be removed (REG-34). */
+    scoredSessionIds: string[]
+    /** Any score in this tournament: the division is locked (REG-15). */
+    hasScores: boolean
+    /** A sweeper score: super sweeper is locked (REG-18, D-110). */
+    hasSweeperScores: boolean
+  }
+}
+
+/** `PATCH /v1/tournaments/{id}/registrations/{registrationId}` (D-197, D-199). Every part is optional. */
+export interface EditRegistrationRequest {
+  divisionId?: string
+  /** `null` clears it (REG-16). */
+  average?: number | null
+  superSweeper?: boolean
+  addSquadIds?: string[]
+  removeSquadIds?: string[]
+  addSweeperIds?: string[]
+  removeSweeperIds?: string[]
+  /** Only the changed fields; an empty string clears one (D-206). */
+  bowler?: Partial<BowlerValues>
+  confirmWarnings?: boolean
+}
+
+export interface EditResult {
+  registrationId: string
+  added: number
+  removed: number
+}
+
+/** What the API asks the director to confirm before it saves (D-201). */
+export interface EditWarning {
+  field: string
+  message: string
+}

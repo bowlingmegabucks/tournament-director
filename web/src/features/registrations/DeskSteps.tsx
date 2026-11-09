@@ -132,7 +132,7 @@ interface ActionsProps {
   children: ReactNode
 }
 
-function Actions({ listUrl, children }: Readonly<ActionsProps>) {
+export function Actions({ listUrl, children }: Readonly<ActionsProps>) {
   return (
     <div className={styles.actions}>
       {children}

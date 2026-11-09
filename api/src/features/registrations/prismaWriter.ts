@@ -1,7 +1,8 @@
 import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { newColumns, patchColumns, toStoredBowler } from './bowlerRow.ts'
-import type { RegistrationWriter, StoredSession } from './writer.ts'
+import { withRetry } from '../../shared/serializableRetry.ts'
+import { StaleRegistrationError, type RegistrationWriter, type StoredSession } from './writer.ts'
 
 const squadType = 0
 const sweeperType = 1
@@ -100,55 +101,76 @@ export function createPrismaRegistrationWriter(
       return rows.map((row) => row.squadId)
     },
 
-    async save({ bowler, registration, addSessionIds, removeSessionIds = [], payment }) {
-      await withDatabaseErrors(logger, () =>
-        client.$transaction(async (tx) => {
-          if (bowler.isNew) {
-            await tx.bowler.create({ data: { id: bowler.id, ...newColumns(bowler.data) } })
-          } else if (Object.keys(bowler.patch).length > 0) {
-            await tx.bowler.update({ where: { id: bowler.id }, data: patchColumns(bowler.patch) })
-          }
+    async save({ bowler, registration, addSessionIds, removeSessionIds = [], payment, expect }) {
+      const run = () =>
+        client.$transaction(
+          async (tx) => {
+            if (expect) {
+              // D-199: the desk read the registration earlier; check it still reads the same.
+              const rows = await tx.squadRegistration.findMany({
+                where: {
+                  registrationId: registration.id,
+                  squadId: { in: [...expect.present, ...expect.absent] },
+                },
+                select: { squadId: true },
+              })
+              const held = new Set(rows.map((row) => row.squadId))
+              if (
+                !expect.present.every((id) => held.has(id)) ||
+                expect.absent.some((id) => held.has(id))
+              ) {
+                throw new StaleRegistrationError()
+              }
+            }
+            if (bowler.isNew) {
+              await tx.bowler.create({ data: { id: bowler.id, ...newColumns(bowler.data) } })
+            } else if (Object.keys(bowler.patch).length > 0) {
+              await tx.bowler.update({ where: { id: bowler.id }, data: patchColumns(bowler.patch) })
+            }
 
-          const columns = {
-            divisionId: registration.divisionId,
-            average: registration.average,
-            superSweeper: registration.superSweeper,
-          }
-          if (registration.isNew) {
-            await tx.registration.create({
-              data: { id: registration.id, bowlerId: bowler.id, ...columns },
-            })
-          } else {
-            await tx.registration.update({ where: { id: registration.id }, data: columns })
-          }
+            const columns = {
+              divisionId: registration.divisionId,
+              average: registration.average,
+              superSweeper: registration.superSweeper,
+            }
+            if (registration.isNew) {
+              await tx.registration.create({
+                data: { id: registration.id, bowlerId: bowler.id, ...columns },
+              })
+            } else {
+              await tx.registration.update({ where: { id: registration.id }, data: columns })
+            }
 
-          if (removeSessionIds.length > 0) {
-            await tx.squadRegistration.deleteMany({
-              where: { registrationId: registration.id, squadId: { in: removeSessionIds } },
-            })
-          }
-          if (addSessionIds.length > 0) {
-            await tx.squadRegistration.createMany({
-              data: addSessionIds.map((squadId) => ({
-                registrationId: registration.id,
-                squadId,
-                laneAssignment: '',
-              })),
-            })
-          }
-          if (payment) {
-            await tx.payment.create({
-              data: {
-                id: payment.id,
-                registrationId: registration.id,
-                confirmationCode: payment.confirmationCode,
-                amount: payment.amount,
-                createdAtUtc: payment.createdAtUtc,
-              },
-            })
-          }
-        }),
-      )
+            if (removeSessionIds.length > 0) {
+              await tx.squadRegistration.deleteMany({
+                where: { registrationId: registration.id, squadId: { in: removeSessionIds } },
+              })
+            }
+            if (addSessionIds.length > 0) {
+              await tx.squadRegistration.createMany({
+                data: addSessionIds.map((squadId) => ({
+                  registrationId: registration.id,
+                  squadId,
+                  laneAssignment: '',
+                })),
+              })
+            }
+            if (payment) {
+              await tx.payment.create({
+                data: {
+                  id: payment.id,
+                  registrationId: registration.id,
+                  confirmationCode: payment.confirmationCode,
+                  amount: payment.amount,
+                  createdAtUtc: payment.createdAtUtc,
+                },
+              })
+            }
+          },
+          // Two desk edits of one registration must not interleave (D-199).
+          expect ? { isolationLevel: 'Serializable' } : undefined,
+        )
+      await withDatabaseErrors(logger, () => (expect ? withRetry(run) : run()))
     },
 
     async deleteRegistration(registrationId) {

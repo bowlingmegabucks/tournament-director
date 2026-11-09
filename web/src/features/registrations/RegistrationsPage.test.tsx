@@ -4,7 +4,12 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import { setMockUser } from '../../mocks/authHandlers'
-import { createRegistration, createTournament, createSignedInUser } from '../../mocks/data'
+import {
+  createRegistration,
+  createSettings,
+  createSignedInUser,
+  createTournament,
+} from '../../mocks/data'
 import { renderApp } from '../../test/renderApp'
 import type { Registration, RegistrationList, Summary } from './types'
 
@@ -611,5 +616,62 @@ describe('RegistrationsPage', () => {
       expect(await screen.findByText('You do not have permission to view this page.')).toBeVisible()
       expect(screen.queryByText('Dana Abbott')).not.toBeInTheDocument()
     })
+  })
+})
+
+describe('the Edit link (REG-25, D-197, D-198)', () => {
+  const serveWithSettings = (registrations: Registration[], completed = false) => {
+    serve(registrations)
+    server.use(
+      http.get('/v1/tournaments/:id/settings', () =>
+        HttpResponse.json({ settings: createSettings({ completed }) }),
+      ),
+    )
+  }
+
+  it('gives each row an Edit link to its edit page, named for the bowler', async () => {
+    const maria = named('Maria', 'Chen')
+    serveWithSettings([named('Dana', 'Abbott'), maria])
+
+    open()
+
+    const link = await screen.findByRole('link', { name: 'Edit Maria Chen' })
+    expect(link).toHaveAttribute(
+      'href',
+      `/tournaments/${tournament.id}/registrations/${maria.id}/edit`,
+    )
+    expect(screen.getAllByRole('link', { name: /^Edit / })).toHaveLength(2)
+  })
+
+  it('hides the links from a score keeper, who may read but not edit (D-198)', async () => {
+    setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+    serveWithSettings([named('Dana', 'Abbott')])
+
+    open()
+
+    expect(await screen.findByRole('rowheader', { name: 'Dana Abbott' })).toBeVisible()
+    expect(screen.queryByRole('link', { name: /^Edit / })).not.toBeInTheDocument()
+  })
+
+  it('hides the links on a complete tournament (D-130)', async () => {
+    serveWithSettings([named('Dana', 'Abbott')], true)
+
+    open()
+
+    expect(await screen.findByRole('rowheader', { name: 'Dana Abbott' })).toBeVisible()
+    expect(screen.queryByRole('link', { name: /^Edit / })).not.toBeInTheDocument()
+  })
+
+  it('shows the updated toast the edit page sends, then clears it', async () => {
+    serveWithSettings([named('Dana', 'Abbott')])
+    const user = userEvent.setup()
+
+    renderApp(`/tournaments/${tournament.id}/registrations`, {
+      updated: 'Dana Abbott: Registration updated. Added 1.',
+    })
+
+    expect(await screen.findByText('Dana Abbott: Registration updated. Added 1.')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(screen.queryByText(/Registration updated/)).not.toBeInTheDocument()
   })
 })

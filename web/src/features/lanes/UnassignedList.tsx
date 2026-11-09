@@ -13,6 +13,7 @@ interface UnassignedListProps {
   dragging: LaneBowler | undefined
   readOnly: boolean
   onAssign: (bowler: LaneBowler) => void
+  onManage?: (bowler: LaneBowler) => void
 }
 
 /** The bowlers who need a lane (LAN-10, D-58). It scrolls on its own. */
@@ -22,6 +23,7 @@ export function UnassignedList({
   dragging,
   readOnly,
   onAssign,
+  onManage,
 }: Readonly<UnassignedListProps>) {
   const titleId = useId()
   const { ref } = useDroppable({ id: unassignedDropId, disabled: readOnly })
@@ -53,6 +55,7 @@ export function UnassignedList({
                   readOnly={readOnly}
                   compact={false}
                   onAssign={onAssign}
+                  onManage={onManage}
                 />
               ))}
             </ul>

@@ -1,5 +1,5 @@
 import { formatPair } from './format'
-import { planMove, type Move } from './tempMoves'
+import { planMove, type Move } from './optimisticMove'
 import type { LaneBowler, LanePair } from './types'
 
 /**
@@ -28,21 +28,14 @@ export const unassignedDropId = 'unassigned'
 /** Where a bowler can go: a pair, or back to unassigned (D-57). */
 export type DropTarget = LanePair | 'unassigned'
 
-/**
- * The notice that goes with every move until the move command exists (D-55). The move shows on
- * this screen only.
- */
-export const NOT_SAVED =
-  'No save is configured yet. This move shows on this screen only and is lost on refresh.'
-
-/** What a drop, or a pick in the Assign dialog, does (D-55, D-58). */
+/** What a drop, or a pick in the Assign dialog, does (D-58, D-220). */
 export type DropDecision =
   { type: 'none' } | { type: 'refuse'; message: string } | { type: 'move'; move: Move }
 
 /**
- * A full pair refuses (D-56). A pair with room, or the unassigned list for a bowler who has a
- * lane, moves the bowler on screen (the seat is worked out in `tempMoves`). A drop that changes
- * nothing does nothing.
+ * A full pair refuses at once (D-56), without a round trip; the API checks again when it saves
+ * (Q-28). A pair with room, or the unassigned list for a bowler who has a lane, moves the bowler:
+ * the page shows the guess from `optimisticMove` and saves. A drop that changes nothing does nothing.
  */
 export function decideDrop(bowler: LaneBowler, target: DropTarget): DropDecision {
   if (target === 'unassigned') {

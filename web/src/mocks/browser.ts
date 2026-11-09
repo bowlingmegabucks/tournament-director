@@ -1,4 +1,5 @@
 import { setupWorker } from 'msw/browser'
-import { handlers } from './handlers'
+import { createEventStreamHandlers, handlers } from './handlers'
 
-export const worker = setupWorker(...handlers)
+// The live streams are built here, not in `handlers`: MSW needs a browser `EventSource` to make them.
+export const worker = setupWorker(...handlers, ...createEventStreamHandlers())

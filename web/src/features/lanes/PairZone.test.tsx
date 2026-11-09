@@ -13,6 +13,7 @@ function show(
   dragging?: LaneBowler,
   readOnly = false,
   onAssign: (bowler: LaneBowler) => void = () => undefined,
+  extra: { savingIds?: ReadonlySet<string>; fresh?: boolean } = {},
 ) {
   return render(
     <DragDropProvider>
@@ -23,6 +24,7 @@ function show(
           dragging={dragging}
           readOnly={readOnly}
           onAssign={onAssign}
+          {...extra}
         />
       </ul>
     </DragDropProvider>,
@@ -101,5 +103,27 @@ describe('PairZone', () => {
 
     expect(screen.getByText('Joe Fontaine')).toBeVisible()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('marks the rows whose moves are still being saved as busy (D-220)', () => {
+    const [a, b] = bowlers(2)
+    if (!a || !b) throw new Error('No bowlers')
+    show(createLanePair(3, [a, b]), undefined, false, undefined, {
+      savingIds: new Set([a.registrationId]),
+    })
+
+    expect(screen.getByText(a.name).closest('li')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByText(b.name).closest('li')).toHaveAttribute('aria-busy', 'false')
+  })
+
+  it('draws an accent edge when another desk just changed the pair, and not otherwise (LAN-19)', () => {
+    const { unmount } = show(createLanePair(3, bowlers(1)), undefined, false, undefined, {
+      fresh: true,
+    })
+    expect(screen.getByRole('heading', { level: 3 }).closest('li')?.className).toMatch(/fresh/)
+    unmount()
+
+    show(createLanePair(3, bowlers(1)))
+    expect(screen.getByRole('heading', { level: 3 }).closest('li')?.className).not.toMatch(/fresh/)
   })
 })

@@ -63,3 +63,9 @@
   content: '✕ ';
   color: var(--color-danger);
 }
+
+/* Changed by someone else a moment ago (LAN-19). The status line says so in words too. */
+.fresh {
+  border-color: var(--color-accent);
+  border-inline-start-width: var(--marker-width);
+}

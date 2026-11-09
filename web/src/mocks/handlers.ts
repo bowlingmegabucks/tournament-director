@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw'
+import { sse } from 'msw/sse'
 import {
   createDemoAtLarge,
   createDivision,
@@ -23,7 +24,10 @@ import { authHandlers } from './authHandlers'
 import { userHandlers } from './userHandlers'
 import { createRegistrationHandlers } from './registrationHandlers'
 import type { DivisionChanges, NewDivision } from '../features/divisions/types'
+import { formatPair } from '../features/lanes/format'
+import { applyMoves, planMove, type Move } from '../features/lanes/optimisticMove'
 import type { LaneBowler, LanePage } from '../features/lanes/types'
+import type { SessionKind } from '../shared/session'
 import type { NewSquad, Squad, SquadChanges } from '../features/squads/types'
 import type { NewSweeper, Sweeper, SweeperChanges } from '../features/sweepers/types'
 import type {
@@ -68,13 +72,21 @@ const scoredSweeperFacts = { ...noSessionFacts, hasScores: true }
 /**
  * A demo lane bowler who is also in the registration list takes that registration's id, so the lane
  * page's Registration actions (D-197) reach the same registration the edit page does. A bowler who
- * is not in the list keeps a random id, and the edit routes answer 404 for it.
+ * is not in the list keeps one id for the life of the page (by name), so a move saved by id finds
+ * the same bowler on the next read (LAN-18); the edit routes answer 404 for it.
  */
+const unlistedIds = new Map<string, string>()
+
 function withListedRegistrations(page: LanePage): LanePage {
-  const idOf = (bowler: LaneBowler) =>
-    registrations.registrations.find(
+  const idOf = (bowler: LaneBowler) => {
+    const listed = registrations.registrations.find(
       (row) => row.bowler.firstName === bowler.firstName && row.bowler.lastName === bowler.lastName,
-    )?.id ?? bowler.registrationId
+    )?.id
+    if (listed) return listed
+    const kept = unlistedIds.get(bowler.name) ?? crypto.randomUUID()
+    unlistedIds.set(bowler.name, kept)
+    return kept
+  }
   const remap = (bowlers: LaneBowler[]) =>
     bowlers.map((bowler) => ({ ...bowler, registrationId: idOf(bowler) }))
   return {
@@ -83,6 +95,112 @@ function withListedRegistrations(page: LanePage): LanePage {
     unassigned: remap(page.unassigned),
     other: remap(page.other),
   }
+}
+
+/** Moves made through the mock `PUT`, by session and then registration. Lost when the page reloads. */
+const laneMoves = new Map<string, Map<string, Move>>()
+/** What each open mock event stream can be told, by session (LAN-19). */
+const streams = new Map<string, Set<(message: string) => void>>()
+
+/** Forget the moves and the streams, so one test cannot see another's (the test setup calls it). */
+export function resetMockLaneMoves() {
+  laneMoves.clear()
+  streams.clear()
+}
+
+function lanePageOf(kind: SessionKind, session: Parameters<typeof createDemoLanePage>[1]) {
+  const page = withListedRegistrations(createDemoLanePage(kind, session, divisions))
+  return applyMoves(page, laneMoves.get(session.id) ?? new Map())
+}
+
+/** Tell every open mock stream of the session that it changed, as the API does after a move (D-218). */
+function publishMock(sessionId: string, kind: 'lanes' | 'entries' = 'lanes') {
+  for (const send of streams.get(sessionId) ?? []) {
+    send(JSON.stringify({ kind, version: Date.now() }))
+  }
+}
+
+/** The mock twin of the lane move (D-216): refuse a full pair, pick the seat, remember it, tell the streams. */
+function laneMoveHandler(kind: SessionKind, sessions: { id: string; complete: boolean }[]) {
+  const label = kind === 'squad' ? 'Squad' : 'Sweeper'
+  return http.put(
+    `/v1/tournaments/:id/${kind}s/:sessionId/lanes/:registrationId`,
+    async ({ params, request }) => {
+      if (!tournaments.some((candidate) => candidate.id === params['id'])) return notFound()
+      const found = (kind === 'squad' ? squads : sweepers).find(
+        (candidate) => candidate.id === params['sessionId'],
+      )
+      if (!found) return HttpResponse.json({ message: `${label} not found` }, { status: 404 })
+      if (sessions.find((candidate) => candidate.id === found.id)?.complete ?? found.complete) {
+        return HttpResponse.json(
+          { message: `This ${kind} is complete. Lanes cannot change.` },
+          { status: 409 },
+        )
+      }
+      const body: unknown = await request.json()
+      const lane = typeof body === 'object' && body !== null ? Reflect.get(body, 'lane') : undefined
+      const page = lanePageOf(kind, found)
+      const everyone = [...page.pairs.flatMap((pair) => pair.bowlers), ...page.unassigned]
+      const bowler = everyone.find(
+        (candidate) => candidate.registrationId === params['registrationId'],
+      )
+      if (!bowler) {
+        return HttpResponse.json(
+          { message: `Bowler is not registered for this ${kind}` },
+          { status: 404 },
+        )
+      }
+      let move: Move
+      if (lane === null) {
+        move = planMove(bowler, 'unassigned')
+      } else {
+        const pair = page.pairs.find((candidate) => candidate.firstLane === lane)
+        if (!pair) {
+          return HttpResponse.json(
+            { message: `Lane ${String(lane)} is not the first lane of a pair in this ${kind}` },
+            { status: 400 },
+          )
+        }
+        if (pair.bowlers.some((candidate) => candidate.registrationId === bowler.registrationId)) {
+          return HttpResponse.json({ position: bowler.position })
+        }
+        if (pair.bowlers.length >= pair.capacity) {
+          return HttpResponse.json(
+            {
+              message: `${formatPair(pair)} ${pair.lanes.length === 1 ? 'is' : 'are'} full (${pair.bowlers.length} of ${pair.capacity}). Pick another pair.`,
+            },
+            { status: 409 },
+          )
+        }
+        move = planMove(bowler, pair)
+      }
+      laneMoves.set(found.id, new Map(laneMoves.get(found.id)).set(bowler.registrationId, move))
+      publishMock(found.id)
+      return HttpResponse.json({ position: move.position })
+    },
+  )
+}
+
+/**
+ * The mock event streams (LAN-19). Kept out of `handlers` because MSW builds an `sse` handler only
+ * where `EventSource` exists: the browser sets these up, the Node test server does not.
+ */
+export function createEventStreamHandlers() {
+  return [eventsHandler('squad'), eventsHandler('sweeper')]
+}
+
+/** The mock event stream of a session: it sends `changed` whenever the mock `PUT` saves a move (LAN-19). */
+function eventsHandler(kind: SessionKind) {
+  return sse<{ changed: string }>(
+    `/v1/tournaments/:id/${kind}s/:sessionId/events`,
+    ({ client, params }) => {
+      const sessionId = String(params['sessionId'])
+      const send = (data: string) => {
+        client.send({ event: 'changed', data })
+      }
+      streams.set(sessionId, (streams.get(sessionId) ?? new Set()).add(send))
+    },
+  )
 }
 
 /** What the delete rules look at for a demo session (D-186). The busy squad has 12 bowlers; the scored sweeper has scores. */
@@ -488,18 +606,18 @@ export const handlers = [
     if (!tournaments.some((candidate) => candidate.id === params.id)) return notFound()
     const squad = squads.find((candidate) => candidate.id === params.sessionId)
     return squad
-      ? HttpResponse.json(withListedRegistrations(createDemoLanePage('squad', squad, divisions)))
+      ? HttpResponse.json(lanePageOf('squad', squad))
       : HttpResponse.json({ message: 'Squad not found' }, { status: 404 })
   }),
+  laneMoveHandler('squad', squads),
   http.get('/v1/tournaments/:id/sweepers/:sessionId/lanes', ({ params }) => {
     if (!tournaments.some((candidate) => candidate.id === params.id)) return notFound()
     const sweeper = sweepers.find((candidate) => candidate.id === params.sessionId)
     return sweeper
-      ? HttpResponse.json(
-          withListedRegistrations(createDemoLanePage('sweeper', sweeper, divisions)),
-        )
+      ? HttpResponse.json(lanePageOf('sweeper', sweeper))
       : HttpResponse.json({ message: 'Sweeper not found' }, { status: 404 })
   }),
+  laneMoveHandler('sweeper', sweepers),
   http.get('/v1/tournaments/:id/squads/:sessionId/scores', ({ params }) => {
     if (!tournaments.some((candidate) => candidate.id === params.id)) return notFound()
     const squad = squads.find((candidate) => candidate.id === params.sessionId)

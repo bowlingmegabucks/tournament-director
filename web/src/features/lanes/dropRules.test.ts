@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createLaneBowler, createLanePair } from '../../mocks/data'
-import {
-  decideDrop,
-  dropOutcome,
-  NOT_SAVED,
-  pairDropId,
-  seatsLeft,
-  unassignedDropId,
-} from './dropRules'
+import { decideDrop, dropOutcome, pairDropId, seatsLeft, unassignedDropId } from './dropRules'
 
 const bowlers = (count: number) => Array.from({ length: count }, () => createLaneBowler())
 
@@ -87,14 +80,6 @@ describe('decideDrop', () => {
 
   it('does nothing when an unassigned bowler is dropped on unassigned', () => {
     expect(decideDrop(waiting, 'unassigned')).toEqual({ type: 'none' })
-  })
-})
-
-describe('NOT_SAVED', () => {
-  it('says the move shows on this screen only (D-55)', () => {
-    expect(NOT_SAVED).toBe(
-      'No save is configured yet. This move shows on this screen only and is lost on refresh.',
-    )
   })
 })
 

@@ -1,5 +1,8 @@
 import { Router } from 'express'
 import { z } from 'zod'
+import { HttpError } from '../../shared/errors.ts'
+import { createSessionEventsRouter } from '../../shared/events/sseRoute.ts'
+import type { SessionEvents } from '../../shared/events/sessionEvents.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { requestLogger } from '../../shared/requestLogging.ts'
 import type { SquadRepository } from '../squads/repository.ts'
@@ -65,4 +68,37 @@ export function createLaneRouter(
   })
 
   return router
+}
+
+/**
+ * Mounted at `/v1/tournaments/:id/squads/:sessionId/events` and the sweeper twin: the live stream
+ * of one session (D-217). Needs `lanes.read`, like the page it keeps fresh. An unknown tournament
+ * or session is a plain 404 before any stream opens.
+ */
+export function createLaneEventsRouter(
+  kind: 'squad' | 'sweeper',
+  findSession: FindSession,
+  {
+    tournaments,
+    events,
+    logger,
+  }: {
+    tournaments: LanePageDeps['tournaments']
+    events: SessionEvents
+    logger: Logger
+  },
+): Router {
+  const label = kind === 'squad' ? 'Squad' : 'Sweeper'
+  return createSessionEventsRouter({
+    events,
+    logger,
+    check: async (tournamentId, sessionId) => {
+      if (!(await tournaments.get(tournamentId))) {
+        throw new HttpError(404, 'Tournament not found')
+      }
+      if (!(await findSession(tournamentId, sessionId))) {
+        throw new HttpError(404, `${label} not found`)
+      }
+    },
+  })
 }

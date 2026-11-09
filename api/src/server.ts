@@ -1,5 +1,8 @@
 import { prismaAdapter } from 'better-auth/adapters/prisma'
+import { metrics } from '@opentelemetry/api'
 import { createApp } from './app.ts'
+import { createPrismaLaneWriter } from './features/lanes/prismaWriter.ts'
+import { createSessionEvents } from './shared/events/sessionEvents.ts'
 import { loadConfig } from './config.ts'
 import { createPrismaDivisionRepository } from './features/divisions/prismaRepository.ts'
 import { createPrismaLaneRepository } from './features/lanes/prismaRepository.ts'
@@ -42,6 +45,8 @@ const auth = createAuth({
   trustedOrigins: config.corsOrigins,
   logger,
 })
+// One hub for the process (D-217, D-221): the routes publish to it and the streams listen.
+const events = createSessionEvents(logger, metrics.getMeter('tournament-director-api'))
 const app = createApp({
   config,
   logger,
@@ -55,6 +60,8 @@ const app = createApp({
   registrationWriter: createPrismaRegistrationWriter(database, logger),
   bowlers: createPrismaBowlerRepository(database, logger),
   lanes: createPrismaLaneRepository(database, logger),
+  laneWriter: createPrismaLaneWriter(database, logger),
+  events,
   scores: createPrismaScoreRepository(database, logger),
   squads: createPrismaSquadRepository(database, logger),
   squadWriter: createPrismaSquadWriter(database, logger),
@@ -72,6 +79,9 @@ const server = app.listen(config.port, () => {
 handleProcessEvents(process, {
   logger,
   server,
+  closeStreams: () => {
+    events.closeAll()
+  },
   flush: async () => {
     try {
       await database.$disconnect()

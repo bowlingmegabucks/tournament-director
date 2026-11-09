@@ -13,7 +13,15 @@ import { createDivisionRouter } from './features/divisions/routes.ts'
 import type { DivisionRepository } from './features/divisions/repository.ts'
 import type { DivisionWriter } from './features/divisions/writer.ts'
 import { createMeRouter } from './features/me/routes.ts'
-import { createLaneRouter, findSquad, findSweeper } from './features/lanes/routes.ts'
+import { createLaneMoveRouter } from './features/lanes/moveRoutes.ts'
+import {
+  createLaneEventsRouter,
+  createLaneRouter,
+  findSquad,
+  findSweeper,
+} from './features/lanes/routes.ts'
+import type { LaneWriter } from './features/lanes/writer.ts'
+import type { SessionEvents } from './shared/events/sessionEvents.ts'
 import type { LaneRepository } from './features/lanes/repository.ts'
 import { createRecapSheetRouter } from './features/recapSheets/routes.ts'
 import { createBowlerRouter } from './features/bowlers/routes.ts'
@@ -99,6 +107,10 @@ export interface AppDependencies {
   /** The desk's bowler search (BWL-14, D-157). */
   bowlers: BowlerRepository
   lanes: LaneRepository
+  /** Saves lane moves (LAN-18, D-216). */
+  laneWriter: LaneWriter
+  /** Tells open screens that a session changed (D-217). */
+  events: SessionEvents
   scores: ScoreRepository
   squads: SquadRepository
   /** Adds squads (SQD-01 to SQD-08, D-167). */
@@ -126,6 +138,8 @@ export function createApp({
   registrationWriter,
   bowlers,
   lanes,
+  laneWriter,
+  events,
   scores,
   squads,
   squadWriter,
@@ -329,7 +343,19 @@ export function createApp({
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/lanes',
+        access: { permission: 'lanes.assign' }, // LAN-18, D-216: director and admin; no API key
+        methods: ['PUT'],
+        router: createLaneMoveRouter('squad', { writer: laneWriter, events, logger }),
+      },
+      {
+        path: '/v1/tournaments/:id/squads/:sessionId/events',
+        access: { permission: 'lanes.read' }, // LAN-19, D-217: signed in; the API key cannot reach it
+        router: createLaneEventsRouter('squad', findSquad(squads), { tournaments, events, logger }),
+      },
+      {
+        path: '/v1/tournaments/:id/squads/:sessionId/lanes',
         access: { permission: 'lanes.read' }, // D-59, D-52: signed in; the API key cannot reach it
+        methods: ['GET'],
         router: createLaneRouter('squad', findSquad(squads), {
           lanes,
           tournaments,
@@ -339,7 +365,23 @@ export function createApp({
       },
       {
         path: '/v1/tournaments/:id/sweepers/:sessionId/lanes',
+        access: { permission: 'lanes.assign' }, // LAN-18, D-216: director and admin; no API key
+        methods: ['PUT'],
+        router: createLaneMoveRouter('sweeper', { writer: laneWriter, events, logger }),
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers/:sessionId/events',
+        access: { permission: 'lanes.read' }, // LAN-19, D-217: signed in; the API key cannot reach it
+        router: createLaneEventsRouter('sweeper', findSweeper(sweepers), {
+          tournaments,
+          events,
+          logger,
+        }),
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers/:sessionId/lanes',
         access: { permission: 'lanes.read' }, // D-59, D-52: signed in; the API key cannot reach it
+        methods: ['GET'],
         router: createLaneRouter('sweeper', findSweeper(sweepers), {
           lanes,
           tournaments,

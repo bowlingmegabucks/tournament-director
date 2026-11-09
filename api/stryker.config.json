@@ -17,6 +17,7 @@
     "!src/features/tournaments/prismaDeleteFacts.ts",
     "!src/shared/sessionFacts.ts",
     "!src/shared/sessionDeleteStore.ts",
+    "!src/shared/sessionCompleteStore.ts",
     "!src/features/divisions/prismaRepository.ts",
     "!src/features/squads/prismaRepository.ts",
     "!src/features/sweepers/prismaRepository.ts",

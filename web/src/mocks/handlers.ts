@@ -634,6 +634,52 @@ export const handlers = [
       ? HttpResponse.json({ deleteInfo: deleteInfoOf(String(params['sessionId'])) })
       : HttpResponse.json({ message: 'Sweeper not found' }, { status: 404 })
   }),
+  // SQD-15 complete: the mock flips the flag and says three no-shows got zeros for the demo's busy
+  // squad, none for any other. It writes no scores, so the API tests cover the zero-fill (D-190). A
+  // repeat is a 409, as the API answers (D-192).
+  http.post('/v1/tournaments/:id/squads/:sessionId/complete', ({ params }) => {
+    if (!tournaments.some((candidate) => candidate.id === params['id'])) return notFound()
+    const found = squads.find((candidate) => candidate.id === params['sessionId'])
+    if (!found) return HttpResponse.json({ message: 'Squad not found' }, { status: 404 })
+    if (found.complete) {
+      const message = 'This squad is already complete'
+      return HttpResponse.json({ message, errors: { session: message } }, { status: 409 })
+    }
+    found.complete = true
+    return HttpResponse.json({ squad: found, noShowCount: found.id === busySquadId ? 3 : 0 })
+  }),
+  http.get('/v1/tournaments/:id/squads/:sessionId/complete-info', ({ params }) => {
+    if (!tournaments.some((candidate) => candidate.id === params['id'])) return notFound()
+    const found = squads.find((candidate) => candidate.id === params['sessionId'])
+    if (!found) return HttpResponse.json({ message: 'Squad not found' }, { status: 404 })
+    const busy = found.id === busySquadId
+    return HttpResponse.json({
+      completeInfo: {
+        entryCount: busy ? 12 : 0,
+        noScoreCount: busy ? 3 : 0,
+        partialCount: busy ? 1 : 0,
+        games: found.games,
+      },
+    })
+  }),
+  // SQD-16 complete: the flag only (D-191).
+  http.post('/v1/tournaments/:id/sweepers/:sessionId/complete', ({ params }) => {
+    if (!tournaments.some((candidate) => candidate.id === params['id'])) return notFound()
+    const found = sweepers.find((candidate) => candidate.id === params['sessionId'])
+    if (!found) return HttpResponse.json({ message: 'Sweeper not found' }, { status: 404 })
+    if (found.complete) {
+      const message = 'This sweeper is already complete'
+      return HttpResponse.json({ message, errors: { session: message } }, { status: 409 })
+    }
+    found.complete = true
+    return HttpResponse.json({ sweeper: found })
+  }),
+  http.get('/v1/tournaments/:id/sweepers/:sessionId/complete-info', ({ params }) => {
+    if (!tournaments.some((candidate) => candidate.id === params['id'])) return notFound()
+    return sweepers.some((candidate) => candidate.id === params['sessionId'])
+      ? HttpResponse.json({ completeInfo: { entryCount: 0 } })
+      : HttpResponse.json({ message: 'Sweeper not found' }, { status: 404 })
+  }),
   http.get('/v1/tournaments/:id/sweepers/:sessionId/edit-info', ({ params }) => {
     if (!tournaments.some((candidate) => candidate.id === params['id'])) return notFound()
     return sweepers.some((candidate) => candidate.id === params['sessionId'])

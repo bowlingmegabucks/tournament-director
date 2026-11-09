@@ -1,12 +1,15 @@
 import { randomUUID } from 'node:crypto'
 import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import type { Logger } from '../../shared/logger.ts'
+import { createSessionCompleter } from '../../shared/sessionCompleteStore.ts'
 import { createSessionDeleter } from '../../shared/sessionDeleteStore.ts'
 import { withRetry } from '../../shared/serializableRetry.ts'
 import { toSessionEditInfo, type SessionNotFound } from '../../shared/sessionEdit.ts'
 import { loadSessionEditFacts } from '../../shared/sessionFacts.ts'
 import { localDateTime } from '../../shared/sessions.ts'
+import type { SquadCompleteInfo } from '../../shared/sessionComplete.ts'
 import type { NewSquad } from './createRequest.ts'
+import type { Squad } from './types.ts'
 import { toSquad } from './squadRow.ts'
 import type { StoredSquad } from './updatePlan.ts'
 import type { UpdateSquad } from './updateRequest.ts'
@@ -178,6 +181,16 @@ export function createPrismaSquadWriter(client: PrismaClient, logger: Logger): S
   return {
     // Delete and delete-info (SQD-14, D-186 to D-189) are the same for a squad and a sweeper.
     ...createSessionDeleter(client, logger, 'squad'),
+    // Complete and complete-info (SQD-15, D-190 to D-192).
+    ...createSessionCompleter<Squad, SquadCompleteInfo>(
+      client,
+      logger,
+      'squad',
+      (_client, row, _tournamentId, defaults) => {
+        const readable = toSquad(row, defaults)
+        return Promise.resolve(readable.success ? readable.data : undefined)
+      },
+    ),
     create: (tournamentId, input) =>
       withDatabaseErrors(logger, () => createOnce(tournamentId, input)),
     update: (tournamentId, squadId, changes, { confirmWarnings }) =>

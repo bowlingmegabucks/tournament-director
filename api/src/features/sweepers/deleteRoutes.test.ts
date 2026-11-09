@@ -188,6 +188,8 @@ describe(`DELETE ${url}`, () => {
       getEditInfo: outage,
       remove: outage,
       getDeleteInfo: outage,
+      complete: outage,
+      getCompleteInfo: outage,
     }
 
     const response = await request(createSignedInTestApp({ sweeperWriter: writer })).delete(url)
@@ -258,6 +260,8 @@ describe(`GET ${infoUrl}`, () => {
       getEditInfo: outage,
       remove: outage,
       getDeleteInfo: outage,
+      complete: outage,
+      getCompleteInfo: outage,
     }
 
     expect(

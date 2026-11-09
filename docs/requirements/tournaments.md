@@ -50,7 +50,7 @@ What decides whether a field may change. A warning appears only when the value r
 | `finalsRatio`, `cashRatio` | No scores         | Scores exist (posted results change at once)         | Complete tournament                                                                  |
 | `superSweeperCashRatio`    | No sweeper scores | Sweeper scores exist                                 | Complete tournament                                                                  |
 
-A complete tournament is frozen: every field is refused, name and center included (D-130). Nothing in the new app sets the flag yet; the Complete action is built with Complete squad and Complete sweeper.
+A complete tournament is frozen: every field is refused, name and center included (D-130). Nothing in the new app sets the flag yet; Complete tournament is its own slice, after Complete squad and Complete sweeper (D-196).
 
 How a stored row becomes those fields:
 
@@ -128,4 +128,4 @@ The shapes are fixed by D-09. The API's `types.ts` and the web app's `types.ts` 
 
 ## Not built yet
 
-`TRN-10` complete (D-130); delete is built (`TRN-32` to `TRN-37`). Complete is final: it completes every open squad and sweeper (`SQD-15`, `SQD-16`), then freezes the tournament, and it is built with Complete squad and Complete sweeper. Until then nothing in the new app sets `Completed`; the edit rules already honor a stored flag. Create starts a tournament with no divisions, squads, or sweepers.
+`TRN-10` complete (D-130); delete is built (`TRN-32` to `TRN-37`). Complete is final: it completes every open squad and sweeper (`SQD-15`, `SQD-16`), then freezes the tournament, and it is its own slice after Complete squad and Complete sweeper, which are built (`SQD-15` to `SQD-18`, D-196). Until then nothing in the new app sets `Completed`; the edit rules already honor a stored flag. Create starts a tournament with no divisions, squads, or sweepers.

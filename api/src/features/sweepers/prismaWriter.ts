@@ -1,14 +1,17 @@
 import { randomUUID } from 'node:crypto'
 import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import type { Logger } from '../../shared/logger.ts'
+import { createSessionCompleter } from '../../shared/sessionCompleteStore.ts'
 import { createSessionDeleter } from '../../shared/sessionDeleteStore.ts'
 import { withRetry } from '../../shared/serializableRetry.ts'
 import { toSessionEditInfo, type SessionNotFound } from '../../shared/sessionEdit.ts'
 import { loadSessionEditFacts } from '../../shared/sessionFacts.ts'
 import { localDateTime } from '../../shared/sessions.ts'
+import type { SweeperCompleteInfo } from '../../shared/sessionComplete.ts'
 import type { NewSweeper } from './createRequest.ts'
 import { unknownDivisionMessage } from './createPlan.ts'
 import { toSweeper } from './sweeperRow.ts'
+import type { Sweeper } from './types.ts'
 import type { StoredSweeper } from './updatePlan.ts'
 import type { UpdateSweeper } from './updateRequest.ts'
 import {
@@ -238,6 +241,39 @@ export function createPrismaSweeperWriter(client: PrismaClient, logger: Logger):
   return {
     // Delete and delete-info (SQD-14, D-186 to D-189) are the same for a squad and a sweeper.
     ...createSessionDeleter(client, logger, 'sweeper'),
+    // Complete and complete-info (SQD-16, D-191, D-192). A sweeper saves no scores.
+    ...createSessionCompleter<Sweeper, SweeperCompleteInfo>(
+      client,
+      logger,
+      'sweeper',
+      async (reader, row, tournamentId) => {
+        // The list shows the pins of this tournament's divisions, in division order.
+        const divisions = await reader.division.findMany({
+          where: { tournamentId },
+          select: { id: true, name: true },
+          orderBy: { number: 'asc' },
+        })
+        const pins = await reader.sweeperDivision.findMany({
+          where: { sweeperId: row.id, division: { tournamentId } },
+        })
+        const readable = toSweeper(
+          row,
+          divisions.flatMap((division) => {
+            const pin = pins.find((candidate) => candidate.divisionId === division.id)
+            return pin
+              ? [
+                  {
+                    divisionId: division.id,
+                    divisionName: division.name,
+                    bonusPinsPerGame: pin.bonusPinsPerGame,
+                  },
+                ]
+              : []
+          }),
+        )
+        return readable.success ? readable.data : undefined
+      },
+    ),
     create: (tournamentId, input) =>
       withDatabaseErrors(logger, () => createOrRefuse(tournamentId, input)),
     update: (tournamentId, sweeperId, changes, { confirmWarnings }) =>

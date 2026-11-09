@@ -46,8 +46,8 @@ The score set is designed: ties for first and at the cash line (scratch and hand
 4. **Registration and money.** Desk registrations and payments in the UI, the registration site's through the API key, returning bowlers updated, some edits and deletes. Check counts for each squad, sweeper, and division, and each bowler's fees owed and paid, and the totals, against the hand-written fee table. _The desk path waits for the registration edit and payment screens (rule 3); only the registration site's API-key part can run now. The money checks wait for the same screens._
 5. **Lanes.** Assign every bowler, open the recap sheets, and move some. No one is left unassigned and no pair is over its maximum. _Moving waits for the saved lane move: today a move is on screen only (`tempMoves.ts`) and saves nothing._
 6. **Scores.** The director enters the designed scores squad by squad, edits one, and checks the Scores tab. _Waits for score entry._
-7. **Complete and results.** Complete every squad and sweeper; check each Results tab, At-large, Seeding, and Super sweeper, including "Unofficial results" before the last session completes (D-84, D-88). _Waits for score entry and Complete._
-8. **Complete the tournament.** It freezes (D-130), and delete is refused (D-133). _Waits for Complete._
+7. **Complete and results.** Complete every squad and sweeper; check each Results tab, At-large, Seeding, and Super sweeper, including "Unofficial results" before the last session completes (D-84, D-88). _Complete squad and sweeper exist (`SQD-15`, `SQD-16`); the stage still waits for score entry. Completing a squad with no scores saves zeros for each entered bowler (D-190)._
+8. **Complete the tournament.** It freezes (D-130), and delete is refused (D-133). _Waits for Complete tournament (D-196)._
 9. **Access.** Walk the same pages as signed out, score keeper, director, and admin; check what shows and what the API refuses.
 
 Stages that wait on a missing feature stay in the plan and are skipped in the run. We do not fake them with direct database writes.
@@ -66,6 +66,7 @@ Start with these; add one whenever a feature brings a new refusal.
 | Register  | Repeat a payment code (D-109, D-118)                 | A retry, no second entry                      |
 | Scores    | Delete an entry that has a score (`REG-19`)          | 400, the entry stays (waits for score entry)  |
 | Scores    | Enter a score above 300                              | Refused                                       |
+| Complete  | Complete a squad that is already complete (D-192)    | 409 with `errors`, no second set of zeros     |
 | Complete  | Edit a complete tournament                           | 409, every field frozen                       |
 | Delete    | Delete a tournament that has scores                  | 409, no override                              |
 | Access    | Score keeper opens a director-only action            | Link hidden; API refuses                      |

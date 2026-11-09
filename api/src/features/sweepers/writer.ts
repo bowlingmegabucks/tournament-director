@@ -15,6 +15,12 @@ import {
   type SessionDeleteInfo,
   type SessionDeleter,
 } from '../../shared/sessionDelete.ts'
+import {
+  applySessionComplete,
+  type EntryScores,
+  type SessionCompleter,
+  type SweeperCompleteInfo,
+} from '../../shared/sessionComplete.ts'
 import type { Sweeper } from './types.ts'
 import { planSweeperEdit, type StoredSweeper, type SweeperEditContext } from './updatePlan.ts'
 import type { UpdateSweeper } from './updateRequest.ts'
@@ -38,7 +44,8 @@ export type UpdateSweeperOutcome =
   | { updated: Sweeper; changed: (keyof NewSweeper)[] }
 
 /** What the create, edit, edit-info, delete, and delete-info routes need from storage. The Prisma version writes the legacy tables. */
-export interface SweeperWriter extends SessionDeleter {
+export interface SweeperWriter
+  extends SessionDeleter, SessionCompleter<Sweeper, SweeperCompleteInfo> {
   create(tournamentId: string, input: NewSweeper): Promise<CreateSweeperOutcome>
   update(
     tournamentId: string,
@@ -179,6 +186,8 @@ export function createInMemorySweeperWriter(
     editFacts?: Record<string, Partial<SessionEditFacts>>
     /** Per sweeper id: what the delete rules look at (D-186). */
     deleteInfo?: Record<string, Partial<SessionDeleteInfo>>
+    /** Per sweeper id: each entered bowler with the games saved (D-191, D-194). */
+    entries?: Record<string, EntryScores[]>
   } = {},
 ) {
   const stored: { tournamentId: string; sweeper: Sweeper }[] = (options.seed ?? []).map(
@@ -193,6 +202,33 @@ export function createInMemorySweeperWriter(
     return entry ? { entry } : { notFound: 'session' }
   }
   const writer: SweeperWriter = {
+    complete: (tournamentId, sweeperId) => {
+      const found = locate(tournamentId, sweeperId)
+      if (!('entry' in found)) return Promise.resolve(found)
+      const { sweeper } = found.entry
+      return applySessionComplete(
+        {
+          completed: options.completed?.includes(tournamentId) ?? false,
+          complete: sweeper.complete,
+        },
+        'sweeper',
+        options.entries?.[sweeperId] ?? [],
+        () => {
+          found.entry.sweeper = { ...sweeper, complete: true }
+          return Promise.resolve()
+        },
+      ).then((result) =>
+        'refused' in result
+          ? result
+          : { completed: found.entry.sweeper, noShowCount: result.noShowCount },
+      )
+    },
+    getCompleteInfo: (tournamentId, sweeperId) => {
+      const found = locate(tournamentId, sweeperId)
+      if (!('entry' in found)) return Promise.resolve(found)
+      const bowlers = new Set((options.entries?.[sweeperId] ?? []).map((e) => e.bowlerId))
+      return Promise.resolve({ entryCount: bowlers.size })
+    },
     remove: async (tournamentId, sweeperId) => {
       const found = locate(tournamentId, sweeperId)
       if (!('entry' in found)) return found

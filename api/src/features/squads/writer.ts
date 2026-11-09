@@ -16,6 +16,14 @@ import {
   type SessionDeleteInfo,
   type SessionDeleter,
 } from '../../shared/sessionDelete.ts'
+import {
+  applySessionComplete,
+  squadCompleteInfo,
+  zeroScores,
+  type EntryScores,
+  type SessionCompleter,
+  type SquadCompleteInfo,
+} from '../../shared/sessionComplete.ts'
 import type { TournamentDefaults } from './squadRow.ts'
 import type { Squad } from './types.ts'
 import { planSquadEdit, type SquadEditContext, type StoredSquad } from './updatePlan.ts'
@@ -40,7 +48,7 @@ export type UpdateSquadOutcome =
   | { updated: Squad; changed: (keyof NewSquad)[] }
 
 /** What the create, edit, edit-info, delete, and delete-info routes need from storage. The Prisma version writes the legacy table. */
-export interface SquadWriter extends SessionDeleter {
+export interface SquadWriter extends SessionDeleter, SessionCompleter<Squad, SquadCompleteInfo> {
   create(tournamentId: string, input: NewSquad): Promise<CreateSquadOutcome>
   update(
     tournamentId: string,
@@ -157,6 +165,8 @@ export function createInMemorySquadWriter(
     editFacts?: Record<string, Partial<SessionEditFacts>>
     /** Per squad id: what the delete rules look at (D-186). */
     deleteInfo?: Record<string, Partial<SessionDeleteInfo>>
+    /** Per squad id: each entered bowler with the games saved (D-190, D-194). */
+    entries?: Record<string, EntryScores[]>
   } = {},
 ) {
   const stored: { tournamentId: string; squad: Squad }[] = (options.seed ?? []).map((entry) => ({
@@ -171,7 +181,38 @@ export function createInMemorySquadWriter(
     const entry = stored.find((e) => e.tournamentId === tournamentId && e.squad.id === squadId)
     return entry ? { entry } : { notFound: 'session' }
   }
+  /** The zero scores a complete saved: one `{ bowlerId, game }` per game of each no-show (D-190). */
+  const zeros: { squadId: string; bowlerId: string; game: number }[] = []
   const writer: SquadWriter = {
+    complete: (tournamentId, squadId) => {
+      const found = locate(tournamentId, squadId)
+      if (!('entry' in found)) return Promise.resolve(found)
+      const { squad } = found.entry
+      const games = { ...wideOpen, ...options.tournament }.games
+      return applySessionComplete(
+        {
+          completed: options.completed?.includes(tournamentId) ?? false,
+          complete: squad.complete,
+        },
+        'squad',
+        options.entries?.[squadId] ?? [],
+        (noShows) => {
+          found.entry.squad = { ...squad, complete: true }
+          for (const row of zeroScores(noShows, games)) zeros.push({ squadId, ...row })
+          return Promise.resolve()
+        },
+      ).then((result) =>
+        'refused' in result
+          ? result
+          : { completed: found.entry.squad, noShowCount: result.noShowCount },
+      )
+    },
+    getCompleteInfo: (tournamentId, squadId) => {
+      const found = locate(tournamentId, squadId)
+      if (!('entry' in found)) return Promise.resolve(found)
+      const games = { ...wideOpen, ...options.tournament }.games
+      return Promise.resolve(squadCompleteInfo(options.entries?.[squadId] ?? [], games))
+    },
     remove: async (tournamentId, squadId) => {
       const found = locate(tournamentId, squadId)
       if (!('entry' in found)) return found
@@ -252,5 +293,5 @@ export function createInMemorySquadWriter(
       })
     },
   }
-  return { writer, stored }
+  return { writer, stored, zeros }
 }

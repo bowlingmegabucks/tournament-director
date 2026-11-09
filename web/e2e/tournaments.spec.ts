@@ -397,7 +397,8 @@ test('the Scores tab shows a part-scored squad by lane pair, and notes bowlers w
   await expect(first.getByRole('row').nth(1).getByRole('cell').last()).not.toHaveText('0')
   await expect(page.getByText('4 bowlers have no lane.')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Assign lanes' })).toBeVisible()
-  await expect(page.getByRole('main').getByRole('button')).toHaveCount(0)
+  // Read only: the one button on the page is the header's Complete (D-195), not a score control.
+  await expect(page.getByRole('main').getByRole('button')).toHaveText(['Complete squad'])
 })
 
 test('the Scores tab of a complete squad says it cannot change and shows a no-show as 0 (SCR-14, D-69)', async ({

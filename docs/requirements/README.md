@@ -45,7 +45,7 @@ What the user sees and can do.
 | ----------------------------------------------------- | ------------------------------------------------ |
 | Tournaments (create, edit, list, Home card, overview) | [tournaments.md](tournaments.md)                 |
 | Divisions (list, create, edit, delete)                | [divisions.md](divisions.md)                     |
-| Squads and sweepers (lists, add, edit, and delete)             | [squads-and-sweepers.md](squads-and-sweepers.md) |
+| Squads and sweepers (lists, add, edit, delete, and complete)   | [squads-and-sweepers.md](squads-and-sweepers.md) |
 | Registrations (list)                                  | [registrations.md](registrations.md)             |
 | Registration API (create, append, get, OpenAPI)       | [registration-api.md](registration-api.md)       |
 | Lane assignments (page, drag, portal)                 | [lane-assignments.md](lane-assignments.md)       |

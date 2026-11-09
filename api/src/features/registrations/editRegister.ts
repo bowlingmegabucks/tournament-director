@@ -101,7 +101,12 @@ function sessionFailures({ tournamentId, found, scoredIds }: Scope, plan: Plan):
     }
   }
   if (plan.nextSquads.length === 0) {
-    list.push(validation('Registration.SquadsRequired', 'Bowler must enter at least one squad'))
+    list.push(
+      validation(
+        'Registration.SquadsRequired',
+        'Bowler must enter at least one squad. To remove the last one, delete the registration.',
+      ),
+    )
   }
   return list
 }

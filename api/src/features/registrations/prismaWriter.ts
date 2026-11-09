@@ -2,6 +2,7 @@ import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { newColumns, patchColumns, toStoredBowler } from './bowlerRow.ts'
 import { withRetry } from '../../shared/serializableRetry.ts'
+import { loadDeskDeleteFacts } from './prismaDeskDelete.ts'
 import { StaleRegistrationError, type RegistrationWriter, type StoredSession } from './writer.ts'
 
 const squadType = 0
@@ -181,6 +182,34 @@ export function createPrismaRegistrationWriter(
           client.registration.delete({ where: { id: registrationId } }),
         ]),
       )
+    },
+
+    async getDeskDeleteFacts(registrationId, tournamentId) {
+      return withDatabaseErrors(logger, () =>
+        loadDeskDeleteFacts(client, registrationId, tournamentId),
+      )
+    },
+
+    async removeForDesk(registrationId, tournamentId, decide) {
+      const run = () =>
+        client.$transaction(
+          async (tx) => {
+            // Read inside the transaction on purpose (D-211): a score or payment saved after this
+            // read must not slip past the refusal or the warning.
+            const facts = await loadDeskDeleteFacts(tx, registrationId, tournamentId)
+            if (!facts) return undefined
+            const plan = decide(facts)
+            if (plan.kind === 'delete') {
+              // No cascade on `SquadRegistration` (database.md, quirk 9), so clear it in code.
+              await tx.squadRegistration.deleteMany({ where: { registrationId } })
+              await tx.payment.deleteMany({ where: { registrationId } })
+              await tx.registration.delete({ where: { id: registrationId } })
+            }
+            return plan
+          },
+          { isolationLevel: 'Serializable' },
+        )
+      return withDatabaseErrors(logger, () => withRetry(run))
     },
 
     async getDetail(registrationId) {

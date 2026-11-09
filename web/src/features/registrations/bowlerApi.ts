@@ -156,7 +156,7 @@ export class UsbcIdOnFileError extends Error {
   }
 }
 
-function errorsOf(value: unknown): DeskFieldErrors {
+export function errorsOf(value: unknown): DeskFieldErrors {
   const errors: DeskFieldErrors = {}
   if (typeof value !== 'object' || value === null) return errors
   for (const [key, message] of Object.entries(value)) {
@@ -165,7 +165,7 @@ function errorsOf(value: unknown): DeskFieldErrors {
   return errors
 }
 
-function existingOf(value: unknown): ExistingRegistration | undefined {
+export function existingOf(value: unknown): ExistingRegistration | undefined {
   if (
     !['registrationId', 'divisionId', 'divisionName'].every((key) => isText(field(value, key))) ||
     !isTextList(field(value, 'squadIds')) ||

@@ -6,6 +6,7 @@ import type {
   BowlerSearchResult,
   BowlerValues,
   DeskRegistrationRequest,
+  EditRegistrationRequest,
   RegistrationList,
 } from '../features/registrations/types'
 import type { Squad } from '../features/squads/types'
@@ -375,6 +376,83 @@ export function createRegistrationHandlers({
     return HttpResponse.json({ registrationId: entry.id, mode: 'created' }, { status: 201 })
   }
 
+  /** What an edit may not do, in the order the API reports it (D-197 to D-206). One message per field. */
+  function editProblems(entry: MockRegistration, owner: MockBowler, body: EditRegistrationRequest) {
+    const errors: Record<string, string> = {}
+    const removedSquads = body.removeSquadIds ?? []
+    const addedSquads = body.addSquadIds ?? []
+    const problem = squadProblem(addedSquads)
+    if (problem) errors['squadIds'] = problem
+    if (removedSquads.length > 0 && entry.hasScores) {
+      errors['squadIds'] = 'Bowler has already bowled in removed squads.'
+    }
+    const squadsAfter = [
+      ...entry.squadIds.filter((id) => !removedSquads.includes(id)),
+      ...addedSquads,
+    ]
+    if (squadsAfter.length === 0) errors['squadIds'] ??= 'Bowler must enter at least one squad'
+    if (body.divisionId !== undefined && body.divisionId !== entry.divisionId && entry.hasScores) {
+      errors['divisionId'] = 'Cannot change bowler division after scores have been recorded.'
+    }
+    const division = divisions.find(
+      (candidate) => candidate.id === (body.divisionId ?? entry.divisionId),
+    )
+    const typed = { ...owner, ...body.bowler }
+    if (blank(typed.firstName)) errors['bowler.firstName'] = 'First Name is Required'
+    if (blank(typed.lastName)) errors['bowler.lastName'] = 'Last Name is Required'
+    if (division?.handicapPercentage != null && blank(typed.usbcId)) {
+      errors['bowler.usbcId'] = 'USBC Id is required for Handicap Divisions'
+    }
+    return errors
+  }
+
+  function editConflict(entry: MockRegistration, body: EditRegistrationRequest) {
+    const gone = [...(body.removeSquadIds ?? []), ...(body.removeSweeperIds ?? [])].some(
+      (id) => ![...entry.squadIds, ...entry.sweeperIds].includes(id),
+    )
+    const held = [...(body.addSquadIds ?? []), ...(body.addSweeperIds ?? [])].some((id) =>
+      [...entry.squadIds, ...entry.sweeperIds].includes(id),
+    )
+    if (!gone && !held) return undefined
+    return HttpResponse.json(
+      {
+        message: 'This registration changed. Review and save again.',
+        conflict: 'changed',
+        existing: {
+          registrationId: entry.id,
+          divisionId: entry.divisionId,
+          divisionName: divisionName(entry.divisionId),
+          squadIds: entry.squadIds,
+          sweeperIds: entry.sweeperIds,
+        },
+      },
+      { status: 409 },
+    )
+  }
+
+  function applyEdit(entry: MockRegistration, owner: MockBowler, body: EditRegistrationRequest) {
+    const removed = [...(body.removeSquadIds ?? []), ...(body.removeSweeperIds ?? [])]
+    const added = [...(body.addSquadIds ?? []), ...(body.addSweeperIds ?? [])]
+    entry.squadIds = [
+      ...entry.squadIds.filter((id) => !(body.removeSquadIds ?? []).includes(id)),
+      ...(body.addSquadIds ?? []),
+    ]
+    entry.sweeperIds = [
+      ...entry.sweeperIds.filter((id) => !(body.removeSweeperIds ?? []).includes(id)),
+      ...(body.addSweeperIds ?? []),
+    ]
+    if (body.divisionId !== undefined) entry.divisionId = body.divisionId
+    if (body.average !== undefined) entry.average = body.average
+    if (body.superSweeper !== undefined) entry.superSweeper = body.superSweeper
+    Object.assign(owner, body.bowler)
+    syncList(entry, owner, false)
+    return HttpResponse.json({
+      registrationId: entry.id,
+      added: added.length,
+      removed: removed.length,
+    })
+  }
+
   return [
     http.get('/v1/bowlers', ({ request }) => {
       const query = new URL(request.url).searchParams
@@ -413,6 +491,66 @@ export function createRegistrationHandlers({
         bowler: found,
         registration: registration ? toRegistration(registration) : null,
       })
+    }),
+
+    http.get('/v1/tournaments/:id/registrations/:registrationId/edit-info', ({ params }) => {
+      if (!tournamentExists(params['id'])) {
+        return HttpResponse.json({ message: 'Tournament not found' }, { status: 404 })
+      }
+      const entry = stored.find((candidate) => candidate.id === params['registrationId'])
+      const owner = bowlers.find((candidate) => candidate.id === entry?.bowlerId)
+      if (!entry || !owner) {
+        return HttpResponse.json({ message: 'Registration not found' }, { status: 404 })
+      }
+      return HttpResponse.json({
+        bowler: owner,
+        registration: {
+          id: entry.id,
+          divisionId: entry.divisionId,
+          average: entry.average,
+          superSweeper: entry.superSweeper,
+          squadIds: entry.squadIds,
+          sweeperIds: entry.sweeperIds,
+        },
+        locks: {
+          scoredSessionIds: entry.hasScores ? entry.squadIds : [],
+          hasScores: entry.hasScores,
+          hasSweeperScores: false,
+        },
+      })
+    }),
+
+    http.patch('/v1/tournaments/:id/registrations/:registrationId', async ({ params, request }) => {
+      if (!tournamentExists(params['id'])) {
+        return HttpResponse.json({ message: 'Tournament not found' }, { status: 404 })
+      }
+      const entry = stored.find((candidate) => candidate.id === params['registrationId'])
+      const owner = bowlers.find((candidate) => candidate.id === entry?.bowlerId)
+      if (!entry || !owner) {
+        return HttpResponse.json({ message: 'Registration not found' }, { status: 404 })
+      }
+      const body = (await request.json()) as EditRegistrationRequest
+      const conflict = editConflict(entry, body)
+      if (conflict) return conflict
+      const errors = editProblems(entry, owner, body)
+      if (Object.keys(errors).length > 0) return reject(errors)
+      if (body.average !== undefined && body.average !== entry.average && entry.hasScores) {
+        if (body.confirmWarnings !== true) {
+          return HttpResponse.json(
+            {
+              message: 'Confirm these changes to save them.',
+              warnings: [
+                {
+                  field: 'average',
+                  message: 'This bowler has scores. Handicap and results will change.',
+                },
+              ],
+            },
+            { status: 409 },
+          )
+        }
+      }
+      return applyEdit(entry, owner, body)
     }),
 
     http.post('/v1/tournaments/:id/registrations', async ({ params, request }) => {

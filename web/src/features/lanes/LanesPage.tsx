@@ -14,7 +14,9 @@ import { countBowlers, formatSpots, formatTotals } from './format'
 import styles from './LanesPage.module.css'
 import { OtherPositions } from './OtherPositions'
 import { PairZone } from './PairZone'
+import { useCan } from '../auth/useCan'
 import { AddRegistrationLink } from '../registrations/AddRegistrationLink'
+import { SessionActionsDialog } from '../registrations/SessionActionsDialog'
 import { RecapDialog } from '../recapSheets/RecapDialog'
 import { applyMoves, type Move } from './tempMoves'
 import type { LaneBowler, LanePage, SessionKind } from './types'
@@ -41,8 +43,11 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
   const { data, isPending, error, refetch } = useLanes(kind, id, sessionId)
   const [draggingId, setDraggingId] = useState<string>()
   const [assigning, setAssigning] = useState<LaneBowler>()
+  const [managing, setManaging] = useState<LaneBowler>()
+  // Edit, move, and remove need `registrations.write` (D-198). The lanes API read needs only `lanes.read`.
+  const canManage = useCan('registrations.write')
   const [recapOpen, setRecapOpen] = useState(false)
-  const [toast, setToast] = useState<{ kind: 'info' | 'error'; text: string }>()
+  const [toast, setToast] = useState<{ kind: 'info' | 'success' | 'error'; text: string }>()
   // TEMPORARY (D-55): the moves made on this screen, for this session only. They show until the
   // page is left or refreshed, when the API's page is all there is.
   const [moved, setMoved] = useState<{ sessionId: string; moves: ReadonlyMap<string, Move> }>({
@@ -140,6 +145,7 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
             dragging={dragging}
             readOnly={readOnly}
             onAssign={setAssigning}
+            onManage={canManage ? setManaging : undefined}
           />
           <section aria-labelledby="lanes-title">
             <h2 id="lanes-title" className={styles.areaTitle}>
@@ -157,6 +163,7 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
                     dragging={dragging}
                     readOnly={readOnly}
                     onAssign={setAssigning}
+                    onManage={canManage ? setManaging : undefined}
                   />
                 ))}
               </ul>
@@ -204,6 +211,20 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
           }}
         />
       )}
+      {managing && (
+        <SessionActionsDialog
+          tournamentId={id}
+          kind={kind}
+          sessionId={sessionId}
+          bowler={{ registrationId: managing.registrationId, name: managing.name }}
+          onDone={(text) => {
+            setToast({ kind: 'success', text })
+          }}
+          onClose={() => {
+            setManaging(undefined)
+          }}
+        />
+      )}
       {recapOpen && (
         <RecapDialog
           kind={kind}
@@ -217,7 +238,7 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
       {toast && (
         <Toast
           kind={toast.kind}
-          autoDismissMs={toast.kind === 'info' ? INFO_MS : undefined}
+          autoDismissMs={toast.kind === 'error' ? undefined : INFO_MS}
           onDismiss={() => {
             setToast(undefined)
           }}

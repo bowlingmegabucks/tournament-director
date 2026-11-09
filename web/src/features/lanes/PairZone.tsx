@@ -12,10 +12,18 @@ interface PairZoneProps {
   dragging: LaneBowler | undefined
   readOnly: boolean
   onAssign: (bowler: LaneBowler) => void
+  onManage?: (bowler: LaneBowler) => void
 }
 
 /** One lane pair as a drop zone, with its bowlers sorted lane then letter (LAN-03, LAN-04). */
-export function PairZone({ pair, kind, dragging, readOnly, onAssign }: Readonly<PairZoneProps>) {
+export function PairZone({
+  pair,
+  kind,
+  dragging,
+  readOnly,
+  onAssign,
+  onManage,
+}: Readonly<PairZoneProps>) {
   const { ref } = useDroppable({ id: pairDropId(pair), disabled: readOnly })
   const outcome = dragging ? dropOutcome(pair, dragging.registrationId) : undefined
   const left = seatsLeft(pair)
@@ -48,6 +56,7 @@ export function PairZone({ pair, kind, dragging, readOnly, onAssign }: Readonly<
               readOnly={readOnly}
               compact
               onAssign={onAssign}
+              onManage={onManage}
             />
           ))}
         </ul>

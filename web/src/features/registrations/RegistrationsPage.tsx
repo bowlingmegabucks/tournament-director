@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { useLocation, useNavigate, useOutletContext, useParams } from 'react-router'
+import { Link, useLocation, useNavigate, useOutletContext, useParams } from 'react-router'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { Toast } from '../../shared/Toast'
 import { field } from '../../shared/field'
 import type { Tournament } from '../tournaments/types'
+import { useCan } from '../auth/useCan'
+import { useTournamentSettings } from '../tournaments/useTournamentSettings'
 import { AddRegistrationLink } from './AddRegistrationLink'
 import addStyles from './AddRegistration.module.css'
 import { filterRegistrations } from './filter'
@@ -56,11 +58,16 @@ export function RegistrationsPage() {
   const navigate = useNavigate()
   // The add page sets this as it moves here (D-164). Clearing it keeps a reload quiet.
   const added = field(location.state, 'added')
+  // The edit page sets this the same way (D-197): "Maria Gonzalez: Registration updated. Added 1."
+  const updated = field(location.state, 'updated')
   const [filter, setFilter] = useState('')
   // The popup keeps only which registration and which list. Its content is read from the live data
   // at render, so a refetch cannot leave the count and the popup disagreeing.
   const [popup, setPopup] = useState<{ registrationId: string; kind: Kind } | null>(null)
 
+  // The Edit link needs `registrations.write`, and a complete tournament cannot change (D-197, D-198).
+  const settings = useTournamentSettings(id)
+  const canEdit = useCan('registrations.write') && settings.data?.completed === false
   const registrations = data?.registrations ?? []
   const shown = filterRegistrations(registrations, filter)
   const filtering = filter.trim() !== ''
@@ -144,6 +151,11 @@ export function RegistrationsPage() {
                   <th scope="col" className={styles.center}>
                     Super sweeper
                   </th>
+                  {canEdit && (
+                    <th scope="col">
+                      <span className={styles.hidden}>Actions</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -181,6 +193,17 @@ export function RegistrationsPage() {
                         <span className={styles.hidden}>No</span>
                       </td>
                     )}
+                    {canEdit && (
+                      <td className={styles.actions}>
+                        <Link
+                          className={styles.editLink}
+                          to={`/tournaments/${id}/registrations/${registration.id}/edit`}
+                          aria-label={`Edit ${registration.bowler.name}`}
+                        >
+                          Edit
+                        </Link>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -200,6 +223,17 @@ export function RegistrationsPage() {
             />
           )}
         </>
+      )}
+      {typeof updated === 'string' && (
+        <Toast
+          kind="success"
+          autoDismissMs={5000}
+          onDismiss={() => {
+            void navigate('.', { replace: true, state: null })
+          }}
+        >
+          {updated}
+        </Toast>
       )}
       {typeof added === 'string' && (
         <Toast

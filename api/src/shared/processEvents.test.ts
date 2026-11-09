@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createCapturedLogger } from '../test/logger.ts'
 import { handleProcessEvents } from './processEvents.ts'
 
-function setup(options: { serverClosesAfterMs?: number } = {}) {
+function setup(options: { serverClosesAfterMs?: number; closeStreams?: () => void } = {}) {
   const events = new EventEmitter()
   const { logger, records } = createCapturedLogger()
   const exit = vi.fn<(code: number) => void>()
@@ -15,7 +15,14 @@ function setup(options: { serverClosesAfterMs?: number } = {}) {
       }
     }),
   }
-  handleProcessEvents(events, { logger, server, flush, exit, forceExitMs: 1000 })
+  handleProcessEvents(events, {
+    logger,
+    server,
+    closeStreams: options.closeStreams,
+    flush,
+    exit,
+    forceExitMs: 1000,
+  })
   return { events, records, exit, flush, server }
 }
 
@@ -25,6 +32,27 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers()
+})
+
+describe('event streams (D-217)', () => {
+  it('ends them before it waits for the server to close, so a deploy does not time out (LAN-19)', () => {
+    const order: string[] = []
+    const closeStreams = vi.fn(() => order.push('streams'))
+    const { events, server } = setup({ closeStreams })
+    server.close.mockImplementation(() => order.push('server'))
+
+    events.emit('SIGTERM')
+
+    expect(order).toEqual(['streams', 'server'])
+  })
+
+  it('ends them once, however many signals come', () => {
+    const closeStreams = vi.fn()
+    const { events } = setup({ closeStreams })
+    events.emit('SIGTERM')
+    events.emit('SIGINT')
+    expect(closeStreams).toHaveBeenCalledOnce()
+  })
 })
 
 describe.each(['SIGINT', 'SIGTERM'])('%s', (signal) => {

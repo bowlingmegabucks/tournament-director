@@ -124,7 +124,22 @@ describe('isQuietPath', () => {
     expect(isQuietPath(url)).toBe(true)
   })
 
-  it.each(['/tournaments', '/health/deep', '/', undefined])('keeps %s', (url) => {
+  it.each(['/v1/tournaments/t1/squads/s1/events', '/v1/tournaments/t1/sweepers/s1/events?x=1'])(
+    'ignores the event stream %s (D-217)',
+    (url) => {
+      expect(isQuietPath(url)).toBe(true)
+    },
+  )
+
+  it.each([
+    '/tournaments',
+    '/health/deep',
+    '/',
+    undefined,
+    '/v1/tournaments/t1/squads/s1/lanes',
+    '/v1/tournaments/t1/squads/s1/events/extra',
+    '/x/v1/tournaments/t1/squads/s1/events',
+  ])('keeps %s', (url) => {
     expect(isQuietPath(url)).toBe(false)
   })
 })

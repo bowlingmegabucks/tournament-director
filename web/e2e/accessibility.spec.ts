@@ -11,6 +11,9 @@ async function expectNoViolations(page: Page) {
   expect(violations).toEqual([])
 }
 
+// Delete registration (the Registrations list buttons, each dialog state, and the edit page's
+// Danger zone) is scanned in dark and light mode in `deleteRegistration.spec.ts`, beside its flow.
+
 for (const colorScheme of colorSchemes) {
   test.describe(`${colorScheme} mode`, () => {
     test.beforeEach(async ({ page }) => {

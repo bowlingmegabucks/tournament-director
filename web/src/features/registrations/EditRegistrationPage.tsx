@@ -1,4 +1,5 @@
 import { Link, useOutletContext, useParams } from 'react-router'
+import { DangerZone } from '../../shared/DangerZone'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { useDivisions } from '../divisions/useDivisions'
@@ -6,6 +7,7 @@ import { useSquads } from '../squads/useSquads'
 import { useSweepers } from '../sweepers/useSweepers'
 import type { Tournament } from '../tournaments/types'
 import { useTournamentSettings } from '../tournaments/useTournamentSettings'
+import { DeleteRegistrationButton } from './DeleteRegistrationButton'
 import { RegistrationNotFoundError } from './editApi'
 import { EditRegistrationForm } from './EditRegistrationForm'
 import { useEditInfo } from './useEditInfo'
@@ -92,6 +94,15 @@ export function EditRegistrationPage() {
           void info.refetch()
         }}
       />
+      <DangerZone description="Delete this bowler's entire registration. The entries and their lane positions go, and the payment records with them. The bowler record stays. This cannot be undone.">
+        <DeleteRegistrationButton
+          tournamentId={id}
+          registrationId={registrationId}
+          bowlerName={`${info.data.bowler.firstName} ${info.data.bowler.lastName}`.trim()}
+        >
+          Delete registration
+        </DeleteRegistrationButton>
+      </DangerZone>
     </>
   )
 }

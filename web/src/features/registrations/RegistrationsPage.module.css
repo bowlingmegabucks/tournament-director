@@ -228,4 +228,12 @@
   .table td.actions::before {
     content: none;
   }
+
+  /* Delete sits below a divider, away from Edit (D-215). */
+  .table td.danger {
+    margin-block-start: var(--space-2);
+    padding-block-start: var(--space-3);
+    border-block-start: var(--border-width) solid var(--color-border);
+    text-align: start;
+  }
 }

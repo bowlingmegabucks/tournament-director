@@ -10,6 +10,7 @@ import type {
   RegistrationList,
 } from '../features/registrations/types'
 import type { Squad } from '../features/squads/types'
+import type { Sweeper } from '../features/sweepers/types'
 import type { Tournament } from '../features/tournaments/types'
 
 interface MockBowler extends BowlerValues {
@@ -58,6 +59,7 @@ interface World {
   tournaments: Tournament[]
   divisions: Division[]
   squads: Squad[]
+  sweepers?: Sweeper[]
   registrations: RegistrationList
 }
 
@@ -72,6 +74,7 @@ export function createRegistrationHandlers({
   tournaments,
   divisions,
   squads,
+  sweepers = [],
   registrations,
 }: World) {
   const bowlers: MockBowler[] = [
@@ -204,6 +207,66 @@ export function createRegistrationHandlers({
       squadIds: entry.squadIds,
       sweeperIds: entry.sweeperIds,
       hasScores: entry.hasScores,
+    }
+  }
+
+  /** What a bowler paid outside this system, by last name (D-210): Tom Delgado paid $85. */
+  const paymentsOf = (owner: MockBowler) =>
+    owner.lastName === 'Delgado' ? [{ system: 'BowlingSite', amount: 85 }] : []
+
+  function deleteFacts(entry: MockRegistration, owner: MockBowler) {
+    const sessions = [
+      ...squads.filter((squad) => entry.squadIds.includes(squad.id)),
+      ...sweepers.filter((sweeper) => entry.sweeperIds.includes(sweeper.id)),
+    ]
+    const entries = [
+      ...entry.squadIds.flatMap((squadId) => {
+        const squad = squads.find((candidate) => candidate.id === squadId)
+        return squad
+          ? [{ id: squad.id, kind: 'squad' as const, date: squad.date, entryFee: squad.entryFee }]
+          : []
+      }),
+      ...entry.sweeperIds.flatMap((sweeperId) => {
+        const sweeper = sweepers.find((candidate) => candidate.id === sweeperId)
+        return sweeper
+          ? [
+              {
+                id: sweeper.id,
+                kind: 'sweeper' as const,
+                date: sweeper.date,
+                entryFee: sweeper.entryFee,
+              },
+            ]
+          : []
+      }),
+    ].sort((a, b) => a.date.localeCompare(b.date))
+    const payments = paymentsOf(owner)
+    return {
+      bowlerName: displayName(owner),
+      divisionName: divisionName(entry.divisionId),
+      tournamentComplete: false,
+      hasScores: entry.hasScores || sessions.some((session) => session.complete),
+      entries,
+      entriesTotal: entries.reduce((sum, item) => sum + item.entryFee, 0),
+      payments,
+      paidTotal: payments.reduce((sum, item) => sum + item.amount, 0),
+    }
+  }
+
+  function removeRegistration(entry: MockRegistration) {
+    stored.splice(stored.indexOf(entry), 1)
+    const list = registrations.registrations
+    const at = list.findIndex((row) => row.id === entry.id)
+    if (at !== -1) list.splice(at, 1)
+    const { summary } = registrations
+    summary.registrations -= 1
+    if (entry.superSweeper) summary.superSweepers -= 1
+    for (const division of summary.divisions) {
+      if (division.id === entry.divisionId) division.entries -= entry.squadIds.length
+    }
+    for (const squad of summary.squads) if (entry.squadIds.includes(squad.id)) squad.entries -= 1
+    for (const sweeper of summary.sweepers) {
+      if (entry.sweeperIds.includes(sweeper.id)) sweeper.entries -= 1
     }
   }
 
@@ -539,6 +602,52 @@ export function createRegistrationHandlers({
           hasSweeperScores: false,
         },
       })
+    }),
+
+    // D-212: the fees and the real payments. A bowler in a complete session has a score, as the API
+    // finds (SQD-15), and Tom Delgado paid outside this system (for the e2e tests).
+    http.get('/v1/tournaments/:id/registrations/:registrationId/delete-info', ({ params }) => {
+      if (!tournamentExists(params['id'])) {
+        return HttpResponse.json({ message: 'Tournament not found' }, { status: 404 })
+      }
+      const entry = stored.find((candidate) => candidate.id === params['registrationId'])
+      const owner = bowlers.find((candidate) => candidate.id === entry?.bowlerId)
+      if (!entry || !owner) {
+        return HttpResponse.json({ message: 'Registration not found' }, { status: 404 })
+      }
+      return HttpResponse.json({ deleteInfo: deleteFacts(entry, owner) })
+    }),
+
+    // D-209 to D-211: refuse scores, warn about a real payment until the total comes back, else delete.
+    http.delete('/v1/tournaments/:id/registrations/:registrationId', ({ params, request }) => {
+      if (!tournamentExists(params['id'])) {
+        return HttpResponse.json({ message: 'Tournament not found' }, { status: 404 })
+      }
+      const entry = stored.find((candidate) => candidate.id === params['registrationId'])
+      const owner = bowlers.find((candidate) => candidate.id === entry?.bowlerId)
+      if (!entry || !owner) {
+        return HttpResponse.json({ message: 'Registration not found' }, { status: 404 })
+      }
+      const facts = deleteFacts(entry, owner)
+      if (facts.hasScores) {
+        const message = 'Cannot delete registration with scores.'
+        return HttpResponse.json({ message, errors: { scores: message } }, { status: 409 })
+      }
+      const query = new URL(request.url).searchParams
+      const confirmed =
+        query.get('confirmWarnings') === 'true' && Number(query.get('paid')) === facts.paidTotal
+      if (facts.payments.length > 0 && !confirmed) {
+        return HttpResponse.json(
+          {
+            message: 'Confirm to delete this registration.',
+            warnings: [{ field: 'registration', message: 'Paid outside this system.' }],
+            paid: facts.paidTotal,
+          },
+          { status: 409 },
+        )
+      }
+      removeRegistration(entry)
+      return new HttpResponse(null, { status: 204 })
     }),
 
     http.patch('/v1/tournaments/:id/registrations/:registrationId', async ({ params, request }) => {

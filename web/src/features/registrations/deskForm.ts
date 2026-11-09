@@ -125,11 +125,21 @@ export function checkBowlerStep(values: BowlerValues): DeskFieldErrors {
   return errors
 }
 
+/** The API's message for an edit that would leave no squad (`editRegister.ts`): change both together. */
+export const lastSquadMessage =
+  'Bowler must enter at least one squad. To remove the last one, delete the registration.'
+
 /** Step 2 needs a division, a squad, and an average in range; the server rechecks (REG-03, REG-16). */
-export function checkRegistrationStep(values: RegistrationValues): DeskFieldErrors {
+export function checkRegistrationStep(
+  values: RegistrationValues,
+  { editing = false }: { editing?: boolean } = {},
+): DeskFieldErrors {
   const errors: DeskFieldErrors = {}
   if (values.divisionId === '') errors['divisionId'] = 'Pick a division'
-  if (values.squadIds.length === 0) errors['squadIds'] = 'Bowler must enter at least one squad'
+  if (values.squadIds.length === 0) {
+    // An edit cannot end with no squad: the way out is to delete the registration (D-203, D-214).
+    errors['squadIds'] = editing ? lastSquadMessage : 'Bowler must enter at least one squad'
+  }
   const average = values.average.trim()
   if (average !== '') {
     const value = Number(average)

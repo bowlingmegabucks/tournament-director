@@ -94,6 +94,17 @@ describe('step checks (D-162, REG-03, REG-16)', () => {
     ).toEqual({})
   })
 
+  it('on an edit, points the last-squad refusal at delete (D-203, D-214)', () => {
+    expect(checkRegistrationStep(emptyRegistration, { editing: true })).toEqual({
+      divisionId: 'Pick a division',
+      squadIds:
+        'Bowler must enter at least one squad. To remove the last one, delete the registration.',
+    })
+    expect(checkRegistrationStep(emptyRegistration, { editing: false })).toMatchObject({
+      squadIds: 'Bowler must enter at least one squad',
+    })
+  })
+
   it.each([
     ['0', 'Average must be greater than 0.'],
     ['-5', 'Average must be greater than 0.'],

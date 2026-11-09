@@ -187,7 +187,8 @@ export function EditRegistrationForm({
   }
 
   function next() {
-    const found = step === 1 ? checkBowlerStep(bowler) : checkRegistrationStep(registration)
+    const found =
+      step === 1 ? checkBowlerStep(bowler) : checkRegistrationStep(registration, { editing: true })
     if (Object.keys(found).length > 0) show(found, step)
     else goTo(step === 1 ? 2 : 3)
   }

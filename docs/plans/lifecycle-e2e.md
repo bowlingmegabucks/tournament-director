@@ -84,7 +84,7 @@ Start with these; add one whenever a feature brings a new refusal.
 ## Open questions
 
 1. **The fee table.** It needs the legacy fee rules from [docs/migration/](../migration/README.md): tournament fee, squad fee, sweeper fee, handicap or super sweeper extras.
-2. **Desk payments in the UI.** There is no payment screen yet. Stage 4's desk path and money checks wait for the payment screens (registration edit is built on branch `editRegistration`). Q-38 in [decisions-and-questions.md](../migration/decisions-and-questions.md) asks whether the desk should record payments and refunds.
+2. **Desk payments in the UI.** There is no payment screen yet. Q-38 in [decisions-and-questions.md](../migration/decisions-and-questions.md) asks whether the desk should record payments and refunds. If it says yes, stage 4's money checks wait for those screens. If it says keep money outside the app (option 1), stage 4 checks the collect, refund, and net lines on the edit Review step against the hand-written fee table, and nothing checks a recorded payment total.
 3. **Resume after a failure.** A snapshot per stage would let us rerun from stage N. Decide once we know how slow the run is.
 
 ## Done when

@@ -64,7 +64,8 @@ Start with these; add one whenever a feature brings a new refusal.
 | Lanes     | Edit lanes so a saved pair no longer fits                                        | 409 with `errors` (after stage 5 saves lanes)            |
 | Register  | Put a bowler in a division that does not fit (D-107)                             | 400 from the route; a refusal in the UI                  |
 | Register  | Repeat a payment code (D-109, D-118)                                             | A retry, no second entry                                 |
-| Scores    | Delete an entry that has a score (`REG-19`)                                      | 400, the entry stays (waits for score entry)             |
+| Scores    | Delete an entry that has a score (`REG-19`, D-211)                               | 409 with `errors.scores`, the entry stays (waits for score entry) |
+| Register  | Delete a registration with a real payment from the site (D-210)                  | 409 with a warning and the total; deletes after the tick |
 | Scores    | Enter a score above 300                                                          | Refused                                                  |
 | Scores    | Remove or move a bowler out of a squad where they have a score (`REG-34`, D-203) | 400, the entry and the lane stay (waits for score entry) |
 | Complete  | Move a bowler out of a complete squad, or into one (D-10, D-202)                 | 400, nothing changes                                     |

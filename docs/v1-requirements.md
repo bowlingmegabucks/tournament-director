@@ -43,7 +43,7 @@ Version numbers follow content, not a countdown. 0.10.0 is fine.
   - [x] Complete a squad or sweeper: `squads.write`, a dialog that counts the no-show zeros, one serializable transaction, a repeat refused (`completeSquad`, `SQD-15` to `SQD-18`, D-190 to D-195). Score save and lane move refuse a complete session when those routes are built (`SCR-14`, D-10).
 - [x] Add a registration at the desk: bowler search, a stored or new bowler, three steps with a fee table, append for a registered bowler, from the Registrations page or a lane page (`createRegistration`, `REG-01` to `REG-08`, `REG-10` to `REG-14`, `REG-22`, `BWL-14`, `BWL-15`, D-157 to D-166; [add-registration.md](requirements/add-registration.md)).
 - [x] Edit a registration at the desk: add or drop a squad or sweeper, switch squads, move the division, change the average, turn super sweeper on or off, correct the bowler; Move and Remove from a lane page; a stale-save guard and a collect, refund, and net Review (`editRegistration`, `REG-15` to `REG-18`, `REG-20`, `REG-21`, `REG-25`, `BWL-16`, `BWL-18`, D-197 to D-207; [edit-registration.md](requirements/edit-registration.md)).
-- [ ] Delete a registration at the desk (`REG-19` screen, D-208, Q-35). Its own slice.
+- [x] Delete a registration at the desk: a dialog with the fees and recorded payments, a warning and a tick for a real payment, refused with scores or on a complete tournament; every delete trigger is now a red outline button apart from routine actions, with a Danger zone on edit pages (`deleteRegistration`, `REG-19`, `REG-25`, D-208 to D-215; [delete-registration.md](requirements/delete-registration.md)).
 
 ## Data and cutover
 

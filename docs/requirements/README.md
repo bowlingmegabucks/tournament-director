@@ -50,6 +50,7 @@ What the user sees and can do.
 | Registration API (create, append, get, OpenAPI)       | [registration-api.md](registration-api.md)       |
 | Add registration (desk: search, three steps, fees)    | [add-registration.md](add-registration.md)       |
 | Edit registration (desk: squads, division, average, move, remove) | [edit-registration.md](edit-registration.md) |
+| Delete registration (desk: dialog, refund view, payment warning) | [delete-registration.md](delete-registration.md) |
 | Lane assignments (page, drag, portal)                 | [lane-assignments.md](lane-assignments.md)       |
 | Recap sheets (preview, print, the cross)              | [recap-sheets.md](recap-sheets.md)               |
 | Scores (view)                                         | [scores.md](scores.md)                           |

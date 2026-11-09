@@ -1,10 +1,3 @@
-/* The outline version of the danger color: the trigger on the page. */
-.trigger {
-  background: transparent;
-  border-color: var(--color-danger);
-  color: var(--color-danger);
-}
-
 .field {
   display: grid;
   gap: var(--space-1);

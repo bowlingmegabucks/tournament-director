@@ -64,6 +64,7 @@ Plain CSS with custom properties (no Tailwind, no component library). Palette co
 
 - No hex, `rgb()`, or pixel values for color or spacing in component CSS. Use `var(--color-*)` and `var(--space-*)`.
 - Add a new token to `tokens.css` before you use a new value. Give a color token a dark and a light value.
+- A delete trigger is a red outline button (`danger.trigger` from `src/shared/Danger.module.css`), set apart from routine actions: its own table column, below a divider on a card, and in a `DangerZone` (`src/shared/DangerZone.tsx`) at the bottom of an edit page or overview. The confirm button inside the dialog is the filled red one (D-215).
 - Style with classes, not element selectors or ids. No `!important`. One exception: a table may use `th`, `td`, `tr`, and `thead` selectors under its own `.table` class, so it can restyle its cells on narrow screens without a class on every cell. Say so in a comment at the top of the module, as `DivisionsPage.module.css` does.
 - Use logical properties (`margin-inline`, `padding-block`, `inline-size`) and `rem`, not `px`, so layout follows text size and writing direction.
 - Mobile first. Add `min-width` media queries only when the layout needs them.

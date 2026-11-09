@@ -61,3 +61,14 @@
 .value {
   margin: 0;
 }
+
+/* Delete sits below a divider, away from Edit (D-215). An empty slot takes no room. */
+.danger {
+  margin-block-start: var(--space-3);
+  padding-block-start: var(--space-3);
+  border-block-start: var(--border-width) solid var(--color-border);
+}
+
+.danger:empty {
+  display: none;
+}

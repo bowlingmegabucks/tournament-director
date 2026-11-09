@@ -1,0 +1,7 @@
+/* A destructive trigger (D-215): the outline in the danger color. The filled red button is the
+   confirm inside the dialog (Dialog.module.css). Text says what it does; color is not alone. */
+.trigger {
+  background: transparent;
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}

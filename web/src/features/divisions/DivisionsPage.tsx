@@ -33,9 +33,21 @@ function ActionsCell({ id, division }: Readonly<{ id: string; division: Division
           >
             Edit
           </Link>
-          <DeleteDivisionButton tournamentId={id} division={division} />
         </div>
       )}
+    </td>
+  )
+}
+
+/**
+ * The Delete button of one row, in a last cell of its own so it sits apart from Edit (D-215). Same
+ * rules as the Edit cell: only with `<Can>`, and not on a complete tournament.
+ */
+function DangerCell({ id, division }: Readonly<{ id: string; division: Division }>) {
+  const show = useTournamentOpen(id)
+  return (
+    <td className={styles.actionsCell}>
+      {show && <DeleteDivisionButton tournamentId={id} division={division} />}
     </td>
   )
 }
@@ -111,6 +123,9 @@ export function DivisionsPage() {
                 <th scope="col">
                   <span className={styles.hidden}>Actions</span>
                 </th>
+                <th scope="col">
+                  <span className={styles.hidden}>Delete</span>
+                </th>
               </Can>
             </tr>
           </thead>
@@ -127,6 +142,7 @@ export function DivisionsPage() {
                 <td data-label="Handicap">{formatHandicap(division)}</td>
                 <Can permission="divisions.write">
                   <ActionsCell id={id} division={division} />
+                  <DangerCell id={id} division={division} />
                 </Can>
               </tr>
             ))}

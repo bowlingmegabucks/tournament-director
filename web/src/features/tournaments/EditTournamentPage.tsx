@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router'
 import { Can } from '../auth/Can'
+import { DangerZone } from '../../shared/DangerZone'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { Toast } from '../../shared/Toast'
@@ -104,13 +105,6 @@ function EditForm({ tournament, settings, info }: Readonly<EditFormProps>) {
             </>
           ) : undefined
         }
-        endActions={
-          settings.completed ? undefined : (
-            <Can permission="tournaments.delete">
-              <DeleteTournamentButton tournament={tournament} />
-            </Can>
-          )
-        }
         locks={locks}
         confirms={confirms}
         hints={hintsFor(settings)}
@@ -138,6 +132,13 @@ function EditForm({ tournament, settings, info }: Readonly<EditFormProps>) {
           return undefined
         }}
       />
+      {!settings.completed && (
+        <Can permission="tournaments.delete">
+          <DangerZone description="Delete this tournament and everything under it. This cannot be undone.">
+            <DeleteTournamentButton tournament={tournament} />
+          </DangerZone>
+        </Can>
+      )}
       {failure && (
         <Toast
           kind="error"

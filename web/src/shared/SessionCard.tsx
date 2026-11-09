@@ -35,6 +35,8 @@ interface SessionCardProps {
   facts: ReactNode
   /** Beside the title, such as the Edit link and Delete button (D-185, D-188). */
   action?: ReactNode
+  /** The Delete button, below a divider and away from the Edit link (D-215). */
+  danger?: ReactNode
   /** Anything below the facts. */
   children?: ReactNode
 }
@@ -61,6 +63,7 @@ export function SessionCard({
   href,
   facts,
   action,
+  danger,
   children,
 }: Readonly<SessionCardProps>) {
   return (
@@ -78,6 +81,7 @@ export function SessionCard({
         {facts}
       </dl>
       {children}
+      {danger && <div className={styles.danger}>{danger}</div>}
     </li>
   )
 }

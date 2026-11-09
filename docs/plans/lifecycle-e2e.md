@@ -56,24 +56,24 @@ Stages that wait on a missing feature stay in the plan and are skipped in the ru
 
 Start with these; add one whenever a feature brings a new refusal.
 
-| Stage     | Action                                               | Expect                                        |
-| --------- | ---------------------------------------------------- | --------------------------------------------- |
-| Divisions | Create a division with a name already used           | 409, list unchanged                           |
-| Squads    | Create a squad dated outside the tournament          | 409 with the message                          |
-| Squads    | Delete a squad that has entries (`SQD-14`, D-186)    | 409 with `errors`, the squad stays            |
-| Lanes     | Edit lanes so a saved pair no longer fits            | 409 with `errors` (after stage 5 saves lanes) |
-| Register  | Put a bowler in a division that does not fit (D-107) | 400 from the route; a refusal in the UI       |
-| Register  | Repeat a payment code (D-109, D-118)                 | A retry, no second entry                      |
-| Scores    | Delete an entry that has a score (`REG-19`)          | 400, the entry stays (waits for score entry)  |
-| Scores    | Enter a score above 300                              | Refused                                       |
+| Stage     | Action                                                                           | Expect                                                   |
+| --------- | -------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Divisions | Create a division with a name already used                                       | 409, list unchanged                                      |
+| Squads    | Create a squad dated outside the tournament                                      | 409 with the message                                     |
+| Squads    | Delete a squad that has entries (`SQD-14`, D-186)                                | 409 with `errors`, the squad stays                       |
+| Lanes     | Edit lanes so a saved pair no longer fits                                        | 409 with `errors` (after stage 5 saves lanes)            |
+| Register  | Put a bowler in a division that does not fit (D-107)                             | 400 from the route; a refusal in the UI                  |
+| Register  | Repeat a payment code (D-109, D-118)                                             | A retry, no second entry                                 |
+| Scores    | Delete an entry that has a score (`REG-19`)                                      | 400, the entry stays (waits for score entry)             |
+| Scores    | Enter a score above 300                                                          | Refused                                                  |
 | Scores    | Remove or move a bowler out of a squad where they have a score (`REG-34`, D-203) | 400, the entry and the lane stay (waits for score entry) |
-| Complete  | Move a bowler out of a complete squad, or into one (D-10, D-202) | 400, nothing changes |
-| Register  | Remove a sweeper while the bowler is in the super sweeper (D-203) | 400 "Remove the Super Sweeper first." |
-| Register  | The site adds a squad while the desk edit is open, then the desk saves (D-199) | 409 `changed`; the site's squad is kept |
-| Complete  | Complete a squad that is already complete (D-192)    | 409 with `errors`, no second set of zeros     |
-| Complete  | Edit a complete tournament                           | 409, every field frozen                       |
-| Delete    | Delete a tournament that has scores                  | 409, no override                              |
-| Access    | Score keeper opens a director-only action            | Link hidden; API refuses                      |
+| Complete  | Move a bowler out of a complete squad, or into one (D-10, D-202)                 | 400, nothing changes                                     |
+| Register  | Remove a sweeper while the bowler is in the super sweeper (D-203)                | 400 "Remove the Super Sweeper first."                    |
+| Register  | The site adds a squad while the desk edit is open, then the desk saves (D-199)   | 409 `changed`; the site's squad is kept                  |
+| Complete  | Complete a squad that is already complete (D-192)                                | 409 with `errors`, no second set of zeros                |
+| Complete  | Edit a complete tournament                                                       | 409, every field frozen                                  |
+| Delete    | Delete a tournament that has scores                                              | 409, no override                                         |
+| Access    | Score keeper opens a director-only action                                        | Link hidden; API refuses                                 |
 
 ## Running it
 
@@ -84,7 +84,7 @@ Start with these; add one whenever a feature brings a new refusal.
 ## Open questions
 
 1. **The fee table.** It needs the legacy fee rules from [docs/migration/](../migration/README.md): tournament fee, squad fee, sweeper fee, handicap or super sweeper extras.
-2. **Desk payments in the UI.** There is no payment screen yet. Stage 4's desk path and money checks wait for the payment screens (registration edit is built on branch `editRegistration`). No question in [decisions-and-questions.md](../migration/decisions-and-questions.md) covers them yet (Q-37 is about changing a bowler's division); open one before we build them.
+2. **Desk payments in the UI.** There is no payment screen yet. Stage 4's desk path and money checks wait for the payment screens (registration edit is built on branch `editRegistration`). Q-38 in [decisions-and-questions.md](../migration/decisions-and-questions.md) asks whether the desk should record payments and refunds.
 3. **Resume after a failure.** A snapshot per stage would let us rerun from stage N. Decide once we know how slow the run is.
 
 ## Done when

@@ -1,3 +1,4 @@
+import { plural } from '../../shared/plural'
 import { formatShortDay } from '../../shared/sessionFormat'
 import type {
   AtLargeDivision,
@@ -103,9 +104,6 @@ export function seedingItems(rows: readonly SeedingRow[]): Item<SeedingRow>[] {
   })
   return items
 }
-
-export const plural = (count: number, one: string, many: string) =>
-  `${count} ${count === 1 ? one : many}`
 
 /** "80 entries · 10 finals spots (ratio 8) · 8 advanced from squads · 2 at-large spots" (RES-12, RES-13). */
 export function formatAtLargeSummary(division: AtLargeDivision, finalsRatio: number): string {

@@ -241,3 +241,12 @@ export function dueLines({ registration, existing, squads, sweepers }: DueInput)
 export function totalDue(lines: DueLine[]): number {
   return lines.reduce((cents, line) => cents + Math.round(line.amount * 100), 0) / 100
 }
+
+/** "First Last" or "First Last, Suffix": the display name the registrations list shows. */
+export function bowlerNameOf(
+  values: Pick<BowlerValues, 'firstName' | 'lastName' | 'suffix'>,
+): string {
+  const name = `${values.firstName.trim()} ${values.lastName.trim()}`
+  const suffix = values.suffix.trim()
+  return suffix === '' ? name : `${name}, ${suffix}`
+}

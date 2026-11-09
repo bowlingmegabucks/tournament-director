@@ -1,3 +1,4 @@
+import { reasonsFor } from '../../shared/refusalReasons'
 import { apiFetch } from '../../shared/apiFetch'
 import { apiUrl } from '../../shared/apiUrl'
 import { field } from '../../shared/field'
@@ -90,12 +91,6 @@ export class RegistrationPaidWarningError extends Error {
   }
 }
 
-function reasonsOf(errors: unknown, fallback: string): string[] {
-  if (typeof errors !== 'object' || errors === null) return [fallback]
-  const reasons = Object.values(errors).filter((value) => typeof value === 'string')
-  return reasons.length > 0 ? reasons : [fallback]
-}
-
 /**
  * Delete a registration at the desk (REG-19, D-209). `confirmPaid` is the total paid the director
  * saw and ticked for (D-213); with no real payment leave it out. Throws
@@ -120,7 +115,10 @@ export async function deleteRegistration(
     if (Array.isArray(field(body, 'warnings')) && typeof paid === 'number') {
       throw new RegistrationPaidWarningError(text, paid)
     }
-    throw new RegistrationDeleteRefusedError(text, reasonsOf(field(body, 'errors'), text))
+    throw new RegistrationDeleteRefusedError(
+      text,
+      reasonsFor(field(body, 'errors'), ['tournament', 'scores'], text),
+    )
   }
   if (response.status === 404) {
     // Stryker disable next-line ArrowFunction: `null` and `undefined` both fail the message check below.

@@ -20,6 +20,7 @@ function show(
   props: {
     info?: DeleteInfo
     loading?: boolean
+    refreshing?: boolean
     loadFailure?: string
     pending?: boolean
     failure?: string
@@ -32,6 +33,7 @@ function show(
       bowlerName="Maria Gonzalez"
       info={props.info}
       loading={props.loading ?? false}
+      refreshing={props.refreshing}
       loadFailure={props.loadFailure}
       onRetry={props.onRetry ?? (() => undefined)}
       pending={props.pending ?? false}
@@ -221,5 +223,29 @@ describe('saving (D-213)', () => {
     expect(within(dialog()).getByRole('alert')).toHaveTextContent(
       'Failed to delete the registration (503)',
     )
+  })
+})
+
+describe('while the total is read again', () => {
+  it('keeps Delete off even with the box ticked, so the old total is not sent twice', async () => {
+    const user = userEvent.setup()
+    const { rerender } = show({ info: paidInfo() })
+    await user.click(within(dialog()).getByRole('checkbox'))
+    expect(within(dialog()).getByRole('button', { name: 'Delete registration' })).toBeEnabled()
+
+    rerender(
+      <DeleteRegistrationDialog
+        bowlerName="Maria Gonzalez"
+        info={paidInfo()}
+        loading={false}
+        refreshing
+        onRetry={() => undefined}
+        pending={false}
+        onConfirm={() => undefined}
+        onClose={() => undefined}
+      />,
+    )
+
+    expect(within(dialog()).getByRole('button', { name: 'Delete registration' })).toBeDisabled()
   })
 })

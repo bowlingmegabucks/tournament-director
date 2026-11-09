@@ -1,6 +1,6 @@
+import { plural } from '../../shared/plural'
 import { useId } from 'react'
 import { useSearchParams } from 'react-router'
-import { plural } from './format'
 import styles from './ResultsPage.module.css'
 
 export interface ChooserDivision {

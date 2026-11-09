@@ -210,7 +210,7 @@ describe('deleteRegistration (REG-19, D-209 to D-211)', () => {
     server.use(
       http.delete(path, () =>
         HttpResponse.json(
-          { message: 'm', errors: { a: 'Only this.', b: 5, c: null } },
+          { message: 'm', errors: { tournament: 'Only this.', scores: 5 } },
           { status: 409 },
         ),
       ),

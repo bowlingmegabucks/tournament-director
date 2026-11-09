@@ -2,6 +2,7 @@ import { useId, useState } from 'react'
 import dialog from '../../shared/Dialog.module.css'
 import { closeDialogOf, showOnMount } from '../../shared/dialogParts'
 import { Loading } from '../../shared/Loading'
+import { plural } from '../../shared/plural'
 import { formatSessionDate } from '../../shared/sessionFormat'
 import { formatFee } from '../tournaments/format'
 import styles from './DeleteRegistration.module.css'
@@ -16,6 +17,8 @@ interface DeleteRegistrationDialogProps {
   /** Undefined while it loads, or when it could not be read. */
   info: DeleteInfo | undefined
   loading: boolean
+  /** The read is running again (a payment arrived): Delete waits for the new total. */
+  refreshing?: boolean
   /** The read failed (D-212): Delete stays off until Try again works. */
   loadFailure?: string
   onRetry: () => void
@@ -26,8 +29,6 @@ interface DeleteRegistrationDialogProps {
   onConfirm: (confirmPaid: number | undefined) => void
   onClose: () => void
 }
-
-const plural = (count: number, singular: string) => `${count} ${singular}${count === 1 ? '' : 's'}`
 
 function systemsOf(payments: DeleteInfo['payments']): string {
   return [...new Set(payments.map((payment) => payment.system))].join(', ')
@@ -43,6 +44,7 @@ export function DeleteRegistrationDialog({
   bowlerName,
   info,
   loading,
+  refreshing = false,
   loadFailure,
   onRetry,
   pending,
@@ -125,9 +127,9 @@ export function DeleteRegistrationDialog({
               <>
                 <p role="alert" className={styles.paid}>
                   <strong>Paid outside this system: {formatFee(info.paidTotal)}</strong> (
-                  {systemsOf(info.payments)}, {plural(info.payments.length, 'payment')}). Deleting
-                  the registration removes the payment records. Any refund is handled outside the
-                  app.
+                  {systemsOf(info.payments)}, {plural(info.payments.length, 'payment', 'payments')}
+                  ). Deleting the registration removes the payment records. Any refund is handled
+                  outside the app.
                 </p>
                 <div className={styles.tick}>
                   <input
@@ -165,7 +167,7 @@ export function DeleteRegistrationDialog({
             <button
               type="button"
               className={dialog.destructive}
-              disabled={!ready || pending}
+              disabled={!ready || pending || refreshing}
               onClick={() => {
                 onConfirm(paid ? info.paidTotal : undefined)
               }}

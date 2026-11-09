@@ -44,6 +44,7 @@ function OpenDialog({
       bowlerName={bowlerName}
       info={info.data}
       loading={info.isPending}
+      refreshing={info.isFetching}
       loadFailure={info.error ? info.error.message : undefined}
       onRetry={() => {
         void info.refetch()

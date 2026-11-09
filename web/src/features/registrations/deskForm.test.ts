@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   bowlerLabels,
+  bowlerNameOf,
   buildRequest,
   changesOf,
   dueLines,
@@ -340,5 +341,19 @@ describe('what the desk collects (D-166, TRN-12)', () => {
 
     expect(totalDue(lines)).toBe(60.4)
     expect(totalDue([])).toBe(0)
+  })
+})
+
+describe('the bowler display name (matches the list)', () => {
+  it('joins first and last name, trimmed', () => {
+    expect(bowlerNameOf({ firstName: ' Maria ', lastName: 'Gonzalez ', suffix: '' })).toBe(
+      'Maria Gonzalez',
+    )
+  })
+
+  it('adds a suffix after a comma', () => {
+    expect(bowlerNameOf({ firstName: 'Maria', lastName: 'Gonzalez', suffix: ' Jr ' })).toBe(
+      'Maria Gonzalez, Jr',
+    )
   })
 })

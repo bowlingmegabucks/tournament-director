@@ -1,3 +1,4 @@
+import { reasonsFor } from './refusalReasons'
 import { apiFetch } from './apiFetch'
 import { field } from './field'
 import { readJson } from './readJson'
@@ -31,13 +32,6 @@ export class SessionCompleteRefusedError extends Error {
   }
 }
 
-function reasonsOf(errors: unknown, fallback: string): string[] {
-  const reasons = ['tournament', 'session']
-    .map((key) => field(errors, key))
-    .filter((reason): reason is string => typeof reason === 'string')
-  return reasons.length > 0 ? reasons : [fallback]
-}
-
 /**
  * Complete a squad or sweeper (SQD-15, SQD-16). Resolves with how many bowlers got zeros (always 0
  * for a sweeper). Throws `SessionCompleteRefusedError` for a 409.
@@ -54,7 +48,10 @@ export async function completeSession(
     const body = await readJson(response, `Failed to complete the ${word(kind)}`)
     const message = field(body, 'message')
     const text = typeof message === 'string' ? message : `The ${word(kind)} cannot be completed.`
-    throw new SessionCompleteRefusedError(text, reasonsOf(field(body, 'errors'), text))
+    throw new SessionCompleteRefusedError(
+      text,
+      reasonsFor(field(body, 'errors'), ['tournament', 'session'], text),
+    )
   }
   if (response.status === 404) {
     throw new Error(`This ${word(kind)} was not found. It may have been removed.`)

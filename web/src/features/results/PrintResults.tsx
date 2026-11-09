@@ -1,6 +1,6 @@
+import { plural } from '../../shared/plural'
 import { createPortal } from 'react-dom'
 import { DivisionBody } from './DivisionResults'
-import { plural } from './format'
 import { PrintHeader } from './PrintHeader'
 import styles from './PrintResults.module.css'
 import tableStyles from './ResultsTable.module.css'

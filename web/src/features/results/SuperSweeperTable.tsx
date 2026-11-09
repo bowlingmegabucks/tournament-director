@@ -1,3 +1,4 @@
+import { plural } from '../../shared/plural'
 import {
   formatFlagNote,
   formatFlagTag,
@@ -5,7 +6,6 @@ import {
   formatPlusMinus,
   formatTie,
   gameColumnCount,
-  plural,
   sweeperItems,
 } from './format'
 import styles from './ResultsTable.module.css'

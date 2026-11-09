@@ -26,6 +26,8 @@ interface MockRegistration {
   squadIds: string[]
   sweeperIds: string[]
   hasScores: boolean
+  /** What the bowler paid outside this system (D-210). Set when the demo data is seeded. */
+  payments?: { system: string; amount: number }[]
 }
 
 function bowler(
@@ -143,6 +145,11 @@ export function createRegistrationHandlers({
       squadIds: [...entry.squadIds],
       sweeperIds: [...entry.sweeperIds],
       hasScores: false,
+      // Tom Delgado paid $85 outside this system (for the delete tests); Rosa Delgado did not.
+      payments:
+        entry.bowler.firstName === 'Tom' && entry.bowler.lastName === 'Delgado'
+          ? [{ system: 'BowlingSite', amount: 85 }]
+          : [],
     })
   }
   const sam = bowlers.find((candidate) => candidate.lastName === 'Scored')
@@ -210,10 +217,6 @@ export function createRegistrationHandlers({
     }
   }
 
-  /** What a bowler paid outside this system, by last name (D-210): Tom Delgado paid $85. */
-  const paymentsOf = (owner: MockBowler) =>
-    owner.lastName === 'Delgado' ? [{ system: 'BowlingSite', amount: 85 }] : []
-
   function deleteFacts(entry: MockRegistration, owner: MockBowler) {
     const sessions = [
       ...squads.filter((squad) => entry.squadIds.includes(squad.id)),
@@ -240,7 +243,7 @@ export function createRegistrationHandlers({
           : []
       }),
     ].sort((a, b) => a.date.localeCompare(b.date))
-    const payments = paymentsOf(owner)
+    const payments = entry.payments ?? []
     return {
       bowlerName: displayName(owner),
       divisionName: divisionName(entry.divisionId),

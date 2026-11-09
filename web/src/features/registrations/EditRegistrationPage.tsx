@@ -9,6 +9,7 @@ import type { Tournament } from '../tournaments/types'
 import { useTournamentSettings } from '../tournaments/useTournamentSettings'
 import { DeleteRegistrationButton } from './DeleteRegistrationButton'
 import { RegistrationNotFoundError } from './editApi'
+import { bowlerNameOf } from './deskForm'
 import { EditRegistrationForm } from './EditRegistrationForm'
 import { useEditInfo } from './useEditInfo'
 
@@ -98,7 +99,7 @@ export function EditRegistrationPage() {
         <DeleteRegistrationButton
           tournamentId={id}
           registrationId={registrationId}
-          bowlerName={`${info.data.bowler.firstName} ${info.data.bowler.lastName}`.trim()}
+          bowlerName={bowlerNameOf(info.data.bowler)}
         >
           Delete registration
         </DeleteRegistrationButton>

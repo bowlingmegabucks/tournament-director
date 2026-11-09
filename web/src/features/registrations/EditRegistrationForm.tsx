@@ -13,6 +13,7 @@ import {
   errorKeyOf,
   stepOfError,
   type RegistrationValues,
+  bowlerNameOf,
 } from './deskForm'
 import { Actions, ErrorSummary, StepList } from './DeskSteps'
 import {
@@ -34,13 +35,7 @@ import { EditReviewStep } from './EditReviewStep'
 import { DeskRejectedError } from './bowlerApi'
 import { RegistrationFields } from './RegistrationFields'
 import { focusOnMount, stepNames, type Step } from './stepInfo'
-import type {
-  BowlerValues,
-  DeskFieldErrors,
-  EditInfo,
-  EditWarning,
-  ExistingRegistration,
-} from './types'
+import type { DeskFieldErrors, EditInfo, EditWarning, ExistingRegistration } from './types'
 import { useEditRegistration } from './useEditRegistration'
 import styles from './AddRegistration.module.css'
 
@@ -52,12 +47,6 @@ interface EditRegistrationFormProps {
   sweepers: Sweeper[]
   /** Read the registration again and start the form over (D-199). */
   onReload: () => void
-}
-
-const nameOf = (values: BowlerValues) => {
-  const name = `${values.firstName.trim()} ${values.lastName.trim()}`
-  const suffix = values.suffix.trim()
-  return suffix === '' ? name : `${name}, ${suffix}`
 }
 
 const keepErrors = (errors: DeskFieldErrors, keep: (key: string) => boolean): DeskFieldErrors =>
@@ -168,7 +157,7 @@ export function EditRegistrationForm({
   const [dialogFailure, setDialogFailure] = useState<string>()
   const [failure, setFailure] = useState<string>()
 
-  const name = nameOf(bowler)
+  const name = bowlerNameOf(bowler)
   const listUrl = `/tournaments/${tournamentId}/registrations`
   const request = buildEditRequest({ info, bowler, registration })
   const money = moneyOf({ info, registration, squads, sweepers })

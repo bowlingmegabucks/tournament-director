@@ -91,10 +91,10 @@ function outcomeOf(error: unknown): Outcome {
 }
 
 function lockReasons(info: EditInfo, sessions: { id: string; complete: boolean }[]) {
-  const held = [...info.registration.squadIds, ...info.registration.sweeperIds]
+  const held = new Set([...info.registration.squadIds, ...info.registration.sweeperIds])
   const reasons: Record<string, string> = {}
   for (const session of sessions) {
-    if (!held.includes(session.id)) continue
+    if (!held.has(session.id)) continue
     const reason = removeLock(session, info)
     if (reason) reasons[session.id] = reason
   }

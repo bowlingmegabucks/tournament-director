@@ -106,10 +106,8 @@ function MoveView({
   onSave,
   onBack,
 }: Readonly<ViewProps>) {
-  const held = [...info.registration.squadIds, ...info.registration.sweeperIds]
-  const targets = sessions.filter(
-    (session) => session.id !== source.id && !held.includes(session.id),
-  )
+  const held = new Set([...info.registration.squadIds, ...info.registration.sweeperIds])
+  const targets = sessions.filter((session) => session.id !== source.id && !held.has(session.id))
   const [chosen, setChosen] = useState<string>()
   const target = targets.find((session) => session.id === chosen && !session.complete)
   const net = target ? target.entryFee - source.entryFee : 0

@@ -158,7 +158,7 @@ export async function patchRegistration(
     typeof added !== 'number' ||
     typeof removed !== 'number'
   ) {
-    throw new Error('Failed to save the registration (unexpected response)')
+    throw new TypeError('Failed to save the registration (unexpected response)')
   }
   return { registrationId: registrationIdBack, added, removed }
 }

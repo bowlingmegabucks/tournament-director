@@ -187,6 +187,28 @@ async function bowlerFailures(
   return { merged, patch, list }
 }
 
+type EligibilityInput = Parameters<typeof checkEligibility>[0]
+
+/** REG-04 and REG-05 against the division the bowler will hold after the save. */
+async function eligibilityFailures(
+  deps: RegisterDependencies,
+  divisionId: string,
+  next: {
+    tournament: { id: string; startDate: EligibilityInput['tournamentStart'] }
+    average: EligibilityInput['average']
+    bowler: EligibilityInput['bowler']
+  },
+): Promise<Failure[]> {
+  const located = await findDivision(deps, divisionId, next.tournament.id)
+  if ('failure' in located) return [located.failure]
+  return checkEligibility({
+    division: located.division,
+    average: next.average,
+    bowler: next.bowler,
+    tournamentStart: next.tournament.startDate,
+  })
+}
+
 /**
  * The desk edits a registration (D-197): division, average, super sweeper, bowler details, and the
  * squads and sweepers to add and remove, in one save. Checks are the vendor `PATCH`'s plus D-04, D-10,
@@ -275,18 +297,13 @@ export async function editRegistration(
   // REG-04 and REG-05 run when something they read changed (D-205). A bowler who no longer fits
   // after the division was edited (D-12) can still add a squad.
   if (divisionMoved || averageChanged || idsChanged) {
-    const located = await findDivision(deps, divisionId, tournament.id)
-    if ('failure' in located) list.push(located.failure)
-    else {
-      list.push(
-        ...checkEligibility({
-          division: located.division,
-          average,
-          bowler: bowler.merged,
-          tournamentStart: tournament.startDate,
-        }),
-      )
-    }
+    list.push(
+      ...(await eligibilityFailures(deps, divisionId, {
+        tournament,
+        average,
+        bowler: bowler.merged,
+      })),
+    )
   }
   if (list.length > 0) return failures(list)
 

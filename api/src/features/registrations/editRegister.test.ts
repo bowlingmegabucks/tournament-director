@@ -31,6 +31,8 @@ interface Options {
   held?: { squads?: number[]; sweepers?: number[] }
   completeIndexes?: { squads?: number[]; sweepers?: number[] }
   scoredIn?: ('squad0' | 'squad1' | 'sweeper0')[]
+  /** A score this bowler has in a squad of another tournament. */
+  scoredElsewhere?: boolean
   average?: number | null
   bowler?: Partial<ReturnType<typeof createCommonBowler>>
 }
@@ -57,6 +59,7 @@ function setup(options: Options = {}) {
     squad1: squads[1],
     sweeper0: sweepers[0],
   }
+  const elsewhere = session('squad', 'another-tournament')
   const { writer, state } = createInMemoryRegistrationWriter({
     bowlers: [bowler],
     divisions: [
@@ -76,11 +79,14 @@ function setup(options: Options = {}) {
         },
       },
     ],
-    sessions: [...squads, ...sweepers],
-    scores: (options.scoredIn ?? []).map((key) => ({
-      bowlerId: bowler.id,
-      sessionId: scoreSessions[key]?.id ?? '',
-    })),
+    sessions: [...squads, ...sweepers, elsewhere],
+    scores: [
+      ...(options.scoredIn ?? []).map((key) => ({
+        bowlerId: bowler.id,
+        sessionId: scoreSessions[key]?.id ?? '',
+      })),
+      ...(options.scoredElsewhere ? [{ bowlerId: bowler.id, sessionId: elsewhere.id }] : []),
+    ],
   })
   const deps = {
     tournaments: createInMemoryTournamentRepository(
@@ -135,6 +141,14 @@ async function messagesOf(result: Promise<EditResult>): Promise<string[]> {
     throw new Error(`expected failures, got ${JSON.stringify(outcome)}`)
   }
   return outcome.failures.map((failure) => failure.description)
+}
+
+async function codesOf(result: Promise<EditResult>): Promise<string[]> {
+  const outcome = await result
+  if (outcome.ok || outcome.kind !== 'failures') {
+    throw new Error(`expected failures, got ${JSON.stringify(outcome)}`)
+  }
+  return outcome.failures.map((failure) => failure.code)
 }
 
 const heldIds = (state: ReturnType<typeof setup>['state'], registrationId: string) =>
@@ -655,5 +669,212 @@ describe('where the registration lives (REG-30, D-130)', () => {
 
     expect(await run({ addSquadIds: [squads[1]?.id] })).toEqual({ ok: false, kind: 'complete' })
     expect(state.payments).toHaveLength(0)
+  })
+})
+
+describe('failure codes, which the routes turn into form fields (EDR-04)', () => {
+  it('names a removal with scores by kind (REG-34)', async () => {
+    const squad = setup({ held: { squads: [0, 1] }, scoredIn: ['squad1'] })
+    expect(await codesOf(squad.run({ removeSquadIds: [squad.squads[1]?.id] }))).toEqual([
+      'Registration.RemovedSquadHasScores',
+    ])
+
+    const sweeper = setup({ scoredIn: ['sweeper0'] })
+    expect(await codesOf(sweeper.run({ removeSweeperIds: [sweeper.sweepers[0]?.id] }))).toEqual([
+      'Registration.RemovedSweeperHasScores',
+    ])
+  })
+
+  it('names a complete removal by kind (D-10)', async () => {
+    const squad = setup({ held: { squads: [0, 1] }, completeIndexes: { squads: [1] } })
+    expect(await codesOf(squad.run({ removeSquadIds: [squad.squads[1]?.id] }))).toEqual([
+      'Registration.RemovedSquadComplete',
+    ])
+
+    const sweeper = setup({ completeIndexes: { sweepers: [0] } })
+    expect(await codesOf(sweeper.run({ removeSweeperIds: [sweeper.sweepers[0]?.id] }))).toEqual([
+      'Registration.RemovedSweeperComplete',
+    ])
+  })
+
+  it('names the super sweeper and division refusals', async () => {
+    const locked = setup({
+      superSweeper: true,
+      held: { squads: [0], sweepers: [0, 1] },
+      scoredIn: ['sweeper0'],
+    })
+    expect(await codesOf(locked.run({ superSweeper: false }))).toEqual([
+      'Registration.SuperSweeperLocked',
+    ])
+
+    const complete = setup({
+      held: { squads: [0], sweepers: [0, 1] },
+      completeIndexes: { sweepers: [1] },
+    })
+    expect(await codesOf(complete.run({ superSweeper: true }))).toEqual([
+      'Registration.SuperSweeperSweeperComplete',
+    ])
+
+    const first = setup({ superSweeper: true, held: { squads: [0], sweepers: [0, 1] } })
+    expect(await codesOf(first.run({ removeSweeperIds: [first.sweepers[1]?.id] }))).toEqual([
+      'Registration.SuperSweeperRemoveFirst',
+    ])
+
+    const missing = setup()
+    expect(await codesOf(missing.run({ superSweeper: true }))).toEqual([
+      'Registration.SuperSweeperNeedsAllSweepers',
+    ])
+
+    const division = setup({ scoredIn: ['squad0'] })
+    expect(await codesOf(division.run({ divisionId: division.otherDivision.id }))).toEqual([
+      'Registration.DivisionLocked',
+    ])
+  })
+
+  it('names a USBC ID another bowler holds (D-161)', async () => {
+    const { run, deps } = setup()
+    await deps.writer.save({
+      bowler: {
+        id: faker.string.uuid(),
+        isNew: true,
+        data: { ...createCommonBowler(), usbcId: '9999-8888' },
+      },
+      registration: {
+        id: faker.string.uuid(),
+        isNew: true,
+        divisionId: faker.string.uuid(),
+        average: null,
+        superSweeper: false,
+      },
+      addSessionIds: [],
+      payment: null,
+    })
+
+    expect(await codesOf(run({ bowler: { usbcId: '9999-8888' } }))).toEqual(['Bowler.UsbcIdInUse'])
+  })
+
+  it('refuses a squad id sent as a sweeper removal, and the reverse (REG-32)', async () => {
+    const { run, squads, sweepers } = setup()
+
+    expect(await codesOf(run({ removeSweeperIds: [squads[0]?.id] }))).toEqual([
+      'Registration.InvalidSweeperIds',
+    ])
+    expect(await messagesOf(run({ removeSweeperIds: [squads[0]?.id] }))).toEqual([
+      'Invalid sweeper IDs',
+    ])
+    expect(await codesOf(run({ removeSquadIds: [sweepers[0]?.id] }))).toEqual([
+      'Registration.InvalidSquadIds',
+    ])
+  })
+})
+
+describe('what is checked, and when (D-199, D-205, D-110)', () => {
+  it('answers changed before it checks anything else (D-199)', async () => {
+    const { run, squads } = setup({ held: { squads: [0, 1] } })
+
+    const added = await run({ addSquadIds: [squads[1]?.id], bowler: { email: 'nope' } })
+    const removed = await run({ removeSquadIds: [squads[2]?.id], bowler: { email: 'nope' } })
+
+    expect(added).toMatchObject({ ok: false, kind: 'changed' })
+    expect(removed).toMatchObject({ ok: false, kind: 'changed' })
+  })
+
+  it('answers changed for a held add even when a removal is fine, and for a gone removal with a fine add', async () => {
+    const { run, squads } = setup({ held: { squads: [0, 1] } })
+
+    expect(
+      await run({ addSquadIds: [squads[1]?.id], removeSquadIds: [squads[0]?.id] }),
+    ).toMatchObject({ kind: 'changed' })
+    expect(
+      await run({ addSquadIds: [squads[2]?.id], removeSweeperIds: [faker.string.uuid()] }),
+    ).toMatchObject({ kind: 'changed' })
+  })
+
+  it('does not check super sweeper when it stays on and a squad is added, even if a sweeper was added to the tournament later (REG-35)', async () => {
+    const { run, squads } = setup({ superSweeper: true, held: { squads: [0], sweepers: [0] } })
+
+    expect(await run({ addSquadIds: [squads[1]?.id] })).toMatchObject({ ok: true })
+  })
+
+  it('lets super sweeper go off while a held sweeper is complete (REG-17)', async () => {
+    const { run, state } = setup({
+      superSweeper: true,
+      held: { squads: [0], sweepers: [0, 1] },
+      completeIndexes: { sweepers: [1] },
+    })
+
+    expect(await run({ superSweeper: false })).toMatchObject({ ok: true })
+    expect(state.registrations[0]?.registration.superSweeper).toBe(false)
+  })
+
+  it('lets super sweeper change when the bowler has scores in a squad only (D-110)', async () => {
+    const { run } = setup({ held: { squads: [0], sweepers: [0, 1] }, scoredIn: ['squad0'] })
+
+    expect(await run({ superSweeper: true })).toMatchObject({ ok: true })
+  })
+
+  it('does not count a score from another tournament as a lock (REG-15)', async () => {
+    const { run, otherDivision } = setup({ scoredElsewhere: true })
+
+    expect(await run({ divisionId: otherDivision.id })).toMatchObject({ ok: true })
+  })
+
+  it('does not run eligibility for a bowler field sent unchanged (D-205)', async () => {
+    const { run } = setup({ division: { minimumAverage: 250 }, bowler: { gender: 'Female' } })
+
+    expect(await run({ bowler: { gender: 'Female' } })).toMatchObject({ ok: true })
+    expect(await messagesOf(run({ bowler: { gender: 'Male' } }))).toEqual([
+      'Minimum average requirement for division not met',
+    ])
+  })
+
+  it('refuses a birth date of today or later (BWL-08)', async () => {
+    const { run } = setup()
+
+    expect(await messagesOf(run({ bowler: { dateOfBirth: '2026-10-01' } }))).toEqual([
+      'Date of Birth must be in the past',
+    ])
+    expect(await run({ bowler: { dateOfBirth: '2026-09-30' } })).toMatchObject({ ok: true })
+  })
+
+  it('accepts the USBC ID the bowler already has, and clears it when the division needs none (D-161, D-206)', async () => {
+    const { run, deps, state, bowler } = setup()
+    await deps.writer.save({
+      bowler: {
+        id: faker.string.uuid(),
+        isNew: true,
+        data: { ...createCommonBowler(), usbcId: '' },
+      },
+      registration: {
+        id: faker.string.uuid(),
+        isNew: true,
+        divisionId: faker.string.uuid(),
+        average: null,
+        superSweeper: false,
+      },
+      addSessionIds: [],
+      payment: null,
+    })
+
+    expect(await run({ bowler: { usbcId: bowler.usbcId } })).toMatchObject({ ok: true })
+    expect(await run({ bowler: { usbcId: '' } })).toMatchObject({ ok: true })
+    expect(state.bowlers.find((b) => b.id === bowler.id)?.usbcId).toBe('')
+  })
+
+  it('passes on an error that is not a stale save (D-199)', async () => {
+    const { deps, tournament, request, squads, registrationId } = setup()
+    const broken: RegistrationWriter = {
+      ...deps.writer,
+      save: () => Promise.reject(new Error('disk full')),
+    }
+
+    await expect(
+      editRegistration(
+        { ...deps, writer: broken },
+        tournament.id,
+        registrationId,
+        request({ addSquadIds: [squads[1]?.id] }),
+      ),
+    ).rejects.toThrow('disk full')
   })
 })

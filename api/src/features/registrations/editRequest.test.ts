@@ -48,6 +48,15 @@ describe('parseEditRequest (D-197, D-199)', () => {
     })
   })
 
+  it('accepts 300 and 1, the edges of the average (REG-16)', () => {
+    expect(parseEditRequest({ average: 300 })).toMatchObject({ success: true })
+    expect(parseEditRequest({ average: 1 })).toMatchObject({ success: true })
+  })
+
+  it('trims the state before it checks the length', () => {
+    expect(parseEditRequest({ bowler: { state: ' MA ' } })).toMatchObject({ success: true })
+  })
+
   it('names the field of a bowler error by its path', () => {
     expect(parseEditRequest({ bowler: { state: 'NCX' } })).toMatchObject({
       success: false,

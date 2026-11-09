@@ -24,13 +24,16 @@ const session = (kind: 'squad' | 'sweeper', tournamentId: string): StoredSession
 })
 
 /** One registered bowler holding squad 0 and sweeper 0, with a second squad free to add. */
-function world(options: { completed?: boolean; scored?: 'squad' | 'sweeper' } = {}) {
+function world(
+  options: { completed?: boolean; scored?: 'squad' | 'sweeper'; scoredElsewhere?: boolean } = {},
+) {
   const tournament = createTournament({ startDate: '2026-10-23' })
   const division = createDivision({ name: 'Scratch' })
   const squads = [session('squad', tournament.id), session('squad', tournament.id)]
-  const sweepers = [session('sweeper', tournament.id)]
+  const sweepers = [session('sweeper', tournament.id), session('sweeper', tournament.id)]
   const bowler = createCommonBowler()
   const registrationId = faker.string.uuid()
+  const elsewhere = session('squad', faker.string.uuid())
   const { writer, state } = createInMemoryRegistrationWriter({
     bowlers: [bowler],
     divisions: [{ id: division.id, tournamentId: tournament.id }],
@@ -47,15 +50,18 @@ function world(options: { completed?: boolean; scored?: 'squad' | 'sweeper' } = 
         },
       },
     ],
-    sessions: [...squads, ...sweepers],
-    scores: options.scored
-      ? [
-          {
-            bowlerId: bowler.id,
-            sessionId: (options.scored === 'squad' ? squads[0] : sweepers[0])?.id ?? '',
-          },
-        ]
-      : [],
+    sessions: [...squads, ...sweepers, elsewhere],
+    scores: [
+      ...(options.scored
+        ? [
+            {
+              bowlerId: bowler.id,
+              sessionId: (options.scored === 'squad' ? squads[0] : sweepers[0])?.id ?? '',
+            },
+          ]
+        : []),
+      ...(options.scoredElsewhere ? [{ bowlerId: bowler.id, sessionId: elsewhere.id }] : []),
+    ],
   })
   const overrides = {
     tournaments: createInMemoryTournamentRepository(
@@ -116,6 +122,16 @@ describe('GET /v1/tournaments/{id}/registrations/{registrationId}/edit-info (D-1
 
     expect(response.body).toMatchObject({
       locks: { scoredSessionIds: [squads[0]?.id], hasScores: true, hasSweeperScores: false },
+    })
+  })
+
+  it('does not count a score from another tournament (REG-15)', async () => {
+    const { overrides, url } = world({ scoredElsewhere: true })
+
+    const response = await request(createSignedInTestApp(overrides)).get(`${url}/edit-info`)
+
+    expect(response.body).toMatchObject({
+      locks: { scoredSessionIds: [], hasScores: false, hasSweeperScores: false },
     })
   })
 
@@ -188,6 +204,37 @@ describe('PATCH /v1/tournaments/{id}/registrations/{registrationId} (D-197)', ()
       },
     })
     expect(state.registrations[0]?.registration.sessionIds).toHaveLength(2)
+  })
+
+  it.each([
+    ['a sweeper with scores', 'sweeper', 'removeSweeperIds', 'sweeperIds'],
+    ['a squad with scores', 'squad', 'removeSquadIds', 'squadIds'],
+  ] as const)('puts the refusal for %s under its own field', async (_name, scored, key, field) => {
+    const { overrides, url, squads, sweepers } = world({ scored })
+    const ids = scored === 'squad' ? squads : sweepers
+
+    const response = await request(createSignedInTestApp(overrides))
+      .patch(url)
+      .send({ [key]: [ids[0]?.id], ...(scored === 'sweeper' ? { superSweeper: false } : {}) })
+
+    expect(response.status).toBe(400)
+    expect(Object.keys(response.body.errors as object)).toContain(field)
+  })
+
+  it('puts the super sweeper refusals under superSweeper', async () => {
+    const { overrides, url } = world()
+
+    const response = await request(createSignedInTestApp(overrides))
+      .patch(url)
+      .send({ superSweeper: true })
+
+    expect(response.status).toBe(400)
+    expect(response.body).toEqual({
+      message: 'Super Sweeper cannot be enrolled when not all sweepers are registered.',
+      errors: {
+        superSweeper: 'Super Sweeper cannot be enrolled when not all sweepers are registered.',
+      },
+    })
   })
 
   it('answers 400 for a body that fails the schema, with the path of each field', async () => {

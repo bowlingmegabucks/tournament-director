@@ -134,6 +134,7 @@ function superSweeperFailures(
   const needsAll = state.next && (changed || plan.removeSweepers.length > 0)
   if (needsAll && !state.tournamentSweeperIds.every((id) => plan.nextSweepers.includes(id))) {
     list.push(
+      // Stryker disable next-line LogicalOperator: when this runs, `next` is true, so `was` and `changed` cannot both be false or both be true; the other combinations read the same either way.
       state.was && !changed
         ? validation(
             'Registration.SuperSweeperRemoveFirst',
@@ -175,8 +176,10 @@ async function bowlerFailures(
     rawPhone: request.bowler.phoneNumber,
   })
   // D-161 for a changed ID: another bowler may not already hold it.
+  // Stryker disable next-line ConditionalExpression: with the ID unchanged the holder is the bowler itself, which the filter below skips, so the two guards are the same check.
   if (patch.usbcId !== undefined && patch.usbcId !== '' && patch.usbcId !== stored.usbcId) {
     const holders = await deps.writer.findBowlersByUsbcId(patch.usbcId)
+    // Stryker disable next-line ConditionalExpression: see the guard above; the stored ID is the only one this bowler holds.
     if (holders.some((holder) => holder.id !== stored.id)) {
       list.push(validation('Bowler.UsbcIdInUse', 'Another bowler already has this USBC ID.'))
     }

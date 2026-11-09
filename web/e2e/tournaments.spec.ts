@@ -240,7 +240,7 @@ test('a squad card opens its lane page with the pairs and the bowlers who need a
   await expect(page.getByRole('heading', { level: 3, name: /^Lanes 3-4/ })).toContainText('2 of 4')
 })
 
-test('a drop on a pair with room moves the bowler on screen and says nothing is saved (D-55, D-56, D-58)', async ({
+test('a drop on a pair with room moves the bowler, saves it, and shows the seat (LAN-18, D-56, D-58)', async ({
   page,
 }) => {
   // Tall enough that the pair is in view: a drop needs a visible target.
@@ -253,13 +253,33 @@ test('a drop on a pair with room moves the bowler on screen and says nothing is 
     page.getByRole('heading', { level: 3, name: /^Lanes 3-4/ }),
   )
 
-  await expect(page.getByText(/No save is configured yet/)).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Unassigned (3)' })).toBeVisible()
   const pair = page.getByRole('heading', { level: 3, name: /^Lanes 3-4/ }).locator('xpath=..')
   await expect(pair).toContainText('3 of 4')
   await expect(pair.getByText('Pat Nguyen')).toBeVisible()
   // The first free seat after 3A and 4C (D-56).
   await expect(pair.getByText('3B')).toBeVisible()
+  await expect(page.getByText(/No save is configured/)).toHaveCount(0)
+  // The save is not undone by the refetch that follows it (the mock keeps the move).
+  await expect(pair.getByText('Pat Nguyen')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Unassigned (3)' })).toBeVisible()
+})
+
+test('the lane page says it is live, and stays live after a save (LAN-19, D-217)', async ({
+  page,
+}) => {
+  await openSquad(page, '1:00 PM')
+
+  await expect(page.getByText('Live: changes by others show here as they happen.')).toBeVisible()
+  await page.getByRole('button', { name: 'Assign to lanes: Pat Nguyen' }).click()
+  await page
+    .getByRole('dialog', { name: 'Assign Pat Nguyen to lanes' })
+    .getByRole('button', { name: /Lanes 7-8/ })
+    .click()
+
+  await expect(page.getByRole('heading', { name: 'Unassigned (3)' })).toBeVisible()
+  // The mock tells this page about its own save; it refetches and shows nothing new to say.
+  await expect(page.getByText('Live: changes by others show here as they happen.')).toBeVisible()
 })
 
 test('a drop on a full pair is refused (D-56, D-58)', async ({ page }) => {
@@ -305,8 +325,10 @@ test('the Assign to lanes dialog picks a pair, and Escape closes it (D-58)', asy
   await button.click()
   await dialog.getByRole('button', { name: /Lanes 7-8/ }).click()
 
-  await expect(page.getByText(/No save is configured yet/)).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Unassigned (3)' })).toBeVisible()
+  await expect(
+    page.getByRole('heading', { level: 3, name: /^Lanes 7-8/ }).locator('xpath=..'),
+  ).toContainText('Pat Nguyen')
 })
 
 test('a complete squad has no handles or buttons (LAN-13, D-10)', async ({ page }) => {

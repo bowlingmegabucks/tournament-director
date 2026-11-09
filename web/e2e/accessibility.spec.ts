@@ -633,9 +633,10 @@ for (const colorScheme of colorSchemes) {
       await expect(page.getByRole('dialog', { name: 'Assign Pat Nguyen to lanes' })).toBeVisible()
       await expectNoViolations(page)
 
-      // The "not saved" notice, with the moved bowler in place.
+      // The moved bowler in place, with the live status line showing.
       await page.getByRole('button', { name: /Lanes 7-8/ }).click()
-      await expect(page.getByText(/No save is configured yet/)).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Unassigned (3)' })).toBeVisible()
+      await expect(page.getByText(/Live: changes by others/)).toBeVisible()
       await expectNoViolations(page)
     })
 

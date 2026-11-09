@@ -712,6 +712,30 @@ describe('what a failed save shows (D-197, D-201)', () => {
     expect(served.patched).toHaveLength(2)
   })
 
+  it.each([
+    ['an average that was not set', null, '175', 'Average: not set → 175'],
+    ['an average that is cleared', 182, '', 'Average: 182 → cleared'],
+    ['an average with spaces around it', 182, ' 175 ', 'Average: 182 → 175'],
+  ])('names the change in the warnings dialog for %s', async (_name, was, typed, text) => {
+    signIn()
+    serve({
+      info: info({ registration: { average: was }, locks: { hasScores: true } }),
+      patches: [warn],
+    })
+    const user = userEvent.setup()
+    await open()
+    await user.clear(screen.getByLabelText('Average'))
+    if (typed !== '') await user.type(screen.getByLabelText('Average'), typed)
+    await press(user, /Next: review/)
+    await press(user, 'Save changes')
+
+    const dialog = await screen.findByRole('dialog')
+
+    expect(within(dialog).getByText(text)).toBeVisible()
+    expect(within(dialog).getAllByRole('listitem')).toHaveLength(2)
+    expect(within(dialog).queryByText('Average: Something else.')).not.toBeInTheDocument()
+  })
+
   it('clears the failure in the dialog when the director tries again', async () => {
     signIn()
     serve({

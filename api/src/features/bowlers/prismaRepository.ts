@@ -73,7 +73,7 @@ export function createPrismaBowlerRepository(
         }
       })
       // Sorted again here so one function decides every tie, as the registration list does (D-51).
-      return toOutcome(results.sort(compareBowlers))
+      return toOutcome(results.toSorted(compareBowlers))
     },
   }
 }

@@ -5,6 +5,15 @@ import type { BowlerSearchResult } from './types'
 import { useBowlerSearch } from './useBowlerSearch'
 import styles from './AddRegistration.module.css'
 
+const idSuffix = (bowler: BowlerSearchResult) => (bowler.usbcId === '' ? '' : `, ${bowler.usbcId}`)
+
+/** " · Town, ST" after the ID, or nothing when the bowler has no town. */
+function placeOf(bowler: BowlerSearchResult) {
+  if (bowler.city === '') return ''
+  const state = bowler.state ? `, ${bowler.state}` : ''
+  return ` · ${bowler.city}${state}`
+}
+
 const none: BowlerFilter = { lastName: '', firstName: '', email: '', usbcId: '' }
 
 interface BowlerSearchProps {
@@ -94,7 +103,7 @@ export function BowlerSearch({ tournamentId, onPick, onNew }: Readonly<BowlerSea
           </button>
         </div>
       )}
-      {data && data.bowlers.length === 0 && (
+      {data?.bowlers.length === 0 && (
         <p>
           No bowler matches. Check the spelling, search by USBC ID or email, or choose{' '}
           <strong>New bowler</strong>.
@@ -113,8 +122,7 @@ export function BowlerSearch({ tournamentId, onPick, onNew }: Readonly<BowlerSea
                   <br />
                   <span className={styles.hint}>
                     {bowler.usbcId === '' ? 'No USBC ID' : bowler.usbcId}
-                    {bowler.city !== '' &&
-                      ` · ${bowler.city}${bowler.state ? `, ${bowler.state}` : ''}`}
+                    {placeOf(bowler)}
                   </span>
                 </span>
                 <span className={styles.resultActions}>
@@ -126,7 +134,7 @@ export function BowlerSearch({ tournamentId, onPick, onNew }: Readonly<BowlerSea
                   <button
                     type="button"
                     className={styles.secondary}
-                    aria-label={`Pick ${bowler.name}${bowler.usbcId === '' ? '' : `, ${bowler.usbcId}`}`}
+                    aria-label={`Pick ${bowler.name}${idSuffix(bowler)}`}
                     onClick={() => {
                       onPick(bowler)
                     }}

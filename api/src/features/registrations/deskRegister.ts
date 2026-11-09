@@ -34,8 +34,10 @@ const failures = (list: Failure[]): DeskRegisterResult => ({
   failures: list,
 })
 
-const displayName = (bowler: StoredBowler) =>
-  `${bowler.firstName} ${bowler.lastName}${bowler.suffix === '' ? '' : `, ${bowler.suffix}`}`
+const displayName = ({ firstName, lastName, suffix }: StoredBowler) => {
+  const name = `${firstName} ${lastName}`
+  return suffix === '' ? name : `${name}, ${suffix}`
+}
 
 async function describeExisting(
   deps: RegisterDependencies,
@@ -52,6 +54,70 @@ async function describeExisting(
     divisionName: divisions.find((division) => division.id === existing.divisionId)?.name ?? '',
     ...held,
   }
+}
+
+type Picked = { known: StoredBowler | undefined } | { refusal: DeskRegisterResult }
+
+/** The stored bowler the desk picked, or a refusal: not found, or a USBC ID another bowler holds. */
+async function pickBowler(
+  writer: RegisterDependencies['writer'],
+  request: DeskRequest,
+  usbcId: string | undefined,
+): Promise<Picked> {
+  if (request.bowlerId === undefined) {
+    // D-161: an exact USBC ID match only. No name matching.
+    if (usbcId === undefined) return { known: undefined }
+    const [onFile] = await writer.findBowlersByUsbcId(usbcId)
+    if (!onFile) return { known: undefined }
+    return {
+      refusal: {
+        ok: false,
+        kind: 'usbcIdOnFile',
+        bowler: { id: onFile.id, name: displayName(onFile) },
+      },
+    }
+  }
+  const known = await writer.findBowlerById(request.bowlerId)
+  if (!known) return { refusal: { ok: false, kind: 'bowlerNotFound' } }
+  if (usbcId === undefined || usbcId === known.usbcId) return { known }
+  // D-161 for a stored bowler: a changed ID may not be one another bowler already holds, or two
+  // records share it and the registration site refuses that ID (Bowler.Duplicate).
+  const holders = await writer.findBowlersByUsbcId(usbcId)
+  if (holders.some((holder) => holder.id !== known.id)) {
+    return {
+      refusal: failures([
+        validation('Bowler.UsbcIdInUse', 'Another bowler already has this USBC ID.'),
+      ]),
+    }
+  }
+  return { known }
+}
+
+/** A bowler already registered here: a conflict until the desk confirms, and no move after scores. */
+async function checkExisting(
+  deps: RegisterDependencies,
+  tournamentId: string,
+  request: DeskRequest,
+  known: StoredBowler | undefined,
+  existing: StoredRegistration | undefined,
+): Promise<DeskRegisterResult | undefined> {
+  if (!existing || !known) return undefined
+  if (!request.appendToExisting) {
+    return {
+      ok: false,
+      kind: 'alreadyRegistered',
+      existing: await describeExisting(deps, tournamentId, existing),
+    }
+  }
+  if (existing.divisionId === request.divisionId) return undefined
+  // D-160, REG-15: a move is fine until the bowler has any score.
+  if (!(await hasScoresIn(deps.writer, known.id, tournamentId))) return undefined
+  return failures([
+    validation(
+      'Registration.DivisionLocked',
+      'Cannot change bowler division after scores have been recorded.',
+    ),
+  ])
 }
 
 /**
@@ -79,54 +145,15 @@ export async function deskRegister(
   if ('failure' in located) return failures([located.failure])
 
   const patch = toDeskBowlerPatch(request.bowler)
-  let knownBowler: StoredBowler | undefined
-  if (request.bowlerId !== undefined) {
-    knownBowler = await writer.findBowlerById(request.bowlerId)
-    if (!knownBowler) return { ok: false, kind: 'bowlerNotFound' }
-  } else if (patch.usbcId !== undefined) {
-    // D-161: an exact USBC ID match only. No name matching.
-    const [onFile] = await writer.findBowlersByUsbcId(patch.usbcId)
-    if (onFile) {
-      return {
-        ok: false,
-        kind: 'usbcIdOnFile',
-        bowler: { id: onFile.id, name: displayName(onFile) },
-      }
-    }
-  }
-
-  if (knownBowler && patch.usbcId !== undefined && patch.usbcId !== knownBowler.usbcId) {
-    // D-161 for a stored bowler: a changed ID may not be one another bowler already holds, or two
-    // records share it and the registration site refuses that ID (Bowler.Duplicate).
-    const holders = await writer.findBowlersByUsbcId(patch.usbcId)
-    if (holders.some((holder) => holder.id !== knownBowler.id)) {
-      return failures([
-        validation('Bowler.UsbcIdInUse', 'Another bowler already has this USBC ID.'),
-      ])
-    }
-  }
+  const picked = await pickBowler(writer, request, patch.usbcId)
+  if ('refusal' in picked) return picked.refusal
+  const knownBowler = picked.known
 
   const existing = knownBowler
     ? await writer.findRegistration(knownBowler.id, tournament.id)
     : undefined
-  if (existing && !request.appendToExisting) {
-    return {
-      ok: false,
-      kind: 'alreadyRegistered',
-      existing: await describeExisting(deps, tournament.id, existing),
-    }
-  }
-  if (existing && knownBowler && existing.divisionId !== request.divisionId) {
-    // D-160, REG-15: a move is fine until the bowler has any score.
-    if (await hasScoresIn(writer, knownBowler.id, tournament.id)) {
-      return failures([
-        validation(
-          'Registration.DivisionLocked',
-          'Cannot change bowler division after scores have been recorded.',
-        ),
-      ])
-    }
-  }
+  const conflict = await checkExisting(deps, tournament.id, request, knownBowler, existing)
+  if (conflict) return conflict
 
   const result = await completeRegistration(deps, {
     tournament,

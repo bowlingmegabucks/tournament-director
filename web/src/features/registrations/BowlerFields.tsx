@@ -49,7 +49,9 @@ export function BowlerFields({
   hint,
   onChange,
 }: Readonly<BowlerFieldsProps>) {
-  function box({ key, label, type = 'text', autoComplete, maxLength, hint: boxHint }: Spec) {
+  function box(spec: Spec) {
+    const { key, type = 'text', maxLength } = spec
+    const boxHint = spec.hint
     const id = bowlerFieldId(key)
     const error = errors[errorKeyOf(key)]
     const describedBy = [error ? `${id}-error` : undefined, boxHint ? `${id}-hint` : undefined]
@@ -58,7 +60,7 @@ export function BowlerFields({
     return (
       <div className={styles.field} key={key}>
         <label className={styles.label} htmlFor={id}>
-          {label ?? bowlerLabels[key]}
+          {spec.label ?? bowlerLabels[key]}
         </label>
         <input
           id={id}
@@ -66,7 +68,7 @@ export function BowlerFields({
           type={type}
           value={values[key]}
           maxLength={maxLength}
-          autoComplete={autoComplete ?? 'off'}
+          autoComplete={spec.autoComplete ?? 'off'}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy === '' ? undefined : describedBy}
           onChange={(event) => {

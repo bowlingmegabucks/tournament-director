@@ -238,6 +238,143 @@ export function createRegistrationHandlers({
     )
   }
 
+  const blank = (value: string | undefined) => (value ?? '').trim() === ''
+
+  /** The last problem among the squad ids wins, as the API reports one message per field. */
+  function squadProblem(ids: string[]) {
+    let problem: string | undefined
+    for (const id of ids) {
+      const squad = squads.find((candidate) => candidate.id === id)
+      if (!squad) problem = 'Invalid squad IDs'
+      else if (squad.complete) problem = 'Cannot add squad(s) that are already complete.'
+    }
+    return problem
+  }
+
+  function validate(
+    body: DeskRegistrationRequest,
+    known: MockBowler | undefined,
+    division: Division | undefined,
+    existing: MockRegistration | undefined,
+  ) {
+    const errors: Record<string, string> = {}
+    const typed = { ...known, ...body.bowler } as BowlerValues
+    if (blank(typed.firstName)) errors['bowler.firstName'] = 'First Name is Required'
+    if (blank(typed.lastName)) errors['bowler.lastName'] = 'Last Name is Required'
+    if (!division) errors['divisionId'] = 'The specified division does not exist.'
+    if (division?.handicapPercentage != null && blank(typed.usbcId)) {
+      errors['bowler.usbcId'] = 'USBC Id is required for Handicap Divisions'
+    }
+    if (body.squadIds.length + (existing?.squadIds.length ?? 0) === 0) {
+      errors['squadIds'] = 'Bowler must enter at least one squad'
+    }
+    const problem = squadProblem(body.squadIds)
+    if (problem) errors['squadIds'] = problem
+    return errors
+  }
+
+  /** D-161: an exact USBC ID match for a new bowler. */
+  function usbcOnFile(body: DeskRegistrationRequest) {
+    const typedUsbc = (body.bowler.usbcId ?? '').trim()
+    if (body.bowlerId || typedUsbc === '') return undefined
+    const onFile = bowlers.find((candidate) => sameText(candidate.usbcId, typedUsbc))
+    if (!onFile) return undefined
+    return HttpResponse.json(
+      {
+        message: 'A bowler with this USBC ID is on file.',
+        conflict: 'usbcIdOnFile',
+        bowler: { id: onFile.id, name: displayName(onFile) },
+      },
+      { status: 409 },
+    )
+  }
+
+  /** The racing bowler gets registered by "someone else" the first time the desk saves (D-159). */
+  function raceConflict(
+    known: MockBowler | undefined,
+    existing: MockRegistration | undefined,
+    division: Division | undefined,
+  ) {
+    if (!known || !racing.has(known.id) || existing) return undefined
+    racing.delete(known.id)
+    const first = squads.find((squad) => !squad.complete)
+    if (!first || !division) return undefined
+    const entry: MockRegistration = {
+      id: faker.string.uuid(),
+      bowlerId: known.id,
+      divisionId: division.id,
+      average: 180,
+      superSweeper: false,
+      squadIds: [first.id],
+      sweeperIds: [],
+      hasScores: false,
+    }
+    stored.push(entry)
+    syncList(entry, known, true)
+    return conflictOf(entry)
+  }
+
+  /** A stored bowler keeps what the desk left blank; a new bowler is added. */
+  function saveBowler(known: MockBowler | undefined, fields: DeskRegistrationRequest['bowler']) {
+    if (known) {
+      for (const [key, value] of Object.entries(fields)) {
+        if (typeof value === 'string' && value.trim() !== '') Object.assign(known, { [key]: value })
+      }
+      return known
+    }
+    const added = bowler({ firstName: '', lastName: '' })
+    Object.assign(added, fields)
+    bowlers.push(added)
+    return added
+  }
+
+  function append(
+    existing: MockRegistration,
+    owner: MockBowler,
+    body: DeskRegistrationRequest,
+    division: Division,
+  ) {
+    if (existing.divisionId !== division.id && existing.hasScores) {
+      return reject({
+        divisionId: 'Cannot change bowler division after scores have been recorded.',
+      })
+    }
+    if (body.squadIds.some((id) => existing.squadIds.includes(id))) {
+      return reject({ squadIds: 'The specified squads are already registered.' })
+    }
+    existing.divisionId = division.id
+    existing.average = body.average ?? existing.average
+    existing.superSweeper = body.superSweeper
+    existing.squadIds.push(...body.squadIds)
+    existing.sweeperIds.push(...body.sweeperIds)
+    syncList(existing, owner, false)
+    return HttpResponse.json({ registrationId: existing.id, mode: 'appended' }, { status: 201 })
+  }
+
+  function commit(
+    body: DeskRegistrationRequest,
+    known: MockBowler | undefined,
+    existing: MockRegistration | undefined,
+    division: Division | undefined,
+  ) {
+    const owner = saveBowler(known, body.bowler)
+    if (existing && body.appendToExisting !== true) return conflictOf(existing)
+    if (existing && division) return append(existing, owner, body, division)
+    const entry: MockRegistration = {
+      id: faker.string.uuid(),
+      bowlerId: owner.id,
+      divisionId: body.divisionId,
+      average: body.average,
+      superSweeper: body.superSweeper,
+      squadIds: [...body.squadIds],
+      sweeperIds: [...body.sweeperIds],
+      hasScores: false,
+    }
+    stored.push(entry)
+    syncList(entry, owner, true)
+    return HttpResponse.json({ registrationId: entry.id, mode: 'created' }, { status: 201 })
+  }
+
   return [
     http.get('/v1/bowlers', ({ request }) => {
       const query = new URL(request.url).searchParams
@@ -283,123 +420,26 @@ export function createRegistrationHandlers({
         return HttpResponse.json({ message: 'Tournament not found' }, { status: 404 })
       }
       const body = (await request.json()) as DeskRegistrationRequest
-      const errors: Record<string, string> = {}
       if (body.bowler.lastName === 'Flaky' && !flaked) {
         flaked = true
         return new HttpResponse(null, { status: 500 })
       }
-      const stored_ = body.bowlerId
+      const known = body.bowlerId
         ? bowlers.find((candidate) => candidate.id === body.bowlerId)
         : undefined
-      if (body.bowlerId && !stored_) {
+      if (body.bowlerId && !known) {
         return HttpResponse.json({ message: 'Bowler not found' }, { status: 404 })
       }
-      const typed = { ...(stored_ ?? {}), ...body.bowler } as BowlerValues
-      if ((typed.firstName ?? '').trim() === '')
-        errors['bowler.firstName'] = 'First Name is Required'
-      if ((typed.lastName ?? '').trim() === '') errors['bowler.lastName'] = 'Last Name is Required'
       const division = divisions.find((candidate) => candidate.id === body.divisionId)
-      if (!division) errors['divisionId'] = 'The specified division does not exist.'
-      if (division?.handicapPercentage != null && (typed.usbcId ?? '') === '') {
-        errors['bowler.usbcId'] = 'USBC Id is required for Handicap Divisions'
-      }
-      const existing = stored_ ? registrationOf(stored_.id) : undefined
-      const heldCount = existing ? existing.squadIds.length : 0
-      if (body.squadIds.length + heldCount === 0) {
-        errors['squadIds'] = 'Bowler must enter at least one squad'
-      }
-      for (const id of body.squadIds) {
-        const squad = squads.find((candidate) => candidate.id === id)
-        if (!squad) errors['squadIds'] = 'Invalid squad IDs'
-        else if (squad.complete)
-          errors['squadIds'] = 'Cannot add squad(s) that are already complete.'
-      }
+      const existing = known ? registrationOf(known.id) : undefined
+      const errors = validate(body, known, division, existing)
       if (Object.keys(errors).length > 0) return reject(errors)
 
-      // D-161: an exact USBC ID match for a new bowler.
-      const typedUsbc = (body.bowler.usbcId ?? '').trim()
-      if (!body.bowlerId && typedUsbc !== '') {
-        const onFile = bowlers.find((candidate) => sameText(candidate.usbcId, typedUsbc))
-        if (onFile) {
-          return HttpResponse.json(
-            {
-              message: 'A bowler with this USBC ID is on file.',
-              conflict: 'usbcIdOnFile',
-              bowler: { id: onFile.id, name: displayName(onFile) },
-            },
-            { status: 409 },
-          )
-        }
-      }
-
-      // The racing bowler gets registered by "someone else" the first time the desk saves (D-159).
-      if (stored_ && racing.has(stored_.id) && !existing) {
-        racing.delete(stored_.id)
-        const first = squads.find((squad) => !squad.complete)
-        if (first && division) {
-          const entry: MockRegistration = {
-            id: faker.string.uuid(),
-            bowlerId: stored_.id,
-            divisionId: division.id,
-            average: 180,
-            superSweeper: false,
-            squadIds: [first.id],
-            sweeperIds: [],
-            hasScores: false,
-          }
-          stored.push(entry)
-          syncList(entry, stored_, true)
-          return conflictOf(entry)
-        }
-      }
-
-      const owner =
-        stored_ ??
-        bowler({
-          firstName: '',
-          lastName: '',
-        })
-      if (stored_) {
-        for (const [key, value] of Object.entries(body.bowler)) {
-          if (typeof value === 'string' && value.trim() !== '')
-            Object.assign(stored_, { [key]: value })
-        }
-      } else {
-        Object.assign(owner, body.bowler)
-        bowlers.push(owner)
-      }
-
-      if (existing && body.appendToExisting !== true) return conflictOf(existing)
-      if (existing && division) {
-        if (existing.divisionId !== division.id && existing.hasScores) {
-          return reject({
-            divisionId: 'Cannot change bowler division after scores have been recorded.',
-          })
-        }
-        if (body.squadIds.some((id) => existing.squadIds.includes(id))) {
-          return reject({ squadIds: 'The specified squads are already registered.' })
-        }
-        existing.divisionId = division.id
-        existing.average = body.average ?? existing.average
-        existing.superSweeper = body.superSweeper
-        existing.squadIds.push(...body.squadIds)
-        existing.sweeperIds.push(...body.sweeperIds)
-        syncList(existing, owner, false)
-        return HttpResponse.json({ registrationId: existing.id, mode: 'appended' }, { status: 201 })
-      }
-      const entry: MockRegistration = {
-        id: faker.string.uuid(),
-        bowlerId: owner.id,
-        divisionId: body.divisionId,
-        average: body.average,
-        superSweeper: body.superSweeper,
-        squadIds: [...body.squadIds],
-        sweeperIds: [...body.sweeperIds],
-        hasScores: false,
-      }
-      stored.push(entry)
-      syncList(entry, owner, true)
-      return HttpResponse.json({ registrationId: entry.id, mode: 'created' }, { status: 201 })
+      return (
+        usbcOnFile(body) ??
+        raceConflict(known, existing, division) ??
+        commit(body, known, existing, division)
+      )
     }),
   ]
 

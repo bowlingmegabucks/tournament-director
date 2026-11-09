@@ -1,11 +1,14 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { Toast } from '../../shared/Toast'
 import { formatSessionDate } from '../../shared/sessionFormat'
+import type { Division } from '../divisions/types'
 import { useDivisions } from '../divisions/useDivisions'
+import type { Squad } from '../squads/types'
 import { useSquads } from '../squads/useSquads'
+import type { Sweeper } from '../sweepers/types'
 import { useSweepers } from '../sweepers/useSweepers'
 import {
   AlreadyRegisteredError,
@@ -13,9 +16,7 @@ import {
   DeskRejectedError,
   UsbcIdOnFileError,
 } from './bowlerApi'
-import { BowlerFields } from './BowlerFields'
 import {
-  bowlerFieldId,
   buildRequest,
   checkBowlerStep,
   checkRegistrationStep,
@@ -28,9 +29,16 @@ import {
   toRegistrationValues,
   type RegistrationValues,
 } from './deskForm'
-import { RegistrationFields } from './RegistrationFields'
+import {
+  BowlerStep,
+  ErrorSummary,
+  Notice,
+  RegistrationStep,
+  ReviewPanel,
+  StepList,
+} from './DeskSteps'
+import { focusOnMount, stepNames, type Step } from './stepInfo'
 import { AlreadyRegisteredDialog, UsbcIdOnFileDialog } from './RegistrationDialogs'
-import { ReviewStep } from './ReviewStep'
 import type { BowlerResponse, BowlerValues, DeskFieldErrors, ExistingRegistration } from './types'
 import { useCreateRegistration } from './useCreateRegistration'
 import styles from './AddRegistration.module.css'
@@ -52,10 +60,6 @@ interface AddRegistrationFormProps {
   onPickAnother: () => void
   onUseStored: (id: string, carry: Carry) => void
 }
-
-type Step = 1 | 2 | 3
-
-const stepNames: Record<Step, string> = { 1: 'Bowler', 2: 'Registration', 3: 'Review' }
 
 type Conflict =
   | { type: 'registered'; existing: ExistingRegistration }
@@ -94,46 +98,120 @@ function initialRegistration(
   }
 }
 
-const nameOf = (values: BowlerValues) =>
-  `${values.firstName.trim()} ${values.lastName.trim()}${values.suffix.trim() === '' ? '' : `, ${values.suffix.trim()}`}`
-
-/** A callback ref that moves focus when its element appears: a new step, or a new summary. */
-const focusOnMount = (node: HTMLElement | null) => {
-  node?.focus()
+function nameOf(values: BowlerValues) {
+  const name = `${values.firstName.trim()} ${values.lastName.trim()}`
+  const suffix = values.suffix.trim()
+  return suffix === '' ? name : `${name}, ${suffix}`
 }
 
-/**
- * The three steps, Bowler, Registration, Review (D-164). A bowler already registered here starts
- * on Registration, with the Bowler step one click away (D-165). Step one checks the names, step
- * two the division and a squad; the server checks everything else and a refusal returns to the
- * step that holds the field.
- */
-export function AddRegistrationForm({
-  tournamentId,
-  detail,
-  carry,
-  presetSquadId,
-  presetSweeperId,
-  onPickAnother,
-  onUseStored,
-}: Readonly<AddRegistrationFormProps>) {
-  const navigate = useNavigate()
-  const divisions = useDivisions(tournamentId)
-  const squads = useSquads(tournamentId)
-  const sweepers = useSweepers(tournamentId)
-  const create = useCreateRegistration(tournamentId)
-  const existing = detail?.registration ?? null
+function firstStep(carry: Carry | undefined, existing: unknown): Step {
+  if (carry) return 3
+  return existing ? 2 : 1
+}
 
-  const [step, setStep] = useState<Step>(carry ? 3 : existing ? 2 : 1)
-  const [bowler, setBowler] = useState(() => initialBowler(detail, carry))
-  const [typedRegistration, setRegistration] = useState(() =>
-    initialRegistration(detail, carry, presetSquadId, presetSweeperId),
-  )
-  const [errors, setErrors] = useState<DeskFieldErrors>({})
-  const [attempt, setAttempt] = useState(0)
-  const [conflict, setConflict] = useState<Conflict>()
-  const [dialogFailure, setDialogFailure] = useState<string>()
-  const [failure, setFailure] = useState<string>()
+/** The step that follows a step the desk just passed. */
+const stepAfter = (step: Step): Step => (step === 1 ? 2 : 3)
+
+const checkStep = (step: Step, bowler: BowlerValues, registration: RegistrationValues) =>
+  step === 1 ? checkBowlerStep(bowler) : checkRegistrationStep(registration)
+
+const messageOf = (error: unknown) =>
+  error instanceof Error ? error.message : 'Failed to save the registration'
+
+/** What the screen does after a save fails. */
+type Outcome =
+  | { kind: 'conflict'; conflict: Conflict }
+  | { kind: 'gone' }
+  | { kind: 'rejected'; errors: DeskFieldErrors; at: Step }
+  | { kind: 'dialogFailure'; message: string }
+  | { kind: 'failure'; message: string }
+
+function outcomeOf(error: unknown, confirmAppend: boolean): Outcome {
+  if (error instanceof AlreadyRegisteredError) {
+    if (confirmAppend) return { kind: 'dialogFailure', message: error.message }
+    return { kind: 'conflict', conflict: { type: 'registered', existing: error.existing } }
+  }
+  if (error instanceof BowlerNotFoundError) return { kind: 'gone' }
+  if (error instanceof UsbcIdOnFileError) {
+    return { kind: 'conflict', conflict: { type: 'usbc', bowler: error.bowler } }
+  }
+  if (error instanceof DeskRejectedError) {
+    const keys = Object.keys(error.errors)
+    if (keys.length === 0) return { kind: 'rejected', errors: { form: error.message }, at: 3 }
+    const at = Math.min(...keys.map(stepOfError)) as Step
+    return { kind: 'rejected', errors: error.errors, at }
+  }
+  const message = messageOf(error)
+  return confirmAppend ? { kind: 'dialogFailure', message } : { kind: 'failure', message }
+}
+
+interface OutcomeHandlers {
+  setConflict: (conflict: Conflict | undefined) => void
+  setDialogFailure: (message: string | undefined) => void
+  setFailure: (message: string | undefined) => void
+  show: (errors: DeskFieldErrors, at: Step) => void
+}
+
+function applyOutcome(outcome: Outcome, handlers: OutcomeHandlers) {
+  switch (outcome.kind) {
+    case 'conflict':
+      handlers.setConflict(outcome.conflict)
+      break
+    case 'gone':
+      // Someone removed the stored bowler after the desk picked them.
+      handlers.setConflict(undefined)
+      handlers.setFailure('That bowler is no longer on file. Go back to the search and pick again.')
+      break
+    case 'rejected':
+      handlers.setConflict(undefined)
+      handlers.show(outcome.errors, outcome.at)
+      break
+    case 'dialogFailure':
+      handlers.setDialogFailure(outcome.message)
+      break
+    case 'failure':
+      handlers.setFailure(outcome.message)
+      break
+  }
+}
+
+function labelled(
+  ids: string[],
+  held: string[],
+  sessions: { id: string; date: string }[],
+  word: string,
+) {
+  return ids
+    .filter((id) => !held.includes(id))
+    .flatMap((id) => {
+      const found = sessions.find((session) => session.id === id)
+      return found ? [{ id, label: `${word}: ${formatSessionDate(found.date)}` }] : []
+    })
+}
+
+/** The lines the "already registered" dialog lists as being added. */
+function newItemsOf(
+  registration: RegistrationValues,
+  existing: { squadIds: string[]; sweeperIds: string[] } | null,
+  squads: Squad[],
+  sweepers: Sweeper[],
+) {
+  return [
+    ...labelled(registration.squadIds, existing?.squadIds ?? [], squads, 'Squad'),
+    ...labelled(registration.sweeperIds, existing?.sweeperIds ?? [], sweepers, 'Sweeper'),
+  ]
+}
+
+const keepErrors = (errors: DeskFieldErrors, keep: (key: string) => boolean): DeskFieldErrors =>
+  Object.fromEntries(Object.entries(errors).filter(([key]) => keep(key)))
+
+/**
+ * Loads the three lists, then shows the steps.
+ */
+export function AddRegistrationForm(props: Readonly<AddRegistrationFormProps>) {
+  const divisions = useDivisions(props.tournamentId)
+  const squads = useSquads(props.tournamentId)
+  const sweepers = useSweepers(props.tournamentId)
 
   const lists = [divisions, squads, sweepers]
   const failed = lists.find((query) => query.error)
@@ -150,17 +228,65 @@ export function AddRegistrationForm({
   if (!divisions.data || !squads.data || !sweepers.data) {
     return <Loading label="Loading…" rows={3} />
   }
+  return (
+    <Steps {...props} divisions={divisions.data} squads={squads.data} sweepers={sweepers.data} />
+  )
+}
+
+type StepsProps = AddRegistrationFormProps & {
+  divisions: Division[]
+  squads: Squad[]
+  sweepers: Sweeper[]
+}
+
+/**
+ * The three steps, Bowler, Registration, Review (D-164). A bowler already registered here starts
+ * on Registration, with the Bowler step one click away (D-165). Step one checks the names, step
+ * two the division and a squad; the server checks everything else and a refusal returns to the
+ * step that holds the field.
+ */
+function Steps({
+  tournamentId,
+  detail,
+  carry,
+  presetSquadId,
+  presetSweeperId,
+  onPickAnother,
+  onUseStored,
+  divisions,
+  squads,
+  sweepers,
+}: Readonly<StepsProps>) {
+  const navigate = useNavigate()
+  const create = useCreateRegistration(tournamentId)
+  const existing = detail?.registration ?? null
+
+  const [step, setStep] = useState<Step>(firstStep(carry, existing))
+  const [bowler, setBowler] = useState(() => initialBowler(detail, carry))
+  const [typedRegistration, setTypedRegistration] = useState(() =>
+    initialRegistration(detail, carry, presetSquadId, presetSweeperId),
+  )
+  const [errors, setErrors] = useState<DeskFieldErrors>({})
+  const [attempt, setAttempt] = useState(0)
+  const [conflict, setConflict] = useState<Conflict>()
+  const [dialogFailure, setDialogFailure] = useState<string>()
+  const [failure, setFailure] = useState<string>()
 
   // A link can name a squad or sweeper this tournament does not have. Drop it here, where the lists
   // are known, so the desk never submits an id it cannot see or untick.
   const registration: RegistrationValues = {
     ...typedRegistration,
-    squadIds: typedRegistration.squadIds.filter((id) => squads.data.some((s) => s.id === id)),
-    sweeperIds: typedRegistration.sweeperIds.filter((id) => sweepers.data.some((s) => s.id === id)),
+    squadIds: typedRegistration.squadIds.filter((id) => squads.some((s) => s.id === id)),
+    sweeperIds: typedRegistration.sweeperIds.filter((id) => sweepers.some((s) => s.id === id)),
   }
   const stored = detail ? toBowlerValues(detail.bowler) : undefined
   const name = nameOf(bowler)
   const listUrl = `/tournaments/${tournamentId}/registrations`
+
+  function goTo(at: Step) {
+    setErrors({})
+    setStep(at)
+  }
 
   function show(next: DeskFieldErrors, at: Step) {
     setErrors(next)
@@ -170,30 +296,21 @@ export function AddRegistrationForm({
 
   function changeBowler(key: keyof BowlerValues, value: string) {
     setBowler({ ...bowler, [key]: value })
-    setErrors((current) =>
-      Object.fromEntries(Object.entries(current).filter(([name]) => name !== errorKeyOf(key))),
-    )
+    setErrors((current) => keepErrors(current, (found) => found !== errorKeyOf(key)))
   }
 
   function changeRegistration(values: RegistrationValues) {
-    setRegistration(values)
-    setErrors((current) =>
-      Object.fromEntries(Object.entries(current).filter(([key]) => key.startsWith('bowler.'))),
-    )
+    setTypedRegistration(values)
+    setErrors((current) => keepErrors(current, (key) => key.startsWith('bowler.')))
   }
 
   function next() {
-    if (step === 1) {
-      const found = checkBowlerStep(bowler)
-      if (Object.keys(found).length > 0) return show(found, 1)
-      setErrors({})
-      setStep(2)
-    } else if (step === 2) {
-      const found = checkRegistrationStep(registration)
-      if (Object.keys(found).length > 0) return show(found, 2)
-      setErrors({})
-      setStep(3)
+    const found = checkStep(step, bowler, registration)
+    if (Object.keys(found).length > 0) {
+      show(found, step)
+      return
     }
+    goTo(stepAfter(step))
   }
 
   async function submit(confirmAppend: boolean): Promise<void> {
@@ -208,259 +325,90 @@ export function AddRegistrationForm({
       await create.mutateAsync(request)
       await navigate(listUrl, { state: { added: name } })
     } catch (error) {
-      if (error instanceof AlreadyRegisteredError) {
-        if (confirmAppend) setDialogFailure(error.message)
-        else setConflict({ type: 'registered', existing: error.existing })
-      } else if (error instanceof BowlerNotFoundError) {
-        // Someone removed the stored bowler after the desk picked them.
-        setConflict(undefined)
-        setFailure('That bowler is no longer on file. Go back to the search and pick again.')
-      } else if (error instanceof UsbcIdOnFileError) {
-        setConflict({ type: 'usbc', bowler: error.bowler })
-      } else if (error instanceof DeskRejectedError) {
-        setConflict(undefined)
-        const keys = Object.keys(error.errors)
-        const at = keys.length === 0 ? 3 : (Math.min(...keys.map(stepOfError)) as Step)
-        show(keys.length === 0 ? { form: error.message } : error.errors, at)
-      } else if (confirmAppend) {
-        setDialogFailure(error instanceof Error ? error.message : 'Failed to save the registration')
-      } else {
-        setFailure(error instanceof Error ? error.message : 'Failed to save the registration')
-      }
+      applyOutcome(outcomeOf(error, confirmAppend), {
+        setConflict,
+        setDialogFailure,
+        setFailure,
+        show,
+      })
     }
   }
 
-  const messages = Object.entries(errors)
-  const heldSquads = existing?.squadIds ?? []
-  const heldSweepers = existing?.sweeperIds ?? []
-
-  const notice = existing ? (
-    <p className={styles.notice} role="status">
-      <strong>{name} is already registered</strong> in {existing.divisionName}. You are adding to
-      that registration.{' '}
-      <button type="button" className={styles.secondary} onClick={onPickAnother}>
-        Pick someone else
-      </button>
-    </p>
-  ) : detail ? (
-    <p className={styles.notice} role="status">
-      Using the bowler on file: <strong>{name}</strong>
-      {detail.bowler.usbcId !== '' && `, ${detail.bowler.usbcId}`}.{' '}
-      <button type="button" className={styles.secondary} onClick={onPickAnother}>
-        Pick someone else
-      </button>
-    </p>
-  ) : (
-    <p className={styles.notice}>
-      New bowler. Only first and last name are required.{' '}
-      <button type="button" className={styles.secondary} onClick={onPickAnother}>
-        Search again
-      </button>
-    </p>
+  const notice = (
+    <Notice existing={existing} detail={detail} name={name} onPickAnother={onPickAnother} />
   )
-
-  const addLabel = existing ? 'Add to registration' : 'Add registration'
-  const newItems = [
-    ...registration.squadIds
-      .filter((id) => !heldSquads.includes(id))
-      .flatMap((id) => {
-        const squad = squads.data.find((found) => found.id === id)
-        return squad ? [{ id, label: `Squad: ${formatSessionDate(squad.date)}` }] : []
-      }),
-    ...registration.sweeperIds
-      .filter((id) => !heldSweepers.includes(id))
-      .flatMap((id) => {
-        const sweeper = sweepers.data.find((found) => found.id === id)
-        return sweeper ? [{ id, label: `Sweeper: ${formatSessionDate(sweeper.date)}` }] : []
-      }),
-  ]
 
   return (
     <div className={styles.stack}>
-      <ol className={styles.steps} aria-label="Progress">
-        {([1, 2, 3] as const).map((number) => {
-          const label = `${String(number)}. ${stepNames[number]}`
-          if (number === step) {
-            return (
-              <li key={number} className={styles.step} aria-current="step">
-                {label}
-              </li>
-            )
-          }
-          return (
-            <li key={number}>
-              {number < step ? (
-                <button
-                  type="button"
-                  className={styles.step}
-                  onClick={() => {
-                    setErrors({})
-                    setStep(number)
-                  }}
-                >
-                  {label}
-                </button>
-              ) : (
-                <span className={styles.step}>{label}</span>
-              )}
-            </li>
-          )
-        })}
-      </ol>
-
-      {messages.length > 0 && (
-        <div role="alert" className={styles.summary} tabIndex={-1} key={attempt} ref={focusOnMount}>
-          <strong>
-            Fix {messages.length} {messages.length === 1 ? 'thing' : 'things'} to save.
-          </strong>
-          <ul className={styles.summaryList}>
-            {messages.map(([key, message]) => (
-              <li key={key}>
-                {key.startsWith('bowler.') ? (
-                  <a
-                    href={`#${bowlerFieldId(key.slice(7) as keyof BowlerValues)}`}
-                    onClick={(event) => {
-                      event.preventDefault()
-                      document
-                        .getElementById(bowlerFieldId(key.slice(7) as keyof BowlerValues))
-                        ?.focus()
-                    }}
-                  >
-                    {message}
-                  </a>
-                ) : (
-                  message
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <StepList step={step} onGo={goTo} />
+      <ErrorSummary key={attempt} errors={errors} />
 
       <h2
         tabIndex={-1}
         key={`${String(step)}-heading`}
-        ref={messages.length > 0 ? undefined : focusOnMount}
+        ref={Object.keys(errors).length > 0 ? undefined : focusOnMount}
       >
         {stepNames[step]}
       </h2>
 
       {step === 1 && (
-        <>
-          {notice}
-          <BowlerFields
-            values={bowler}
-            errors={errors}
-            legend={detail ? 'Bowler details' : 'New bowler'}
-            hint={
-              detail
-                ? 'Filled from the record on file. Change what is out of date. Changed fields save to the bowler; blank boxes change nothing.'
-                : undefined
-            }
-            onChange={changeBowler}
-          />
-          <div className={styles.actions}>
-            <button type="button" className={styles.secondary} onClick={onPickAnother}>
-              Back to search
-            </button>
-            <button type="button" onClick={next}>
-              Next: registration
-            </button>
-            <Link className={styles.cancel} to={listUrl}>
-              Cancel
-            </Link>
-          </div>
-        </>
+        <BowlerStep
+          notice={notice}
+          detail={detail}
+          values={bowler}
+          errors={errors}
+          listUrl={listUrl}
+          onChange={changeBowler}
+          onBack={onPickAnother}
+          onNext={next}
+        />
       )}
-
       {step === 2 && (
-        <>
-          {existing && notice}
-          <RegistrationFields
-            values={registration}
-            errors={errors}
-            divisions={divisions.data}
-            squads={squads.data}
-            sweepers={sweepers.data}
-            heldSquadIds={heldSquads}
-            heldSweeperIds={heldSweepers}
-            presetSquadId={presetSquadId}
-            presetSweeperId={presetSweeperId}
-            legend={existing ? 'Add to the registration' : 'Registration'}
-            hint={
-              existing
-                ? 'Squads and sweepers already entered show checked and locked. A different division moves the registration.'
-                : undefined
-            }
-            onChange={changeRegistration}
-          />
-          <div className={styles.actions}>
-            <button
-              type="button"
-              className={styles.secondary}
-              onClick={() => {
-                setErrors({})
-                setStep(1)
-              }}
-            >
-              {existing ? 'Back to bowler details' : 'Back'}
-            </button>
-            <button type="button" onClick={next}>
-              Next: review
-            </button>
-            <Link className={styles.cancel} to={listUrl}>
-              Cancel
-            </Link>
-          </div>
-        </>
+        <RegistrationStep
+          notice={notice}
+          existing={existing}
+          values={registration}
+          errors={errors}
+          divisions={divisions}
+          squads={squads}
+          sweepers={sweepers}
+          presetSquadId={presetSquadId}
+          presetSweeperId={presetSweeperId}
+          listUrl={listUrl}
+          onChange={changeRegistration}
+          onBack={() => {
+            goTo(1)
+          }}
+          onNext={next}
+        />
       )}
-
       {step === 3 && (
-        <>
-          <ReviewStep
-            heading="Check and save"
-            name={name}
-            bowler={bowler}
-            stored={stored}
-            registration={registration}
-            existing={existing}
-            divisions={divisions.data}
-            squads={squads.data}
-            sweepers={sweepers.data}
-          />
-          <div className={styles.actions}>
-            <button
-              type="button"
-              className={styles.secondary}
-              disabled={create.isPending}
-              onClick={() => {
-                setErrors({})
-                setStep(2)
-              }}
-            >
-              Back
-            </button>
-            <button
-              type="button"
-              disabled={create.isPending}
-              onClick={() => {
-                void submit(false)
-              }}
-            >
-              {create.isPending && !conflict ? 'Saving…' : addLabel}
-            </button>
-            <Link className={styles.cancel} to={listUrl}>
-              Cancel
-            </Link>
-          </div>
-        </>
+        <ReviewPanel
+          name={name}
+          bowler={bowler}
+          stored={stored}
+          registration={registration}
+          existing={existing}
+          divisions={divisions}
+          squads={squads}
+          sweepers={sweepers}
+          listUrl={listUrl}
+          pending={create.isPending}
+          saving={create.isPending && !conflict}
+          onBack={() => {
+            goTo(2)
+          }}
+          onSave={() => {
+            void submit(false)
+          }}
+        />
       )}
 
       {conflict?.type === 'registered' && (
         <AlreadyRegisteredDialog
           name={name}
           existing={conflict.existing}
-          adding={newItems}
+          adding={newItemsOf(registration, existing, squads, sweepers)}
           pending={create.isPending}
           failure={dialogFailure}
           onConfirm={() => {

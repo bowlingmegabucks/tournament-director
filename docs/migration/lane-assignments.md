@@ -33,7 +33,7 @@ Any other value: the screen shows an error and disables itself. (Legacy squad va
 
 The desk drags a bowler onto a position, or back to "unassigned". Several desk PCs can work at once, so the move checks for stale data.
 
-**D-55, D-57:** the new app drags a bowler onto a **pair**, and the API picks the seat. The page, the drag, and an on-screen move (nothing saves) come first; the command comes after the lock-down release. `LAN-07` and `LAN-08` fall away; `LAN-05`, `LAN-06`, and `LAN-09` carry over.
+**D-216 to D-222:** the move saves through `PUT …/lanes/{registrationId}` and every open lane page updates over SSE (answers Q-27, Q-28). **D-55, D-57:** the new app drags a bowler onto a **pair**, and the API picks the seat. The page, the drag, and an on-screen move (nothing saves) come first; the command comes after the lock-down release. `LAN-07` and `LAN-08` fall away; `LAN-05`, `LAN-06`, and `LAN-09` carry over.
 
 | ID     | Rule                                                                                                            | Message                                                                                            |
 | ------ | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |

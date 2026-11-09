@@ -113,6 +113,10 @@ export function SweepersPage() {
               action={
                 <Can permission="squads.write">
                   <EditSweeperLink id={id} sweeper={sweeper} />
+                </Can>
+              }
+              danger={
+                <Can permission="squads.write">
                   <DeleteSweeperButton id={id} sweeper={sweeper} />
                 </Can>
               }

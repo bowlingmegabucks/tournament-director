@@ -8,6 +8,7 @@ import type { Tournament } from '../tournaments/types'
 import { useCan } from '../auth/useCan'
 import { useTournamentSettings } from '../tournaments/useTournamentSettings'
 import { AddRegistrationLink } from './AddRegistrationLink'
+import { DeleteRegistrationButton } from './DeleteRegistrationButton'
 import addStyles from './AddRegistration.module.css'
 import { filterRegistrations } from './filter'
 import { RegistrationSummary } from './RegistrationSummary'
@@ -152,9 +153,14 @@ export function RegistrationsPage() {
                     Super sweeper
                   </th>
                   {canEdit && (
-                    <th scope="col">
-                      <span className={styles.hidden}>Actions</span>
-                    </th>
+                    <>
+                      <th scope="col">
+                        <span className={styles.hidden}>Actions</span>
+                      </th>
+                      <th scope="col">
+                        <span className={styles.hidden}>Delete</span>
+                      </th>
+                    </>
                   )}
                 </tr>
               </thead>
@@ -194,15 +200,27 @@ export function RegistrationsPage() {
                       </td>
                     )}
                     {canEdit && (
-                      <td className={styles.actions}>
-                        <Link
-                          className={styles.editLink}
-                          to={`/tournaments/${id}/registrations/${registration.id}/edit`}
-                          aria-label={`Edit ${registration.bowler.name}`}
-                        >
-                          Edit
-                        </Link>
-                      </td>
+                      <>
+                        <td className={styles.actions}>
+                          <Link
+                            className={styles.editLink}
+                            to={`/tournaments/${id}/registrations/${registration.id}/edit`}
+                            aria-label={`Edit ${registration.bowler.name}`}
+                          >
+                            Edit
+                          </Link>
+                        </td>
+                        <td className={`${styles.actions} ${styles.danger}`}>
+                          <DeleteRegistrationButton
+                            tournamentId={id}
+                            registrationId={registration.id}
+                            bowlerName={registration.bowler.name}
+                            ariaLabel={`Delete ${registration.bowler.name}'s registration`}
+                          >
+                            Delete
+                          </DeleteRegistrationButton>
+                        </td>
+                      </>
                     )}
                   </tr>
                 ))}

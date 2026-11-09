@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   bowlerLabels,
+  bowlerNameOf,
   buildRequest,
   changesOf,
   dueLines,
@@ -92,6 +93,17 @@ describe('step checks (D-162, REG-03, REG-16)', () => {
     expect(
       checkRegistrationStep({ ...emptyRegistration, divisionId: 'd', squadIds: ['s'] }),
     ).toEqual({})
+  })
+
+  it('on an edit, points the last-squad refusal at delete (D-203, D-214)', () => {
+    expect(checkRegistrationStep(emptyRegistration, { editing: true })).toEqual({
+      divisionId: 'Pick a division',
+      squadIds:
+        'Bowler must enter at least one squad. To remove the last one, delete the registration.',
+    })
+    expect(checkRegistrationStep(emptyRegistration, { editing: false })).toMatchObject({
+      squadIds: 'Bowler must enter at least one squad',
+    })
   })
 
   it.each([
@@ -329,5 +341,19 @@ describe('what the desk collects (D-166, TRN-12)', () => {
 
     expect(totalDue(lines)).toBe(60.4)
     expect(totalDue([])).toBe(0)
+  })
+})
+
+describe('the bowler display name (matches the list)', () => {
+  it('joins first and last name, trimmed', () => {
+    expect(bowlerNameOf({ firstName: ' Maria ', lastName: 'Gonzalez ', suffix: '' })).toBe(
+      'Maria Gonzalez',
+    )
+  })
+
+  it('adds a suffix after a comma', () => {
+    expect(bowlerNameOf({ firstName: 'Maria', lastName: 'Gonzalez', suffix: ' Jr ' })).toBe(
+      'Maria Gonzalez, Jr',
+    )
   })
 })

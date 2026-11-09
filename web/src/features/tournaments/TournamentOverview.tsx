@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate, useOutletContext } from 'react-router'
 import { Can } from '../auth/Can'
 import { field } from '../../shared/field'
+import { DangerZone } from '../../shared/DangerZone'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { Toast } from '../../shared/Toast'
@@ -38,9 +39,6 @@ export function TournamentOverview() {
               Edit tournament
             </Link>
           </Can>
-          <Can permission="tournaments.delete">
-            <DeleteTournamentButton tournament={tournament} />
-          </Can>
         </div>
       )}
       <dl className={styles.fields}>
@@ -52,6 +50,13 @@ export function TournamentOverview() {
         <dd>{formatFee(tournament.entryFee)}</dd>
       </dl>
       <Format id={tournament.id} />
+      {settings.data && !completed && (
+        <Can permission="tournaments.delete">
+          <DangerZone description="Delete this tournament and everything under it. This cannot be undone.">
+            <DeleteTournamentButton tournament={tournament} />
+          </DangerZone>
+        </Can>
+      )}
       {(justCreated || justSaved) && (
         <Toast
           kind="success"

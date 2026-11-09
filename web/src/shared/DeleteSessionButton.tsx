@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import styles from './DeleteSession.module.css'
+import danger from './Danger.module.css'
 import { DeleteSessionDialog } from './DeleteSessionDialog'
 import { SessionDeleteRefusedError } from './sessionDeleteApi'
 import { word, type SessionKind } from './sessionEditApi'
@@ -101,7 +102,7 @@ export function DeleteSessionButton({
     <>
       <button
         type="button"
-        className={styles.trigger}
+        className={danger.trigger}
         aria-label={`Delete ${word(kind)} ${formatSessionDate(session.date)}`}
         onClick={() => {
           setRefusal(undefined)

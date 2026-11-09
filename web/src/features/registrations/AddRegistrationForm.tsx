@@ -28,6 +28,7 @@ import {
   toBowlerValues,
   toRegistrationValues,
   type RegistrationValues,
+  bowlerNameOf,
 } from './deskForm'
 import {
   BowlerStep,
@@ -96,12 +97,6 @@ function initialRegistration(
     ),
     superSweeper: base.superSweeper || typed.superSweeper,
   }
-}
-
-function nameOf(values: BowlerValues) {
-  const name = `${values.firstName.trim()} ${values.lastName.trim()}`
-  const suffix = values.suffix.trim()
-  return suffix === '' ? name : `${name}, ${suffix}`
 }
 
 function firstStep(carry: Carry | undefined, existing: unknown): Step {
@@ -280,7 +275,7 @@ function Steps({
     sweeperIds: typedRegistration.sweeperIds.filter((id) => sweepers.some((s) => s.id === id)),
   }
   const stored = detail ? toBowlerValues(detail.bowler) : undefined
-  const name = nameOf(bowler)
+  const name = bowlerNameOf(bowler)
   const listUrl = `/tournaments/${tournamentId}/registrations`
 
   function goTo(at: Step) {

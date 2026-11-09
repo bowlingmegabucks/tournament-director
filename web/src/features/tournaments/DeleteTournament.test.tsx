@@ -71,6 +71,33 @@ describe('who sees Delete (TRN-37, D-132, D-136, D-19)', () => {
   })
 
   it.each([
+    ['the overview', `/tournaments/${id}`],
+    ['the edit page', `/tournaments/${id}/edit`],
+  ])('keeps the Delete button in a Danger zone on %s (D-215)', async (_page, route) => {
+    setMockUser(createSignedInUser({ roles: ['admin'] }))
+    serve()
+
+    renderApp(route)
+
+    const zone = await screen.findByRole('region', { name: 'Danger zone' })
+    expect(within(zone).getByRole('button', { name: 'Delete tournament' })).toBeVisible()
+    expect(within(zone).getByText(/cannot be undone/)).toBeVisible()
+  })
+
+  it.each([
+    ['the overview', `/tournaments/${id}`],
+    ['the edit page', `/tournaments/${id}/edit`],
+  ])('shows no empty Danger zone to a director on %s', async (_page, route) => {
+    setMockUser(createSignedInUser({ roles: ['director'] }))
+    serve()
+
+    renderApp(route)
+
+    await screen.findByRole('heading', { level: 1 })
+    expect(screen.queryByRole('region', { name: 'Danger zone' })).not.toBeInTheDocument()
+  })
+
+  it.each([
     ['a director', createSignedInUser({ roles: ['director'] })],
     ['a score keeper', createSignedInUser({ roles: ['scoreKeeper'] })],
     ['a signed-out visitor', null],

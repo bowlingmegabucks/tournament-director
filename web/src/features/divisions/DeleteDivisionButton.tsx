@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { Toast } from '../../shared/Toast'
 import { DivisionDeleteRefusedError } from './api'
 import styles from './DeleteDivision.module.css'
+import danger from '../../shared/Danger.module.css'
 import { DeleteDivisionDialog } from './DeleteDivisionDialog'
 import type { Division } from './types'
 import { useDeleteDivision } from './useDeleteDivision'
@@ -91,7 +92,7 @@ export function DeleteDivisionButton({
     <>
       <button
         type="button"
-        className={styles.trigger}
+        className={danger.trigger}
         aria-label={`Delete ${division.name}`}
         onClick={() => {
           setRefusal(undefined)

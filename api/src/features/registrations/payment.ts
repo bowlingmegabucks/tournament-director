@@ -1,3 +1,4 @@
+import { manualPrefix } from '../tournaments/prismaDeleteFacts.ts'
 import type { PaymentInput } from './request.ts'
 import type { NewPayment } from './writer.ts'
 
@@ -14,6 +15,20 @@ export function isPaidRequest(payment: PaymentInput | null | undefined): boolean
     // The column keeps cents, so an amount that rounds to $0.00 is not a payment.
     Math.round(payment.amount * 100) > 0
   )
+}
+
+/**
+ * D-133, D-210: a payment the registration site took. The desk's placeholder code starts with
+ * `Manual_` (PAY-01a), and an amount that rounds to $0.00 is not a payment.
+ */
+export function isRealPayment(confirmationCode: string, amount: number): boolean {
+  return !confirmationCode.startsWith(manualPrefix) && Math.round(amount * 100) > 0
+}
+
+/** The processing system of a stored code `<system>_<code>` (PAY-02). */
+export function paymentSystem(confirmationCode: string): string {
+  const at = confirmationCode.indexOf('_')
+  return at === -1 ? confirmationCode : confirmationCode.slice(0, at)
 }
 
 /** PAY-02 and PAY-04: the stored code is `<system>_<code>`; the time is the server's. */

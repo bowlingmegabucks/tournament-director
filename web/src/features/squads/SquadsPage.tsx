@@ -102,6 +102,10 @@ export function SquadsPage() {
               action={
                 <Can permission="squads.write">
                   <EditSquadLink id={id} squad={squad} />
+                </Can>
+              }
+              danger={
+                <Can permission="squads.write">
                   <DeleteSquadButton id={id} squad={squad} />
                 </Can>
               }

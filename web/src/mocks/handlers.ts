@@ -209,7 +209,7 @@ function applySweeperChanges(found: Sweeper, changes: SweeperChanges) {
 export const handlers = [
   ...authHandlers,
   ...userHandlers,
-  ...createRegistrationHandlers({ tournaments, divisions, squads, registrations }),
+  ...createRegistrationHandlers({ tournaments, divisions, squads, sweepers, registrations }),
   http.get('/v1/tournaments', () => HttpResponse.json({ tournaments })),
   // TRN-19: the browser has checked the rules; the mock only refuses a duplicate, as the API does.
   http.post('/v1/tournaments', async ({ request }) => {

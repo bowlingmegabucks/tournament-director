@@ -1,0 +1,52 @@
+.fees {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.fees caption {
+  text-align: start;
+  color: var(--color-text-muted);
+  padding-block-end: var(--space-1);
+}
+
+.fees th,
+.fees td {
+  text-align: start;
+  padding: var(--space-1) var(--space-2);
+  border-block-end: var(--border-width) solid var(--color-border);
+}
+
+.fees td:last-child,
+.fees th:last-child {
+  text-align: end;
+}
+
+.fees tfoot th,
+.fees tfoot td {
+  font-weight: 600;
+}
+
+.paid {
+  margin: 0;
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.tick {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.tick input {
+  flex: none;
+  inline-size: var(--space-4);
+  block-size: var(--space-4);
+  margin-block-start: var(--space-1);
+}
+
+.reasons {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}

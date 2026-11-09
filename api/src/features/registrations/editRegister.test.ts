@@ -241,7 +241,7 @@ describe('removing a squad or sweeper (REG-20, D-203)', () => {
     const { run, squads } = setup()
 
     expect(await messagesOf(run({ removeSquadIds: [squads[0]?.id] }))).toEqual([
-      'Bowler must enter at least one squad',
+      'Bowler must enter at least one squad. To remove the last one, delete the registration.',
     ])
   })
 

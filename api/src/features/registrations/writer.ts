@@ -1,4 +1,6 @@
 import type { BowlerData, BowlerPatch, StoredBowler } from './bowler.ts'
+import type { DeskDeleteFacts, DeskDeletePlan } from './deskDelete.ts'
+import { isRealPayment, paymentSystem } from './payment.ts'
 
 /** A squad or sweeper row, as the create rules need it (D-108). */
 export interface StoredSession {
@@ -6,6 +8,9 @@ export interface StoredSession {
   tournamentId: string
   kind: 'squad' | 'sweeper'
   complete: boolean
+  /** Only the desk delete reads these (D-212): the local date and what the entry costs. */
+  date?: string
+  entryFee?: number
 }
 
 /** A registration with the ids of every squad and sweeper on it. */
@@ -86,6 +91,24 @@ export interface RegistrationWriter {
   save(command: SaveRegistration): Promise<void>
   /** Removes the registration with its squad links and payments. The bowler stays (REG-19). */
   deleteRegistration(registrationId: string): Promise<void>
+  /**
+   * The facts a desk delete reads (D-211, D-212), or `undefined` for an unknown registration or one
+   * of another tournament.
+   */
+  getDeskDeleteFacts(
+    registrationId: string,
+    tournamentId: string,
+  ): Promise<DeskDeleteFacts | undefined>
+  /**
+   * The desk delete (D-209 to D-211): in one serializable transaction, read the facts, ask `decide`
+   * what to do, and delete the squad entries, payments, and registration only when it says
+   * `delete`. Returns what `decide` said, or `undefined` for an unknown registration.
+   */
+  removeForDesk(
+    registrationId: string,
+    tournamentId: string,
+    decide: (facts: DeskDeleteFacts) => DeskDeletePlan,
+  ): Promise<DeskDeletePlan | undefined>
   getDetail(registrationId: string): Promise<RegistrationDetail | undefined>
 }
 
@@ -93,9 +116,11 @@ export interface InMemoryWriterSeed {
   bowlers?: StoredBowler[]
   /** A registration, with the tournament its division belongs to. */
   registrations?: { tournamentId: string; registration: StoredRegistration }[]
-  divisions?: { id: string; tournamentId: string }[]
+  divisions?: { id: string; tournamentId: string; name?: string }[]
+  /** Tournaments that are complete (D-130); the desk delete reads it. */
+  completedTournamentIds?: string[]
   sessions?: StoredSession[]
-  payments?: { registrationId: string; confirmationCode: string }[]
+  payments?: { registrationId: string; confirmationCode: string; amount?: number }[]
   /** A score of one bowler in one squad or sweeper. */
   scores?: { bowlerId: string; sessionId: string }[]
 }
@@ -109,6 +134,43 @@ export function createInMemoryRegistrationWriter(seed: InMemoryWriterSeed = {}) 
     sessions: [...(seed.sessions ?? [])],
     payments: [...(seed.payments ?? [])],
     scores: [...(seed.scores ?? [])],
+    completedTournamentIds: [...(seed.completedTournamentIds ?? [])],
+  }
+
+  function deskFacts(registrationId: string, tournamentId: string): DeskDeleteFacts | undefined {
+    const entry = state.registrations.find((e) => e.registration.id === registrationId)
+    const bowler = state.bowlers.find((b) => b.id === entry?.registration.bowlerId)
+    if (!entry || !bowler || entry.tournamentId !== tournamentId) return undefined
+    const sessions = state.sessions.filter((session) =>
+      entry.registration.sessionIds.includes(session.id),
+    )
+    const scored = new Set(
+      state.scores.filter((score) => score.bowlerId === bowler.id).map((s) => s.sessionId),
+    )
+    return {
+      bowlerName: `${bowler.firstName} ${bowler.lastName}`,
+      divisionName: state.divisions.find((d) => d.id === entry.registration.divisionId)?.name ?? '',
+      tournamentComplete: state.completedTournamentIds.includes(tournamentId),
+      hasScores: state.sessions.some(
+        (session) => session.tournamentId === tournamentId && scored.has(session.id),
+      ),
+      entries: sessions.map((session) => ({
+        id: session.id,
+        kind: session.kind,
+        date: session.date ?? '',
+        entryFee: session.entryFee ?? 0,
+      })),
+      payments: state.payments
+        .filter(
+          (payment) =>
+            payment.registrationId === registrationId &&
+            isRealPayment(payment.confirmationCode, payment.amount ?? 0),
+        )
+        .map((payment) => ({
+          system: paymentSystem(payment.confirmationCode),
+          amount: payment.amount ?? 0,
+        })),
+    }
   }
 
   const writer: RegistrationWriter = {
@@ -195,6 +257,22 @@ export function createInMemoryRegistrationWriter(seed: InMemoryWriterSeed = {}) 
       )
       state.payments = state.payments.filter((payment) => payment.registrationId !== registrationId)
       return Promise.resolve()
+    },
+    getDeskDeleteFacts: (registrationId, tournamentId) =>
+      Promise.resolve(deskFacts(registrationId, tournamentId)),
+    removeForDesk: (registrationId, tournamentId, decide) => {
+      const facts = deskFacts(registrationId, tournamentId)
+      if (!facts) return Promise.resolve(undefined)
+      const plan = decide(facts)
+      if (plan.kind === 'delete') {
+        state.registrations = state.registrations.filter(
+          (entry) => entry.registration.id !== registrationId,
+        )
+        state.payments = state.payments.filter(
+          (payment) => payment.registrationId !== registrationId,
+        )
+      }
+      return Promise.resolve(plan)
     },
     getDetail: (registrationId) => {
       const entry = state.registrations.find((e) => e.registration.id === registrationId)

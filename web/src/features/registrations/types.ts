@@ -179,3 +179,28 @@ export interface EditWarning {
   field: string
   message: string
 }
+
+/** One squad or sweeper entry in the delete dialog, with what it costs (D-212). */
+export interface DeleteEntry {
+  id: string
+  kind: 'squad' | 'sweeper'
+  /** Local date and time, `YYYY-MM-DDTHH:mm:ss`. */
+  date: string
+  entryFee: number
+}
+
+/**
+ * `GET /v1/tournaments/{id}/registrations/{registrationId}/delete-info` (D-212). The API's
+ * `deskDelete.ts` (`DeskDeleteInfo`) sends these fields: change both together. `payments` holds the
+ * real ones only and never a confirmation code.
+ */
+export interface DeleteInfo {
+  bowlerName: string
+  divisionName: string
+  tournamentComplete: boolean
+  hasScores: boolean
+  entries: DeleteEntry[]
+  entriesTotal: number
+  payments: { system: string; amount: number }[]
+  paidTotal: number
+}

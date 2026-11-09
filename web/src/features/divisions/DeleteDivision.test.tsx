@@ -65,6 +65,20 @@ async function openDialog(user: ReturnType<typeof userEvent.setup>, name = 'Wome
   return screen.findByRole('dialog', { name: 'Delete this division?' })
 }
 
+describe('where Delete sits (D-215)', () => {
+  it('puts Delete in a cell of its own, apart from the Edit link', async () => {
+    setMockUser(createSignedInUser({ roles: ['director'] }))
+    serve(trio())
+
+    open()
+
+    const remove = await screen.findByRole('button', { name: 'Delete Women' })
+    const edit = screen.getByRole('link', { name: 'Edit Women' })
+    expect(remove.closest('td')).not.toBe(edit.closest('td'))
+    expect(remove.closest('tr')).toBe(edit.closest('tr'))
+  })
+})
+
 describe('who sees Delete (DIV-12, D-19, D-150, D-154)', () => {
   it.each(['director', 'admin'] as const)(
     'gives a %s a Delete button per row, named for it',

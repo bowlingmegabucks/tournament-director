@@ -102,8 +102,3 @@
   border-radius: var(--radius);
   background: var(--color-surface);
 }
-
-/* Pushed to the far end so a slip of the mouse does not land on it (D-136). */
-.endActions {
-  margin-inline-start: auto;
-}

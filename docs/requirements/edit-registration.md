@@ -71,7 +71,7 @@ All web only (D-09). Access `{ permission: 'registrations.write' }` (D-198). Mou
 
 ## Not built
 
-- **Delete registration** (the `REG-19` screen) is the next slice (D-208, Q-35).
+- **Delete registration** (the `REG-19` screen): see [delete-registration.md](delete-registration.md).
 - Recording real payments or refunds, or a balance (D-163, D-11, `PAY-05`).
 - Live updates when another desk or the site changes a bowler (Q-27); the `409 changed` guard is the only protection.
 - A marker on the lane page for a bowler who has scores. The dialog reads the bowler's locks when it opens, and the server refuses.

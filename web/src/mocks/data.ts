@@ -4,7 +4,12 @@ import type { Division } from '../features/divisions/types'
 import type { LaneBowler, LanePage, LanePair } from '../features/lanes/types'
 import type { SessionKind } from '../shared/session'
 import type { RecapSheet, RecapSheets } from '../features/recapSheets/types'
-import type { EditInfo, Registration, RegistrationList } from '../features/registrations/types'
+import type {
+  DeleteInfo,
+  EditInfo,
+  Registration,
+  RegistrationList,
+} from '../features/registrations/types'
 import type {
   AtLargeDivision,
   AtLargeResults,
@@ -1301,6 +1306,24 @@ export function createSignedInUser(overrides: Partial<SignedInUser> = {}): Signe
     name: faker.person.fullName(),
     roles,
     permissions: roles.flatMap((role) => permissionsByRole[role] ?? []),
+    ...overrides,
+  }
+}
+
+/** What `GET .../registrations/{id}/delete-info` returns (D-212): two entries and no real payment. */
+export function createDeleteInfo(overrides: Partial<DeleteInfo> = {}): DeleteInfo {
+  return {
+    bowlerName: 'Maria Gonzalez',
+    divisionName: 'Scratch',
+    tournamentComplete: false,
+    hasScores: false,
+    entries: [
+      { id: faker.string.uuid(), kind: 'squad', date: '2026-10-24T09:00:00', entryFee: 60 },
+      { id: faker.string.uuid(), kind: 'sweeper', date: '2026-10-24T18:00:00', entryFee: 25 },
+    ],
+    entriesTotal: 85,
+    payments: [],
+    paidTotal: 0,
     ...overrides,
   }
 }

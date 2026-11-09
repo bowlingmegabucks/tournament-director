@@ -125,11 +125,21 @@ export function checkBowlerStep(values: BowlerValues): DeskFieldErrors {
   return errors
 }
 
+/** The API's message for an edit that would leave no squad (`editRegister.ts`): change both together. */
+export const lastSquadMessage =
+  'Bowler must enter at least one squad. To remove the last one, delete the registration.'
+
 /** Step 2 needs a division, a squad, and an average in range; the server rechecks (REG-03, REG-16). */
-export function checkRegistrationStep(values: RegistrationValues): DeskFieldErrors {
+export function checkRegistrationStep(
+  values: RegistrationValues,
+  { editing = false }: { editing?: boolean } = {},
+): DeskFieldErrors {
   const errors: DeskFieldErrors = {}
   if (values.divisionId === '') errors['divisionId'] = 'Pick a division'
-  if (values.squadIds.length === 0) errors['squadIds'] = 'Bowler must enter at least one squad'
+  if (values.squadIds.length === 0) {
+    // An edit cannot end with no squad: the way out is to delete the registration (D-203, D-214).
+    errors['squadIds'] = editing ? lastSquadMessage : 'Bowler must enter at least one squad'
+  }
   const average = values.average.trim()
   if (average !== '') {
     const value = Number(average)
@@ -230,4 +240,13 @@ export function dueLines({ registration, existing, squads, sweepers }: DueInput)
 /** The total in whole cents, added as cents so 0.1 and 0.2 make 0.3 (D-166). */
 export function totalDue(lines: DueLine[]): number {
   return lines.reduce((cents, line) => cents + Math.round(line.amount * 100), 0) / 100
+}
+
+/** "First Last" or "First Last, Suffix": the display name the registrations list shows. */
+export function bowlerNameOf(
+  values: Pick<BowlerValues, 'firstName' | 'lastName' | 'suffix'>,
+): string {
+  const name = `${values.firstName.trim()} ${values.lastName.trim()}`
+  const suffix = values.suffix.trim()
+  return suffix === '' ? name : `${name}, ${suffix}`
 }

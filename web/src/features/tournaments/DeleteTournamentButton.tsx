@@ -10,6 +10,7 @@ import {
 } from './api'
 import { DeleteTournamentDialog } from './DeleteTournamentDialog'
 import styles from './DeleteTournament.module.css'
+import danger from '../../shared/Danger.module.css'
 import type { Tournament } from './types'
 import { useDeleteTournament } from './useDeleteTournament'
 
@@ -78,7 +79,7 @@ export function DeleteTournamentButton({ tournament }: Readonly<{ tournament: To
     <>
       <button
         type="button"
-        className={styles.trigger}
+        className={danger.trigger}
         onClick={() => {
           setRefusal(undefined)
           setOpen(true)

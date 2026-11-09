@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router'
 import { createSquad } from '../mocks/data'
 import { Fact, SessionCard, SessionList } from './SessionCard'
 
-function renderCard(action?: React.ReactNode) {
+function renderCard(action?: React.ReactNode, danger?: React.ReactNode) {
   return render(
     <MemoryRouter>
       <SessionList>
@@ -13,6 +13,7 @@ function renderCard(action?: React.ReactNode) {
           href="s1"
           facts={<Fact label="Entry fee">$50.00</Fact>}
           action={action}
+          danger={danger}
         />
       </SessionList>
     </MemoryRouter>,
@@ -52,6 +53,17 @@ describe('SessionCard', () => {
     const remove = screen.getByRole('button', { name: 'Delete' })
     expect(edit.parentElement).toBe(remove.parentElement)
     expect(edit.compareDocumentPosition(remove) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('puts the danger slot below the facts, apart from the actions (D-215)', () => {
+    renderCard(<a href="/edit">Edit</a>, <button type="button">Delete</button>)
+
+    const edit = screen.getByRole('link', { name: 'Edit' })
+    const remove = screen.getByRole('button', { name: 'Delete' })
+    expect(edit.parentElement).not.toBe(remove.parentElement)
+    expect(
+      screen.getByText('Lanes').compareDocumentPosition(remove) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
   })
 
   it('renders no action area when there is no action', () => {

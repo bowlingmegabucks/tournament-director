@@ -86,7 +86,7 @@ Do not put a click handler on a `div` or `span`. The lint rule `jsx-a11y` fails 
 - Mark required fields in the label text, not only with `*`.
 - Use the right `type` and `autocomplete` (`email`, `tel`, `inputmode="numeric"`).
 
-**Buttons.** The base style in `base.css` is the primary button. One primary per view. A secondary button (outline: transparent fill, `--color-accent` border and text) gets a class in the component module. A destructive action names the thing ("Delete tournament") and asks to confirm.
+**Buttons.** The base style in `base.css` is the primary button. One primary per view. A secondary button (outline: transparent fill, `--color-accent` border and text) gets a class in the component module. A destructive action names the thing ("Delete tournament") and asks to confirm. **A delete trigger is a red outline button** (`danger.trigger`, `src/shared/Danger.module.css`), never beside Edit: its own table column, below a divider on a card, and inside a `DangerZone` (`src/shared/DangerZone.tsx`) at the bottom of an edit page or overview. The filled red button lives only in the confirm dialog (D-215).
 
 **Data view.** Follow the state shape in `react-patterns`. Style the states alike: loading with the shared `Loading` component (`web/src/shared/Loading.tsx`: pulsing dots, the words, and optional placeholder rows via `rows`, D-53), error in a bordered `role="alert"` block with a "Try again" button, empty as a plain sentence that says what to do next.
 

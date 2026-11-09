@@ -5,6 +5,7 @@ import { HttpError } from '../../shared/errors.ts'
 import { createSquad, testApiKey } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createSignedInTestApp, createTestApp } from '../../test/testApp.ts'
+import { recordingEvents } from '../../test/recordingEvents.ts'
 import { createInMemorySquadWriter, type SquadWriter } from './writer.ts'
 
 const tournamentId = '11111111-1111-4111-8111-111111111111'
@@ -248,5 +249,20 @@ describe(`GET ${infoUrl}`, () => {
       403,
     )
     expect((await request(createSignedInTestApp({}, 'scoreKeeper')).get(infoUrl)).status).toBe(403)
+  })
+})
+
+describe('live updates after Complete (LAN-20, D-10, D-219)', () => {
+  it('tells the open lane pages once, and not again when the second try is refused', async () => {
+    const { events, published } = recordingEvents()
+    const made = setup()
+    const app = createSignedInTestApp({ squadWriter: made.writer, events })
+
+    const first = await request(app).post(url)
+    const second = await request(app).post(url)
+
+    expect(first.status).toBe(200)
+    expect(second.status).toBe(409)
+    expect(published).toEqual([{ sessionId, kind: 'lanes' }])
   })
 })

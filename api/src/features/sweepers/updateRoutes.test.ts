@@ -5,6 +5,7 @@ import { HttpError } from '../../shared/errors.ts'
 import { createSweeper, testApiKey } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createSignedInTestApp, createTestApp } from '../../test/testApp.ts'
+import { recordingEvents } from '../../test/recordingEvents.ts'
 import { createInMemorySweeperWriter, type SweeperWriter } from './writer.ts'
 
 const tournamentId = '11111111-1111-4111-8111-111111111111'
@@ -387,5 +388,28 @@ describe(`GET ${url}/edit-info`, () => {
     expect(
       (await request(createSignedInTestApp({ sweeperWriter: writer })).get(infoUrl)).status,
     ).toBe(503)
+  })
+})
+
+describe('live updates after an edit (LAN-20, D-219)', () => {
+  it('tells the open lane pages of the sweeper when a field changes', async () => {
+    const { events, published } = recordingEvents()
+    const made = setup()
+    const app = createSignedInTestApp({ sweeperWriter: made.writer, events })
+
+    await request(app).patch(url).send({ games: 4 })
+
+    expect(published).toEqual([{ sessionId: sweeperId, kind: 'lanes' }])
+  })
+
+  it('tells no one when the edit is refused', async () => {
+    const { events, published } = recordingEvents()
+    const made = setup()
+    const app = createSignedInTestApp({ sweeperWriter: made.writer, events })
+
+    const refused = await request(app).patch(url).send({ games: 0 })
+
+    expect(refused.status).toBeGreaterThanOrEqual(400)
+    expect(published).toEqual([])
   })
 })

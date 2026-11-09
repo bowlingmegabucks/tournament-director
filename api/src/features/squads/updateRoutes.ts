@@ -1,3 +1,4 @@
+import type { SessionEvents } from '../../shared/events/sessionEvents.ts'
 import { Router } from 'express'
 import { z } from 'zod'
 import { callerOf } from '../../shared/auth/caller.ts'
@@ -29,7 +30,11 @@ function notFound(outcome: SessionNotFound): HttpError {
  * routes, so the vendor sees no change (D-09). Which fields may change, and when, is `planSquadEdit` (D-180 to D-182);
  * this router only turns its answer into HTTP.
  */
-export function createSquadUpdateRouter(writer: SquadWriter, logger: Logger): Router {
+export function createSquadUpdateRouter(
+  writer: SquadWriter,
+  logger: Logger,
+  events: SessionEvents,
+): Router {
   const router = Router({ mergeParams: true })
 
   router.patch('/:sessionId', jsonBody, async (req, res) => {
@@ -65,6 +70,8 @@ export function createSquadUpdateRouter(writer: SquadWriter, logger: Logger): Ro
         'Squad updated',
       )
     }
+    // A changed date, fee, lane count, or ratio shows on every open lane page of the session (D-219).
+    if (outcome.changed.length > 0) events.publish(sessionId, 'lanes')
     res.json({ squad: outcome.updated })
   })
 

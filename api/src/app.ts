@@ -32,6 +32,7 @@ import { createDeskRegistrationRouter } from './features/registrations/deskRoute
 import { createDeskDeleteRouter } from './features/registrations/deskDeleteRoutes.ts'
 import { createEditRegistrationRouter } from './features/registrations/editRoutes.ts'
 import { createVendorRegistrationRouter } from './features/registrations/vendorRoutes.ts'
+import { createPublishingRegistrationWriter } from './features/registrations/publishingWriter.ts'
 import type { RegistrationWriter } from './features/registrations/writer.ts'
 import { createFinalsRouter, createResultsRouter } from './features/results/routes.ts'
 import { createScoreRouter } from './features/scores/routes.ts'
@@ -135,7 +136,7 @@ export function createApp({
   divisions,
   divisionWriter,
   registrations,
-  registrationWriter,
+  registrationWriter: storedRegistrationWriter,
   bowlers,
   lanes,
   laneWriter,
@@ -149,6 +150,13 @@ export function createApp({
   // Stryker disable next-line StringLiteral: the scope name only labels the metrics.
   meter = metrics.getMeter('tournament-director-api'),
 }: AppDependencies): express.Express {
+  // Every registration write, desk or vendor, tells the open lane pages of the sessions it touches
+  // (LAN-20, D-219). The routes below see only this wrapper.
+  const registrationWriter = createPublishingRegistrationWriter(
+    storedRegistrationWriter,
+    events,
+    logger,
+  )
   const app = express()
   // Without this, req.ip is the proxy's address.
   app.set('trust proxy', config.trustProxy)
@@ -262,7 +270,7 @@ export function createApp({
         path: '/v1/tournaments/:id/squads',
         access: { permission: 'squads.write' }, // SQD-23, D-184: edit; no API key
         methods: ['PATCH'],
-        router: createSquadUpdateRouter(squadWriter, logger),
+        router: createSquadUpdateRouter(squadWriter, logger, events),
       },
       {
         path: '/v1/tournaments/:id/squads',
@@ -274,7 +282,7 @@ export function createApp({
         path: '/v1/tournaments/:id/squads',
         access: { permission: 'squads.write' }, // SQD-15, D-193: complete; no API key
         methods: ['POST'],
-        router: createSquadCompleteRouter(squadWriter, logger),
+        router: createSquadCompleteRouter(squadWriter, logger, events),
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/complete-info',
@@ -309,7 +317,7 @@ export function createApp({
         path: '/v1/tournaments/:id/sweepers',
         access: { permission: 'squads.write' }, // SQD-23, D-184: edit; no API key
         methods: ['PATCH'],
-        router: createSweeperUpdateRouter(sweeperWriter, logger),
+        router: createSweeperUpdateRouter(sweeperWriter, logger, events),
       },
       {
         path: '/v1/tournaments/:id/sweepers',
@@ -321,7 +329,7 @@ export function createApp({
         path: '/v1/tournaments/:id/sweepers',
         access: { permission: 'squads.write' }, // SQD-16, D-193: complete; no API key
         methods: ['POST'],
-        router: createSweeperCompleteRouter(sweeperWriter, logger),
+        router: createSweeperCompleteRouter(sweeperWriter, logger, events),
       },
       {
         path: '/v1/tournaments/:id/sweepers/:sessionId/complete-info',

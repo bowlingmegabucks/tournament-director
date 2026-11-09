@@ -23,6 +23,7 @@ import { authHandlers } from './authHandlers'
 import { userHandlers } from './userHandlers'
 import { createRegistrationHandlers } from './registrationHandlers'
 import type { DivisionChanges, NewDivision } from '../features/divisions/types'
+import type { LaneBowler, LanePage } from '../features/lanes/types'
 import type { NewSquad, Squad, SquadChanges } from '../features/squads/types'
 import type { NewSweeper, Sweeper, SweeperChanges } from '../features/sweepers/types'
 import type {
@@ -63,6 +64,26 @@ const noSessionFacts = {
 const busySquadFacts = { ...noSessionFacts, entryCount: 12 }
 
 const scoredSweeperFacts = { ...noSessionFacts, hasScores: true }
+
+/**
+ * A demo lane bowler who is also in the registration list takes that registration's id, so the lane
+ * page's Registration actions (D-197) reach the same registration the edit page does. A bowler who
+ * is not in the list keeps a random id, and the edit routes answer 404 for it.
+ */
+function withListedRegistrations(page: LanePage): LanePage {
+  const idOf = (bowler: LaneBowler) =>
+    registrations.registrations.find(
+      (row) => row.bowler.firstName === bowler.firstName && row.bowler.lastName === bowler.lastName,
+    )?.id ?? bowler.registrationId
+  const remap = (bowlers: LaneBowler[]) =>
+    bowlers.map((bowler) => ({ ...bowler, registrationId: idOf(bowler) }))
+  return {
+    ...page,
+    pairs: page.pairs.map((pair) => ({ ...pair, bowlers: remap(pair.bowlers) })),
+    unassigned: remap(page.unassigned),
+    other: remap(page.other),
+  }
+}
 
 /** What the delete rules look at for a demo session (D-186). The busy squad has 12 bowlers; the scored sweeper has scores. */
 function deleteInfoOf(sessionId: string) {
@@ -467,14 +488,16 @@ export const handlers = [
     if (!tournaments.some((candidate) => candidate.id === params.id)) return notFound()
     const squad = squads.find((candidate) => candidate.id === params.sessionId)
     return squad
-      ? HttpResponse.json(createDemoLanePage('squad', squad, divisions))
+      ? HttpResponse.json(withListedRegistrations(createDemoLanePage('squad', squad, divisions)))
       : HttpResponse.json({ message: 'Squad not found' }, { status: 404 })
   }),
   http.get('/v1/tournaments/:id/sweepers/:sessionId/lanes', ({ params }) => {
     if (!tournaments.some((candidate) => candidate.id === params.id)) return notFound()
     const sweeper = sweepers.find((candidate) => candidate.id === params.sessionId)
     return sweeper
-      ? HttpResponse.json(createDemoLanePage('sweeper', sweeper, divisions))
+      ? HttpResponse.json(
+          withListedRegistrations(createDemoLanePage('sweeper', sweeper, divisions)),
+        )
       : HttpResponse.json({ message: 'Sweeper not found' }, { status: 404 })
   }),
   http.get('/v1/tournaments/:id/squads/:sessionId/scores', ({ params }) => {

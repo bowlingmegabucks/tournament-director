@@ -161,6 +161,7 @@ export function createRegistrationHandlers({
   // Hooks for the e2e tests: a search that fails once, one that finds more than 25, and a save that fails once.
   let boomed = false
   let flaked = false
+  let editFlaked = false
   const crowd: BowlerSearchResult[] = Array.from({ length: 26 }, (_, index) => ({
     id: faker.string.uuid(),
     name: `Pat Many${String(index).padStart(2, '0')}`,
@@ -400,20 +401,40 @@ export function createRegistrationHandlers({
     const typed = { ...owner, ...body.bowler }
     if (blank(typed.firstName)) errors['bowler.firstName'] = 'First Name is Required'
     if (blank(typed.lastName)) errors['bowler.lastName'] = 'Last Name is Required'
-    if (division?.handicapPercentage != null && blank(typed.usbcId)) {
+    // REG-05 runs when the division or the USBC ID changes (D-205), not on every edit.
+    const checksUsbc = body.divisionId !== undefined || body.bowler?.usbcId !== undefined
+    if (checksUsbc && division?.handicapPercentage != null && blank(typed.usbcId)) {
       errors['bowler.usbcId'] = 'USBC Id is required for Handicap Divisions'
     }
     return errors
   }
 
-  function editConflict(entry: MockRegistration, body: EditRegistrationRequest) {
+  // For the e2e tests (D-199): the first save for this bowler finds that "the site" added the last
+  // squad a moment earlier, so the desk meets a changed registration.
+  let staleDone = false
+  function editConflict(entry: MockRegistration, owner: MockBowler, body: EditRegistrationRequest) {
+    const lastSquad = squads.at(-1)
+    if (
+      !staleDone &&
+      owner.usbcId === '5560-11902' &&
+      lastSquad &&
+      !entry.squadIds.includes(lastSquad.id)
+    ) {
+      staleDone = true
+      entry.squadIds.push(lastSquad.id)
+      syncList(entry, owner, false)
+      return changedResponse(entry)
+    }
     const gone = [...(body.removeSquadIds ?? []), ...(body.removeSweeperIds ?? [])].some(
       (id) => ![...entry.squadIds, ...entry.sweeperIds].includes(id),
     )
     const held = [...(body.addSquadIds ?? []), ...(body.addSweeperIds ?? [])].some((id) =>
       [...entry.squadIds, ...entry.sweeperIds].includes(id),
     )
-    if (!gone && !held) return undefined
+    return gone || held ? changedResponse(entry) : undefined
+  }
+
+  function changedResponse(entry: MockRegistration) {
     return HttpResponse.json(
       {
         message: 'This registration changed. Review and save again.',
@@ -530,7 +551,12 @@ export function createRegistrationHandlers({
         return HttpResponse.json({ message: 'Registration not found' }, { status: 404 })
       }
       const body = (await request.json()) as EditRegistrationRequest
-      const conflict = editConflict(entry, body)
+      // For the e2e tests: a save that changes the last name to "Flaky" fails once.
+      if (body.bowler?.lastName === 'Flaky' && !editFlaked) {
+        editFlaked = true
+        return new HttpResponse(null, { status: 500 })
+      }
+      const conflict = editConflict(entry, owner, body)
       if (conflict) return conflict
       const errors = editProblems(entry, owner, body)
       if (Object.keys(errors).length > 0) return reject(errors)

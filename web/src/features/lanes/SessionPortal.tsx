@@ -35,7 +35,8 @@ type CompleteNotice = { kind: 'success'; text: string } | { kind: 'error'; reaso
 /** "Squad completed. 3 bowlers got zeros." Only a squad saves zeros, and none for no no-shows (D-190, D-191). */
 function completedText(label: string, noShowCount: number): string {
   if (noShowCount === 0) return `${label} completed.`
-  return `${label} completed. ${noShowCount === 1 ? '1 bowler' : `${noShowCount} bowlers`} got zeros.`
+  const bowlers = noShowCount === 1 ? '1 bowler' : `${noShowCount} bowlers`
+  return `${label} completed. ${bowlers} got zeros.`
 }
 
 /**

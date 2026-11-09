@@ -32,6 +32,16 @@ export interface NewPayment {
   createdAtUtc: Date
 }
 
+/**
+ * Thrown by `save` when the squads and sweepers on the registration are no longer what the desk
+ * read: one it adds is already there, or one it removes is gone (D-199). Nothing was written.
+ */
+export class StaleRegistrationError extends Error {
+  constructor() {
+    super('The registration changed after it was read.')
+  }
+}
+
 /** One save: the bowler, the registration, the squads and sweepers added, and the payment. */
 export interface SaveRegistration {
   bowler:
@@ -47,6 +57,12 @@ export interface SaveRegistration {
   /** Squads and sweepers taken off the registration (REG-31). */
   removeSessionIds?: string[]
   payment: NewPayment | null
+  /**
+   * The desk's guard (D-199): inside the save, every id in `present` must be on the registration
+   * and every id in `absent` must not be, or `save` throws `StaleRegistrationError` and writes
+   * nothing. The registration site's calls leave it out.
+   */
+  expect?: { present: string[]; absent: string[] }
 }
 
 /**
@@ -120,7 +136,15 @@ export function createInMemoryRegistrationWriter(seed: InMemoryWriterSeed = {}) 
           state.scores.filter((score) => score.bowlerId === bowlerId).map((s) => s.sessionId),
         ),
       ]),
-    save: ({ bowler, registration, addSessionIds, removeSessionIds = [], payment }) => {
+    save: ({ bowler, registration, addSessionIds, removeSessionIds = [], payment, expect }) => {
+      if (expect) {
+        const held = state.registrations.find((e) => e.registration.id === registration.id)
+          ?.registration.sessionIds
+        const isHeld = (id: string) => held?.includes(id) ?? false
+        if (!expect.present.every(isHeld) || expect.absent.some(isHeld)) {
+          return Promise.reject(new StaleRegistrationError())
+        }
+      }
       if (bowler.isNew) {
         state.bowlers.push({ id: bowler.id, ...bowler.data })
       } else {

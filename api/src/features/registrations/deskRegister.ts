@@ -39,7 +39,7 @@ const displayName = ({ firstName, lastName, suffix }: StoredBowler) => {
   return suffix === '' ? name : `${name}, ${suffix}`
 }
 
-async function describeExisting(
+export async function describeExisting(
   deps: RegisterDependencies,
   tournamentId: string,
   existing: StoredRegistration,
@@ -216,6 +216,13 @@ const fieldOfCode: Record<string, string> = {
   'Registration.SweeperComplete': 'sweeperIds',
   'Sweeper.Conflict': 'sweeperIds',
   'Registration.SuperSweeperNeedsAllSweepers': 'superSweeper',
+  'Registration.SuperSweeperLocked': 'superSweeper',
+  'Registration.SuperSweeperRemoveFirst': 'superSweeper',
+  'Registration.SuperSweeperSweeperComplete': 'superSweeper',
+  'Registration.RemovedSquadHasScores': 'squadIds',
+  'Registration.RemovedSquadComplete': 'squadIds',
+  'Registration.RemovedSweeperHasScores': 'sweeperIds',
+  'Registration.RemovedSweeperComplete': 'sweeperIds',
   'Registration.DivisionNotInTournament': 'divisionId',
   'Registration.DivisionLocked': 'divisionId',
   'Division.NotFound': 'divisionId',

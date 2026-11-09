@@ -5,6 +5,7 @@ import { HttpError } from '../../shared/errors.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { requestLogger } from '../../shared/requestLogging.ts'
 import type { DivisionRepository } from '../divisions/repository.ts'
+import { toBowlerValues } from '../registrations/bowlerValues.ts'
 import { hasScoresIn, sessionIdsByKind } from '../registrations/held.ts'
 import type { RegistrationWriter } from '../registrations/writer.ts'
 import type { BowlerRepository } from './repository.ts'
@@ -94,22 +95,7 @@ export function createBowlerRouter(
     }
 
     const response: BowlerResponse = {
-      bowler: {
-        id: bowler.id,
-        firstName: bowler.firstName,
-        middleInitial: bowler.middleInitial,
-        lastName: bowler.lastName,
-        suffix: bowler.suffix,
-        street: bowler.street,
-        city: bowler.city,
-        state: bowler.state,
-        zipCode: bowler.zipCode,
-        email: bowler.email,
-        phoneNumber: bowler.phoneNumber,
-        usbcId: bowler.usbcId,
-        dateOfBirth: bowler.dateOfBirth ?? '',
-        gender: bowler.gender ?? '',
-      },
+      bowler: toBowlerValues(bowler),
       registration,
     }
     // The detail holds contact details: record who read whose, by id only (no name, email, or phone).

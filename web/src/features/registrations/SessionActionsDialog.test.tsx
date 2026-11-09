@@ -168,7 +168,8 @@ describe('the Registration button on the lane page (REG-20, D-197, D-198)', () =
 
     const dialog = await openActions(user)
 
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+    // The read waits a moment before its one retry, so the error takes a little longer to show.
+    expect(await within(dialog).findByRole('alert', {}, { timeout: 4000 })).toHaveTextContent(
       'You do not have permission to edit a registration.',
     )
     await user.click(within(dialog).getByRole('button', { name: 'Close' }))

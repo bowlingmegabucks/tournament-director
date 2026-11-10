@@ -74,7 +74,7 @@ The two reads and the stream need `lanes.read` since the lock-down (D-59, D-52, 
 ## Notes
 
 - **The seat the screen shows first is a guess.** `web/src/features/lanes/optimisticMove.ts` picks the seat and moves the bowler at once (D-220); the API picks the real one, and its answer replaces the guess. A refusal puts the page back as it was. The page also refetches after every save.
-- **One instance.** The hub that tells open pages lives in the Node process (D-221). With two App Service instances a change on one never reaches a page on the other: Q-39. See [deployment.md](../deployment.md#live-updates-sse-d-217).
+- **One instance.** The hub that tells open pages lives in the Node process (D-221). With two App Service instances a change on one never reaches a page on the other, so one instance is the decision (D-224). See [deployment.md](../deployment.md#live-updates-sse-d-217).
 - **Pattern for the rest.** Scores and Results keep their 15 s poll for now (D-222) and move to the same stream, with an open route, in their own slice. [api-standards.md](../api-standards.md#live-updates-sse) holds the pattern.
 - **Not built yet:** `LAN-12` copy is dropped (D-67); add to squad, new registration, and remove from squad are built (see [edit-registration.md](edit-registration.md)). Recap sheets and the cross are built: [recap-sheets.md](recap-sheets.md). `LAN-07` and `LAN-08` are not needed: the server picks the seat (D-57).
 - **Mock mode.** The mock `PUT` keeps the move and tells the open mock stream, so `npm run dev:mocks` and the e2e tests save and refetch like the real API.

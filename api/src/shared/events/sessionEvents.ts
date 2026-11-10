@@ -18,7 +18,7 @@ export interface Subscriber {
 }
 
 /**
- * Who is watching which squad or sweeper, kept in this Node process (D-217, D-221, Q-39). The
+ * Who is watching which squad or sweeper, kept in this Node process (D-217, D-221, D-224). The
  * Node twin of a SignalR hub group, with one instance and no history: a screen that missed a
  * message refetches when it reconnects (D-218).
  */

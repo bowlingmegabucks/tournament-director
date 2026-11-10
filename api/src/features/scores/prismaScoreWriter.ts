@@ -66,13 +66,16 @@ export function createPrismaScoreWriter(client: PrismaClient, logger: Logger): S
           input,
         )
         if (plan.type === 'save') {
-          for (const { game, score } of plan.writes) {
-            await tx.squadScore.upsert({
-              where: { bowlerId_squadId_game: { bowlerId, squadId: input.sessionId, game } },
-              create: { bowlerId, squadId: input.sessionId, game, score },
-              update: { score },
-            })
-          }
+          // The plan already settled which games to write, so the rows do not depend on each other.
+          await Promise.all(
+            plan.writes.map(({ game, score }) =>
+              tx.squadScore.upsert({
+                where: { bowlerId_squadId_game: { bowlerId, squadId: input.sessionId, game } },
+                create: { bowlerId, squadId: input.sessionId, game, score },
+                update: { score },
+              }),
+            ),
+          )
         } else if (plan.type === 'clear') {
           await tx.squadScore.delete({
             where: {

@@ -404,6 +404,27 @@ describe('DELETE .../scores/:registrationId/:game (SCR-19)', () => {
     expect((await request(app).get(page)).body.pairs[0].bowlers[0].scores[0]).toBeNull()
   })
 
+  it('drops the cached results of the session on a save and a clear, in both modes (RES-44, D-241)', async () => {
+    const { overrides, url, tournament, squad, ann } = setup()
+    const app = createSignedInTestApp(overrides)
+    const results = (mode: string) =>
+      request(app).get(`/v1/tournaments/${tournament.id}/squads/${squad.id}/results?mode=${mode}`)
+    const firstTotal = async (mode: string) =>
+      (await results(mode)).body.divisions[0]?.rows[0]?.total
+    expect(await firstTotal('full-game')).toBeUndefined()
+    expect(await firstTotal('live')).toBeUndefined()
+
+    await request(app).put(url(ann.registrationId, 1)).send({ score: 212 })
+
+    expect(await firstTotal('full-game')).toBe(212)
+    expect(await firstTotal('live')).toBe(212)
+
+    await request(app).delete(url(ann.registrationId, 1))
+
+    expect(await firstTotal('full-game')).toBeUndefined()
+    expect(await firstTotal('live')).toBeUndefined()
+  })
+
   it('needs scores.write (SCR-19, D-96)', async () => {
     const { overrides, url } = setup()
     const app = createTestApp(overrides)

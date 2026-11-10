@@ -534,12 +534,12 @@ export function createApp({
       {
         path: '/v1/tournaments/:id/squads/:sessionId/results',
         access: 'public', // D-74: public for good, so bowlers check the standings
-        router: createResultsRouter('squad', resultsDeps),
+        router: createResultsRouter('squad', resultsDeps, scoreCache),
       },
       {
         path: '/v1/tournaments/:id/sweepers/:sessionId/results',
         access: 'public', // D-74
-        router: createResultsRouter('sweeper', resultsDeps),
+        router: createResultsRouter('sweeper', resultsDeps, scoreCache),
       },
       {
         path: '/v1/tournaments/:id/at-large',

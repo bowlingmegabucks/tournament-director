@@ -7,7 +7,6 @@ import {
   createDemoLanePage,
   createDemoRecapSheets,
   createDemoRegistrationList,
-  createDemoScorePage,
   createDemoSeeding,
   createDemoSquadResults,
   createDemoSuperSweeper,
@@ -20,6 +19,7 @@ import {
   createSettings,
   createTournament,
 } from './data'
+import { createDemoGamesView, createDemoScoresWithSaves, mockScoreChange } from './gamesData'
 import { authHandlers } from './authHandlers'
 import { userHandlers } from './userHandlers'
 import { createRegistrationHandlers } from './registrationHandlers'
@@ -101,6 +101,8 @@ function withListedRegistrations(page: LanePage): LanePage {
 const laneMoves = new Map<string, Map<string, Move>>()
 /** The skip saved through the mock `PUT`, by session (SCR-23). No entry means staggered. */
 const skips = new Map<string, 'staggered' | 'same'>()
+/** Scores saved through the mock `PUT`, by session and then registration. Lost when the page reloads. */
+const savedScores = new Map<string, Map<string, (number | null)[]>>()
 /** What each open mock event stream can be told, by session (LAN-21). */
 const streams = new Map<string, Set<(message: string) => void>>()
 
@@ -108,6 +110,7 @@ const streams = new Map<string, Set<(message: string) => void>>()
 export function resetMockLaneMoves() {
   laneMoves.clear()
   skips.clear()
+  savedScores.clear()
   streams.clear()
 }
 
@@ -117,7 +120,7 @@ function lanePageOf(kind: SessionKind, session: Parameters<typeof createDemoLane
 }
 
 /** Tell every open mock stream of the session that it changed, as the API does after a move (D-218). */
-function publishMock(sessionId: string, kind: 'lanes' | 'entries' = 'lanes') {
+function publishMock(sessionId: string, kind: 'lanes' | 'entries' | 'scores' = 'lanes') {
   for (const send of streams.get(sessionId) ?? []) {
     send(JSON.stringify({ kind, version: Date.now() }))
   }
@@ -138,6 +141,65 @@ function saveMockSkip(tournamentId: string, sessionId: string, kind: SessionKind
     publishMock(sessionId)
   }
   return HttpResponse.json({ skip })
+}
+
+/** The demo session of a kind, or the 404 that says it is missing. */
+function mockSession(tournamentId: string, sessionId: string, kind: SessionKind) {
+  if (!tournaments.some((candidate) => candidate.id === tournamentId)) {
+    return { missing: problem('Tournament not found', 404) }
+  }
+  const session = (kind === 'squad' ? squads : sweepers).find((entry) => entry.id === sessionId)
+  return session
+    ? { session }
+    : { missing: problem(`${kind === 'squad' ? 'Squad' : 'Sweeper'} not found`, 404) }
+}
+
+/** The mock twin of `GET .../scores/games` (SCR-22). */
+function mockGames(tournamentId: string, sessionId: string, kind: SessionKind) {
+  const found = mockSession(tournamentId, sessionId, kind)
+  if (found.missing) return found.missing
+  return HttpResponse.json(
+    createDemoGamesView(
+      kind,
+      found.session,
+      divisions,
+      skips.get(sessionId) ?? 'staggered',
+      savedScores.get(sessionId),
+    ),
+  )
+}
+
+/** The mock twin of `PUT` and `DELETE .../scores/:registrationId/:game` (SCR-19). `score` null clears. */
+function saveMockScore(
+  params: Readonly<Record<string, string | readonly string[] | undefined>>,
+  kind: SessionKind,
+  score: number | null,
+) {
+  const sessionId = String(params['sessionId'])
+  const registrationId = String(params['registrationId'])
+  const found = mockSession(String(params['id']), sessionId, kind)
+  if (found.missing) return found.missing
+  const page = createDemoScoresWithSaves(kind, found.session, divisions, savedScores.get(sessionId))
+  const bowler = [...page.pairs.flatMap((pair) => pair.bowlers), ...page.other].find(
+    (entry) => entry.registrationId === registrationId,
+  )
+  if (!bowler) return problem(`Bowler is not registered for this ${kind}`, 404)
+  const result = mockScoreChange(
+    bowler.scores,
+    page.session.games,
+    Number(params['game']),
+    score,
+    found.session.complete,
+  )
+  if (result.status !== 200) return problem(result.message, result.status)
+  const bySession = savedScores.get(sessionId) ?? new Map<string, (number | null)[]>()
+  bySession.set(registrationId, result.scores)
+  savedScores.set(sessionId, bySession)
+  publishMock(sessionId, 'scores')
+  return HttpResponse.json({
+    scores: result.scores,
+    total: result.scores.reduce<number>((sum, value) => sum + (value ?? 0), 0),
+  })
 }
 
 function problem(message: string, status: number) {
@@ -644,18 +706,46 @@ export const handlers = [
       : HttpResponse.json({ message: 'Sweeper not found' }, { status: 404 })
   }),
   laneMoveHandler('sweeper', sweepers),
+  // SCR-22, SCR-19: score entry. The mock keeps saved scores in memory and tells the streams.
+  http.get('/v1/tournaments/:id/squads/:sessionId/scores/games', ({ params }) =>
+    mockGames(String(params['id']), String(params['sessionId']), 'squad'),
+  ),
+  http.get('/v1/tournaments/:id/sweepers/:sessionId/scores/games', ({ params }) =>
+    mockGames(String(params['id']), String(params['sessionId']), 'sweeper'),
+  ),
+  http.put(
+    '/v1/tournaments/:id/squads/:sessionId/scores/:registrationId/:game',
+    async ({ params, request }) =>
+      saveMockScore(params, 'squad', ((await request.json()) as { score: number }).score),
+  ),
+  http.put(
+    '/v1/tournaments/:id/sweepers/:sessionId/scores/:registrationId/:game',
+    async ({ params, request }) =>
+      saveMockScore(params, 'sweeper', ((await request.json()) as { score: number }).score),
+  ),
+  http.delete('/v1/tournaments/:id/squads/:sessionId/scores/:registrationId/:game', ({ params }) =>
+    saveMockScore(params, 'squad', null),
+  ),
+  http.delete(
+    '/v1/tournaments/:id/sweepers/:sessionId/scores/:registrationId/:game',
+    ({ params }) => saveMockScore(params, 'sweeper', null),
+  ),
   http.get('/v1/tournaments/:id/squads/:sessionId/scores', ({ params }) => {
     if (!tournaments.some((candidate) => candidate.id === params.id)) return notFound()
     const squad = squads.find((candidate) => candidate.id === params.sessionId)
     return squad
-      ? HttpResponse.json(createDemoScorePage('squad', squad, divisions))
+      ? HttpResponse.json(
+          createDemoScoresWithSaves('squad', squad, divisions, savedScores.get(squad.id)),
+        )
       : HttpResponse.json({ message: 'Squad not found' }, { status: 404 })
   }),
   http.get('/v1/tournaments/:id/sweepers/:sessionId/scores', ({ params }) => {
     if (!tournaments.some((candidate) => candidate.id === params.id)) return notFound()
     const sweeper = sweepers.find((candidate) => candidate.id === params.sessionId)
     return sweeper
-      ? HttpResponse.json(createDemoScorePage('sweeper', sweeper, divisions))
+      ? HttpResponse.json(
+          createDemoScoresWithSaves('sweeper', sweeper, divisions, savedScores.get(sweeper.id)),
+        )
       : HttpResponse.json({ message: 'Sweeper not found' }, { status: 404 })
   }),
   http.get('/v1/tournaments/:id/squads/:sessionId/results', ({ params }) => {

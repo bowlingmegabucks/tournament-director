@@ -1,10 +1,4 @@
-import {
-  planClear,
-  planSave,
-  type ScoreFacts,
-  type ScorePlan,
-  type ScoreWrite,
-} from './scorePlan.ts'
+import { planChange, type ScorePlan, type ScoreWrite } from './scorePlan.ts'
 
 export type SessionKind = 'squad' | 'sweeper'
 
@@ -29,13 +23,6 @@ export type ScoreChangeResult =
  */
 export interface ScoreWriter {
   change(input: ScoreChange): Promise<ScoreChangeResult>
-}
-
-/** Run the plan the change asks for. The Prisma and in-memory writers share it. */
-export function planChange(facts: ScoreFacts, input: ScoreChange): ScorePlan {
-  return input.score === undefined
-    ? planClear(facts, input.game)
-    : planSave(facts, input.game, input.score)
 }
 
 export interface InMemoryScoreWriterSeed {

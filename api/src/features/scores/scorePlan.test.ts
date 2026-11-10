@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { planClear, planSave, totalOf, type ScoreFacts } from './scorePlan.ts'
+import { planChange, planClear, planSave, totalOf, type ScoreFacts } from './scorePlan.ts'
 
 function facts(overrides: Partial<ScoreFacts> = {}): ScoreFacts {
   return {
@@ -211,6 +211,16 @@ describe('planClear', () => {
       type: 'refused',
       message: 'This tournament is complete. Scores cannot change.',
     })
+  })
+})
+
+describe('planChange', () => {
+  it('saves when there is a score and clears when there is none (D-228)', () => {
+    const stored = [{ game: 1, score: 150 }]
+    expect(planChange(facts({ stored }), { game: 1, score: 160 })).toEqual(
+      planSave(facts({ stored }), 1, 160),
+    )
+    expect(planChange(facts({ stored }), { game: 1 })).toEqual(planClear(facts({ stored }), 1))
   })
 })
 

@@ -1,8 +1,8 @@
 import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { withRetry } from '../../shared/serializableRetry.ts'
+import { planChange } from './scorePlan.ts'
 import {
-  planChange,
   type ScoreChange,
   type ScoreChangeResult,
   type ScoreWriter,

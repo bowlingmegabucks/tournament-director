@@ -114,6 +114,13 @@ export function planClear(facts: ScoreFacts, game: number): ScorePlan {
   return { type: 'clear', game, scores }
 }
 
+/** The plan a change asks for: a save when it holds a score, a clear when it does not (D-228). */
+export function planChange(facts: ScoreFacts, input: { game: number; score?: number }): ScorePlan {
+  return input.score === undefined
+    ? planClear(facts, input.game)
+    : planSave(facts, input.game, input.score)
+}
+
 /** The scratch sum of the scores present (D-68), 0 when there are none. */
 export function totalOf(scores: ScoreColumns): number {
   return scores.reduce<number>((sum, score) => sum + (score ?? 0), 0)

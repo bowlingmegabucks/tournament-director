@@ -172,6 +172,40 @@ describe('PUT .../scores/:registrationId/:game (SCR-19)', () => {
     expect((await request(app).put(url()).send({ score: 200, extra: 1 })).status).toBe(400)
   })
 
+  it('says the game must be a whole number when it is not digits (SCR-02)', async () => {
+    const { overrides, url, ann } = setup()
+    const response = await request(createSignedInTestApp(overrides))
+      .put(url(ann.registrationId, 1).replace(/\/1$/, '/abc'))
+      .send({ score: 200 })
+    expect(JSON.stringify(response.body)).toContain('Game must be a whole number')
+  })
+
+  it('logs a refusal with ids and no name (SCR-14, D-231)', async () => {
+    const { overrides, url, captured, squad } = setup({ complete: true })
+    await request(createSignedInTestApp(overrides)).put(url()).send({ score: 200 })
+
+    const line = captured.records().find((entry) => entry.msg === 'Score change refused')
+    expect(line).toMatchObject({ squadId: squad.id, game: 1 })
+    expect(JSON.stringify(captured.records())).not.toContain('Ann Lee')
+  })
+
+  it('names a sweeper that is not found, and a sweeper bowler who is not entered (SCR-19)', async () => {
+    const { overrides, url, tournament, sweeper, inSweeper } = setup()
+    const app = createSignedInTestApp(overrides)
+    const unknown = 'b0000000-0000-4000-8000-000000000009'
+
+    const noSweeper = await request(app)
+      .put(
+        `/v1/tournaments/${tournament.id}/sweepers/${unknown}/scores/${inSweeper.registrationId}/1`,
+      )
+      .send({ score: 200 })
+    expect(noSweeper.body).toEqual({ message: 'Sweeper not found' })
+    const stranger = await request(app)
+      .put(url(unknown, 1, sweeper.id, 'sweepers'))
+      .send({ score: 200 })
+    expect(stranger.body).toEqual({ message: 'Bowler is not registered for this sweeper' })
+  })
+
   it('refuses a game that is not digits, is 0, or is above the games with 400 (SCR-02, D-238)', async () => {
     const { overrides, url, ann } = setup()
     const app = createSignedInTestApp(overrides)
@@ -326,6 +360,16 @@ describe('DELETE .../scores/:registrationId/:game (SCR-19)', () => {
     const { overrides, url } = setup({ complete: true })
     const response = await request(createSignedInTestApp(overrides)).delete(url())
     expect(response.status).toBe(409)
+  })
+
+  it('logs a clear with ids and the game (SCR-19)', async () => {
+    const { overrides, url, captured, squad } = setup()
+    const app = createSignedInTestApp(overrides)
+    await request(app).put(url()).send({ score: 150 })
+    await request(app).delete(url())
+
+    const line = captured.records().find((entry) => entry.msg === 'Score cleared')
+    expect(line).toMatchObject({ squadId: squad.id, game: 1 })
   })
 
   it('publishes and drops the cache like a save (D-232)', async () => {

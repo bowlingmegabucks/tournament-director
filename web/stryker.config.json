@@ -12,6 +12,7 @@
     "!src/vite-env.d.ts"
   ],
   "vitest": { "configFile": "vitest.stryker.config.ts" },
+  "dryRunTimeoutMinutes": 15,
   "incremental": true,
   "reporters": ["clear-text", "html"],
   "dashboard": { "module": "web" },

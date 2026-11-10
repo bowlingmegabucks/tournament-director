@@ -107,7 +107,7 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 - [ ] Live score updates reach every open Scores tab, signed in or not, without polling (Q-33; polls every 15 s until then, D-72).
 - [ ] Load test with a full tournament's users and score entry.
 - [ ] Tournament lifecycle test: one UI-driven Playwright run on its own database and API (3 divisions, 4 squads, 2 sweepers, about 150 bowlers, 300 squad entries and 150 sweeper entries, scripted failures, hand-written expected results). Manual trigger, plus a job on `main` that deploy does not wait for. Built in stages as the features land. See [lifecycle-e2e.md](plans/lifecycle-e2e.md).
-- [x] Several desk users can work at once: lane moves and new registrations show on every open lane page over server-sent events (D-217 to D-219, Q-27), and two people racing for the last seat of a pair get one winner and a clear message for the other (D-216, D-220, Q-28). Scores and Results move to the stream in their own slice (D-222). The hub is one process (Q-39).
+- [x] Several desk users can work at once: lane moves and new registrations show on every open lane page over server-sent events (D-217 to D-219, Q-27), and two people racing for the last seat of a pair get one winner and a clear message for the other (D-216, D-220, Q-28). Scores and Results move to the stream in their own slice (D-222). The hub is one process (D-224).
 
 ## People
 

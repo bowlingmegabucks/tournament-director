@@ -57,7 +57,7 @@ The lane page keeps itself fresh over server-sent events: `GET /v1/tournaments/{
 - **HTTP version 2.0** on the Web App (**on**, checked 2026-11-09; portal: Configuration > General settings > HTTP version; or `az webapp update -g rg-tournamentdirector-prod -n app-tournamentdirector-prod --http20-enabled true`). Without it a browser holds at most 6 connections to the API across all tabs, and each open lane page holds one stream. Keep **HTTP 2.0 Proxy** off: Express speaks HTTP/1.1 only, and Azure's front end already speaks HTTP/2 to the browser.
 - **WebSockets are not needed.** SSE is plain HTTP.
 - **Idle limit.** Azure's front end closes a connection that is quiet for about 4 minutes. The stream sends a `: heartbeat` comment every 25 s, so it stays open.
-- **One instance only (Q-39, D-221).** The hub that tells open pages about a change lives in the Node process. With two instances, a change saved on one never reaches a page connected to the other. Do not scale the plan out until Q-39 is answered.
+- **One instance only (D-224).** The hub that tells open pages about a change lives in the Node process. With two instances, a change saved on one never reaches a page connected to the other, and the plan bill doubles. Do not scale the plan out; no autoscale rule.
 - **Deploys.** A deploy drops every stream. The server ends them first on SIGTERM, so shutdown does not wait out the 10 s limit, and each browser reconnects and refetches by itself.
 - The API refuses a stream past 500 open connections with `503`.
 - **Rate limit (D-223).** The default 100 requests a minute per address stays: two people do desk work. Raise `RATE_LIMIT_MAX` if more desks or many viewers share one address.

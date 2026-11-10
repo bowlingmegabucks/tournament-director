@@ -102,7 +102,7 @@ A page that must show other people's changes listens to a server-sent event stre
 - **Who may listen.** The route group declares its own access, like any route (`lanes.read` for the lane stream). Scores and Results will be `public`.
 - **Who publishes.** The route that wrote, after the commit, and only when something changed: the lane move (`moveRoutes.ts`), the squad and sweeper `PATCH` and `complete`, and every registration write (the `createPublishingRegistrationWriter` wrapper in `app.ts`, which reads the sessions before the write and publishes to each one after it, so the vendor routes need no change). A failed publish is logged and never fails the write.
 - **Shutdown.** An open stream never finishes, so `handleProcessEvents` calls `closeStreams` (the hub's `closeAll`) before it waits for the server. Without that, a deploy would hit the 10 s limit and exit with code 1.
-- **Limits.** 500 open streams (`MAX_STREAMS`), then `503`. One instance only (Q-39).
+- **Limits.** 500 open streams (`MAX_STREAMS`), then `503`. One instance only (D-224).
 - **Telemetry.** The stream's request span is skipped (`isQuietPath`): it lasts hours. The gauge `tournament_director.events.connections` and the counter `tournament_director.events.published` (by `kind`) show use. Logs are at `debug`, with ids and counts and never a name.
 - **Tests.** Supertest cannot read a stream that never ends, so `sseRoute.test.ts` opens a real local server and reads with `fetch`. Test a publisher with `recordingEvents()` (`test/recordingEvents.ts`).
 

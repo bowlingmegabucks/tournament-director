@@ -1,4 +1,4 @@
-import { parsePosition } from '../lanes/positions.ts'
+import { comparePositions, parsePosition } from '../lanes/positions.ts'
 import type { LaneEntry, LanePage } from '../lanes/types.ts'
 import { crossLanes, lanesInUse } from '../recapSheets/cross.ts'
 import type { Skip } from '../skip/store.ts'
@@ -28,12 +28,14 @@ export function buildGamesView(
     storedOf.set(bowlerId, byGame)
   }
 
-  const seated = lanePage.pairs.filter((pair) => pair.bowlers.length > 0)
-  const lanes = lanesInUse(seated)
-  const pairOfLane = new Map(seated.flatMap((pair) => pair.lanes.map((lane) => [lane, pair])))
+  // `lanesInUse` skips a pair with no bowler, so a lane no bowler can reach is never looked up.
+  const lanes = lanesInUse(lanePage.pairs)
+  const pairOfLane = new Map(
+    lanePage.pairs.flatMap((pair) => pair.lanes.map((lane) => [lane, pair])),
+  )
 
   // One row per bowler with a lane: where they bowl each game, and their scores.
-  const rows = seated.flatMap((pair) =>
+  const rows = lanePage.pairs.flatMap((pair) =>
     pair.bowlers.flatMap((bowler) => {
       const position = parsePosition(bowler.position)
       // A bowler in a pair always has a position that parses; this only narrows the type.
@@ -74,7 +76,12 @@ export function buildGamesView(
         firstLane,
         lanes: pairLanes,
         bowlers: bowlers
-          .toSorted((a, b) => a.lane - b.lane || (a.row.letter < b.row.letter ? -1 : 1))
+          .toSorted((a, b) =>
+            comparePositions(
+              { lane: a.lane, letter: a.row.letter },
+              { lane: b.lane, letter: b.row.letter },
+            ),
+          )
           .map(({ lane, row }): GameBowler => ({
             registrationId: row.bowler.registrationId,
             name: row.bowler.name,

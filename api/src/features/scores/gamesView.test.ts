@@ -27,8 +27,10 @@ const cal = createLaneEntry({ divisionId: open.id, position: '3A', name: 'Cal Od
 const dee = createLaneEntry({ divisionId: open.id, position: '4A', name: 'Dee Park' })
 const late = createLaneEntry({ divisionId: open.id, position: '', name: 'Lou Late' })
 
-function view(options: { skip?: Skip; scores?: ScoreRow[]; games?: number } = {}) {
-  const entries = [ann, bea, cal, dee, late]
+function view(
+  options: { skip?: Skip; scores?: ScoreRow[]; games?: number; extra?: (typeof ann)[] } = {},
+) {
+  const entries = [ann, bea, cal, dee, late, ...(options.extra ?? [])]
   const { page } = buildLanePage(session, entries, [open])
   return buildGamesView(
     page,
@@ -126,13 +128,29 @@ describe('buildGamesView', () => {
     expect(built.games[0]?.entered).toBe(0)
   })
 
-  it('counts bowlers with no lane and does not list them (D-71)', () => {
-    const built = view()
-    expect(built.withoutLane).toBe(1)
+  it('counts bowlers with no lane and with a position outside the lanes, and lists neither (D-71)', () => {
+    const lost = createLaneEntry({ divisionId: open.id, position: '77A', name: 'Lost Lena' })
+    const built = view({ extra: [lost] })
+    expect(built.withoutLane).toBe(2)
     const names = built.games.flatMap((game) =>
       game.pairs.flatMap((pair) => pair.bowlers.map((b) => b.name)),
     )
     expect(names).not.toContain('Lou Late')
+  })
+
+  it('sorts bowlers of a pair by lane, then letter (LAN-04)', () => {
+    const entries = [
+      createLaneEntry({ divisionId: open.id, position: '1B', name: 'Second B' }),
+      createLaneEntry({ divisionId: open.id, position: '2A', name: 'Third' }),
+      createLaneEntry({ divisionId: open.id, position: '1A', name: 'First A' }),
+    ]
+    const { page } = buildLanePage(session, entries, [open])
+    const built = buildGamesView(page, entries, [], 1, 'staggered')
+    expect(built.games[0]?.pairs[0]?.bowlers.map((bowler) => bowler.lane)).toEqual([
+      '1A',
+      '1B',
+      '2A',
+    ])
   })
 
   it('lists a one game session with one game (SCR-22)', () => {

@@ -35,7 +35,11 @@ import { createEditRegistrationRouter } from './features/registrations/editRoute
 import { createVendorRegistrationRouter } from './features/registrations/vendorRoutes.ts'
 import { createPublishingRegistrationWriter } from './features/registrations/publishingWriter.ts'
 import type { RegistrationWriter } from './features/registrations/writer.ts'
-import { createFinalsRouter, createResultsRouter } from './features/results/routes.ts'
+import {
+  createFinalsRouter,
+  createLiveResultsRouter,
+  createResultsRouter,
+} from './features/results/routes.ts'
 import { createScoreWriteRouter } from './features/scores/scoreRoutes.ts'
 import type { ScoreWriter } from './features/scores/scoreWriter.ts'
 import { createScoreCache, dropCacheOnPublish } from './features/scores/scoreCache.ts'
@@ -490,6 +494,11 @@ export function createApp({
           events,
           logger,
         }),
+      },
+      {
+        path: '/v1/tournaments/:id/live-results',
+        access: 'public', // RES-47, D-242: the TV page loads this; no sign-in
+        router: createLiveResultsRouter(resultsDeps, scoreCache),
       },
       {
         path: '/v1/tournaments/:id/live-results/events',

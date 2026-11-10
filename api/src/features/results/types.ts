@@ -265,3 +265,25 @@ export const superSweeperResultsSchema = z.object({
 })
 
 export type SuperSweeperResults = z.infer<typeof superSweeperResultsSchema>
+
+/**
+ * What the TV page loads once (RES-47, D-244): every squad (by division), every sweeper, and the
+ * super sweeper, all ranked through the last full game. Only sessions with scores are listed. Web
+ * only, public, never vendor-visible (D-09). It carries no more personal data than its parts (BWL-17).
+ */
+export const liveResultsSchema = z.object({
+  tournament: z.object({ id: z.uuid(), name: z.string() }),
+  /** When the answer was worked out, for the "Updated 3:41 pm" line. */
+  generatedAt: z.iso.datetime(),
+  /** Squads in date order, then sweepers in date order (D-242). */
+  sessions: z.array(
+    z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('squad'), results: squadResultsSchema }),
+      z.object({ kind: z.literal('sweeper'), results: sweeperResultsSchema }),
+    ]),
+  ),
+  /** `null` when no one has a sweeper score in the super sweeper. */
+  superSweeper: superSweeperResultsSchema.nullable(),
+})
+
+export type LiveResults = z.infer<typeof liveResultsSchema>

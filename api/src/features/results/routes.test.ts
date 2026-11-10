@@ -19,8 +19,8 @@ import { createScoreCache } from '../scores/scoreCache.ts'
 import { createInMemorySquadRepository } from '../squads/repository.ts'
 import { createInMemorySweeperRepository } from '../sweepers/repository.ts'
 import { createInMemoryTournamentRepository } from '../tournaments/repository.ts'
-import { createResultsRouter } from './routes.ts'
-import { squadResultsSchema, sweeperResultsSchema } from './types.ts'
+import { createLiveResultsRouter, createResultsRouter } from './routes.ts'
+import { liveResultsSchema, squadResultsSchema, sweeperResultsSchema } from './types.ts'
 
 function setup(options: { squadOver?: Parameters<typeof createSquad>[0] } = {}) {
   const tournament = createTournament()
@@ -512,5 +512,85 @@ describe('results ranking mode and division filter (RES-45, RES-48)', () => {
     )
     expect(response.status).toBe(200)
     expect(response.body.rows).toHaveLength(4)
+  })
+})
+
+describe('GET /v1/tournaments/:id/live-results (RES-47)', () => {
+  it('returns every session with scores, public and as JSON', async () => {
+    const { app, tournament, squad, sweeper } = setup()
+
+    const response = await request(app).get(`/v1/tournaments/${tournament.id}/live-results`)
+
+    expect(response.status).toBe(200)
+    expect(response.headers['content-type']).toMatch(/application\/json/)
+    expect(liveResultsSchema.safeParse(response.body).success).toBe(true)
+    expect(response.body.tournament.id).toBe(tournament.id)
+    expect(
+      response.body.sessions.map((s: { kind: string; results: { session: { id: string } } }) => [
+        s.kind,
+        s.results.session.id,
+      ]),
+    ).toEqual([
+      ['squad', squad.id],
+      ['sweeper', sweeper.id],
+    ])
+    expect(response.body.sessions[0].results.mode).toBe('full-game')
+  })
+
+  it('answers 404 for an unknown tournament and 400 for an id that is not a UUID', async () => {
+    const { app } = setup()
+
+    expect(
+      (await request(app).get(`/v1/tournaments/${crypto.randomUUID()}/live-results`)).status,
+    ).toBe(404)
+    expect((await request(app).get('/v1/tournaments/nope/live-results')).status).toBe(400)
+  })
+
+  it('answers 422 when a squad has a ratio of 0 (D-83)', async () => {
+    const tournament = createTournament()
+    const squad = createSquad({ cashRatio: 0 })
+    const app = createTestApp({
+      tournaments: createInMemoryTournamentRepository([tournament]),
+      squads: createInMemorySquadRepository([{ tournamentId: tournament.id, squad }]),
+    })
+
+    const response = await request(app).get(`/v1/tournaments/${tournament.id}/live-results`)
+
+    expect(response.status).toBe(422)
+  })
+
+  it('keeps the answer for the cache window, and a drop of the tournament clears it (D-244)', async () => {
+    const tournament = createTournament()
+    const inner = createInMemoryTournamentRepository([tournament])
+    let calls = 0
+    const cache = createScoreCache(60_000)
+    const router = createLiveResultsRouter(
+      {
+        tournaments: {
+          ...inner,
+          get: (id: string) => {
+            calls++
+            return inner.get(id)
+          },
+        },
+        divisions: createInMemoryDivisionRepository([]),
+        squads: createInMemorySquadRepository([]),
+        sweepers: createInMemorySweeperRepository([]),
+        lanes: createInMemoryLaneRepository([]),
+        scores: createInMemoryScoreRepository([]),
+        dnf: createInMemoryDnfStore().store,
+        logger: createCapturedLogger().logger,
+      },
+      cache,
+    )
+    const app = express().use('/:id', router)
+
+    await request(app).get(`/${tournament.id}`).expect(200)
+    await request(app).get(`/${tournament.id}`).expect(200)
+    expect(calls).toBe(1)
+
+    cache.dropTournament(tournament.id)
+    await request(app).get(`/${tournament.id}`).expect(200)
+    expect(calls).toBe(2)
   })
 })

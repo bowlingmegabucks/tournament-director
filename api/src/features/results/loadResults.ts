@@ -1,16 +1,18 @@
 import { HttpError } from '../../shared/errors.ts'
 import type { DivisionRepository } from '../divisions/repository.ts'
+import type { Division } from '../divisions/types.ts'
 import type { LaneRepository } from '../lanes/repository.ts'
 import type { DnfStore } from '../dnf/store.ts'
 import type { ScoreRepository } from '../scores/repository.ts'
 import type { SquadRepository } from '../squads/repository.ts'
+import type { Squad } from '../squads/types.ts'
 import type { SweeperRepository } from '../sweepers/repository.ts'
 import type { TournamentRepository } from '../tournaments/repository.ts'
 import { toDivisionResult } from './divisionResult.ts'
 import { buildResultEntries, sweeperPins, type ResultEntry } from './entries.ts'
 import { limitToCountedGames, type RankMode } from './fullGame.ts'
 import { compareText, reportSkipped, requireRatios, type Reporting } from './resultHelpers.ts'
-import { workOutSquads, type FlowOptions } from './squadFlow.ts'
+import { workOutSquads, type FlowOptions, type WorkedSquad } from './squadFlow.ts'
 import { workOutSweeper } from './sweeperResults.ts'
 import { markCashLine, markTies } from './ties.ts'
 import type { SquadResults, SweeperResults } from './types.ts'
@@ -27,6 +29,48 @@ export interface ResultsDeps {
 
 /** What the results routes pass on: the ranking mode (D-239) and the DNF flags (D-248). */
 export type ResultsOptions = FlowOptions
+
+/**
+ * One worked squad as the page reads it: each division with its rows, lines, and counted games
+ * (RES-10, RES-40). The one-squad route and the TV feed both draw it.
+ */
+export function toSquadResults(
+  squad: Squad,
+  worked: WorkedSquad,
+  divisions: readonly Division[],
+  mode: RankMode,
+): SquadResults {
+  const { outcomes, advancedBefore, flagged } = worked
+  // The advancers of every squad before this one decide who is an earlier advancer (RES-06).
+  const divisionById = new Map(divisions.map((division) => [division.id, division]))
+  const results = outcomes.flatMap(({ divisionId, outcome, throughGame }) => {
+    const division = divisionById.get(divisionId)
+    if (!division) return []
+    return [
+      toDivisionResult(
+        division,
+        outcome,
+        markTies(outcome, advancedBefore),
+        advancedBefore,
+        throughGame,
+        flagged,
+      ),
+    ]
+  })
+  return {
+    session: {
+      id: squad.id,
+      kind: 'squad',
+      date: squad.date,
+      complete: squad.complete,
+      games: squad.games,
+    },
+    mode,
+    finalsRatio: squad.finalsRatio,
+    cashRatio: squad.cashRatio,
+    divisions: results.toSorted((a, b) => compareText(a.name, b.name) || a.number - b.number),
+  }
+}
 
 /**
  * RES-01 to RES-11b, D-75, D-81: the results of one squad, division by division.
@@ -65,37 +109,8 @@ export async function loadSquadResults(
   const current = worked[index]
   // Stryker disable next-line all: unreachable. `worked` has one entry for each squad up to this one.
   if (!current) throw new HttpError(404, 'Squad not found')
-  const { outcomes, skipped, advancedBefore, flagged: flaggedHere } = current
-  // The advancers of every squad before this one decide who is an earlier advancer (RES-06).
-  const divisionById = new Map(divisions.map((division) => [division.id, division]))
-  reportSkipped(reporting, sessionId, skipped)
-  const results = outcomes.flatMap(({ divisionId, outcome, throughGame }) => {
-    const division = divisionById.get(divisionId)
-    if (!division) return []
-    return [
-      toDivisionResult(
-        division,
-        outcome,
-        markTies(outcome, advancedBefore),
-        advancedBefore,
-        throughGame,
-        flaggedHere,
-      ),
-    ]
-  })
-  return {
-    session: {
-      id: squad.id,
-      kind: 'squad',
-      date: squad.date,
-      complete: squad.complete,
-      games: squad.games,
-    },
-    mode: options.mode ?? 'live',
-    finalsRatio: squad.finalsRatio,
-    cashRatio: squad.cashRatio,
-    divisions: results.toSorted((a, b) => compareText(a.name, b.name) || a.number - b.number),
-  }
+  reportSkipped(reporting, sessionId, current.skipped)
+  return toSquadResults(squad, current, divisions, options.mode ?? 'live')
 }
 
 /**

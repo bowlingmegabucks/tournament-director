@@ -5,6 +5,7 @@ import { requestLogger } from '../../shared/requestLogging.ts'
 import { cacheKey, createTtlCache, LIVE_CACHE_MS } from '../../shared/ttlCache.ts'
 import { createScoreCache, type ScoreCache } from '../scores/scoreCache.ts'
 import { loadAtLarge, loadSeeding, loadSuperSweeper } from './loadFinals.ts'
+import { loadLiveResults } from './loadLiveResults.ts'
 import { loadSquadResults, loadSweeperResults, type ResultsDeps } from './loadResults.ts'
 import type { RankMode } from './fullGame.ts'
 import { rankModeSchema, type SquadResults } from './types.ts'
@@ -100,6 +101,35 @@ export function createFinalsRouter(
     const logger = requestLogger(res, deps.logger)
     const key = kind === 'super-sweeper' ? cacheKey(id, mode) : cacheKey(id)
     res.json(await cached(key, () => loadAnswer(logger, id, mode)))
+  })
+
+  return router
+}
+
+/**
+ * Mounted at `/v1/tournaments/:id/live-results` (RES-47). The TV page's first load: every squad,
+ * sweeper, and the super sweeper, ranked through the last full game, in one answer (D-244). Web
+ * only, not part of the vendor contract (D-09), and public (D-242). An unknown tournament is a 404,
+ * a ratio of 0 or less a 422. It shares the scores page's cache (D-232), so a save, a flag, or a
+ * complete drops it before the TV is told to ask again (`dropTournament`).
+ */
+export function createLiveResultsRouter(
+  deps: ResultsDeps & { logger: Logger },
+  cache: ScoreCache = createScoreCache(),
+): Router {
+  const router = Router({ mergeParams: true })
+  // A bad stored row stays bad on every poll. Say so once per process (D-51).
+  const reported = new Set<string>()
+
+  // Stryker disable next-line StringLiteral: '' and '/' match the same path.
+  router.get('/', async (req, res) => {
+    const { id } = tournamentParams.parse(req.params)
+    const logger = requestLogger(res, deps.logger)
+    res.json(
+      await cache.cached(cacheKey('live-results', id), () =>
+        loadLiveResults(deps, { logger, reported }, id),
+      ),
+    )
   })
 
   return router

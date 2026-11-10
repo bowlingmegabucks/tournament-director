@@ -255,6 +255,7 @@ describe('routes that stay public (D-09, D-70, D-74, D-85)', () => {
     ['at-large', `${base}/at-large`, 404],
     ['seeding', `${base}/seeding`, 404],
     ['super sweeper', `${base}/super-sweeper`, 404],
+    ['live results feed (RES-47)', `${base}/live-results`, 404],
     ['live results stream (RES-49)', `${base}/live-results/events`, 404],
   ])('answers an anonymous caller on the %s route (not 401)', async (_name, path, status) => {
     const response = await request(createTestApp()).get(path)

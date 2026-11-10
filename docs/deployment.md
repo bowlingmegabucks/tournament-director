@@ -50,9 +50,13 @@ The web build hides the Sign in link and `/login` unless `VITE_SHOW_SIGN_IN=true
 
 The site (`https://bowlingmegabucks.com/tournament-director/`) and the API (`*.azurewebsites.net`) are different origins. `web/` reads the API origin from `VITE_API_BASE_URL` (`apiUrl()` in `web/src/shared/apiUrl.ts`; empty in dev, where Vite proxies `/api`), and `CORS_ORIGIN` on the API must be the site's origin.
 
+### Database script for the skip (D-235)
+
+Run `api/prisma/score-tables.sql` once on the production database **before the deploy that ships score entry**. It creates `SessionSkip` if it is missing, so running it again is safe, and it touches no legacy table. Without it the skip routes, recap sheets, and score entry answer `503`. Same way as the sign-in tables ([api-standards](api-standards.md#database)). Locally: `docker exec -i tournament-director-db mariadb -uroot -p<password> <database> < api/prisma/score-tables.sql`.
+
 ### Live updates (SSE, D-217)
 
-The lane page keeps itself fresh over server-sent events: `GET /v1/tournaments/{id}/squads/{sessionId}/events` (and the sweeper twin). The streams go from the browser straight to the API's origin, so only the Azure settings matter, not GreenGeeks.
+The lane page keeps itself fresh over server-sent events: `GET /v1/tournaments/{id}/squads/{sessionId}/events` (and the sweeper twin). The Scores tab and score entry listen to the public `…/scores/events` the same way (D-232); both streams count against the 500. The streams go from the browser straight to the API's origin, so only the Azure settings matter, not GreenGeeks.
 
 - **HTTP version 2.0** on the Web App (**on**, checked 2026-11-09; portal: Configuration > General settings > HTTP version; or `az webapp update -g rg-tournamentdirector-prod -n app-tournamentdirector-prod --http20-enabled true`). Without it a browser holds at most 6 connections to the API across all tabs, and each open lane page holds one stream. Keep **HTTP 2.0 Proxy** off: Express speaks HTTP/1.1 only, and Azure's front end already speaks HTTP/2 to the browser.
 - **WebSockets are not needed.** SSE is plain HTTP.
@@ -60,7 +64,7 @@ The lane page keeps itself fresh over server-sent events: `GET /v1/tournaments/{
 - **One instance only (D-224).** The hub that tells open pages about a change lives in the Node process. With two instances, a change saved on one never reaches a page connected to the other, and the plan bill doubles. Do not scale the plan out; no autoscale rule.
 - **Deploys.** A deploy drops every stream. The server ends them first on SIGTERM, so shutdown does not wait out the 10 s limit, and each browser reconnects and refetches by itself.
 - The API refuses a stream past 500 open connections with `503`.
-- **Rate limit (D-223).** The default 100 requests a minute per address stays: two people do desk work. Raise `RATE_LIMIT_MAX` if more desks or many viewers share one address.
+- **Rate limit (D-223, D-232).** The default 100 requests a minute per address stays for every route except the live score routes, which count apart at `LIVE_RATE_LIMIT_MAX` (default 600) so a venue full of phones watching scores does not lock out the keepers. Raise `RATE_LIMIT_MAX` if more desks share one address, and `LIVE_RATE_LIMIT_MAX` if more viewers do.
 
 ### Custom domain (0.4.0)
 

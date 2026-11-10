@@ -35,8 +35,14 @@ import { createVendorRegistrationRouter } from './features/registrations/vendorR
 import { createPublishingRegistrationWriter } from './features/registrations/publishingWriter.ts'
 import type { RegistrationWriter } from './features/registrations/writer.ts'
 import { createFinalsRouter, createResultsRouter } from './features/results/routes.ts'
+import { createScoreWriteRouter } from './features/scores/scoreRoutes.ts'
+import type { ScoreWriter } from './features/scores/scoreWriter.ts'
+import { createScoreCache, dropCacheOnPublish } from './features/scores/scoreCache.ts'
+import { createGamesRouter } from './features/scores/gamesRoutes.ts'
 import { createScoreRouter } from './features/scores/routes.ts'
 import type { ScoreRepository } from './features/scores/repository.ts'
+import { createSkipRouter } from './features/skip/routes.ts'
+import type { SkipStore } from './features/skip/store.ts'
 import { createSquadRouter } from './features/squads/routes.ts'
 import type { SquadRepository } from './features/squads/repository.ts'
 import { createSquadCreateRouter } from './features/squads/createRoutes.ts'
@@ -113,6 +119,10 @@ export interface AppDependencies {
   /** Tells open screens that a session changed (D-217). */
   events: SessionEvents
   scores: ScoreRepository
+  /** Saves and clears one score at a time (SCR-19, D-228). */
+  scoreWriter: ScoreWriter
+  /** The stored skip of each squad and sweeper (SCR-23, D-235). */
+  skipStore: SkipStore
   squads: SquadRepository
   /** Adds squads (SQD-01 to SQD-08, D-167). */
   squadWriter: SquadWriter
@@ -140,8 +150,10 @@ export function createApp({
   bowlers,
   lanes,
   laneWriter,
-  events,
+  events: sessionEvents,
   scores,
+  scoreWriter,
+  skipStore,
   squads,
   squadWriter,
   sweepers,
@@ -150,6 +162,10 @@ export function createApp({
   // Stryker disable next-line StringLiteral: the scope name only labels the metrics.
   meter = metrics.getMeter('tournament-director-api'),
 }: AppDependencies): express.Express {
+  // One cache for the public scores page. Every change message drops it first, so a refetch after a
+  // complete, a lane move, a session edit, or a registration write gets the new page (D-232).
+  const scoreCache = createScoreCache()
+  const events = dropCacheOnPublish(sessionEvents, scoreCache)
   // Every registration write, desk or vendor, tells the open lane pages of the sessions it touches
   // (LAN-22, D-219). The routes below see only this wrapper.
   const registrationWriter = createPublishingRegistrationWriter(
@@ -176,6 +192,20 @@ export function createApp({
   // Before the routes, so each one's access label can see who is calling (D-95, D-96).
   app.use(identifyCaller({ apiKey: config.apiKey, auth, logger }))
 
+  const skipSquadRouter = createSkipRouter('squad', {
+    store: skipStore,
+    findSession: findSquad(squads),
+    tournaments,
+    events,
+    logger,
+  })
+  const skipSweeperRouter = createSkipRouter('sweeper', {
+    store: skipStore,
+    findSession: findSweeper(sweepers),
+    tournaments,
+    events,
+    logger,
+  })
   // The five results routes (squad, sweeper, at-large, seeding, super sweeper) read the same data.
   const resultsDeps = { tournaments, divisions, squads, sweepers, lanes, scores, logger }
 
@@ -398,26 +428,108 @@ export function createApp({
         }),
       },
       {
-        path: '/v1/tournaments/:id/squads/:sessionId/scores',
-        access: 'public', // D-70: public for good, so viewers who are not signed in watch scores
-        router: createScoreRouter('squad', findSquad(squads), {
+        path: '/v1/tournaments/:id/squads/:sessionId/skip',
+        access: { permission: 'lanes.read' }, // SCR-23, D-235: signed in; the API key cannot reach it
+        methods: ['GET'],
+        router: skipSquadRouter,
+      },
+      {
+        path: '/v1/tournaments/:id/squads/:sessionId/skip',
+        access: { permission: 'scores.write' }, // SCR-23, D-235: score keeper, director, admin
+        methods: ['PUT'],
+        router: skipSquadRouter,
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers/:sessionId/skip',
+        access: { permission: 'lanes.read' }, // SCR-23, D-235
+        methods: ['GET'],
+        router: skipSweeperRouter,
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers/:sessionId/skip',
+        access: { permission: 'scores.write' }, // SCR-23, D-235
+        methods: ['PUT'],
+        router: skipSweeperRouter,
+      },
+      {
+        path: '/v1/tournaments/:id/squads/:sessionId/scores/events',
+        access: 'public', // SCR-20, D-232: bowlers watch scores come in, so no sign-in
+        router: createLaneEventsRouter('squad', findSquad(squads), { tournaments, events, logger }),
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers/:sessionId/scores/events',
+        access: 'public', // SCR-20, D-232
+        router: createLaneEventsRouter('sweeper', findSweeper(sweepers), {
+          tournaments,
+          events,
+          logger,
+        }),
+      },
+      {
+        path: '/v1/tournaments/:id/squads/:sessionId/scores/games',
+        access: { permission: 'scores.write' }, // SCR-22, D-234: entry only; the API key cannot reach it
+        router: createGamesRouter('squad', findSquad(squads), {
           lanes,
           tournaments,
           divisions,
           scores,
+          skipStore,
+          logger,
+        }),
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers/:sessionId/scores/games',
+        access: { permission: 'scores.write' }, // SCR-22, D-234
+        router: createGamesRouter('sweeper', findSweeper(sweepers), {
+          lanes,
+          tournaments,
+          divisions,
+          scores,
+          skipStore,
+          logger,
+        }),
+      },
+      {
+        path: '/v1/tournaments/:id/squads/:sessionId/scores',
+        access: { permission: 'scores.write' }, // SCR-19, D-228: no API key
+        methods: ['PUT', 'DELETE'],
+        router: createScoreWriteRouter('squad', {
+          writer: scoreWriter,
+          cache: scoreCache,
+          events,
           logger,
         }),
       },
       {
         path: '/v1/tournaments/:id/sweepers/:sessionId/scores',
-        access: 'public', // D-70
-        router: createScoreRouter('sweeper', findSweeper(sweepers), {
-          lanes,
-          tournaments,
-          divisions,
-          scores,
+        access: { permission: 'scores.write' }, // SCR-19, D-228
+        methods: ['PUT', 'DELETE'],
+        router: createScoreWriteRouter('sweeper', {
+          writer: scoreWriter,
+          cache: scoreCache,
+          events,
           logger,
         }),
+      },
+      {
+        path: '/v1/tournaments/:id/squads/:sessionId/scores',
+        access: 'public', // D-70: public for good, so viewers who are not signed in watch scores
+        router: createScoreRouter(
+          'squad',
+          findSquad(squads),
+          { lanes, tournaments, divisions, scores, logger },
+          scoreCache,
+        ),
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers/:sessionId/scores',
+        access: 'public', // D-70
+        router: createScoreRouter(
+          'sweeper',
+          findSweeper(sweepers),
+          { lanes, tournaments, divisions, scores, logger },
+          scoreCache,
+        ),
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/results',
@@ -447,20 +559,22 @@ export function createApp({
       {
         path: '/v1/tournaments/:id/squads/:sessionId/recap-sheets',
         access: { permission: 'lanes.read' }, // D-66, D-52: signed in; the API key cannot reach it
-        router: createRecapSheetRouter('squad', findSquad(squads), {
-          lanes,
-          tournaments,
-          divisions,
-        }),
+        router: createRecapSheetRouter(
+          'squad',
+          findSquad(squads),
+          { lanes, tournaments, divisions },
+          skipStore,
+        ),
       },
       {
         path: '/v1/tournaments/:id/sweepers/:sessionId/recap-sheets',
         access: { permission: 'lanes.read' }, // D-66, D-52: signed in; the API key cannot reach it
-        router: createRecapSheetRouter('sweeper', findSweeper(sweepers), {
-          lanes,
-          tournaments,
-          divisions,
-        }),
+        router: createRecapSheetRouter(
+          'sweeper',
+          findSweeper(sweepers),
+          { lanes, tournaments, divisions },
+          skipStore,
+        ),
       },
       {
         path: '/v1/tournaments/:id/registrations',

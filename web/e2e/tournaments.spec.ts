@@ -356,8 +356,11 @@ test('the recap sheets dialog previews every sheet, switches the skip, and picks
 
   const first = dialog.getByRole('article').first()
   const staggered = await first.getByRole('cell').allTextContents()
-  await dialog.getByRole('radio', { name: 'Same skip' }).check()
-  expect(await first.getByRole('cell').allTextContents()).not.toEqual(staggered)
+  await dialog.getByRole('radio', { name: 'Same skip' }).click()
+  await expect(dialog.getByRole('radio', { name: 'Same skip' })).toBeChecked()
+  await expect(async () => {
+    expect(await first.getByRole('cell').allTextContents()).not.toEqual(staggered)
+  }).toPass()
 
   await dialog
     .getByRole('checkbox', { name: /^Print / })
@@ -442,9 +445,12 @@ test('the Scores tab shows a part-scored squad by lane pair, and notes bowlers w
 }) => {
   await openSquad(page, '1:00 PM')
 
-  await page.getByRole('link', { name: 'Scores' }).click()
+  await page.getByRole('link', { name: 'Scores', exact: true }).click()
 
-  await expect(page.getByRole('link', { name: 'Scores' })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('link', { name: 'Scores', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  )
   await expect(page.getByRole('heading', { level: 2, name: 'Lanes 1-2' })).toBeVisible()
   await expect(page.getByRole('heading', { level: 2, name: 'Lanes 3-4' })).toBeVisible()
   const first = page.getByRole('table', { name: 'Scores for lanes 1-2' })
@@ -460,7 +466,7 @@ test('the Scores tab of a complete squad says it cannot change and shows a no-sh
 }) => {
   await openSquad(page, '9:00 AM')
 
-  await page.getByRole('link', { name: 'Scores' }).click()
+  await page.getByRole('link', { name: 'Scores', exact: true }).click()
 
   await expect(page.getByText('This squad is complete. Scores cannot change.')).toBeVisible()
   await expect(page.getByRole('table', { name: 'Scores for lanes 1-2' })).toBeVisible()
@@ -469,7 +475,7 @@ test('the Scores tab of a complete squad says it cannot change and shows a no-sh
 test('the Scores tab does not scroll sideways on a phone (D-73)', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 800 })
   await openSquad(page, '1:00 PM')
-  await page.getByRole('link', { name: 'Scores' }).click()
+  await page.getByRole('link', { name: 'Scores', exact: true }).click()
   await expect(page.getByRole('heading', { level: 2, name: 'Lanes 1-2' })).toBeVisible()
 
   const overflow = await page.evaluate(

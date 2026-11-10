@@ -1,6 +1,7 @@
 import type { LanePage } from '../lanes/types.ts'
 import { parsePosition } from '../lanes/positions.ts'
-import { crossLanes, lanesInUse, type SkipPattern } from './cross.ts'
+import { crossLanes, lanesInUse } from './cross.ts'
+import type { Skip } from '../skip/store.ts'
 import type { RecapSheets } from './types.ts'
 
 /**
@@ -15,6 +16,7 @@ export function buildRecapSheets(
   page: LanePage,
   games: number,
   withoutDivision: number,
+  skip: Skip,
 ): RecapSheets {
   const lanes = lanesInUse(page.pairs)
 
@@ -23,7 +25,7 @@ export function buildRecapSheets(
       const position = parsePosition(bowler.position)
       // A bowler in a pair always has a position that parses; this only narrows the type.
       if (!position) return []
-      const cross = (pattern: SkipPattern) =>
+      const cross = (pattern: Skip) =>
         crossLanes(position.lane, lanes, games, pattern).map((lane) => `${lane}${position.letter}`)
       return [
         {
@@ -46,6 +48,7 @@ export function buildRecapSheets(
       games,
       complete: page.session.complete,
     },
+    skip,
     sheets,
     withoutLane: page.unassigned.length + page.other.length,
     withoutDivision,

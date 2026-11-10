@@ -121,6 +121,10 @@ describe('fetchRecapSheets (RPT-08)', () => {
     ['handicap', { handicap: '47' }],
     ['cross', { cross: undefined }],
     ['the staggered cross', { cross: { staggered: 'x', same: [] } }],
+    [
+      'a staggered cross with one non-text lane among text',
+      { cross: { staggered: [4, '1A'], same: [] } },
+    ],
     ['a staggered lane that is not text', { cross: { staggered: ['1A', 4], same: [] } }],
     ['the same cross', { cross: { staggered: [], same: undefined } }],
     ['a same lane that is not text', { cross: { staggered: [], same: ['4A', 4] } }],
@@ -152,6 +156,8 @@ describe('fetchRecapSheets (RPT-08)', () => {
     ['no session', { ...recap, session: undefined }],
     ['no sheets', { ...recap, sheets: undefined }],
     ['sheets that is not an array', { ...recap, sheets: 'none' }],
+    ['a skip that is not a pattern', { ...recap, skip: 'zigzag' }],
+    ['no skip', { ...recap, skip: undefined }],
     ['no withoutLane', { ...recap, withoutLane: undefined }],
     ['no withoutDivision', { ...recap, withoutDivision: undefined }],
   ])('rejects %s', async (_label, body) => {

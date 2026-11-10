@@ -14,6 +14,7 @@ import { SeedingPage } from './features/results/SeedingPage'
 import { SuperSweeperPage } from './features/results/SuperSweeperPage'
 import { SquadResultsPage } from './features/results/SquadResultsPage'
 import { SweeperResultsPage } from './features/results/SweeperResultsPage'
+import { EntryPage } from './features/scores/EntryPage'
 import { ScoresPage } from './features/scores/ScoresPage'
 import { OpenLanes, SquadPortal, SweeperPortal } from './features/lanes/SessionPortal'
 import { AddRegistrationPage } from './features/registrations/AddRegistrationPage'
@@ -106,6 +107,14 @@ export default function App() {
               }
             />
             <Route path="scores" element={<ScoresPage kind="squad" />} />
+            <Route
+              path="scores/entry/:game?/:firstLane?"
+              element={
+                <RequirePermission permission="scores.write">
+                  <EntryPage kind="squad" />
+                </RequirePermission>
+              }
+            />
             <Route path="results" element={<SquadResultsPage />} />
           </Route>
           <Route path="sweepers" element={<SweepersPage />} />
@@ -136,6 +145,14 @@ export default function App() {
               }
             />
             <Route path="scores" element={<ScoresPage kind="sweeper" />} />
+            <Route
+              path="scores/entry/:game?/:firstLane?"
+              element={
+                <RequirePermission permission="scores.write">
+                  <EntryPage kind="sweeper" />
+                </RequirePermission>
+              }
+            />
             <Route path="results" element={<SweeperResultsPage />} />
           </Route>
           <Route path="super-sweeper" element={<SuperSweeperPage />} />

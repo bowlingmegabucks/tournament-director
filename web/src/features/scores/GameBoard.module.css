@@ -1,0 +1,219 @@
+.board {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+  /* minmax(0, 1fr), not auto: an input's default width must not widen the column past the pane. */
+  grid-template-columns: minmax(0, 1fr);
+  min-inline-size: 0;
+}
+
+.note {
+  margin: 0;
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.games {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(auto-fit, minmax(4.75rem, 1fr));
+}
+
+.gameLink {
+  display: grid;
+  min-block-size: var(--target-min);
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text);
+  text-decoration: none;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.gameLink[aria-current='true'] {
+  background: var(--color-surface);
+  border: 2px solid var(--color-accent);
+}
+
+.gameLink small,
+.muted {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+
+.skip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.skipLegend {
+  float: inline-start;
+  margin-inline-end: var(--space-3);
+  padding: 0;
+  font-size: var(--font-size-sm);
+}
+
+.skipOption {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-block-size: var(--target-min);
+}
+
+.problem {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+.search input {
+  inline-size: 100%;
+}
+
+.search {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+}
+
+.search input,
+.range input {
+  box-sizing: border-box;
+  min-inline-size: 0;
+  min-block-size: var(--target-min);
+  padding: 0 var(--space-3);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  font: inherit;
+}
+
+.found {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.found a {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  align-items: center;
+  min-block-size: var(--target-min);
+  padding: 0 var(--space-3);
+  color: var(--color-text);
+  text-decoration: none;
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: end;
+}
+
+.range label {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+}
+
+.range input {
+  inline-size: 5rem;
+}
+
+.secondary {
+  min-block-size: var(--target-min);
+  padding: 0 var(--space-3);
+  background: transparent;
+  color: var(--color-accent);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius);
+  font: inherit;
+}
+
+.tiles {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tile {
+  display: grid;
+  gap: var(--space-1);
+  min-block-size: var(--target-min);
+  padding: var(--space-3);
+  color: var(--color-text);
+  text-decoration: none;
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.tile strong {
+  font-size: var(--font-size-lg);
+}
+
+.tile[aria-current='page'] {
+  border: 2px solid var(--color-accent);
+}
+
+.ok,
+.part,
+.wait {
+  font-size: var(--font-size-sm);
+}
+
+.ok {
+  color: var(--color-success);
+}
+
+.part {
+  color: var(--color-accent);
+}
+
+.wait {
+  color: var(--color-text-muted);
+}
+
+/*
+ * From a tablet up, the board is the left pane. It stays in view while the sheet beside it scrolls,
+ * and only its list of pairs scrolls inside it (never sideways), so twenty pairs never push the
+ * sheet off screen.
+ */
+@media (min-width: 48rem) {
+  .board {
+    position: sticky;
+    inset-block-start: var(--space-3);
+    max-block-size: calc(100dvh - var(--space-6));
+    grid-template-rows: auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-inline-end: var(--space-1);
+  }
+
+  .tiles {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 48rem) and (max-width: 63.99rem) {
+  .tiles {
+    grid-template-columns: 1fr;
+  }
+}

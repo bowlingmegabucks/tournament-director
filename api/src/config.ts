@@ -36,6 +36,7 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(logLevels).default('info'),
   RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(100),
   RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().min(1).default(60),
+  LIVE_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(600),
   // How many reverse proxies sit in front of the API. 0 for local dev, 1 on Azure App Service.
   // Too low and every caller shares the proxy's address; too high and callers can fake theirs.
   TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(0),
@@ -98,6 +99,8 @@ export interface MailConfig {
 export interface RateLimitConfig {
   /** Requests allowed per client in one window. */
   max: number
+  /** Requests allowed per client in one window on the live score routes (D-232). */
+  liveMax: number
   windowSeconds: number
 }
 
@@ -186,7 +189,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     auth: { secret: data.AUTH_SECRET, baseUrl: data.AUTH_BASE_URL },
     mail: mailConfigOf(data),
     logLevel: data.LOG_LEVEL,
-    rateLimit: { max: data.RATE_LIMIT_MAX, windowSeconds: data.RATE_LIMIT_WINDOW_SECONDS },
+    rateLimit: {
+      max: data.RATE_LIMIT_MAX,
+      liveMax: data.LIVE_RATE_LIMIT_MAX,
+      windowSeconds: data.RATE_LIMIT_WINDOW_SECONDS,
+    },
     trustProxy: data.TRUST_PROXY,
     corsOrigins: data.CORS_ORIGIN.split(',')
       .map((origin) => origin.trim())

@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { loadLanePage, type FindSession, type LanePageDeps } from '../lanes/loadLanePage.ts'
+import type { SkipStore } from '../skip/store.ts'
 import { buildRecapSheets } from './recapSheets.ts'
 
 const params = z.object({ id: z.uuid(), sessionId: z.uuid() })
@@ -15,6 +16,7 @@ export function createRecapSheetRouter(
   kind: 'squad' | 'sweeper',
   findSession: FindSession,
   deps: LanePageDeps,
+  skipStore: SkipStore,
 ): Router {
   const router = Router({ mergeParams: true })
   const label = kind === 'squad' ? 'Squad' : 'Sweeper'
@@ -24,7 +26,8 @@ export function createRecapSheetRouter(
     const { id, sessionId } = params.parse(req.params)
     // The same checks as the lane page, in one place (LAN-02, D-56).
     const { session, page, skipped } = await loadLanePage(label, findSession, deps, id, sessionId)
-    res.json(buildRecapSheets(page, session.games, skipped.length))
+    const skip = await skipStore.get(sessionId)
+    res.json(buildRecapSheets(page, session.games, skipped.length, skip))
   })
 
   return router

@@ -544,7 +544,7 @@ for (const colorScheme of colorSchemes) {
         .getByRole('link', { name: 'Squads' })
         .click()
       await page.getByRole('link', { name: /^[A-Z][a-z]{2} \d{2}\/\d{2}\/\d{4} 1:00 PM$/ }).click()
-      await page.getByRole('link', { name: 'Scores' }).click()
+      await page.getByRole('link', { name: 'Scores', exact: true }).click()
       await expect(page.getByRole('heading', { level: 2, name: 'Lanes 1-2' })).toBeVisible()
       await expectNoViolations(page)
 

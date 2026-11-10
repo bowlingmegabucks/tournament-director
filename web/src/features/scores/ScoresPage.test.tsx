@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import { setMockUser } from '../../mocks/authHandlers'
@@ -13,8 +13,8 @@ import {
   createTournament,
 } from '../../mocks/data'
 import { renderApp } from '../../test/renderApp'
+import { FakeEventSource } from '../../test/fakeEventSource'
 import type { ScorePage } from './types'
-import { SCORE_REFRESH_MS } from './useScores'
 
 const tournament = createTournament({ name: 'Spring Open' })
 
@@ -402,53 +402,229 @@ describe('ScoresPage', () => {
   })
 })
 
-describe('ScoresPage refresh (SCR-18, D-72)', () => {
-  it('asks again every 15 seconds and shows a changed score', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true })
+describe('ScoresPage: the way into score entry (SCR-21)', () => {
+  const settings = http.get('/v1/tournaments/:id/settings', () =>
+    HttpResponse.json({
+      settings: {
+        games: 3,
+        entryFee: 50,
+        finalsRatio: 7,
+        cashRatio: 5,
+        superSweeperCashRatio: 5,
+        completed: false,
+      },
+    }),
+  )
+
+  it('shows Enter scores to someone who may enter them, and links to the entry start', async () => {
+    setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+    const page = filled()
+    serve(page)
+    server.use(settings)
+
+    open(page)
+
+    const link = await screen.findByRole('link', { name: 'Enter scores' })
+    expect(link).toHaveAttribute(
+      'href',
+      `/tournaments/${tournament.id}/squads/${page.session.id}/scores/entry`,
+    )
+  })
+
+  it('links the sweeper tab to the sweeper entry', async () => {
+    setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+    const page = filled({ session: { ...createScorePage().session, kind: 'sweeper' } })
+    serve(page)
+    server.use(settings)
+
+    open(page)
+
+    expect(await screen.findByRole('link', { name: 'Enter scores' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/sweepers/'),
+    )
+  })
+
+  it('hides it from a visitor who is not signed in (D-102)', async () => {
     const page = filled()
     serve(page)
     open(page)
     await screen.findByRole('table', { name: 'Scores for lanes 1-2' }, { timeout: 3000 })
-    expect(screen.queryByText('200')).not.toBeInTheDocument()
-    const changed = filled({
-      pairs: [
-        createScorePair(1, [{ ...priya, scores: [200, null, null], total: 200 }, joe, maria]),
-        createScorePair(3, [tom]),
-      ],
-    })
-    server.use(
-      http.get('/v1/tournaments/:id/squads/:sessionId/scores', () => HttpResponse.json(changed)),
-    )
-
-    await vi.advanceTimersByTimeAsync(SCORE_REFRESH_MS + 100)
-
-    await waitFor(() => {
-      expect(screen.getAllByText('200').length).toBeGreaterThan(0)
-    })
+    expect(screen.queryByRole('link', { name: 'Enter scores' })).not.toBeInTheDocument()
   })
 
-  it('stops asking once the session is complete (SCR-18, D-10)', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true })
+  it('hides it from someone without the score permission (D-96)', async () => {
+    setMockUser(createSignedInUser({ roles: ['director'], permissions: ['lanes.read'] }))
+    const page = filled()
+    serve(page)
+    open(page)
+    await screen.findByRole('table', { name: 'Scores for lanes 1-2' }, { timeout: 3000 })
+    expect(screen.queryByRole('link', { name: 'Enter scores' })).not.toBeInTheDocument()
+  })
+
+  it('hides it on a complete session (D-231)', async () => {
+    setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
     const page = filled({ session: { ...createScorePage().session, complete: true } })
     serve(page)
+    server.use(settings)
+    open(page)
+    await screen.findByRole('table', { name: 'Scores for lanes 1-2' }, { timeout: 3000 })
+    expect(screen.queryByRole('link', { name: 'Enter scores' })).not.toBeInTheDocument()
+  })
+
+  it('hides it on a complete tournament (D-231)', async () => {
+    setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+    const page = filled()
+    serve(page)
+    server.use(
+      http.get('/v1/tournaments/:id/settings', () =>
+        HttpResponse.json({
+          settings: {
+            games: 3,
+            entryFee: 50,
+            finalsRatio: 7,
+            cashRatio: 5,
+            superSweeperCashRatio: 5,
+            completed: true,
+          },
+        }),
+      ),
+    )
+    open(page)
+    await screen.findByRole('table', { name: 'Scores for lanes 1-2' }, { timeout: 3000 })
+    await waitFor(() => {
+      expect(screen.queryByRole('link', { name: 'Enter scores' })).not.toBeInTheDocument()
+    })
+  })
+})
+
+describe('ScoresPage live (SCR-18, SCR-20, D-232)', () => {
+  const streamUrl = (page: ScorePage) =>
+    `/v1/tournaments/${tournament.id}/${page.session.kind}s/${page.session.id}/scores/events`
+
+  /** Serve the page, then change what the next ask returns. */
+  function serveChanging(page: ScorePage) {
+    serve(page)
+    let current = page
     let asked = 0
     server.use(
       http.get('/v1/tournaments/:id/squads/:sessionId/scores', () => {
         asked += 1
-        return HttpResponse.json(page)
+        return HttpResponse.json(current)
       }),
     )
+    return {
+      change: (next: ScorePage) => {
+        current = next
+      },
+      asked: () => asked,
+    }
+  }
+
+  /** The stream comes up, as it does in a browser a moment after the page loads. */
+  const connect = () => {
+    act(() => {
+      FakeEventSource.latest().open()
+    })
+  }
+
+  const withPriyaAt = (score: number): ScorePage =>
+    filled({
+      pairs: [
+        createScorePair(1, [joe, maria, { ...priya, scores: [score, null, null], total: score }]),
+        createScorePair(3, [tom]),
+      ],
+    })
+
+  it('opens the public stream of the session and says it is live (SCR-20, D-232)', async () => {
+    const page = filled()
+    serve(page)
+
     open(page)
     await screen.findByRole('table', { name: 'Scores for lanes 1-2' }, { timeout: 3000 })
-    expect(asked).toBe(1)
+    act(() => {
+      FakeEventSource.latest().open()
+    })
 
-    await vi.advanceTimersByTimeAsync(SCORE_REFRESH_MS * 3)
-
-    expect(asked).toBe(1)
+    expect(FakeEventSource.latest().url).toBe(streamUrl(page))
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Live: changes by others show here as they happen.',
+    )
   })
 
-  it('keeps the last scores on screen when a refresh fails', async () => {
+  it('refetches on a message, shows the new score, and names who and which game (SCR-18, D-237)', async () => {
+    const page = filled()
+    const live = serveChanging(page)
+    open(page)
+    await screen.findByRole('table', { name: 'Scores for lanes 1-2' }, { timeout: 3000 })
+    expect(screen.queryByText('200')).not.toBeInTheDocument()
+    connect()
+    live.change(withPriyaAt(200))
+
+    act(() => {
+      FakeEventSource.latest().message('{"kind":"scores","version":1}')
+    })
+
+    expect((await screen.findAllByText('200')).length).toBeGreaterThan(0)
+    expect(await screen.findByText('Updated: Priya Nair, game 1')).toBeVisible()
+  })
+
+  it('does not poll: no new ask after a long wait (SCR-18, D-72)', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
+    const page = filled()
+    const live = serveChanging(page)
+    open(page)
+    await screen.findByRole('table', { name: 'Scores for lanes 1-2' }, { timeout: 3000 })
+    connect()
+    const before = live.asked()
+
+    await vi.advanceTimersByTimeAsync(60_000)
+
+    expect(live.asked()).toBe(before)
+  })
+
+  it('asks again every 15 s while the stream is not live (no stream, no refresh)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const page = filled()
+    const live = serveChanging(page)
+    open(page)
+    await screen.findByRole('table', { name: 'Scores for lanes 1-2' }, { timeout: 3000 })
+    const before = live.asked()
+
+    await vi.advanceTimersByTimeAsync(16_000)
+
+    expect(live.asked()).toBeGreaterThan(before)
+  })
+
+  it('asks again when a lane move changes the pairs, and says nothing new about scores (D-218)', async () => {
+    const page = filled()
+    serveChanging(page)
+    open(page)
+    await screen.findByRole('table', { name: 'Scores for lanes 1-2' }, { timeout: 3000 })
+    connect()
+
+    act(() => {
+      FakeEventSource.latest().message('{"kind":"lanes","version":1}')
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('Live')
+    })
+    expect(screen.queryByText(/^Updated:/)).not.toBeInTheDocument()
+  })
+
+  it('opens no stream and shows no live line once the session is complete (D-10)', async () => {
+    const page = filled({ session: { ...createScorePage().session, complete: true } })
+    serve(page)
+
+    open(page)
+    await screen.findByRole('table', { name: 'Scores for lanes 1-2' }, { timeout: 3000 })
+
+    expect(FakeEventSource.instances).toHaveLength(0)
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('keeps the last scores on screen when a refetch fails (SCR-18)', async () => {
     const page = filled()
     serve(page)
     open(page)
@@ -461,12 +637,72 @@ describe('ScoresPage refresh (SCR-18, D-72)', () => {
       }),
     )
 
-    await vi.advanceTimersByTimeAsync(SCORE_REFRESH_MS + 100)
+    act(() => {
+      FakeEventSource.latest().message()
+    })
 
     await waitFor(() => {
       expect(asked).toBeGreaterThan(0)
     })
     expect(screen.getByRole('table', { name: 'Scores for lanes 1-2' })).toBeVisible()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('asks once more when the stream comes back after a drop (D-218)', async () => {
+    const page = filled()
+    const live = serveChanging(page)
+    open(page)
+    await screen.findByRole('table', { name: 'Scores for lanes 1-2' }, { timeout: 3000 })
+    const stream = FakeEventSource.latest()
+    act(() => {
+      stream.open()
+    })
+    const before = live.asked()
+    live.change(withPriyaAt(188))
+
+    act(() => {
+      stream.fail()
+    })
+    expect(screen.getByRole('status')).toHaveTextContent('Reconnecting')
+    act(() => {
+      stream.open()
+    })
+
+    await waitFor(() => {
+      expect(live.asked()).toBe(before + 1)
+    })
+    expect((await screen.findAllByText('188')).length).toBeGreaterThan(0)
+  })
+
+  it('says live updates are off when the stream is refused for good (D-217)', async () => {
+    const page = filled()
+    serve(page)
+    open(page)
+    await screen.findByRole('table', { name: 'Scores for lanes 1-2' }, { timeout: 3000 })
+
+    act(() => {
+      FakeEventSource.latest().fail(true)
+    })
+
+    expect(screen.getByRole('status')).toHaveTextContent('Live updates are off')
+  })
+
+  it('marks the changed row for a few seconds (D-237)', async () => {
+    const page = filled()
+    const live = serveChanging(page)
+    open(page)
+    const table = await tableFor('Scores for lanes 1-2')
+    connect()
+    live.change(withPriyaAt(200))
+
+    act(() => {
+      FakeEventSource.latest().message()
+    })
+
+    await screen.findByText('Updated: Priya Nair, game 1')
+    const rows = table.getAllByRole('row').slice(1)
+    const marked = rows.filter((row) => row.className.includes('fresh'))
+    expect(marked).toHaveLength(1)
+    expect(marked[0]).toHaveTextContent('Priya Nair')
   })
 })

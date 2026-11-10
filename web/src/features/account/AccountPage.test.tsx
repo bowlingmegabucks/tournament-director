@@ -155,9 +155,14 @@ describe('AccountPage', () => {
     })
 
     it('says Saving… while the request runs', async () => {
+      // Hold the response until the test lets go, so a slow machine cannot finish the save first.
+      let release: () => void = () => undefined
+      const gate = new Promise<void>((resolve) => {
+        release = resolve
+      })
       server.use(
         http.patch('/v1/account', async () => {
-          await new Promise((resolve) => setTimeout(resolve, 50))
+          await gate
           return HttpResponse.json({ name: 'Dana Director' })
         }),
       )
@@ -168,6 +173,9 @@ describe('AccountPage', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Save name' }))
 
       expect(await screen.findByRole('button', { name: 'Saving…' })).toBeDisabled()
+
+      release()
+      expect(await screen.findByRole('button', { name: 'Save name' })).toBeEnabled()
     })
   })
 

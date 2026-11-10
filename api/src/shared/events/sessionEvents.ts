@@ -1,8 +1,8 @@
 import type { Meter } from '@opentelemetry/api'
 import type { Logger } from '../logger.ts'
 
-/** Why a session changed (D-218): a lane move or a session edit, or an entry added, changed, or removed. */
-export type ChangeKind = 'lanes' | 'entries'
+/** Why a session changed (D-218): a lane move or a session edit, an entry added, changed, or removed, or a score saved or cleared (D-232). */
+export type ChangeKind = 'lanes' | 'entries' | 'scores'
 
 /** What a screen is told (D-218): that something changed, never what. The page refetches. */
 export interface ChangeEvent {

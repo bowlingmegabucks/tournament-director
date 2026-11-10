@@ -168,7 +168,7 @@ export function createConfig(overrides: Partial<Config> = {}): Config {
     mail: undefined,
     logLevel: 'silent',
     // High enough that no test hits it by accident. Tests of the limit set their own.
-    rateLimit: { max: 1000, windowSeconds: 60 },
+    rateLimit: { max: 1000, liveMax: 1000, windowSeconds: 60 },
     trustProxy: 0,
     corsOrigins: [],
     telemetry: {

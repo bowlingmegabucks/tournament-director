@@ -2,7 +2,8 @@
  * The recap sheets of one squad or sweeper (RPT-08). The API's `features/recapSheets/types.ts` has
  * the same fields: change both together.
  */
-export type SkipPattern = 'staggered' | 'same'
+export type { SkipPattern } from '../skip/api'
+import type { SkipPattern } from '../skip/api'
 
 /** One bowler's sheet (RPT-05). `handicap` is the bonus pins on a sweeper (SCR-09). */
 export interface RecapSheet {
@@ -28,6 +29,8 @@ export interface RecapSession {
 
 export interface RecapSheets {
   session: RecapSession
+  /** The skip stored for the session (D-235). The dialog starts from it. */
+  skip: SkipPattern
   /** In lane order, then letter. */
   sheets: RecapSheet[]
   /** Bowlers with no sheet: no lane, or a position outside the session's lanes (D-65). */

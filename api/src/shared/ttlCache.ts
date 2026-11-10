@@ -25,7 +25,7 @@ export const MAX_CACHED = 500
 export function createTtlCache<T>(ttlMs: number, now: () => number = Date.now) {
   const slots = new Map<string, Slot<T>>()
 
-  return function cached(key: string, load: () => Promise<T>): Promise<T> {
+  function cached(key: string, load: () => Promise<T>): Promise<T> {
     const found = slots.get(key)
     if (found && found.expires > now()) return found.value
 
@@ -37,4 +37,14 @@ export function createTtlCache<T>(ttlMs: number, now: () => number = Date.now) {
     })
     return value
   }
+
+  /** Forget the answer for `key`, so a write is seen by the next read (D-232). */
+  const drop = (key: string) => slots.delete(key)
+
+  /** Forget every answer whose key passes `test`. */
+  const dropWhere = (test: (key: string) => boolean) => {
+    for (const key of slots.keys()) if (test(key)) slots.delete(key)
+  }
+
+  return Object.assign(cached, { drop, dropWhere })
 }

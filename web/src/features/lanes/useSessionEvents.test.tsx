@@ -3,6 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createLaneBowler } from '../../mocks/data'
+import { MESSAGE_WINDOW_MS } from '../../shared/useEventStream'
 import { FakeEventSource } from '../../test/fakeEventSource'
 import { filled, serve, tournament } from './lanesTestSupport'
 import { useLanes } from './useLanes'
@@ -129,6 +130,21 @@ describe('useSessionEvents (LAN-21, D-217, D-218)', () => {
     expect(result.current.events.updated?.version).toBe(1)
   })
 
+  it('ignores a scores message: it belongs to the Scores tab (D-232)', async () => {
+    const { result, client } = setup()
+    await waitFor(() => {
+      expect(result.current.lanes.data).toBeDefined()
+    })
+    const fetches = vi.spyOn(client, 'invalidateQueries')
+
+    act(() => {
+      FakeEventSource.latest().message('{"kind":"scores","version":3}')
+    })
+
+    expect(fetches).not.toHaveBeenCalled()
+    expect(result.current.events.updated).toBeUndefined()
+  })
+
   it('names the pair another desk changed (LAN-21)', async () => {
     const { result, api } = setup()
     await waitFor(() => {
@@ -189,9 +205,14 @@ describe('useSessionEvents (LAN-21, D-217, D-218)', () => {
       act(() => {
         FakeEventSource.latest().message()
       })
-      await waitFor(() => {
-        expect(result.current.lanes.data?.unassigned.map((bowler) => bowler.name)).toContain(name)
-      })
+      // The second message lands inside the stream's join window, so it reaches the page up to
+      // MESSAGE_WINDOW_MS later. Wait longer than the default 1 s, or a slow run fails.
+      await waitFor(
+        () => {
+          expect(result.current.lanes.data?.unassigned.map((bowler) => bowler.name)).toContain(name)
+        },
+        { timeout: MESSAGE_WINDOW_MS + 2000 },
+      )
     }
     await waitFor(() => {
       expect(result.current.events.updated?.version).toBe(2)

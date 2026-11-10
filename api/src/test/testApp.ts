@@ -14,6 +14,8 @@ import { createInMemoryBowlerRepository } from '../features/bowlers/repository.t
 import { createInMemoryRegistrationRepository } from '../features/registrations/repository.ts'
 import { createInMemoryRegistrationWriter } from '../features/registrations/writer.ts'
 import { createInMemoryScoreRepository } from '../features/scores/repository.ts'
+import { createInMemoryScoreWriter } from '../features/scores/scoreWriter.ts'
+import { createInMemorySkipStore } from '../features/skip/store.ts'
 import { createInMemorySquadRepository } from '../features/squads/repository.ts'
 import { createInMemorySquadWriter } from '../features/squads/writer.ts'
 import { createInMemorySweeperRepository } from '../features/sweepers/repository.ts'
@@ -39,6 +41,8 @@ export function createTestApp(overrides: Partial<AppDependencies> = {}): Express
     laneWriter: createInMemoryLaneWriter().writer,
     events: createSessionEvents(logger, metrics.getMeter('test')),
     scores: createInMemoryScoreRepository([]),
+    scoreWriter: createInMemoryScoreWriter().writer,
+    skipStore: createInMemorySkipStore().store,
     squads: createInMemorySquadRepository([]),
     squadWriter: createInMemorySquadWriter().writer,
     sweepers: createInMemorySweeperRepository([]),

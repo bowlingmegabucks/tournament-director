@@ -6,6 +6,7 @@
   "mutate": [
     "src/**/*.{ts,tsx}",
     "!src/**/*.test.{ts,tsx}",
+    "!src/**/*TestSupport.tsx",
     "!src/main.tsx",
     "!src/mocks/**",
     "!src/test/**",

@@ -257,3 +257,12 @@ model Verification {
   @@index([identifier], map: "verification_identifier_idx")
   @@map("verification")
 }
+
+/// The skip pattern (`staggered` or `same`, LAN-19) of one squad or sweeper (D-235). Created by
+/// prisma/score-tables.sql, not by Prisma, and unknown to WinForms. No row means staggered.
+model SessionSkip {
+  sessionId String @id @map("SessionId") @db.Char(36)
+  skip      String @map("Skip") @db.VarChar(16)
+
+  @@map("SessionSkip")
+}

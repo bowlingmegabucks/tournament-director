@@ -1,0 +1,201 @@
+/* The sheet sizes itself from its own width (a container), so the board beside it on a tablet
+   narrows the sheet without a media query: a phone gets stacked blocks, a wide sheet a grid. */
+.sheet {
+  container-type: inline-size;
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: space-between;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--target-min);
+  padding: 0 var(--space-3);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius);
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.done {
+  margin: 0;
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-success);
+  border-radius: var(--radius);
+}
+
+.rows {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-areas:
+    'who total'
+    'entry entry'
+    'mark mark'
+    'prior prior'
+    'hint hint'
+    'retry retry';
+  grid-template-columns: 1fr auto;
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.row > * {
+  margin: 0;
+}
+
+.who {
+  grid-area: who;
+  display: grid;
+  gap: 0;
+}
+
+.lane {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.name {
+  font-weight: 600;
+}
+
+.division {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.total {
+  grid-area: total;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.label {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.entry {
+  grid-area: entry;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.box {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-block-size: 3.5rem;
+  padding: 0 var(--space-3);
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius);
+  font: inherit;
+  font-size: var(--font-size-xl);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.box[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+.next,
+.retry {
+  min-block-size: var(--target-min);
+  padding: 0 var(--space-4);
+  background: transparent;
+  color: var(--color-accent);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius);
+  font: inherit;
+}
+
+.retry {
+  grid-area: retry;
+  justify-self: start;
+}
+
+.mark,
+.problem,
+.prior,
+.hint {
+  font-size: var(--font-size-sm);
+}
+
+.mark {
+  grid-area: mark;
+  min-block-size: 1.25rem;
+  color: var(--color-text-muted);
+}
+
+.problem {
+  grid-area: mark;
+  min-block-size: 1.25rem;
+  color: var(--color-danger);
+}
+
+.prior {
+  grid-area: prior;
+  color: var(--color-text-muted);
+}
+
+/* No other games yet: take no room. (The status line keeps its room, so nothing jumps while saving.) */
+.prior:empty {
+  display: none;
+}
+
+.hint {
+  grid-area: hint;
+  color: var(--color-text-muted);
+}
+
+.hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@container (min-width: 38rem) {
+  .row {
+    grid-template-areas:
+      'who prior entry total'
+      'mark mark mark mark'
+      'hint hint hint hint'
+      'retry retry retry retry';
+    grid-template-columns: minmax(9rem, 1.2fr) minmax(8rem, 1.2fr) minmax(10rem, 12rem) 5rem;
+    align-items: center;
+  }
+
+  .row .mark,
+  .row .problem {
+    min-block-size: 0;
+  }
+}

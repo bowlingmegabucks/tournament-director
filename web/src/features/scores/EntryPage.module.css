@@ -1,0 +1,56 @@
+/*
+ * One screen at a time on a phone: the board until a pair is picked, then that pair's sheet. From a
+ * tablet up (48rem) the board is the left pane and the sheet fills the right (D-230).
+ */
+.panes {
+  display: grid;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.panes[data-detail='true'] .board {
+  display: none;
+}
+
+.panes[data-detail='false'] .detail {
+  display: none;
+}
+
+.pick {
+  margin: 0;
+  padding: var(--space-4);
+  border: var(--border-width) dashed var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text-muted);
+}
+
+@media (min-width: 48rem) {
+  .panes {
+    grid-template-columns: minmax(14rem, 18rem) 1fr;
+    /* The board's wrapper spans the row, so the board can stick inside it while the sheet scrolls. */
+    align-items: stretch;
+  }
+
+  .panes[data-detail='true'] .board,
+  .panes[data-detail='false'] .detail {
+    display: block;
+  }
+
+  .board,
+  .detail {
+    min-inline-size: 0;
+  }
+}
+
+/* A portrait tablet has little room beside the sidebar: a narrow board leaves the sheet its names. */
+@media (min-width: 48rem) and (max-width: 63.99rem) {
+  .panes {
+    grid-template-columns: minmax(11rem, 12.5rem) 1fr;
+  }
+}
+
+@media (min-width: 64rem) {
+  .panes {
+    grid-template-columns: minmax(18rem, 22rem) 1fr;
+  }
+}

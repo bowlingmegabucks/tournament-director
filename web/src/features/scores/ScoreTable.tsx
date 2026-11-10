@@ -13,6 +13,8 @@ interface ScoreTableProps {
   games: number
   /** Names the table for a screen reader, such as "Scores for lanes 1-2". */
   label: string
+  /** Registration ids of rows a push just changed; they stand out for a few seconds (D-237). */
+  fresh?: readonly string[]
 }
 
 /** A score cell: the number, "0" for a stored 0, or a blank a screen reader reads as "no score" (D-69). */
@@ -32,7 +34,7 @@ const totalClass = `${styles.num} ${styles.total}`
  * The bowlers of one lane pair, or of "Other positions": lane, bowler with division, a column per
  * game, and the scratch total (SCR-13, D-68, D-69). Read only.
  */
-export function ScoreTable({ bowlers, games, label }: Readonly<ScoreTableProps>) {
+export function ScoreTable({ bowlers, games, label, fresh = [] }: Readonly<ScoreTableProps>) {
   const columns = Array.from({ length: games }, (_, index) => index + 1)
   return (
     <table role="table" className={styles.table} aria-label={label}>
@@ -59,7 +61,11 @@ export function ScoreTable({ bowlers, games, label }: Readonly<ScoreTableProps>)
       {/* eslint-disable-next-line jsx-a11y/no-redundant-roles */}
       <tbody role="rowgroup" className={styles.body}>
         {bowlers.map((bowler) => (
-          <tr key={bowler.registrationId} role="row">
+          <tr
+            key={bowler.registrationId}
+            role="row"
+            className={fresh.includes(bowler.registrationId) ? styles.fresh : undefined}
+          >
             {/* eslint-disable-next-line jsx-a11y/no-interactive-element-to-noninteractive-role */}
             <td role="cell" className={styles.lane}>
               {bowler.position}

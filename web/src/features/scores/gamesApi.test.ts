@@ -87,6 +87,74 @@ describe('fetchGames (SCR-22)', () => {
   })
 })
 
+describe('fetchGames shape checks (SCR-22)', () => {
+  const bowler = createGameBowler({ registrationId: 'r1', scores: [200, null] })
+  const good = createGamesView({
+    games: [createGame(1, [createGamePair(1, [bowler])])],
+  })
+  const clone = () => structuredClone(good) as unknown as Record<string, unknown>
+  type Loose = {
+    session: Record<string, unknown>
+    games: { pairs: { bowlers: Record<string, unknown>[] }[] }[]
+  } & Record<string, unknown>
+  const edit = (change: (body: Loose) => void) => () => {
+    const body = clone() as Loose
+    change(body)
+    return body
+  }
+  const bowlerOf = (body: Loose) => body.games[0]?.pairs[0]?.bowlers[0] ?? {}
+  const pairOf = (body: Loose) => (body.games[0]?.pairs[0] ?? {}) as Record<string, unknown>
+  const gameOf = (body: Loose) => (body.games[0] ?? {}) as Record<string, unknown>
+
+  const wrong: [string, () => unknown][] = [
+    ['a bowler id', edit((b) => (bowlerOf(b).registrationId = 1))],
+    ['a bowler name', edit((b) => (bowlerOf(b).name = 1))],
+    ['a bowler division', edit((b) => (bowlerOf(b).divisionName = null))],
+    ['a bowler lane', edit((b) => (bowlerOf(b).lane = 1))],
+    ['a bowler score', edit((b) => (bowlerOf(b).score = '200'))],
+    ['a missing bowler score', edit((b) => delete bowlerOf(b).score)],
+    ['a bowler scores list', edit((b) => (bowlerOf(b).scores = 'x'))],
+    ['a bowler score inside the list', edit((b) => (bowlerOf(b).scores = [200, 'x']))],
+    ['a bowler total', edit((b) => (bowlerOf(b).total = '200'))],
+    ['a pair first lane', edit((b) => (pairOf(b).firstLane = '1'))],
+    ['a pair lanes list', edit((b) => (pairOf(b).lanes = 'x'))],
+    ['a pair lane inside the list', edit((b) => (pairOf(b).lanes = [1, 'x']))],
+    ['a pair bowlers list', edit((b) => (pairOf(b).bowlers = 'x'))],
+    ['a bowler of the wrong shape inside the list', edit((b) => (pairOf(b).bowlers = [{}]))],
+    ['a game number', edit((b) => (gameOf(b).game = '1'))],
+    ['a game entered count', edit((b) => (gameOf(b).entered = '1'))],
+    ['a game total', edit((b) => (gameOf(b).total = '1'))],
+    ['a game pairs list', edit((b) => (gameOf(b).pairs = 'x'))],
+    ['a pair of the wrong shape inside the list', edit((b) => (gameOf(b).pairs = [{}]))],
+    ['a games list', edit((b) => (b.games = 'x' as never))],
+    ['a game of the wrong shape inside the list', edit((b) => (b.games = [{}] as never))],
+    ['a session id', edit((b) => (b.session.id = 1))],
+    ['a session kind', edit((b) => (b.session.kind = 'finals'))],
+    ['a session date', edit((b) => (b.session.date = '2026-10-24'))],
+    ['a session complete flag', edit((b) => (b.session.complete = 'no'))],
+    ['a session games count', edit((b) => (b.session.games = '3'))],
+    ['a session', edit((b) => delete (b as Record<string, unknown>).session)],
+    ['a without-lane count', edit((b) => (b.withoutLane = '2'))],
+    ['a skip', edit((b) => delete b.skip)],
+  ]
+
+  it('accepts a bowler whose scores hold nulls and numbers, and either session kind', async () => {
+    server.use(http.get(gamesPath, () => HttpResponse.json(good)))
+    await expect(fetchGames('squad', 't1', 's1')).resolves.toEqual(good)
+    server.use(
+      http.get(gamesPath, () =>
+        HttpResponse.json({ ...good, session: { ...good.session, kind: 'sweeper' } }),
+      ),
+    )
+    await expect(fetchGames('squad', 't1', 's1')).resolves.toBeDefined()
+  })
+
+  it.each(wrong)('rejects %s of the wrong shape', async (_label, make) => {
+    server.use(http.get(gamesPath, () => HttpResponse.json(make() as never)))
+    await expect(fetchGames('squad', 't1', 's1')).rejects.toThrow('unexpected response')
+  })
+})
+
 const scorePath = '/v1/tournaments/:id/squads/:sessionId/scores/:registrationId/:game'
 
 describe('saveScore (SCR-19, D-228)', () => {

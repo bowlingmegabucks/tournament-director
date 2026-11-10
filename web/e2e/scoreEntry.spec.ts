@@ -15,7 +15,7 @@ async function openScoresTab(page: Page) {
   await page.getByRole('article').first().getByRole('link').click()
   await menuLink(page, 'Squads')
   await page.getByRole('link', { name: /^[A-Z][a-z]{2} \d{2}\/\d{2}\/\d{4} 1:00 PM$/ }).click()
-  await page.getByRole('link', { name: 'Scores' }).click()
+  await page.getByRole('link', { name: 'Scores', exact: true }).click()
   await expect(page.getByRole('heading', { level: 2, name: 'Lanes 1-2' })).toBeVisible()
 }
 
@@ -126,7 +126,7 @@ test('a visitor who is not signed in cannot reach entry and sees no link (SCR-21
   await page.getByRole('article').first().getByRole('link').click()
   await menuLink(page, 'Squads')
   await page.getByRole('link', { name: /^[A-Z][a-z]{2} \d{2}\/\d{2}\/\d{4} 1:00 PM$/ }).click()
-  await page.getByRole('link', { name: 'Scores' }).click()
+  await page.getByRole('link', { name: 'Scores', exact: true }).click()
   await expect(page.getByRole('heading', { level: 2, name: 'Lanes 1-2' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Enter scores' })).toHaveCount(0)
 })

@@ -36,6 +36,13 @@ describe('readScore (SCR-01)', () => {
     expect(readScore('300')).toEqual({ score: 300 })
   })
 
+  it.each(['abc', '1.5', '-5', '2e', ' '])(
+    'rejects text that is not a whole number: "%s"',
+    (text) => {
+      expect(readScore(text)).toEqual({ problem: 'Enter a score from 1 to 300.' })
+    },
+  )
+
   it.each(['', '0', '301', '999', '00'])('says what is wrong with "%s"', (text) => {
     expect(readScore(text)).toEqual({ problem: 'Enter a score from 1 to 300.' })
   })

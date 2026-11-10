@@ -20,6 +20,12 @@ describe('diffScores (SCR-18, D-237)', () => {
     expect(diffScores(before, after)).toEqual({ ids: ['id-Ann'], names: ['Ann'], games: [2] })
   })
 
+  it('lists the games from the lowest, whatever order the bowlers changed them in', () => {
+    const before = page(named('Ann', [null, null, null]), named('Bob', [null, null, null]))
+    const after = page(named('Ann', [null, null, 200]), named('Bob', [180, null, null]))
+    expect(diffScores(before, after).games).toEqual([1, 3])
+  })
+
   it('counts a changed score, a cleared score, and a new score as changes', () => {
     const before = page(named('Ann', [200, 150]), named('Bob', [null, null]))
     const after = page(named('Ann', [201, null]), named('Bob', [170, null]))

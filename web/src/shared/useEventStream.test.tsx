@@ -51,6 +51,14 @@ describe('useEventStream (D-217, D-218, D-232)', () => {
     },
   )
 
+  it('treats a message with no text as a change of unknown kind', () => {
+    const { onChange } = setup()
+    act(() => {
+      FakeEventSource.latest().message(5 as unknown as string)
+    })
+    expect(onChange).toHaveBeenCalledWith('unknown')
+  })
+
   it('asks again once when the stream comes back after a drop, and not on the first connect', () => {
     const { onReconnect } = setup()
     const stream = FakeEventSource.latest()

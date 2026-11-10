@@ -164,3 +164,40 @@ describe('PUT .../skip', () => {
     expect(line).toMatchObject({ squadId: squad.id, skip: 'same' })
   })
 })
+
+describe('PUT .../skip logging (SCR-23)', () => {
+  it('logs a refused change with the ids and the kind, for a squad and a sweeper', async () => {
+    const complete = setup({ complete: true })
+    await request(createSignedInTestApp(complete.overrides))
+      .put(complete.url())
+      .send({ skip: 'same' })
+    const refused = complete.captured
+      .records()
+      .find((entry) => entry.msg === 'Skip change refused: squad or tournament complete')
+    expect(refused).toMatchObject({
+      tournamentId: complete.tournament.id,
+      squadId: complete.squad.id,
+    })
+
+    const frozen = setup({ tournamentComplete: true })
+    await request(createSignedInTestApp(frozen.overrides))
+      .put(frozen.url(frozen.sweeper.id, 'sweepers'))
+      .send({ skip: 'same' })
+    const line = frozen.captured
+      .records()
+      .find((entry) => entry.msg === 'Skip change refused: sweeper or tournament complete')
+    expect(line).toMatchObject({
+      tournamentId: frozen.tournament.id,
+      sweeperId: frozen.sweeper.id,
+    })
+  })
+
+  it('logs the change with the tournament and the kind of the session', async () => {
+    const { overrides, url, captured, tournament, sweeper } = setup()
+    await request(createSignedInTestApp(overrides))
+      .put(url(sweeper.id, 'sweepers'))
+      .send({ skip: 'same' })
+    const line = captured.records().find((entry) => entry.msg === 'Skip changed')
+    expect(line).toMatchObject({ tournamentId: tournament.id, sweeperId: sweeper.id, skip: 'same' })
+  })
+})

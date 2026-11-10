@@ -9,6 +9,7 @@ import {
   createTournament,
   testApiKey,
 } from '../../test/factories.ts'
+import { createCapturedLogger } from '../../test/logger.ts'
 import { createSignedInTestApp, createTestApp } from '../../test/testApp.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
 import { createInMemoryLaneRepository } from '../lanes/repository.ts'
@@ -54,7 +55,7 @@ function setup(options: { maxPerPair?: number } = {}) {
   }
   const url = (session = squad.id, plural = 'squads') =>
     `/v1/tournaments/${tournament.id}/${plural}/${session}/scores/games`
-  return { overrides, url, tournament, other, squad, sweeper, skipStore }
+  return { overrides, url, tournament, other, squad, sweeper, skipStore, open }
 }
 
 describe('GET /v1/tournaments/:id/squads/:sessionId/scores/games (SCR-22)', () => {
@@ -164,5 +165,43 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/scores/games (SCR-22)', () =
     )
     expect(response.status).toBe(200)
     expect(response.body).toHaveProperty('pairs')
+  })
+})
+
+describe('GET .../scores/games problems and failures (SCR-22, D-51, D-61)', () => {
+  it('warns once about a lane position that fits no pair and an entry with no division, with ids only', async () => {
+    const { overrides, url, squad, open } = setup()
+    const lost = createLaneEntry({ divisionId: open.id, position: '77A' })
+    const orphan = createLaneEntry({ position: '1A' })
+    const captured = createCapturedLogger()
+    const lanes = createInMemoryLaneRepository([
+      { sessionId: squad.id, entry: lost },
+      { sessionId: squad.id, entry: orphan },
+    ])
+    const app = createSignedInTestApp({ ...overrides, lanes, logger: captured.logger })
+
+    await request(app).get(url())
+    await request(app).get(url())
+
+    const lines = (message: string) =>
+      captured.records().filter((record) => record['msg'] === message)
+    expect(lines('A lane position fits no pair of this session')).toHaveLength(1)
+    expect(lines('A lane position fits no pair of this session')[0]).toMatchObject({
+      registrationId: lost.registrationId,
+      sessionId: squad.id,
+    })
+    expect(lines('Skipped a lane entry whose division is not in this tournament')).toHaveLength(1)
+  })
+
+  it('answers 404 for an unknown squad even when the score read fails, with nothing left unhandled', async () => {
+    const { overrides, url } = setup()
+    const app = createSignedInTestApp({
+      ...overrides,
+      scores: { listScores: () => Promise.reject(new Error('database is down')) },
+    })
+
+    const response = await request(app).get(url('b0000000-0000-4000-8000-000000000009'))
+
+    expect(response.status).toBe(404)
   })
 })

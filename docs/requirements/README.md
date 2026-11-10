@@ -52,7 +52,7 @@ What the user sees and can do.
 | Edit registration (desk: squads, division, average, move, remove) | [edit-registration.md](edit-registration.md) |
 | Delete registration (desk: dialog, refund view, payment warning) | [delete-registration.md](delete-registration.md) |
 | Lane assignments (page, drag, portal)                 | [lane-assignments.md](lane-assignments.md)       |
-| Recap sheets (preview, print, the cross)              | [recap-sheets.md](recap-sheets.md)               |
+| Recap sheets (preview, print, the cross, QR code)     | [recap-sheets.md](recap-sheets.md)               |
 | Scores (view)                                         | [scores.md](scores.md)                           |
 | Results (squad and sweeper)                           | [results.md](results.md)                         |
 | Results (at-large, seeding, super sweeper)            | [finals-results.md](finals-results.md)           |

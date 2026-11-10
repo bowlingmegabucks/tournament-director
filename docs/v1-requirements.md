@@ -25,6 +25,7 @@ Version numbers follow content, not a countdown. 0.10.0 is fine.
 - [ ] Every legacy rule is `Done`, `Done, differs`, or `Dropped` with a decision ID (see the Status columns in `docs/migration/`).
 - [ ] Every open question in [decisions-and-questions.md](migration/decisions-and-questions.md) is settled.
 - [x] The desk can generate and print recap sheets for a squad or sweeper, with the cross (`RPT-05`, `LAN-12`; [recap-sheets.md](requirements/recap-sheets.md)).
+- [x] Every printed recap sheet carries a QR code that opens the squad's or sweeper's Scores tab on a phone (`RPT-10`, D-225; [recap-sheets.md](requirements/recap-sheets.md)).
 - [ ] Tournament commands (D-12, D-15, D-130; [tournaments.md](requirements/tournaments.md)):
   - [x] Create a tournament (`createTournament`, `TRN-19` to `TRN-22`).
   - [x] Edit a tournament, with free, confirmed, and refused fields by what depends on them (`editTournament`, `TRN-24` to `TRN-31`, D-127 to D-131).

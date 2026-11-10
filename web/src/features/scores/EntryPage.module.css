@@ -42,6 +42,13 @@
   }
 }
 
+/* A portrait tablet has little room beside the sidebar: a narrow board leaves the sheet its names. */
+@media (min-width: 48rem) and (max-width: 63.99rem) {
+  .panes {
+    grid-template-columns: minmax(11rem, 12.5rem) 1fr;
+  }
+}
+
 @media (min-width: 64rem) {
   .panes {
     grid-template-columns: minmax(18rem, 22rem) 1fr;

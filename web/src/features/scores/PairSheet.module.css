@@ -164,6 +164,11 @@
   color: var(--color-text-muted);
 }
 
+/* No other games yet: take no room. (The status line keeps its room, so nothing jumps while saving.) */
+.prior:empty {
+  display: none;
+}
+
 .hint {
   grid-area: hint;
   color: var(--color-text-muted);

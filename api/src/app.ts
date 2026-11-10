@@ -37,6 +37,8 @@ import type { RegistrationWriter } from './features/registrations/writer.ts'
 import { createFinalsRouter, createResultsRouter } from './features/results/routes.ts'
 import { createScoreRouter } from './features/scores/routes.ts'
 import type { ScoreRepository } from './features/scores/repository.ts'
+import { createSkipRouter } from './features/skip/routes.ts'
+import type { SkipStore } from './features/skip/store.ts'
 import { createSquadRouter } from './features/squads/routes.ts'
 import type { SquadRepository } from './features/squads/repository.ts'
 import { createSquadCreateRouter } from './features/squads/createRoutes.ts'
@@ -113,6 +115,8 @@ export interface AppDependencies {
   /** Tells open screens that a session changed (D-217). */
   events: SessionEvents
   scores: ScoreRepository
+  /** The stored skip of each squad and sweeper (SCR-23, D-235). */
+  skipStore: SkipStore
   squads: SquadRepository
   /** Adds squads (SQD-01 to SQD-08, D-167). */
   squadWriter: SquadWriter
@@ -142,6 +146,7 @@ export function createApp({
   laneWriter,
   events,
   scores,
+  skipStore,
   squads,
   squadWriter,
   sweepers,
@@ -177,6 +182,20 @@ export function createApp({
   app.use(identifyCaller({ apiKey: config.apiKey, auth, logger }))
 
   // The five results routes (squad, sweeper, at-large, seeding, super sweeper) read the same data.
+  const skipSquadRouter = createSkipRouter('squad', {
+    store: skipStore,
+    findSession: findSquad(squads),
+    tournaments,
+    events,
+    logger,
+  })
+  const skipSweeperRouter = createSkipRouter('sweeper', {
+    store: skipStore,
+    findSession: findSweeper(sweepers),
+    tournaments,
+    events,
+    logger,
+  })
   const resultsDeps = { tournaments, divisions, squads, sweepers, lanes, scores, logger }
 
   // One router serves every method; the two groups below give each its own access.
@@ -396,6 +415,30 @@ export function createApp({
           divisions,
           logger,
         }),
+      },
+      {
+        path: '/v1/tournaments/:id/squads/:sessionId/skip',
+        access: { permission: 'lanes.read' }, // SCR-23, D-235: signed in; the API key cannot reach it
+        methods: ['GET'],
+        router: skipSquadRouter,
+      },
+      {
+        path: '/v1/tournaments/:id/squads/:sessionId/skip',
+        access: { permission: 'scores.write' }, // SCR-23, D-235: score keeper, director, admin
+        methods: ['PUT'],
+        router: skipSquadRouter,
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers/:sessionId/skip',
+        access: { permission: 'lanes.read' }, // SCR-23, D-235
+        methods: ['GET'],
+        router: skipSweeperRouter,
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers/:sessionId/skip',
+        access: { permission: 'scores.write' }, // SCR-23, D-235
+        methods: ['PUT'],
+        router: skipSweeperRouter,
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/scores',

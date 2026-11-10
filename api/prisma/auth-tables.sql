@@ -1,4 +1,4 @@
--- Sign-in tables for Better Auth (D-98, D-100). The only tables we add to the legacy database.
+-- Sign-in tables for Better Auth (D-98, D-100). With `score-tables.sql`, the only tables we add to the legacy database.
 -- Run this once on each database (local, production) with any MariaDB client. Safe to run again:
 -- every table is created only if it is missing. We never run `prisma migrate` (D-30).
 -- Column names and types follow what Better Auth 1.7 expects; the `role` and `ban*` columns come

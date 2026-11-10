@@ -7,6 +7,9 @@ import { createTestAuth, createTestUser, signInCookie } from './testAuth.ts'
 import { createInMemoryDivisionRepository } from '../features/divisions/repository.ts'
 import { createInMemoryDivisionWriter } from '../features/divisions/writer.ts'
 import { createInMemoryLaneRepository } from '../features/lanes/repository.ts'
+import { createInMemoryLaneWriter } from '../features/lanes/writer.ts'
+import { createSessionEvents } from '../shared/events/sessionEvents.ts'
+import { metrics } from '@opentelemetry/api'
 import { createInMemoryBowlerRepository } from '../features/bowlers/repository.ts'
 import { createInMemoryRegistrationRepository } from '../features/registrations/repository.ts'
 import { createInMemoryRegistrationWriter } from '../features/registrations/writer.ts'
@@ -20,9 +23,10 @@ import { createInMemoryTournamentWriter } from '../features/tournaments/writer.t
 
 /** An app with in-memory storage, a database that always answers, and no CORS. Override only what a test cares about. */
 export function createTestApp(overrides: Partial<AppDependencies> = {}): Express {
+  const logger = createCapturedLogger().logger
   return createApp({
     config: createConfig(),
-    logger: createCapturedLogger().logger,
+    logger,
     auth: createTestAuth().auth,
     tournaments: createInMemoryTournamentRepository([]),
     tournamentWriter: createInMemoryTournamentWriter().writer,
@@ -32,6 +36,8 @@ export function createTestApp(overrides: Partial<AppDependencies> = {}): Express
     registrationWriter: createInMemoryRegistrationWriter().writer,
     bowlers: createInMemoryBowlerRepository([]),
     lanes: createInMemoryLaneRepository([]),
+    laneWriter: createInMemoryLaneWriter().writer,
+    events: createSessionEvents(logger, metrics.getMeter('test')),
     scores: createInMemoryScoreRepository([]),
     squads: createInMemorySquadRepository([]),
     squadWriter: createInMemorySquadWriter().writer,

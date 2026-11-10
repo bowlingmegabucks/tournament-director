@@ -3,7 +3,7 @@ import { http, HttpResponse, type JsonBodyType } from 'msw'
 import { server } from '../../mocks/server'
 import { createLaneBowler, createLanePage, createLanePair } from '../../mocks/data'
 import { LaneSetupError, SessionNotFoundError } from '../../shared/session'
-import { fetchLanes } from './api'
+import { fetchLanes, LaneMoveError, moveBowler } from './api'
 
 const squadPath = '/v1/tournaments/:id/squads/:sessionId/lanes'
 const sweeperPath = '/v1/tournaments/:id/sweepers/:sessionId/lanes'
@@ -239,4 +239,110 @@ describe('fetchLanes', () => {
       await expect(fetchLanes('squad', 't1', 's1')).rejects.toThrow('unexpected response')
     },
   )
+})
+
+describe('moveBowler (LAN-20, D-216)', () => {
+  const putPath = '/v1/tournaments/:id/:kind/:sessionId/lanes/:registrationId'
+
+  it('sends the lane to the registration of the session and returns the seat', async () => {
+    let seen: { url: string; body: unknown; type: string | null } | undefined
+    server.use(
+      http.put(putPath, async ({ request }) => {
+        seen = {
+          url: new URL(request.url).pathname,
+          body: await request.json(),
+          type: request.headers.get('content-type'),
+        }
+        return HttpResponse.json({ position: '2C' })
+      }),
+    )
+
+    await expect(moveBowler('squad', 't1', 's1', 'r1', 1)).resolves.toBe('2C')
+
+    expect(seen).toEqual({
+      url: '/v1/tournaments/t1/squads/s1/lanes/r1',
+      body: { lane: 1 },
+      type: 'application/json',
+    })
+  })
+
+  it('asks the sweeper path for a sweeper, and sends null to unassign (LAN-09)', async () => {
+    let seen: { url: string; body: unknown } | undefined
+    server.use(
+      http.put(putPath, async ({ request }) => {
+        seen = { url: new URL(request.url).pathname, body: await request.json() }
+        return HttpResponse.json({ position: '' })
+      }),
+    )
+
+    await expect(moveBowler('sweeper', 't1', 's1', 'r1', null)).resolves.toBe('')
+
+    expect(seen).toEqual({ url: '/v1/tournaments/t1/sweepers/s1/lanes/r1', body: { lane: null } })
+  })
+
+  it.each([
+    [409, 'Lanes 1-2 are full (4 of 4). Pick another pair.'],
+    [404, 'Bowler is not registered for this squad'],
+    [400, 'Lane 2 is not the first lane of a pair in this squad'],
+    [422, 'Bowlers per pair must be 2 to 5 to assign lanes'],
+  ])('keeps the API message for a %i (LAN-05, LAN-13, Q-28)', async (status, message) => {
+    server.use(http.put(putPath, () => HttpResponse.json({ message }, { status })))
+
+    const failure = await moveBowler('squad', 't1', 's1', 'r1', 1).catch((error: unknown) => error)
+
+    expect(failure).toBeInstanceOf(LaneMoveError)
+    expect(failure).toMatchObject({ message, status })
+  })
+
+  it('falls back to a plain message when the message is empty or not text', async () => {
+    server.use(http.put(putPath, () => HttpResponse.json({ message: '' }, { status: 409 })))
+    await expect(moveBowler('squad', 't1', 's1', 'r1', 1)).rejects.toThrow('The move was refused.')
+    server.use(http.put(putPath, () => HttpResponse.json({ message: 7 }, { status: 409 })))
+    await expect(moveBowler('squad', 't1', 's1', 'r1', 1)).rejects.toThrow('The move was refused.')
+  })
+
+  it('falls back to a plain message when a refusal has no body', async () => {
+    server.use(http.put(putPath, () => new HttpResponse(null, { status: 409 })))
+    await expect(moveBowler('squad', 't1', 's1', 'r1', 1)).rejects.toThrow('The move was refused.')
+    server.use(http.put(putPath, () => new HttpResponse(null, { status: 404 })))
+    await expect(moveBowler('sweeper', 't1', 's1', 'r1', 1)).rejects.toThrow(
+      'That bowler is no longer in this sweeper.',
+    )
+  })
+
+  it('says a 403 plainly: a score keeper may watch but not move (D-216)', async () => {
+    server.use(
+      http.put(putPath, () => HttpResponse.json({ message: 'Forbidden' }, { status: 403 })),
+    )
+    await expect(moveBowler('squad', 't1', 's1', 'r1', 1)).rejects.toMatchObject({
+      message: 'You are not allowed to move bowlers.',
+      status: 403,
+    })
+  })
+
+  it('asks the user to try again on a server error', async () => {
+    server.use(http.put(putPath, () => new HttpResponse(null, { status: 503 })))
+    await expect(moveBowler('squad', 't1', 's1', 'r1', 1)).rejects.toMatchObject({
+      message: 'Could not save the move. Try again.',
+      status: 503,
+    })
+  })
+
+  it('says so when the request never gets an answer', async () => {
+    server.use(http.put(putPath, () => HttpResponse.error()))
+    await expect(moveBowler('squad', 't1', 's1', 'r1', 1)).rejects.toThrow(
+      'Could not save the move. Check your connection and try again.',
+    )
+  })
+
+  it('rejects an answer with no position', async () => {
+    server.use(http.put(putPath, () => HttpResponse.json({ nope: true })))
+    await expect(moveBowler('squad', 't1', 's1', 'r1', 1)).rejects.toThrow(
+      'Failed to save the move (unexpected response)',
+    )
+    server.use(http.put(putPath, () => new HttpResponse('not json')))
+    await expect(moveBowler('squad', 't1', 's1', 'r1', 1)).rejects.toThrow(
+      'Failed to save the move (response is not JSON)',
+    )
+  })
 })

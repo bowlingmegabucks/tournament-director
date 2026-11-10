@@ -1,6 +1,6 @@
-// TEMPORARY (D-55, D-57): until the move command exists, a drop changes only what this screen
-// shows. The seat letter is worked out here. Slice two moves this to the API, which picks the seat
-// and sends back the position; delete this file then.
+// The guess a drop shows at once (D-220). The API picks the seat and sends it back (D-57, D-216);
+// its answer replaces this one, and a refusal puts the page back as it was. `SEAT_ORDER` here only
+// has to agree with the API's in the usual case.
 import type { LaneBowler, LanePage, LanePair } from './types'
 
 /** The order seats fill (D-56). The API's `SEAT_ORDER` is the real one. */

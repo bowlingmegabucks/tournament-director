@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { callerOf } from './auth/caller.ts'
 import { FieldErrorsError, HttpError } from './errors.ts'
+import type { SessionEvents } from './events/sessionEvents.ts'
 import type { Logger } from './logger.ts'
 import { requestLogger } from './requestLogging.ts'
 import type { SessionCompleter } from './sessionComplete.ts'
@@ -39,6 +40,7 @@ export function createSessionCompleteRouter<Session>(
   completer: SessionCompleter<Session, unknown>,
   logger: Logger,
   kind: SessionKind,
+  events: SessionEvents,
 ): Router {
   const router = Router({ mergeParams: true })
 
@@ -60,6 +62,8 @@ export function createSessionCompleteRouter<Session>(
       kind === 'squad' ? { ...ids, noShowCount: outcome.noShowCount } : ids,
       `${sessionName(kind)} completed`,
     )
+    // Every open lane page drops to read only, and score pages stop asking (D-10, D-219).
+    events.publish(sessionId, 'lanes')
     res.json(
       kind === 'squad'
         ? { squad: outcome.completed, noShowCount: outcome.noShowCount }

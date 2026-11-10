@@ -21,7 +21,7 @@ The `deploy-api` job in `.github/workflows/deploy.yml` runs before `deploy-web` 
 
 Azure resources (in one resource group):
 
-- App Service plan (Linux, B1 or better; F1 sleeps when idle).
+- App Service plan `asp-tournamentdirector-prod` (Linux, **B1**, one worker; the owner moved off the free tier). B1 has Always On, so the first request after idle is no longer slow. F1 sleeps when idle.
 - Web App `app-tournamentdirector-prod`, runtime Node 24 LTS, startup command `npm start`.
 - Entra app registration with a federated credential: GitHub organization `bowlingmegabucks`, repository `tournament-director`, entity type Environment, name `production`. The app's service principal has the **Website Contributor** role on the Web App.
 
@@ -50,11 +50,23 @@ The web build hides the Sign in link and `/login` unless `VITE_SHOW_SIGN_IN=true
 
 The site (`https://bowlingmegabucks.com/tournament-director/`) and the API (`*.azurewebsites.net`) are different origins. `web/` reads the API origin from `VITE_API_BASE_URL` (`apiUrl()` in `web/src/shared/apiUrl.ts`; empty in dev, where Vite proxies `/api`), and `CORS_ORIGIN` on the API must be the site's origin.
 
+### Live updates (SSE, D-217)
+
+The lane page keeps itself fresh over server-sent events: `GET /v1/tournaments/{id}/squads/{sessionId}/events` (and the sweeper twin). The streams go from the browser straight to the API's origin, so only the Azure settings matter, not GreenGeeks.
+
+- **HTTP version 2.0** on the Web App (**on**, checked 2026-11-09; portal: Configuration > General settings > HTTP version; or `az webapp update -g rg-tournamentdirector-prod -n app-tournamentdirector-prod --http20-enabled true`). Without it a browser holds at most 6 connections to the API across all tabs, and each open lane page holds one stream. Keep **HTTP 2.0 Proxy** off: Express speaks HTTP/1.1 only, and Azure's front end already speaks HTTP/2 to the browser.
+- **WebSockets are not needed.** SSE is plain HTTP.
+- **Idle limit.** Azure's front end closes a connection that is quiet for about 4 minutes. The stream sends a `: heartbeat` comment every 25 s, so it stays open.
+- **One instance only (D-224).** The hub that tells open pages about a change lives in the Node process. With two instances, a change saved on one never reaches a page connected to the other, and the plan bill doubles. Do not scale the plan out; no autoscale rule.
+- **Deploys.** A deploy drops every stream. The server ends them first on SIGTERM, so shutdown does not wait out the 10 s limit, and each browser reconnects and refetches by itself.
+- The API refuses a stream past 500 open connections with `503`.
+- **Rate limit (D-223).** The default 100 requests a minute per address stays: two people do desk work. Raise `RATE_LIMIT_MAX` if more desks or many viewers share one address.
+
 ### Custom domain (0.4.0)
 
 At 0.4.0 the API moves to `api.bowlingmegabucks.com`, which today points to the legacy API. Changing that DNS record is the vendor cutover. Steps:
 
-- Scale the plan to Basic (B1) or higher. The Free (F1) tier allows no custom domain. B1 also has Always On, which removes the slow first request after idle.
+- The plan is already Basic (B1), which allows a custom domain (the Free tier does not) and has Always On.
 - Add the domain to the Web App (a CNAME to the default domain, plus the `asuid` TXT record) and bind a free App Service managed certificate.
 - Set `API_BASE_URL` to `https://api.bowlingmegabucks.com` and redeploy the web app.
 

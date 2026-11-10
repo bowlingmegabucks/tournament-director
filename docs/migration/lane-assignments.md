@@ -33,15 +33,15 @@ Any other value: the screen shows an error and disables itself. (Legacy squad va
 
 The desk drags a bowler onto a position, or back to "unassigned". Several desk PCs can work at once, so the move checks for stale data.
 
-**D-55, D-57:** the new app drags a bowler onto a **pair**, and the API picks the seat. The page, the drag, and an on-screen move (nothing saves) come first; the command comes after the lock-down release. `LAN-07` and `LAN-08` fall away; `LAN-05`, `LAN-06`, and `LAN-09` carry over.
+**D-216 to D-222:** the move saves through `PUT …/lanes/{registrationId}` and every open lane page updates over SSE (answers Q-27, Q-28). **D-55, D-57:** the new app drags a bowler onto a **pair**, and the API picks the seat. The page, the drag, and an on-screen move (nothing saves) come first; the command comes after the lock-down release. `LAN-07` and `LAN-08` fall away; `LAN-05`, `LAN-06`, and `LAN-09` carry over.
 
-| ID     | Rule                                                                                                            | Message                                                                                            |
-| ------ | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| LAN-05 | The bowler must be on this squad                                                                                | "Bowler is not registered for squad"                                                               |                |
-| LAN-06 | Moving to the current position does nothing                                                                     |                                                                                                    |                |
+| ID     | Rule | Message | Status |
+| ------ | ---- | ------- | ------ |
+| LAN-05 | The bowler must be on this squad                                                                                | "Bowler is not registered for squad" (the new app says "for this squad", `404`) | Done, differs (D-216) |
+| LAN-06 | Moving to the current position does nothing                                                                     | | Done |
 | LAN-07 | The bowler's saved position must equal the position the screen thinks it is (the "original" sent with the move) | "Bowler has already been moved from {original}. Please refresh and verify correct lane assignment" | Dropped (D-57) |
-| LAN-08 | The target must be empty                                                                                        | "Lane {target} is already assigned. Please refresh for updated lane assignments"                   | Dropped (D-57) |
-| LAN-09 | An empty target unassigns the bowler                                                                            |                                                                                                    |                |
+| LAN-08 | The target must be empty                                                                                        | "Lane {target} is already assigned. Please refresh for updated lane assignments" | Dropped (D-57) |
+| LAN-09 | An empty target unassigns the bowler                                                                            | | Done |
 
 ## What the screen shows
 
@@ -49,10 +49,10 @@ The desk drags a bowler onto a position, or back to "unassigned". Several desk P
 | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
 | LAN-10 | Two areas: unassigned bowlers and the lane grid. Plus a count of entries per division.                                                                                                                                                                                                                                                 | Done, differs (D-58) |
 | LAN-11 | Each bowler shows name, division, average, and handicap. On a squad, handicap comes from the division formula (`SCR-07`). On a sweeper, it is the division's bonus pins (`SCR-09`), and the bowler also shows Y/N for super sweeper.                                                                                                   | Done                 |
-| LAN-12 | Actions: add an already-registered bowler to this squad (`REG-21`), new registration (`REG-22`), remove from squad (`REG-20`), copy assignments to clipboard (`RPT-06`, dropped: D-67), generate recap sheets (the staggered skip choice, two radio buttons, sits with them; D-62 to D-66; see [the cross](#the-cross-lane-per-game)). |                      |
+| LAN-12 | Actions: add an already-registered bowler to this squad (`REG-21`), new registration (`REG-22`), remove from squad (`REG-20`), copy assignments to clipboard (`RPT-06`, dropped: D-67), generate recap sheets (the staggered skip choice, two radio buttons, sits with them; D-62 to D-66; see [the cross](#the-cross-lane-per-game)). | Done in part, differs (D-67, D-197)|
 | LAN-13 | A complete squad opens read-only (`SQD-17`).                                                                                                                                                                                                                                                                                           | Done, differs (D-10) |
 
-**D-55:** all of `LAN-12` is Later. **D-58:** `LAN-10` and `LAN-11` are built, with an on-screen move that saves nothing; "unassigned" is a NULL or empty position. **D-59:** public for 0.2.0, then signed-in only. **D-60:** reached from a squad portal page. **D-10:** the server lock on a complete session comes with the move command. The lasting record is [lane-assignments.md](../requirements/lane-assignments.md).
+**D-55:** all of `LAN-12` was Later; since then add, new registration, and remove are built with the registration pages (`REG-20` to `REG-22`, D-197), copy is dropped (D-67), and recap sheets are built (D-62 to D-66). **D-58:** `LAN-10` and `LAN-11` are built, with the move; "unassigned" is a NULL or empty position. **D-59:** public for 0.2.0, then signed-in only. **D-60:** reached from a squad portal page. **D-10:** the move command locks a complete session on the server (`LAN-13`, D-216). The lasting record is [lane-assignments.md](../requirements/lane-assignments.md).
 
 ## The cross (lane per game)
 

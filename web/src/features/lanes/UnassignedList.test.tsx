@@ -5,7 +5,12 @@ import { createLaneBowler } from '../../mocks/data'
 import { UnassignedList } from './UnassignedList'
 import type { LaneBowler } from './types'
 
-function show(bowlers: LaneBowler[], dragging?: LaneBowler, readOnly = false) {
+function show(
+  bowlers: LaneBowler[],
+  dragging?: LaneBowler,
+  readOnly = false,
+  savingIds?: ReadonlySet<string>,
+) {
   return render(
     <DragDropProvider>
       <UnassignedList
@@ -13,6 +18,7 @@ function show(bowlers: LaneBowler[], dragging?: LaneBowler, readOnly = false) {
         kind="squad"
         dragging={dragging}
         readOnly={readOnly}
+        savingIds={savingIds}
         onAssign={() => undefined}
       />
     </DragDropProvider>,
@@ -57,5 +63,15 @@ describe('UnassignedList', () => {
 
     expect(screen.getByText('Pat Nguyen')).toBeVisible()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('marks a bowler whose move is still being saved as busy (D-220)', () => {
+    const saving = createLaneBowler({ name: 'Pat Nguyen', position: '' })
+    const idle = createLaneBowler({ name: 'Carl Dubois', position: '' })
+
+    show([saving, idle], undefined, false, new Set([saving.registrationId]))
+
+    expect(screen.getByText('Pat Nguyen').closest('li')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByText('Carl Dubois').closest('li')).toHaveAttribute('aria-busy', 'false')
   })
 })

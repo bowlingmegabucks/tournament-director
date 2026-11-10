@@ -5,6 +5,7 @@ import { HttpError } from '../../shared/errors.ts'
 import { createSquad, testApiKey } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createSignedInTestApp, createTestApp } from '../../test/testApp.ts'
+import { recordingEvents } from '../../test/recordingEvents.ts'
 import { createInMemorySquadWriter, type SquadWriter } from './writer.ts'
 
 const tournamentId = '11111111-1111-4111-8111-111111111111'
@@ -348,5 +349,29 @@ describe(`GET ${url}/edit-info`, () => {
     const response = await request(createSignedInTestApp({ squadWriter: writer })).get(infoUrl)
 
     expect(response.status).toBe(503)
+  })
+})
+
+describe('live updates after an edit (LAN-22, D-219)', () => {
+  it('tells the open lane pages of the squad when a field changes', async () => {
+    const { events, published } = recordingEvents()
+    const made = setup()
+    const app = createSignedInTestApp({ squadWriter: made.writer, events })
+
+    await request(app).patch(url).send({ maxPerPair: 3 })
+
+    expect(published).toEqual([{ sessionId: squadId, kind: 'lanes' }])
+  })
+
+  it('tells no one when nothing changed or the edit is refused', async () => {
+    const { events, published } = recordingEvents()
+    const made = setup()
+    const app = createSignedInTestApp({ squadWriter: made.writer, events })
+
+    await request(app).patch(url).send({ maxPerPair: 4 })
+    const refused = await request(app).patch(url).send({ maxPerPair: 99 })
+
+    expect(refused.status).toBeGreaterThanOrEqual(400)
+    expect(published).toEqual([])
   })
 })

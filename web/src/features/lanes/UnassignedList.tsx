@@ -12,6 +12,8 @@ interface UnassignedListProps {
   /** The bowler being dragged, if any. A placed one gets a cue here (D-58). */
   dragging: LaneBowler | undefined
   readOnly: boolean
+  /** Registrations whose moves are still being saved (D-220). */
+  savingIds?: ReadonlySet<string>
   onAssign: (bowler: LaneBowler) => void
   onManage?: (bowler: LaneBowler) => void
 }
@@ -22,6 +24,7 @@ export function UnassignedList({
   kind,
   dragging,
   readOnly,
+  savingIds,
   onAssign,
   onManage,
 }: Readonly<UnassignedListProps>) {
@@ -54,6 +57,7 @@ export function UnassignedList({
                   kind={kind}
                   readOnly={readOnly}
                   compact={false}
+                  saving={savingIds?.has(bowler.registrationId)}
                   onAssign={onAssign}
                   onManage={onManage}
                 />

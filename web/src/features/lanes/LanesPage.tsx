@@ -9,7 +9,7 @@ import type { Tournament } from '../tournaments/types'
 import { LaneSetupError } from '../../shared/session'
 import { AssignDialog } from './AssignDialog'
 import { BowlerPreview } from './BowlerRow'
-import { decideDrop, NOT_SAVED, pairDropId, unassignedDropId, type DropTarget } from './dropRules'
+import { decideDrop, pairDropId, unassignedDropId, type DropTarget } from './dropRules'
 import { countBowlers, formatSpots, formatTotals } from './format'
 import styles from './LanesPage.module.css'
 import { OtherPositions } from './OtherPositions'
@@ -18,12 +18,14 @@ import { useCan } from '../auth/useCan'
 import { AddRegistrationLink } from '../registrations/AddRegistrationLink'
 import { SessionActionsDialog } from '../registrations/SessionActionsDialog'
 import { RecapDialog } from '../recapSheets/RecapDialog'
-import { applyMoves, type Move } from './tempMoves'
 import type { LaneBowler, LanePage, SessionKind } from './types'
 import { UnassignedList } from './UnassignedList'
+import { LiveStatus } from './LiveStatus'
 import { useLanes } from './useLanes'
+import { useMoveBowler } from './useMoveBowler'
+import { useSessionEvents } from './useSessionEvents'
 
-/** How long the "not saved" notice stays. An error stays until dismissed. */
+/** How long a success notice stays. An error stays until dismissed. */
 const INFO_MS = 8000
 
 function everyBowler(page: LanePage): LaneBowler[] {
@@ -32,9 +34,10 @@ function everyBowler(page: LanePage): LaneBowler[] {
 
 /**
  * The lane assignments of one squad or sweeper (LAN-10, D-58, D-60): the bowlers who need a lane
- * beside one drop zone per lane pair. Nothing saves yet (D-55): a drop on a pair with room, or a
- * placed bowler dropped on the unassigned list, moves the bowler on this screen only and says so
- * in an info toast. A full pair refuses.
+ * beside one drop zone per lane pair. A drop on a pair with room, or a placed bowler dropped on the
+ * unassigned list, shows at once and saves (LAN-20, D-216, D-220); a refusal puts the bowler back
+ * and says why. A full pair refuses before it asks. The page keeps itself fresh over the live
+ * stream of the session (LAN-21, D-217), so a second desk's moves and new entries show here.
  */
 export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
   // Stryker disable next-line StringLiteral: the route always has these params; this only satisfies the type.
@@ -48,12 +51,11 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
   const canManage = useCan('registrations.write')
   const [recapOpen, setRecapOpen] = useState(false)
   const [toast, setToast] = useState<{ kind: 'info' | 'success' | 'error'; text: string }>()
-  // TEMPORARY (D-55): the moves made on this screen, for this session only. They show until the
-  // page is left or refreshed, when the API's page is all there is.
-  const [moved, setMoved] = useState<{ sessionId: string; moves: ReadonlyMap<string, Move> }>({
-    sessionId,
-    moves: new Map(),
-  })
+  // Moving a bowler needs `lanes.assign` (D-216). A score keeper may watch the lanes but not change them.
+  const canAssign = useCan('lanes.assign')
+  const { move, savingIds } = useMoveBowler(kind, id, sessionId)
+  // A complete session cannot change, so it needs no stream (D-10, D-217).
+  const live = useSessionEvents(kind, id, sessionId, data !== undefined && !data.session.complete)
 
   if (isPending) return <Loading label="Loading lane assignments…" rows={4} />
   if (error instanceof LaneSetupError) return <p role="alert">{error.message}</p>
@@ -69,20 +71,30 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
   }
 
   const { session } = data
-  const readOnly = session.complete
-  const moves = moved.sessionId === sessionId ? moved.moves : new Map<string, Move>()
-  const view = applyMoves(data, moves)
+  // A complete session says so; a user who may not assign sees no controls and no line about it.
+  const readOnly = session.complete || !canAssign
+  const view = data
   const bowlers = everyBowler(view)
   const dragging = bowlers.find((bowler) => bowler.registrationId === draggingId)
 
-  // One place decides what a drop or a dialog pick does (D-55, D-58).
+  // One place decides what a drop or a dialog pick does (D-58, D-220).
   function attempt(bowler: LaneBowler, target: DropTarget) {
     const decision = decideDrop(bowler, target)
     if (decision.type === 'refuse') {
       setToast({ kind: 'error', text: decision.message })
     } else if (decision.type === 'move') {
-      setMoved({ sessionId, moves: new Map(moves).set(bowler.registrationId, decision.move) })
-      setToast({ kind: 'info', text: NOT_SAVED })
+      move(
+        {
+          registrationId: bowler.registrationId,
+          lane: target === 'unassigned' ? null : target.firstLane,
+          guess: decision.move,
+        },
+        {
+          onError: (failure) => {
+            setToast({ kind: 'error', text: failure.message })
+          },
+        },
+      )
     }
   }
 
@@ -137,13 +149,16 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
             </button>
           </span>
         </div>
-        {readOnly && <p className={styles.note}>This {kind} is complete. Lanes cannot change.</p>}
+        {session.complete && (
+          <p className={styles.note}>This {kind} is complete. Lanes cannot change.</p>
+        )}
         <div className={styles.layout}>
           <UnassignedList
             bowlers={view.unassigned}
             kind={kind}
             dragging={dragging}
             readOnly={readOnly}
+            savingIds={savingIds}
             onAssign={setAssigning}
             onManage={canManage ? setManaging : undefined}
           />
@@ -162,6 +177,8 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
                     kind={kind}
                     dragging={dragging}
                     readOnly={readOnly}
+                    savingIds={savingIds}
+                    fresh={live.updated?.pairs.includes(pair.firstLane)}
                     onAssign={setAssigning}
                     onManage={canManage ? setManaging : undefined}
                   />
@@ -196,6 +213,7 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
       }}
     >
       <title>{`Lane assignments · ${formatSessionDate(session.date)} · ${tournament.name} · Tournament Director`}</title>
+      {!session.complete && <LiveStatus state={live.state} updated={live.updated?.text} />}
       {body}
       <DragOverlay>{dragging ? <BowlerPreview name={dragging.name} /> : null}</DragOverlay>
       {assigning && (

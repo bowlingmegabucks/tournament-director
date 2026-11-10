@@ -98,3 +98,67 @@ export async function fetchLanes(
   }
   return body
 }
+
+/**
+ * A move the API refused or could not save. The message is ready to show: for a full pair it names
+ * the pair, for a complete session it says so (LAN-13, Q-28, D-216).
+ */
+export class LaneMoveError extends Error {
+  /** The status that came back, or `undefined` when the request never got an answer. */
+  readonly status: number | undefined
+
+  constructor(message: string, status?: number) {
+    super(message)
+    this.status = status
+  }
+}
+
+async function messageOf(response: Response, fallback: string): Promise<string> {
+  const body: unknown = await response.json().catch(() => undefined)
+  const message = field(body, 'message')
+  return typeof message === 'string' && message !== '' ? message : fallback
+}
+
+/**
+ * Saves a move (LAN-20, D-216): the bowler to the pair whose first lane is `lane`, or off the lanes
+ * when `lane` is `null`. The API picks the seat and returns it. `409` (pair full, session or
+ * tournament complete) and `404` (the bowler left the session) keep the API's message.
+ */
+export async function moveBowler(
+  kind: SessionKind,
+  tournamentId: string,
+  sessionId: string,
+  registrationId: string,
+  lane: number | null,
+): Promise<string> {
+  const response = await apiFetch(
+    apiUrl(`/v1/tournaments/${tournamentId}/${kind}s/${sessionId}/lanes/${registrationId}`),
+    {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ lane }),
+    },
+  ).catch(() => {
+    throw new LaneMoveError('Could not save the move. Check your connection and try again.')
+  })
+  if (response.status === 403) {
+    throw new LaneMoveError('You are not allowed to move bowlers.', 403)
+  }
+  if (response.status === 404) {
+    throw new LaneMoveError(
+      await messageOf(response, `That bowler is no longer in this ${kind}.`),
+      404,
+    )
+  }
+  if (response.status === 409 || response.status === 400 || response.status === 422) {
+    throw new LaneMoveError(await messageOf(response, 'The move was refused.'), response.status)
+  }
+  if (!response.ok) {
+    throw new LaneMoveError('Could not save the move. Try again.', response.status)
+  }
+  const position = field(await readJson(response, 'Failed to save the move'), 'position')
+  if (typeof position !== 'string') {
+    throw new LaneMoveError('Failed to save the move (unexpected response)')
+  }
+  return position
+}

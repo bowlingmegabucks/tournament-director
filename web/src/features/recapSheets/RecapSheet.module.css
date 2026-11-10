@@ -88,7 +88,14 @@
   block-size: 0.5in;
 }
 
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  margin-block-start: 0.15in;
+}
+
 .office {
-  margin: 0.15in 0 0;
+  margin: 0;
   text-align: end;
 }

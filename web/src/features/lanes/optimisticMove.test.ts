@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { createLaneBowler, createLanePage, createLanePair } from '../../mocks/data'
-import { applyMoves, planMove, type Move } from './tempMoves'
+import { applyMoves, planMove, type Move } from './optimisticMove'
 
 const at = (position: string, name = position) => createLaneBowler({ name, position })
 
-describe('planMove (D-56, D-57, temporary)', () => {
+describe('planMove (D-56, D-57, D-220)', () => {
   const waiting = createLaneBowler()
 
   it('puts the first bowler on A of the first lane', () => {

@@ -5,6 +5,8 @@ export interface ProcessEventDependencies {
   logger: Logger
   /** The HTTP server: `close` stops new connections and calls back once open requests end. */
   server: { close: (callback: () => void) => unknown }
+  /** End the long-lived event streams (D-217): `server.close` waits for them and they never finish. */
+  closeStreams?: () => void
   /** Send buffered telemetry. */
   flush: () => Promise<void>
   exit: (code: number) => void
@@ -19,7 +21,7 @@ export interface ProcessEventDependencies {
  */
 export function handleProcessEvents(
   events: Pick<EventEmitter, 'on'>,
-  { logger, server, flush, exit, forceExitMs }: ProcessEventDependencies,
+  { logger, server, closeStreams, flush, exit, forceExitMs }: ProcessEventDependencies,
 ): void {
   let stopping = false
   let finishing = false
@@ -45,6 +47,8 @@ export function handleProcessEvents(
       logger.error({ forceExitMs }, 'Shutdown took too long, exiting')
       exit(1)
     }, forceExitMs).unref()
+    // Open streams would hold `close` until the forced exit, so end them first.
+    closeStreams?.()
     server.close(finish)
   }
 

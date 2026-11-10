@@ -82,3 +82,8 @@
   color: var(--color-accent);
   font-size: var(--font-size-sm);
 }
+
+/* A move saved but not yet answered (D-220): the seat letter is a guess until it is. */
+.saving {
+  opacity: 0.6;
+}

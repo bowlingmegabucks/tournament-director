@@ -25,6 +25,7 @@ Version numbers follow content, not a countdown. 0.10.0 is fine.
 - [ ] Every legacy rule is `Done`, `Done, differs`, or `Dropped` with a decision ID (see the Status columns in `docs/migration/`).
 - [ ] Every open question in [decisions-and-questions.md](migration/decisions-and-questions.md) is settled.
 - [x] The desk can generate and print recap sheets for a squad or sweeper, with the cross (`RPT-05`, `LAN-12`; [recap-sheets.md](requirements/recap-sheets.md)).
+- [x] Every printed recap sheet carries a QR code that opens the squad's or sweeper's Scores tab on a phone (`RPT-10`, D-225; [recap-sheets.md](requirements/recap-sheets.md)).
 - [ ] Tournament commands (D-12, D-15, D-130; [tournaments.md](requirements/tournaments.md)):
   - [x] Create a tournament (`createTournament`, `TRN-19` to `TRN-22`).
   - [x] Edit a tournament, with free, confirmed, and refused fields by what depends on them (`editTournament`, `TRN-24` to `TRN-31`, D-127 to D-131).
@@ -107,7 +108,7 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 - [ ] Live score updates reach every open Scores tab, signed in or not, without polling (Q-33; polls every 15 s until then, D-72).
 - [ ] Load test with a full tournament's users and score entry.
 - [ ] Tournament lifecycle test: one UI-driven Playwright run on its own database and API (3 divisions, 4 squads, 2 sweepers, about 150 bowlers, 300 squad entries and 150 sweeper entries, scripted failures, hand-written expected results). Manual trigger, plus a job on `main` that deploy does not wait for. Built in stages as the features land. See [lifecycle-e2e.md](plans/lifecycle-e2e.md).
-- [ ] Several desk users can work at once: lane moves and new registrations show on every open screen (WebSockets or similar, Q-27), and two people racing for the last seat of a pair get one winner and a clear message for the other (Q-28).
+- [x] Several desk users can work at once: lane moves and new registrations show on every open lane page over server-sent events (D-217 to D-219, Q-27), and two people racing for the last seat of a pair get one winner and a clear message for the other (D-216, D-220, Q-28). Scores and Results move to the stream in their own slice (D-222). The hub is one process (D-224).
 
 ## People
 

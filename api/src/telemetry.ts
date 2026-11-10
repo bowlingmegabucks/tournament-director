@@ -24,10 +24,13 @@ import {
 import type { TelemetryConfig } from './config.ts'
 
 const quietPath = '/health'
+// An event stream (D-217) stays open for hours, so its span would never be useful.
+const eventStreamPath = /^\/v1\/tournaments\/[^/]+\/(squads|sweepers)\/[^/]+\/events$/
 
-/** Health probes run every few seconds and would drown out real traffic. */
+/** Health probes run every few seconds and would drown out real traffic; event streams last hours. */
 export function isQuietPath(url: string | undefined): boolean {
-  return url?.split('?')[0] === quietPath
+  const path = url?.split('?')[0]
+  return path === quietPath || (path !== undefined && eventStreamPath.test(path))
 }
 
 export function createResource(config: TelemetryConfig): Resource {

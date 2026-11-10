@@ -11,6 +11,10 @@ interface PairZoneProps {
   /** The bowler being dragged, if any. Pairs show a cue for them (D-58). */
   dragging: LaneBowler | undefined
   readOnly: boolean
+  /** Registrations whose moves are still being saved (D-220). */
+  savingIds?: ReadonlySet<string>
+  /** Another desk just changed this pair (LAN-21): an accent edge while the status line says so. */
+  fresh?: boolean
   onAssign: (bowler: LaneBowler) => void
   onManage?: (bowler: LaneBowler) => void
 }
@@ -21,6 +25,8 @@ export function PairZone({
   kind,
   dragging,
   readOnly,
+  savingIds,
+  fresh = false,
   onAssign,
   onManage,
 }: Readonly<PairZoneProps>) {
@@ -35,7 +41,7 @@ export function PairZone({
   if (outcome === 'full') zone = styles.cannotDrop ?? ''
 
   return (
-    <li ref={ref} className={`${styles.pair} ${zone}`}>
+    <li ref={ref} className={`${styles.pair} ${zone} ${fresh ? styles.fresh : ''}`}>
       <h3 className={styles.title}>
         {formatPair(pair)}{' '}
         {cue ? (
@@ -55,6 +61,7 @@ export function PairZone({
               kind={kind}
               readOnly={readOnly}
               compact
+              saving={savingIds?.has(bowler.registrationId)}
               onAssign={onAssign}
               onManage={onManage}
             />

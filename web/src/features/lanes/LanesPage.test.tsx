@@ -10,68 +10,9 @@ import {
   createLanePair,
   createRecapSheet,
   createRecapSheets,
-  createSquad,
-  createSweeper,
-  createTournament,
   createSignedInUser,
 } from '../../mocks/data'
-import { renderApp } from '../../test/renderApp'
-import type { LanePage } from './types'
-
-const tournament = createTournament({ name: 'Spring Open' })
-
-/** Serve the lane page for the squad or sweeper it describes, with a matching session list for the header. */
-function serve(page: LanePage) {
-  const { session } = page
-  const head = { id: session.id, date: session.date, complete: session.complete }
-  server.use(
-    http.get('/v1/tournaments/:id', () => HttpResponse.json({ tournament })),
-    http.get('/v1/tournaments/:id/squads', () =>
-      HttpResponse.json({ squads: session.kind === 'squad' ? [createSquad(head)] : [] }),
-    ),
-    http.get('/v1/tournaments/:id/sweepers', () =>
-      HttpResponse.json({ sweepers: session.kind === 'sweeper' ? [createSweeper(head)] : [] }),
-    ),
-    http.get('/v1/tournaments/:id/squads/:sessionId/lanes', () => HttpResponse.json(page)),
-    http.get('/v1/tournaments/:id/sweepers/:sessionId/lanes', () => HttpResponse.json(page)),
-  )
-}
-
-const open = (page: LanePage) =>
-  renderApp(`/tournaments/${tournament.id}/${page.session.kind}s/${page.session.id}/lanes`)
-
-const pat = createLaneBowler({
-  name: 'Pat Nguyen',
-  divisionName: 'Women',
-  average: 168,
-  pins: 47,
-})
-const carl = createLaneBowler({ name: 'Carl Dubois', average: 205, pins: 14 })
-const joe = createLaneBowler({ name: 'Joe Fontaine', position: '1A', pins: 0 })
-const dana = createLaneBowler({ name: 'Dana Abbott', position: '2C', pins: 21 })
-
-function filled(): LanePage {
-  const full = Array.from({ length: 5 }, (_, index) =>
-    createLaneBowler({
-      name: `Full ${index}`,
-      position: ['3A', '3B', '4C', '4D', '4E'][index] ?? '',
-    }),
-  )
-  return createLanePage({
-    pairs: [
-      createLanePair(1, [joe, dana]),
-      createLanePair(3, full),
-      createLanePair(5, []),
-      createLanePair(7, []),
-      createLanePair(9, []),
-    ],
-    unassigned: [carl, pat],
-    divisions: [
-      { id: 'd1', number: 1, name: 'Open', entries: 8 },
-      { id: 'd2', number: 2, name: 'Women', entries: 1 },
-    ],
-  })
-}
+import { carl, filled, joe, open, pat, serve, tournament } from './lanesTestSupport'
 
 /** The pair's card: the `li` that holds its level 3 heading. */
 async function pairCard(name: RegExp): Promise<HTMLElement> {
@@ -493,9 +434,9 @@ describe('Assign to lanes dialog (D-58)', () => {
     )
   })
 
-  it('moves the bowler to the pair on screen and says nothing is saved (D-55, D-56)', async () => {
+  it('saves the move and shows the seat the API picked (LAN-20, D-56, D-216)', async () => {
     const page = filled()
-    serve(page)
+    const server = serve(page)
     const user = userEvent.setup()
     open(page)
     await user.click(
@@ -505,11 +446,6 @@ describe('Assign to lanes dialog (D-58)', () => {
 
     await user.click(within(dialog).getByRole('button', { name: /Lanes 5-6/ }))
 
-    expect(
-      await screen.findByText(
-        'No save is configured yet. This move shows on this screen only and is lost on refresh.',
-      ),
-    ).toBeVisible()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Unassigned (1)' })).toBeVisible()
     const pair = await pairCard(/Lanes 5-6/)
@@ -517,6 +453,10 @@ describe('Assign to lanes dialog (D-58)', () => {
     expect(within(pair).getByText('5A')).toBeVisible()
     expect(within(pair).queryByText('No one yet.')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 3, name: /Lanes 5-6/ })).toHaveTextContent('1 of 5')
+    await waitFor(() => {
+      expect(server.puts).toEqual([{ registrationId: pat.registrationId, lane: 5 }])
+    })
+    expect(screen.queryByText(/No save is configured/)).not.toBeInTheDocument()
   })
 
   it('gives the next bowler on a pair the next seat (D-56)', async () => {
@@ -559,9 +499,9 @@ describe('Assign to lanes dialog (D-58)', () => {
     expect(within(await pairCard(/Lanes 5-6/)).getByText('Joe Fontaine')).toBeVisible()
   })
 
-  it('offers Unassigned to a bowler who has a lane, and clears the lane on screen (D-57, D-55)', async () => {
+  it('offers Unassigned to a bowler who has a lane, and saves a null lane (LAN-09, D-57)', async () => {
     const page = filled()
-    serve(page)
+    const server = serve(page)
     const user = userEvent.setup()
     open(page)
     await user.click(
@@ -575,12 +515,14 @@ describe('Assign to lanes dialog (D-58)', () => {
     )
     await user.click(within(dialog).getByRole('button', { name: /Unassigned/ }))
 
-    expect(await screen.findByText(/No save is configured yet/)).toBeVisible()
-    expect(screen.getByRole('heading', { name: 'Unassigned (3)' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Unassigned (3)' })).toBeVisible()
     expect(
       within(screen.getByRole('region', { name: 'Unassigned bowlers' })).getByText('Joe Fontaine'),
     ).toBeVisible()
     expect(within(await pairCard(/Lanes 1-2/)).queryByText('Joe Fontaine')).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(server.puts).toEqual([{ registrationId: joe.registrationId, lane: null }])
+    })
   })
 
   it('closes on Cancel with no error', async () => {
@@ -621,21 +563,131 @@ describe('Assign to lanes dialog (D-58)', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('dismisses the notice', async () => {
+  it('puts the bowler back and says why when the API refuses (Q-28, D-220)', async () => {
     const page = filled()
     serve(page)
+    server.use(
+      http.put('/v1/tournaments/:id/:kind/:sessionId/lanes/:registrationId', () =>
+        HttpResponse.json(
+          { message: 'Lanes 5-6 are full (5 of 5). Pick another pair.' },
+          { status: 409 },
+        ),
+      ),
+    )
     const user = userEvent.setup()
     open(page)
     await user.click(
       await screen.findByRole('button', { name: 'Assign to lanes: Pat Nguyen' }, { timeout: 3000 }),
     )
     await user.click(await screen.findByRole('button', { name: /Lanes 5-6/ }))
-    const notice = (await screen.findByText(/No save is configured yet/)).closest('output')
-    if (!notice) throw new Error('The notice is not a status')
+
+    expect(await screen.findByText('Lanes 5-6 are full (5 of 5). Pick another pair.')).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Unassigned (2)' })).toBeVisible()
+    expect(within(await pairCard(/Lanes 5-6/)).queryByText('Pat Nguyen')).not.toBeInTheDocument()
+  })
+
+  it('keeps the error until it is dismissed (Q-28)', async () => {
+    const page = filled()
+    serve(page)
+    server.use(
+      http.put('/v1/tournaments/:id/:kind/:sessionId/lanes/:registrationId', () =>
+        HttpResponse.json(
+          { message: 'This squad is complete. Lanes cannot change.' },
+          { status: 409 },
+        ),
+      ),
+    )
+    const user = userEvent.setup()
+    open(page)
+    await user.click(
+      await screen.findByRole('button', { name: 'Assign to lanes: Pat Nguyen' }, { timeout: 3000 }),
+    )
+    await user.click(await screen.findByRole('button', { name: /Lanes 5-6/ }))
+    const notice = (await screen.findByText(/This squad is complete/)).closest('[role="alert"]')
+    if (!(notice instanceof HTMLElement)) throw new Error('The error is not an alert')
 
     await user.click(within(notice).getByRole('button', { name: 'Dismiss' }))
 
-    expect(screen.queryByText(/No save is configured yet/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/This squad is complete/)).not.toBeInTheDocument()
+  })
+
+  it('marks the row busy while the save is out, and clears it when the API answers (D-220)', async () => {
+    const page = filled()
+    serve(page)
+    let answer: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => {
+      answer = resolve
+    })
+    server.use(
+      http.put('/v1/tournaments/:id/:kind/:sessionId/lanes/:registrationId', async () => {
+        await gate
+        return HttpResponse.json({ position: '5A' })
+      }),
+    )
+    const user = userEvent.setup()
+    open(page)
+    await user.click(
+      await screen.findByRole('button', { name: 'Assign to lanes: Pat Nguyen' }, { timeout: 3000 }),
+    )
+    await user.click(await screen.findByRole('button', { name: /Lanes 5-6/ }))
+
+    const row = (await screen.findAllByText('Pat Nguyen'))[0]?.closest('li')
+    expect(row).toHaveAttribute('aria-busy', 'true')
+    expect(within(await pairCard(/Lanes 5-6/)).getByText('5A')).toBeVisible()
+
+    answer()
+    await waitFor(() => {
+      expect(screen.getByText('Pat Nguyen').closest('li')).toHaveAttribute('aria-busy', 'false')
+    })
+  })
+
+  it('shows the seat the API chose when it is not the one guessed (LAN-20, D-57)', async () => {
+    const page = filled()
+    const api = serve(page)
+    server.use(
+      http.put('/v1/tournaments/:id/:kind/:sessionId/lanes/:registrationId', () => {
+        // Another desk took 5A first, so the server seats Pat on 6C.
+        api.replace({
+          ...api.current(),
+          pairs: api
+            .current()
+            .pairs.map((pair) =>
+              pair.firstLane === 5 ? { ...pair, bowlers: [{ ...pat, position: '6C' }] } : pair,
+            ),
+          unassigned: [carl],
+        })
+        return HttpResponse.json({ position: '6C' })
+      }),
+    )
+    const user = userEvent.setup()
+    open(page)
+    await user.click(
+      await screen.findByRole('button', { name: 'Assign to lanes: Pat Nguyen' }, { timeout: 3000 }),
+    )
+    await user.click(await screen.findByRole('button', { name: /Lanes 5-6/ }))
+
+    const pair = await pairCard(/Lanes 5-6/)
+    await waitFor(() => {
+      expect(within(pair).getByText('6C')).toBeVisible()
+    })
+    expect(within(pair).queryByText('5A')).not.toBeInTheDocument()
+  })
+
+  it('shows no controls to a user who may watch but not move bowlers (D-216)', async () => {
+    setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+    const page = filled()
+    serve(page)
+
+    open(page)
+
+    expect(
+      await screen.findByRole('heading', { name: 'Unassigned (2)' }, { timeout: 3000 }),
+    ).toBeVisible()
+    expect(screen.queryByRole('button', { name: /Assign to lanes/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Move / })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Drag / })).not.toBeInTheDocument()
+    expect(screen.getByText('Pat Nguyen')).toBeVisible()
+    expect(screen.queryByText(/is complete/)).not.toBeInTheDocument()
   })
 })
 

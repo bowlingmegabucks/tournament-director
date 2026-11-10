@@ -10,6 +10,8 @@ interface BowlerRowProps {
   readOnly: boolean
   /** The narrow form inside a pair: no average. */
   compact: boolean
+  /** A save of this bowler's move is still out (D-220): the row is dimmed and marked busy. */
+  saving?: boolean
   /** The "Assign to lanes" or "Move" button was pressed (D-58). */
   onAssign: (bowler: LaneBowler) => void
   /** The "Registration" button was pressed: edit, move to another session, or remove (D-197). Left out for a user who may not. */
@@ -49,6 +51,7 @@ function DraggableRow({
   bowler,
   kind,
   compact,
+  saving = false,
   onAssign,
   onManage,
 }: Readonly<Omit<BowlerRowProps, 'readOnly'>>) {
@@ -58,7 +61,8 @@ function DraggableRow({
   return (
     <li
       ref={ref}
-      className={`${styles.row} ${placed ? styles.placed : ''} ${isDragSource ? styles.dragging : ''}`}
+      className={`${styles.row} ${placed ? styles.placed : ''} ${isDragSource ? styles.dragging : ''} ${saving ? styles.saving : ''}`}
+      aria-busy={saving}
     >
       <button
         ref={handleRef}

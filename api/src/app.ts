@@ -13,7 +13,15 @@ import { createDivisionRouter } from './features/divisions/routes.ts'
 import type { DivisionRepository } from './features/divisions/repository.ts'
 import type { DivisionWriter } from './features/divisions/writer.ts'
 import { createMeRouter } from './features/me/routes.ts'
-import { createLaneRouter, findSquad, findSweeper } from './features/lanes/routes.ts'
+import { createLaneMoveRouter } from './features/lanes/moveRoutes.ts'
+import {
+  createLaneEventsRouter,
+  createLaneRouter,
+  findSquad,
+  findSweeper,
+} from './features/lanes/routes.ts'
+import type { LaneWriter } from './features/lanes/writer.ts'
+import type { SessionEvents } from './shared/events/sessionEvents.ts'
 import type { LaneRepository } from './features/lanes/repository.ts'
 import { createRecapSheetRouter } from './features/recapSheets/routes.ts'
 import { createBowlerRouter } from './features/bowlers/routes.ts'
@@ -24,6 +32,7 @@ import { createDeskRegistrationRouter } from './features/registrations/deskRoute
 import { createDeskDeleteRouter } from './features/registrations/deskDeleteRoutes.ts'
 import { createEditRegistrationRouter } from './features/registrations/editRoutes.ts'
 import { createVendorRegistrationRouter } from './features/registrations/vendorRoutes.ts'
+import { createPublishingRegistrationWriter } from './features/registrations/publishingWriter.ts'
 import type { RegistrationWriter } from './features/registrations/writer.ts'
 import { createFinalsRouter, createResultsRouter } from './features/results/routes.ts'
 import { createScoreRouter } from './features/scores/routes.ts'
@@ -99,6 +108,10 @@ export interface AppDependencies {
   /** The desk's bowler search (BWL-14, D-157). */
   bowlers: BowlerRepository
   lanes: LaneRepository
+  /** Saves lane moves (LAN-20, D-216). */
+  laneWriter: LaneWriter
+  /** Tells open screens that a session changed (D-217). */
+  events: SessionEvents
   scores: ScoreRepository
   squads: SquadRepository
   /** Adds squads (SQD-01 to SQD-08, D-167). */
@@ -123,9 +136,11 @@ export function createApp({
   divisions,
   divisionWriter,
   registrations,
-  registrationWriter,
+  registrationWriter: storedRegistrationWriter,
   bowlers,
   lanes,
+  laneWriter,
+  events,
   scores,
   squads,
   squadWriter,
@@ -135,6 +150,13 @@ export function createApp({
   // Stryker disable next-line StringLiteral: the scope name only labels the metrics.
   meter = metrics.getMeter('tournament-director-api'),
 }: AppDependencies): express.Express {
+  // Every registration write, desk or vendor, tells the open lane pages of the sessions it touches
+  // (LAN-22, D-219). The routes below see only this wrapper.
+  const registrationWriter = createPublishingRegistrationWriter(
+    storedRegistrationWriter,
+    events,
+    logger,
+  )
   const app = express()
   // Without this, req.ip is the proxy's address.
   app.set('trust proxy', config.trustProxy)
@@ -248,7 +270,7 @@ export function createApp({
         path: '/v1/tournaments/:id/squads',
         access: { permission: 'squads.write' }, // SQD-23, D-184: edit; no API key
         methods: ['PATCH'],
-        router: createSquadUpdateRouter(squadWriter, logger),
+        router: createSquadUpdateRouter(squadWriter, logger, events),
       },
       {
         path: '/v1/tournaments/:id/squads',
@@ -260,7 +282,7 @@ export function createApp({
         path: '/v1/tournaments/:id/squads',
         access: { permission: 'squads.write' }, // SQD-15, D-193: complete; no API key
         methods: ['POST'],
-        router: createSquadCompleteRouter(squadWriter, logger),
+        router: createSquadCompleteRouter(squadWriter, logger, events),
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/complete-info',
@@ -295,7 +317,7 @@ export function createApp({
         path: '/v1/tournaments/:id/sweepers',
         access: { permission: 'squads.write' }, // SQD-23, D-184: edit; no API key
         methods: ['PATCH'],
-        router: createSweeperUpdateRouter(sweeperWriter, logger),
+        router: createSweeperUpdateRouter(sweeperWriter, logger, events),
       },
       {
         path: '/v1/tournaments/:id/sweepers',
@@ -307,7 +329,7 @@ export function createApp({
         path: '/v1/tournaments/:id/sweepers',
         access: { permission: 'squads.write' }, // SQD-16, D-193: complete; no API key
         methods: ['POST'],
-        router: createSweeperCompleteRouter(sweeperWriter, logger),
+        router: createSweeperCompleteRouter(sweeperWriter, logger, events),
       },
       {
         path: '/v1/tournaments/:id/sweepers/:sessionId/complete-info',
@@ -329,7 +351,19 @@ export function createApp({
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/lanes',
+        access: { permission: 'lanes.assign' }, // LAN-20, D-216: director and admin; no API key
+        methods: ['PUT'],
+        router: createLaneMoveRouter('squad', { writer: laneWriter, events, logger }),
+      },
+      {
+        path: '/v1/tournaments/:id/squads/:sessionId/events',
+        access: { permission: 'lanes.read' }, // LAN-21, D-217: signed in; the API key cannot reach it
+        router: createLaneEventsRouter('squad', findSquad(squads), { tournaments, events, logger }),
+      },
+      {
+        path: '/v1/tournaments/:id/squads/:sessionId/lanes',
         access: { permission: 'lanes.read' }, // D-59, D-52: signed in; the API key cannot reach it
+        methods: ['GET'],
         router: createLaneRouter('squad', findSquad(squads), {
           lanes,
           tournaments,
@@ -339,7 +373,23 @@ export function createApp({
       },
       {
         path: '/v1/tournaments/:id/sweepers/:sessionId/lanes',
+        access: { permission: 'lanes.assign' }, // LAN-20, D-216: director and admin; no API key
+        methods: ['PUT'],
+        router: createLaneMoveRouter('sweeper', { writer: laneWriter, events, logger }),
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers/:sessionId/events',
+        access: { permission: 'lanes.read' }, // LAN-21, D-217: signed in; the API key cannot reach it
+        router: createLaneEventsRouter('sweeper', findSweeper(sweepers), {
+          tournaments,
+          events,
+          logger,
+        }),
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers/:sessionId/lanes',
         access: { permission: 'lanes.read' }, // D-59, D-52: signed in; the API key cannot reach it
+        methods: ['GET'],
         router: createLaneRouter('sweeper', findSweeper(sweepers), {
           lanes,
           tournaments,

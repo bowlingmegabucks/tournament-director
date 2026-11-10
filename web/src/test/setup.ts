@@ -19,7 +19,7 @@ HTMLDialogElement.prototype.close = function close() {
 
 beforeAll(() => {
   server.listen({ onUnhandledFrame: 'error' })
-  // jsdom has no EventSource (LAN-19); the lane page opens one.
+  // jsdom has no EventSource (LAN-21); the lane page opens one.
   vi.stubGlobal('EventSource', FakeEventSource)
 })
 afterEach(() => {

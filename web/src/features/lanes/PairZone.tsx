@@ -13,7 +13,7 @@ interface PairZoneProps {
   readOnly: boolean
   /** Registrations whose moves are still being saved (D-220). */
   savingIds?: ReadonlySet<string>
-  /** Another desk just changed this pair (LAN-19): an accent edge while the status line says so. */
+  /** Another desk just changed this pair (LAN-21): an accent edge while the status line says so. */
   fresh?: boolean
   onAssign: (bowler: LaneBowler) => void
   onManage?: (bowler: LaneBowler) => void

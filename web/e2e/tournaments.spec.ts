@@ -240,7 +240,7 @@ test('a squad card opens its lane page with the pairs and the bowlers who need a
   await expect(page.getByRole('heading', { level: 3, name: /^Lanes 3-4/ })).toContainText('2 of 4')
 })
 
-test('a drop on a pair with room moves the bowler, saves it, and shows the seat (LAN-18, D-56, D-58)', async ({
+test('a drop on a pair with room moves the bowler, saves it, and shows the seat (LAN-20, D-56, D-58)', async ({
   page,
 }) => {
   // Tall enough that the pair is in view: a drop needs a visible target.
@@ -265,7 +265,7 @@ test('a drop on a pair with room moves the bowler, saves it, and shows the seat 
   await expect(page.getByRole('heading', { name: 'Unassigned (3)' })).toBeVisible()
 })
 
-test('the lane page says it is live, and stays live after a save (LAN-19, D-217)', async ({
+test('the lane page says it is live, and stays live after a save (LAN-21, D-217)', async ({
   page,
 }) => {
   await openSquad(page, '1:00 PM')

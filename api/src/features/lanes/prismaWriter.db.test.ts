@@ -113,7 +113,7 @@ describe('Prisma lane writer', () => {
     kind: 'squad' | 'sweeper' = 'squad',
   ) => ({ tournamentId, kind, sessionId, registrationId, lane })
 
-  it('writes the first free seat of the pair (LAN-18, D-56)', async () => {
+  it('writes the first free seat of the pair (LAN-20, D-56)', async () => {
     const tournamentId = await insertTournament()
     const divisionId = await insertDivision(tournamentId)
     const sessionId = await insertSession(tournamentId)
@@ -156,7 +156,7 @@ describe('Prisma lane writer', () => {
     })
   })
 
-  it('moves a bowler on a sweeper the same way (LAN-18)', async () => {
+  it('moves a bowler on a sweeper the same way (LAN-20)', async () => {
     const tournamentId = await insertTournament()
     const divisionId = await insertDivision(tournamentId)
     const sessionId = await insertSession(tournamentId, { type: 1 })

@@ -2,7 +2,7 @@ import type { AddressInfo } from 'node:net'
 import type { Server } from 'node:http'
 import { metrics } from '@opentelemetry/api'
 import express from 'express'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { HttpError } from '../errors.ts'
 import { createErrorHandler } from '../middleware.ts'
@@ -30,8 +30,11 @@ afterEach(async () => {
   )
 })
 
-function setup(options: { max?: number; heartbeatMs?: number; known?: boolean } = {}) {
-  const { logger } = createCapturedLogger()
+function setup(
+  options: { max?: number; heartbeatMs?: number; known?: boolean; gate?: Promise<void> } = {},
+) {
+  const captured = createCapturedLogger('debug')
+  const logger = captured.logger
   const events = createSessionEvents(logger, metrics.getMeter('test'), options.max)
   const app = express()
   app.use(
@@ -40,9 +43,9 @@ function setup(options: { max?: number; heartbeatMs?: number; known?: boolean } 
       events,
       logger,
       heartbeatMs: options.heartbeatMs,
-      check: () => {
+      check: async () => {
         if (options.known === false) throw new HttpError(404, 'Squad not found')
-        return Promise.resolve()
+        await options.gate
       },
     }),
   )
@@ -70,7 +73,7 @@ function setup(options: { max?: number; heartbeatMs?: number; known?: boolean } 
     }
     return { response, until, close: () => controller.abort(), text: () => text }
   }
-  return { events, open }
+  return { events, open, captured }
 }
 
 describe('session events route', () => {
@@ -91,7 +94,7 @@ describe('session events route', () => {
     expect(await stream.until('retry: 5000\n\n')).toContain('retry: 5000\n\n')
   })
 
-  it('sends a changed message when the session publishes (LAN-19, D-218)', async () => {
+  it('sends a changed message when the session publishes (LAN-21, D-218)', async () => {
     const { open, events } = setup()
     const stream = await open()
     await stream.until('retry')
@@ -172,5 +175,50 @@ describe('session events route', () => {
     expect(await second.response.json()).toEqual({
       message: 'Too many live connections. Try again shortly.',
     })
+  })
+
+  it('logs that a stream started, with the session id and no more (api-observability)', async () => {
+    const { open, captured } = setup()
+    const stream = await open()
+    await stream.until('retry')
+
+    expect(captured.records().find((line) => line['msg'] === 'Event stream started')).toMatchObject(
+      {
+        level: 20,
+        sessionId,
+      },
+    )
+  })
+
+  it('stops the heartbeat when the browser leaves (D-217)', async () => {
+    const { open, events } = setup({ heartbeatMs: 20 })
+    const cleared = vi.spyOn(globalThis, 'clearInterval')
+    const stream = await open()
+    await stream.until('retry')
+
+    stream.close()
+    await expect.poll(() => events.count()).toBe(0)
+
+    expect(cleared).toHaveBeenCalled()
+    cleared.mockRestore()
+  })
+
+  it('opens no stream for a browser that left while the check was still running (D-217)', async () => {
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const { open, events } = setup({ gate })
+    const pending = open().catch(() => undefined)
+    // The request reaches the server and waits on the check. Let the browser walk away.
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    controllers.at(-1)?.abort()
+    await pending
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    release()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(events.count()).toBe(0)
   })
 })

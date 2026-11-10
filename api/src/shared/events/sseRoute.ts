@@ -58,12 +58,12 @@ export function createSessionEventsRouter({
     })
     if (!stop) throw new HttpError(503, 'Too many live connections. Try again shortly.')
 
-    res.status(200)
     res.setHeader('content-type', 'text/event-stream; charset=utf-8')
     // no-transform keeps a proxy from compressing or rewriting; x-accel-buffering stops nginx-style buffering.
     res.setHeader('cache-control', 'no-cache, no-transform')
     res.setHeader('x-accel-buffering', 'no')
 
+    // Stryker disable next-line all: the first write sends the headers anyway; this only sends them at once.
     res.flushHeaders()
     res.write(`retry: ${RETRY_MS}\n\n`)
     const heartbeat = setInterval(() => {

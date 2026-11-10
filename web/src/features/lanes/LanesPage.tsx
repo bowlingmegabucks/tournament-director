@@ -35,9 +35,9 @@ function everyBowler(page: LanePage): LaneBowler[] {
 /**
  * The lane assignments of one squad or sweeper (LAN-10, D-58, D-60): the bowlers who need a lane
  * beside one drop zone per lane pair. A drop on a pair with room, or a placed bowler dropped on the
- * unassigned list, shows at once and saves (LAN-18, D-216, D-220); a refusal puts the bowler back
+ * unassigned list, shows at once and saves (LAN-20, D-216, D-220); a refusal puts the bowler back
  * and says why. A full pair refuses before it asks. The page keeps itself fresh over the live
- * stream of the session (LAN-19, D-217), so a second desk's moves and new entries show here.
+ * stream of the session (LAN-21, D-217), so a second desk's moves and new entries show here.
  */
 export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
   // Stryker disable next-line StringLiteral: the route always has these params; this only satisfies the type.

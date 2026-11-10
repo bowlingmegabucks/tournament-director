@@ -54,11 +54,10 @@ export function useMoveBowler(kind: SessionKind, tournamentId: string, sessionId
   // The bowlers whose saves are still out, so their rows can say so.
   const saving = useMutationState({
     filters: { mutationKey, status: 'pending' },
-    select: (item) => (item.state.variables as MoveRequest | undefined)?.registrationId,
+    // Every mutation under this key is a `MoveRequest`.
+    select: (item) => (item.state.variables as MoveRequest).registrationId,
   })
-  const savingIds: ReadonlySet<string> = new Set(
-    saving.filter((id): id is string => id !== undefined),
-  )
+  const savingIds: ReadonlySet<string> = new Set(saving)
 
   return { move: mutation.mutate, savingIds }
 }

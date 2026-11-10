@@ -97,6 +97,7 @@ export function planLaneMove(
   if (stored && pairOf(stored.lane, [pair])) return { type: 'unchanged', position: mine.position }
 
   const others = facts.entries.filter((entry) => {
+    // Stryker disable next-line ConditionalExpression: a bowler already in the pair returned above, so a stored position of their own never reaches the count.
     if (entry.registrationId === registrationId) return false
     const position = parsePosition(entry.position)
     return position !== undefined && pairOf(position.lane, [pair]) !== undefined
@@ -109,9 +110,7 @@ export function planLaneMove(
     }
   }
 
-  const taken = new Set(
-    others.map((entry) => parsePosition(entry.position)?.letter).filter((l) => l !== undefined),
-  )
+  const taken = new Set(others.map((entry) => parsePosition(entry.position)?.letter))
   // `others` is below `maxPerPair`, which is at most the seat count, so a free letter exists.
   const letter = SEAT_ORDER.find((seat) => !taken.has(seat)) ?? SEAT_ORDER[0]
   return { type: 'move', position: `${seatLane(pair, letter)}${letter}` }

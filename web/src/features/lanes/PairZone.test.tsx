@@ -116,7 +116,7 @@ describe('PairZone', () => {
     expect(screen.getByText(b.name).closest('li')).toHaveAttribute('aria-busy', 'false')
   })
 
-  it('draws an accent edge when another desk just changed the pair, and not otherwise (LAN-19)', () => {
+  it('draws an accent edge when another desk just changed the pair, and not otherwise (LAN-21)', () => {
     const { unmount } = show(createLanePair(3, bowlers(1)), undefined, false, undefined, {
       fresh: true,
     })

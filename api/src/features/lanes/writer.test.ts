@@ -15,7 +15,7 @@ function setup() {
 const input = { tournamentId, kind: 'squad' as const, sessionId, registrationId, lane: 1 }
 
 describe('in-memory lane writer', () => {
-  it('stores the position it picks (LAN-18)', async () => {
+  it('stores the position it picks (LAN-20)', async () => {
     const { writer, state } = setup()
     await expect(writer.move(input)).resolves.toEqual({ type: 'move', position: '1A' })
     expect(state.entries[0]?.position).toBe('1A')

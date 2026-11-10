@@ -434,7 +434,7 @@ describe('Assign to lanes dialog (D-58)', () => {
     )
   })
 
-  it('saves the move and shows the seat the API picked (LAN-18, D-56, D-216)', async () => {
+  it('saves the move and shows the seat the API picked (LAN-20, D-56, D-216)', async () => {
     const page = filled()
     const server = serve(page)
     const user = userEvent.setup()
@@ -641,7 +641,7 @@ describe('Assign to lanes dialog (D-58)', () => {
     })
   })
 
-  it('shows the seat the API chose when it is not the one guessed (LAN-18, D-57)', async () => {
+  it('shows the seat the API chose when it is not the one guessed (LAN-20, D-57)', async () => {
     const page = filled()
     const api = serve(page)
     server.use(

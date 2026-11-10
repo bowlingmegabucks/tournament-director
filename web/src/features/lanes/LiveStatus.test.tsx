@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { LiveStatus } from './LiveStatus'
 
-describe('LiveStatus (LAN-19, D-217)', () => {
+describe('LiveStatus (LAN-21, D-217)', () => {
   it('says the page is live', () => {
     render(<LiveStatus state="live" updated={undefined} />)
     expect(screen.getByRole('status')).toHaveTextContent(
@@ -21,6 +21,18 @@ describe('LiveStatus (LAN-19, D-217)', () => {
     expect(screen.getByRole('status')).toHaveTextContent(
       'Reconnecting… The page refreshes when it is back.',
     )
+  })
+
+  it('colors the dot for the state: green live, amber reconnecting, red off', () => {
+    const dot = (state: 'live' | 'reconnecting' | 'off') => {
+      const { container, unmount } = render(<LiveStatus state={state} updated={undefined} />)
+      const className = container.querySelector('[aria-hidden="true"]')?.className ?? ''
+      unmount()
+      return className
+    }
+    expect(dot('reconnecting')).toMatch(/wait/)
+    expect(dot('off')).toMatch(/off/)
+    expect(dot('live')).not.toMatch(/wait|off/)
   })
 
   it('says the updates are off, and ignores a stale update line', () => {

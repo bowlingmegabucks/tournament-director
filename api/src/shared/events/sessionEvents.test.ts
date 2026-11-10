@@ -21,7 +21,7 @@ function watcher() {
 }
 
 describe('createSessionEvents', () => {
-  it('tells everyone watching the session, and no one else (LAN-19, D-217)', () => {
+  it('tells everyone watching the session, and no one else (LAN-21, D-217)', () => {
     const events = createSessionEvents(createCapturedLogger().logger, noMeter)
     const a = watcher()
     const b = watcher()
@@ -49,7 +49,7 @@ describe('createSessionEvents', () => {
     ])
   })
 
-  it('does nothing when no one watches (LAN-20)', () => {
+  it('does nothing when no one watches (LAN-22)', () => {
     const events = createSessionEvents(createCapturedLogger().logger, noMeter)
     expect(() => {
       events.publish('nobody', 'entries')
@@ -86,7 +86,7 @@ describe('createSessionEvents', () => {
     expect(events.subscribe('s1', watcher().subscriber)).toBeDefined()
   })
 
-  it('keeps sending to the rest when one send fails, and logs it without a name (LAN-20)', () => {
+  it('keeps sending to the rest when one send fails, and logs it without a name (LAN-22)', () => {
     const { logger, records } = createCapturedLogger('debug')
     const events = createSessionEvents(logger, noMeter)
     const broken: Subscriber = {
@@ -140,7 +140,15 @@ describe('createSessionEvents', () => {
     events.closeAll()
 
     expect(fine.subscriber.end).toHaveBeenCalled()
-    expect(records().some((line) => line['msg'] === 'Could not end an event stream')).toBe(true)
+    expect(records().find((line) => line['msg'] === 'Could not end an event stream')).toMatchObject(
+      { level: 40, sessionId: 's1' },
+    )
+  })
+
+  it('logs a publish to no one with zero watchers (api-observability)', () => {
+    const { logger, records } = createCapturedLogger('debug')
+    createSessionEvents(logger, noMeter).publish('s9', 'entries')
+    expect(records()[0]).toMatchObject({ msg: 'Change published', kind: 'entries', watchers: 0 })
   })
 
   it('logs opens, closes, and publishes at debug with ids and counts only (api-observability)', () => {
@@ -155,6 +163,9 @@ describe('createSessionEvents', () => {
       [20, 'Change published', 's1'],
       [20, 'Event stream closed', 's1'],
     ])
+    expect(records()[0]).toMatchObject({ streams: 1 })
+    expect(records()[1]).toMatchObject({ kind: 'lanes', watchers: 1 })
+    expect(records()[2]).toMatchObject({ streams: 0 })
   })
 
   it('counts open streams and published messages as metrics (D-217)', async () => {

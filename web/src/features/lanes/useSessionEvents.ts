@@ -18,7 +18,7 @@ export interface SessionEvents {
 }
 
 /**
- * Listens to the live stream of one squad or sweeper and keeps the lane page fresh (LAN-19, D-217,
+ * Listens to the live stream of one squad or sweeper and keeps the lane page fresh (LAN-21, D-217,
  * D-218). A `changed` message refetches the page; a reconnect after a drop refetches once, since
  * messages are not replayed. The browser reconnects on its own. The stream closes when the page
  * leaves or the session is complete (`enabled` false). A browser with no `EventSource`, or a

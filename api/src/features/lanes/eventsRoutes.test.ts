@@ -72,7 +72,7 @@ async function readStream(app: Parameters<typeof createServer>[1], url: string, 
 }
 
 describe('GET /v1/tournaments/:id/squads/:sessionId/events', () => {
-  it('streams to a signed-in director, and carries a published change (LAN-19, D-217)', async () => {
+  it('streams to a signed-in director, and carries a published change (LAN-21, D-217)', async () => {
     const { overrides, events, squad, squadUrl } = setup()
     const stream = await readStream(createSignedInTestApp(overrides, 'director'), squadUrl, 'retry')
 

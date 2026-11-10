@@ -27,7 +27,7 @@ const statusLine = () => {
 
 const findHeading = (name: string) => screen.findByRole('heading', { name }, { timeout: 3000 })
 
-describe('LanesPage live updates (LAN-19, D-217, D-218)', () => {
+describe('LanesPage live updates (LAN-21, D-217, D-218)', () => {
   it('says it is reconnecting until the stream connects, then that it is live', async () => {
     const page = filled()
     serve(page)
@@ -78,7 +78,7 @@ describe('LanesPage live updates (LAN-19, D-217, D-218)', () => {
     })
   })
 
-  it('shows a bowler who registered since the page opened, in the unassigned list (LAN-20, D-219)', async () => {
+  it('shows a bowler who registered since the page opened, in the unassigned list (LAN-22, D-219)', async () => {
     const page = filled()
     const api = serve(page)
     open(page)
@@ -156,7 +156,7 @@ describe('LanesPage live updates (LAN-19, D-217, D-218)', () => {
     expect(screen.queryByText(/Live/)).not.toBeInTheDocument()
   })
 
-  it('opens the sweeper stream for a sweeper (LAN-19)', async () => {
+  it('opens the sweeper stream for a sweeper (LAN-21)', async () => {
     const base = filled()
     const page = { ...base, session: { ...base.session, kind: 'sweeper' as const } }
     serve(page)
@@ -182,7 +182,7 @@ describe('LanesPage live updates (LAN-19, D-217, D-218)', () => {
     expect(screen.queryByRole('button', { name: /^Move / })).not.toBeInTheDocument()
   })
 
-  it('does not say "Updated" for the desk’s own save (LAN-19, D-220)', async () => {
+  it('does not say "Updated" for the desk’s own save (LAN-21, D-220)', async () => {
     const page = filled()
     serve(page)
     const user = userEvent.setup()

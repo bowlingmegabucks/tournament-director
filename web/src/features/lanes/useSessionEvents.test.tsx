@@ -31,7 +31,7 @@ afterEach(() => {
   vi.stubGlobal('EventSource', FakeEventSource)
 })
 
-describe('useSessionEvents (LAN-19, D-217, D-218)', () => {
+describe('useSessionEvents (LAN-21, D-217, D-218)', () => {
   it('opens the stream of the session with the cookie, and is live once it connects', async () => {
     const { result, page } = setup()
     await waitFor(() => {
@@ -129,7 +129,7 @@ describe('useSessionEvents (LAN-19, D-217, D-218)', () => {
     expect(result.current.events.updated?.version).toBe(1)
   })
 
-  it('names the pair another desk changed (LAN-19)', async () => {
+  it('names the pair another desk changed (LAN-21)', async () => {
     const { result, api } = setup()
     await waitFor(() => {
       expect(result.current.lanes.data).toBeDefined()
@@ -198,7 +198,7 @@ describe('useSessionEvents (LAN-19, D-217, D-218)', () => {
     })
   })
 
-  it('goes back to "Live" after a few seconds (LAN-19)', async () => {
+  it('goes back to "Live" after a few seconds (LAN-21)', async () => {
     const { result, api } = setup()
     await waitFor(() => {
       expect(result.current.lanes.data).toBeDefined()
@@ -278,5 +278,115 @@ describe('useSessionEvents (LAN-19, D-217, D-218)', () => {
     })
 
     expect(result.current.events.state).toBe('off')
+  })
+
+  it('refetches only on the first connection after a drop, not on every later open (D-218)', async () => {
+    const { result, client } = setup()
+    await waitFor(() => {
+      expect(result.current.lanes.data).toBeDefined()
+    })
+    act(() => {
+      FakeEventSource.latest().open()
+    })
+    act(() => {
+      FakeEventSource.latest().fail()
+    })
+    const fetches = vi.spyOn(client, 'invalidateQueries')
+
+    act(() => {
+      FakeEventSource.latest().open()
+    })
+    act(() => {
+      FakeEventSource.latest().open()
+    })
+
+    expect(fetches).toHaveBeenCalledTimes(1)
+  })
+
+  it('refreshes the lane page and nothing else (D-218)', async () => {
+    const { result, client } = setup()
+    await waitFor(() => {
+      expect(result.current.lanes.data).toBeDefined()
+    })
+    client.setQueryData(['somethingElse'], 1)
+
+    act(() => {
+      FakeEventSource.latest().message()
+    })
+    await waitFor(() => {
+      expect(client.isFetching()).toBe(0)
+    })
+    act(() => {
+      FakeEventSource.latest().fail()
+    })
+    act(() => {
+      FakeEventSource.latest().open()
+    })
+
+    expect(client.getQueryState(['somethingElse'])?.isInvalidated).toBe(false)
+  })
+
+  it('keeps a newer update on screen when an older one is still counting down', async () => {
+    const { result, api } = setup()
+    await waitFor(() => {
+      expect(result.current.lanes.data).toBeDefined()
+    })
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    for (const name of ['First', 'Second']) {
+      api.replace({
+        ...api.current(),
+        unassigned: [...api.current().unassigned, createLaneBowler({ name })],
+      })
+      act(() => {
+        FakeEventSource.latest().message()
+      })
+      await waitFor(() => {
+        expect(result.current.lanes.data?.unassigned.map((bowler) => bowler.name)).toContain(name)
+      })
+      if (name === 'First') {
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(UPDATED_MS - 2000)
+        })
+      }
+    }
+    await waitFor(() => {
+      expect(result.current.events.updated?.version).toBe(2)
+    })
+
+    // The first update's timer would end here, which is before the second's.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2500)
+    })
+
+    expect(result.current.events.updated?.version).toBe(2)
+  })
+
+  it('clears the countdown when the page leaves', async () => {
+    const { result, api, unmount } = setup()
+    await waitFor(() => {
+      expect(result.current.lanes.data).toBeDefined()
+    })
+    api.replace({
+      ...api.current(),
+      unassigned: [...api.current().unassigned, createLaneBowler({ name: 'Last' })],
+    })
+    const timers = vi.spyOn(globalThis, 'setTimeout')
+    act(() => {
+      FakeEventSource.latest().message()
+    })
+    await waitFor(() => {
+      expect(result.current.events.updated).toBeDefined()
+    })
+    const cleared = vi.spyOn(globalThis, 'clearTimeout')
+    // The countdown that is still pending is the timer set for UPDATED_MS.
+    const countdown = timers.mock.calls.findIndex(([, delay]) => delay === UPDATED_MS)
+    const id: unknown = timers.mock.results[countdown]?.value
+
+    unmount()
+
+    expect(countdown).toBeGreaterThanOrEqual(0)
+    expect(cleared).toHaveBeenCalledWith(id)
+    cleared.mockRestore()
+    timers.mockRestore()
   })
 })

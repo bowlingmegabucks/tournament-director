@@ -84,7 +84,7 @@ function setup(
 }
 
 describe('PUT /v1/tournaments/:id/squads/:sessionId/lanes/:registrationId', () => {
-  it('saves the seat the API picks and returns it (LAN-18, D-56, D-57)', async () => {
+  it('saves the seat the API picks and returns it (LAN-20, D-56, D-57)', async () => {
     const { app, url, state } = setup()
 
     const response = await request(app).put(url()).send({ lane: 1 })
@@ -94,7 +94,7 @@ describe('PUT /v1/tournaments/:id/squads/:sessionId/lanes/:registrationId', () =
     expect(state.entries.find((entry) => entry.registrationId === mine)?.position).toBe('2C')
   })
 
-  it('moves a bowler on a sweeper the same way (LAN-18)', async () => {
+  it('moves a bowler on a sweeper the same way (LAN-20)', async () => {
     const { app, url, sweeper, state } = setup()
 
     const response = await request(app)
@@ -125,7 +125,7 @@ describe('PUT /v1/tournaments/:id/squads/:sessionId/lanes/:registrationId', () =
     expect(seen).toEqual([])
   })
 
-  it('tells every screen watching the session, after the save, and no other session (LAN-20, D-219)', async () => {
+  it('tells every screen watching the session, after the save, and no other session (LAN-22, D-219)', async () => {
     const { app, url, seen, squad } = setup()
 
     await request(app).put(url()).send({ lane: 3 })
@@ -133,7 +133,7 @@ describe('PUT /v1/tournaments/:id/squads/:sessionId/lanes/:registrationId', () =
     expect(seen).toEqual([{ sessionId: squad.id, event: { kind: 'lanes', version: 1 } }])
   })
 
-  it('publishes nothing when the move is refused (LAN-20)', async () => {
+  it('publishes nothing when the move is refused (LAN-22)', async () => {
     const { app, url, seen } = setup({ complete: true })
     await request(app).put(url()).send({ lane: 1 })
     expect(seen).toEqual([])
@@ -186,11 +186,21 @@ describe('PUT /v1/tournaments/:id/squads/:sessionId/lanes/:registrationId', () =
       )
       .send({ lane: 1 })
     expect(unknownTournament.status).toBe(404)
+    expect(unknownTournament.body).toEqual({ message: 'Tournament not found' })
     const wrongKind = await request(app)
       .put(url(mine, sweeper.id, 'squads'))
       .send({ lane: 1 })
     expect(wrongKind.status).toBe(404)
     expect(wrongKind.body).toEqual({ message: 'Squad not found' })
+  })
+
+  it('says Sweeper for a sweeper id under sweepers that does not exist (LAN-14)', async () => {
+    const { app, url, squad } = setup()
+    const response = await request(app)
+      .put(url(mine, squad.id, 'sweepers'))
+      .send({ lane: 11 })
+    expect(response.status).toBe(404)
+    expect(response.body).toEqual({ message: 'Sweeper not found' })
   })
 
   it('answers 400 for a lane that does not start a pair (LAN-03)', async () => {
@@ -230,7 +240,7 @@ describe('PUT /v1/tournaments/:id/squads/:sessionId/lanes/:registrationId', () =
     expect((await request(app).put(url('not-a-uuid')).send({ lane: 1 })).status).toBe(400)
   })
 
-  it('logs ids and the lane at info, never a name (LAN-18)', async () => {
+  it('logs ids and the lane at info, never a name (LAN-20)', async () => {
     const { app, url, captured, tournament, squad } = setup()
     await request(app).put(url()).send({ lane: 1 })
 
@@ -243,6 +253,18 @@ describe('PUT /v1/tournaments/:id/squads/:sessionId/lanes/:registrationId', () =
       lane: 1,
     })
     for (const key of ['name', 'firstName', 'lastName']) expect(line).not.toHaveProperty(key)
+  })
+
+  it('logs a full pair at info with the lane and ids (Q-28)', async () => {
+    const { app, url, captured, tournament } = setup({ maxPerPair: 2, crowded: true })
+    await request(app).put(url()).send({ lane: 1 })
+    const line = captured.records().find((entry) => entry['msg'] === 'Lane move refused: pair full')
+    expect(line).toMatchObject({
+      level: 30,
+      tournamentId: tournament.id,
+      registrationId: mine,
+      lane: 1,
+    })
   })
 
   it('logs a refused move and a full pair at info (LAN-13, Q-28)', async () => {

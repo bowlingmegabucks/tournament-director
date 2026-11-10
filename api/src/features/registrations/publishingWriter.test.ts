@@ -71,7 +71,7 @@ const edit = (overrides: Partial<SaveRegistration> = {}): SaveRegistration => ({
 })
 
 describe('createPublishingRegistrationWriter', () => {
-  it('tells the sessions a new registration joins (LAN-20, D-219)', async () => {
+  it('tells the sessions a new registration joins (LAN-22, D-219)', async () => {
     const { hub, published } = recordingHub()
     const writer = createPublishingRegistrationWriter(
       storage().writer,
@@ -95,7 +95,7 @@ describe('createPublishingRegistrationWriter', () => {
     expect(published).toEqual([{ sessionId: b, kind: 'entries' }])
   })
 
-  it('tells the sessions a registration is in as well as the ones it adds and drops (LAN-20, D-219)', async () => {
+  it('tells the sessions a registration is in as well as the ones it adds and drops (LAN-22, D-219)', async () => {
     const { hub, published } = recordingHub()
     const writer = createPublishingRegistrationWriter(
       storage().writer,
@@ -110,7 +110,7 @@ describe('createPublishingRegistrationWriter', () => {
     expect(published.every((item) => item.kind === 'entries')).toBe(true)
   })
 
-  it('tells a session once, however many ways it is touched (LAN-20)', async () => {
+  it('tells a session once, however many ways it is touched (LAN-22)', async () => {
     const { hub, published } = recordingHub()
     const writer = createPublishingRegistrationWriter(
       storage().writer,
@@ -123,7 +123,7 @@ describe('createPublishingRegistrationWriter', () => {
     expect(published.map((item) => item.sessionId).sort()).toEqual([a, b].sort())
   })
 
-  it('tells nothing when the save is stale and throws (LAN-20, D-199)', async () => {
+  it('tells nothing when the save is stale and throws (LAN-22, D-199)', async () => {
     const { hub, published } = recordingHub()
     const writer = createPublishingRegistrationWriter(
       storage().writer,
@@ -138,7 +138,7 @@ describe('createPublishingRegistrationWriter', () => {
     expect(published).toEqual([])
   })
 
-  it('tells the sessions a deleted registration was in, read before they go (LAN-20, REG-19)', async () => {
+  it('tells the sessions a deleted registration was in, read before they go (LAN-22, REG-19)', async () => {
     const { hub, published } = recordingHub()
     const writer = createPublishingRegistrationWriter(
       storage().writer,
@@ -151,7 +151,20 @@ describe('createPublishingRegistrationWriter', () => {
     expect(published).toEqual([{ sessionId: a, kind: 'entries' }])
   })
 
-  it('tells the sessions after a desk delete, and nothing when the delete is refused or warns (LAN-20, D-209)', async () => {
+  it('tells no one when an unknown registration is deleted (LAN-22)', async () => {
+    const { hub, published } = recordingHub()
+    const writer = createPublishingRegistrationWriter(
+      storage().writer,
+      hub,
+      createCapturedLogger().logger,
+    )
+
+    await writer.deleteRegistration('x0000000-0000-4000-8000-000000000009')
+
+    expect(published).toEqual([])
+  })
+
+  it('tells the sessions after a desk delete, and nothing when the delete is refused or warns (LAN-22, D-209)', async () => {
     const { hub, published } = recordingHub()
     const inner = storage().writer
     const writer = createPublishingRegistrationWriter(inner, hub, createCapturedLogger().logger)
@@ -194,7 +207,7 @@ describe('createPublishingRegistrationWriter', () => {
     expect(published).toEqual([])
   })
 
-  it('still saves, and logs, when the sessions cannot be read first (LAN-20)', async () => {
+  it('still saves, and logs, when the sessions cannot be read first (LAN-22)', async () => {
     const { hub, published } = recordingHub()
     const { writer: inner, state } = storage()
     const broken = {
@@ -211,11 +224,11 @@ describe('createPublishingRegistrationWriter', () => {
     expect(
       captured
         .records()
-        .some((line) => line['msg'] === 'Could not read the sessions before a write'),
-    ).toBe(true)
+        .find((line) => line['msg'] === 'Could not read the sessions before a write'),
+    ).toMatchObject({ level: 40, registrationId })
   })
 
-  it('does not fail the write when a publish throws, and logs it (LAN-20, D-219)', async () => {
+  it('does not fail the write when a publish throws, and logs it (LAN-22, D-219)', async () => {
     const hub: SessionEvents = {
       subscribe: () => undefined,
       publish: () => {
@@ -232,8 +245,8 @@ describe('createPublishingRegistrationWriter', () => {
 
     expect(state.registrations[0]?.registration.sessionIds).toContain(b)
     expect(
-      captured.records().some((line) => line['msg'] === 'Could not publish an entry change'),
-    ).toBe(true)
+      captured.records().find((line) => line['msg'] === 'Could not publish an entry change'),
+    ).toMatchObject({ level: 40, sessionId: a })
   })
 
   it('leaves the reads of the inner writer as they were', async () => {

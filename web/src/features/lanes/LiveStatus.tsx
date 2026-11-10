@@ -8,7 +8,7 @@ interface LiveStatusProps {
 }
 
 /**
- * The line over the lane page that says whether it keeps itself fresh (LAN-19, D-217). It is a
+ * The line over the lane page that says whether it keeps itself fresh (LAN-21, D-217). It is a
  * polite status, so a screen reader hears a change of state and nothing more. The dot is a second
  * cue; the words carry the meaning.
  */

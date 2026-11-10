@@ -35,7 +35,7 @@ afterEach(() => {
 })
 
 describe('event streams (D-217)', () => {
-  it('ends them before it waits for the server to close, so a deploy does not time out (LAN-19)', () => {
+  it('ends them before it waits for the server to close, so a deploy does not time out (LAN-21)', () => {
     const order: string[] = []
     const closeStreams = vi.fn(() => order.push('streams'))
     const { events, server } = setup({ closeStreams })

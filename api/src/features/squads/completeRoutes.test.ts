@@ -252,7 +252,7 @@ describe(`GET ${infoUrl}`, () => {
   })
 })
 
-describe('live updates after Complete (LAN-20, D-10, D-219)', () => {
+describe('live updates after Complete (LAN-22, D-10, D-219)', () => {
   it('tells the open lane pages once, and not again when the second try is refused', async () => {
     const { events, published } = recordingEvents()
     const made = setup()

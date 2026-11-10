@@ -73,7 +73,7 @@ const scoredSweeperFacts = { ...noSessionFacts, hasScores: true }
  * A demo lane bowler who is also in the registration list takes that registration's id, so the lane
  * page's Registration actions (D-197) reach the same registration the edit page does. A bowler who
  * is not in the list keeps one id for the life of the page (by name), so a move saved by id finds
- * the same bowler on the next read (LAN-18); the edit routes answer 404 for it.
+ * the same bowler on the next read (LAN-20); the edit routes answer 404 for it.
  */
 const unlistedIds = new Map<string, string>()
 
@@ -99,7 +99,7 @@ function withListedRegistrations(page: LanePage): LanePage {
 
 /** Moves made through the mock `PUT`, by session and then registration. Lost when the page reloads. */
 const laneMoves = new Map<string, Map<string, Move>>()
-/** What each open mock event stream can be told, by session (LAN-19). */
+/** What each open mock event stream can be told, by session (LAN-21). */
 const streams = new Map<string, Set<(message: string) => void>>()
 
 /** Forget the moves and the streams, so one test cannot see another's (the test setup calls it). */
@@ -182,14 +182,14 @@ function laneMoveHandler(kind: SessionKind, sessions: { id: string; complete: bo
 }
 
 /**
- * The mock event streams (LAN-19). Kept out of `handlers` because MSW builds an `sse` handler only
+ * The mock event streams (LAN-21). Kept out of `handlers` because MSW builds an `sse` handler only
  * where `EventSource` exists: the browser sets these up, the Node test server does not.
  */
 export function createEventStreamHandlers() {
   return [eventsHandler('squad'), eventsHandler('sweeper')]
 }
 
-/** The mock event stream of a session: it sends `changed` whenever the mock `PUT` saves a move (LAN-19). */
+/** The mock event stream of a session: it sends `changed` whenever the mock `PUT` saves a move (LAN-21). */
 function eventsHandler(kind: SessionKind) {
   return sse<{ changed: string }>(
     `/v1/tournaments/:id/${kind}s/:sessionId/events`,

@@ -44,16 +44,21 @@ export function createSessionEvents(
   const watchers = new Map<string, Set<Subscriber>>()
   let total = 0
   let version = 0
+  // Stryker disable next-line ObjectLiteral: the options only carry a description, which nothing reads.
   const connections = meter.createUpDownCounter('tournament_director.events.connections', {
+    // Stryker disable next-line all: the description labels the metric and nothing reads it.
     description: 'Open event streams.',
   })
+  // Stryker disable next-line ObjectLiteral: the options only carry a description, which nothing reads.
   const published = meter.createCounter('tournament_director.events.published', {
+    // Stryker disable next-line all: the description labels the metric and nothing reads it.
     description: 'Change messages published.',
   })
 
   function remove(sessionId: string, subscriber: Subscriber): void {
     const set = watchers.get(sessionId)
     if (!set?.delete(subscriber)) return
+    // Stryker disable next-line all: an empty set only holds a little memory; no read can tell.
     if (set.size === 0) watchers.delete(sessionId)
     total -= 1
     connections.add(-1)

@@ -241,7 +241,7 @@ describe('fetchLanes', () => {
   )
 })
 
-describe('moveBowler (LAN-18, D-216)', () => {
+describe('moveBowler (LAN-20, D-216)', () => {
   const putPath = '/v1/tournaments/:id/:kind/:sessionId/lanes/:registrationId'
 
   it('sends the lane to the registration of the session and returns the seat', async () => {
@@ -294,6 +294,13 @@ describe('moveBowler (LAN-18, D-216)', () => {
     expect(failure).toMatchObject({ message, status })
   })
 
+  it('falls back to a plain message when the message is empty or not text', async () => {
+    server.use(http.put(putPath, () => HttpResponse.json({ message: '' }, { status: 409 })))
+    await expect(moveBowler('squad', 't1', 's1', 'r1', 1)).rejects.toThrow('The move was refused.')
+    server.use(http.put(putPath, () => HttpResponse.json({ message: 7 }, { status: 409 })))
+    await expect(moveBowler('squad', 't1', 's1', 'r1', 1)).rejects.toThrow('The move was refused.')
+  })
+
   it('falls back to a plain message when a refusal has no body', async () => {
     server.use(http.put(putPath, () => new HttpResponse(null, { status: 409 })))
     await expect(moveBowler('squad', 't1', 's1', 'r1', 1)).rejects.toThrow('The move was refused.')
@@ -334,6 +341,8 @@ describe('moveBowler (LAN-18, D-216)', () => {
       'Failed to save the move (unexpected response)',
     )
     server.use(http.put(putPath, () => new HttpResponse('not json')))
-    await expect(moveBowler('squad', 't1', 's1', 'r1', 1)).rejects.toThrow('response is not JSON')
+    await expect(moveBowler('squad', 't1', 's1', 'r1', 1)).rejects.toThrow(
+      'Failed to save the move (response is not JSON)',
+    )
   })
 })

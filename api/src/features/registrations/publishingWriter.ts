@@ -4,7 +4,7 @@ import type { RegistrationWriter } from './writer.ts'
 
 /**
  * Wraps a registration writer so each write tells every open screen of the squads and sweepers it
- * touches (LAN-20, D-219): the desk's create, edit, and delete, and the registration site's calls
+ * touches (LAN-22, D-219): the desk's create, edit, and delete, and the registration site's calls
  * (they go through the same writer, so no vendor route changes: D-09). A new entry then lands in
  * "unassigned" on every open lane page. The ids are read before the write (a delete removes the
  * sessions with the registration) and the messages go after it commits, only on success. A

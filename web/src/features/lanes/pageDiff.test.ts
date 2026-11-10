@@ -10,7 +10,7 @@ const pageOf = (
   unassigned = [] as ReturnType<typeof at>[],
 ) => createLanePage({ pairs, unassigned })
 
-describe('diffPages (LAN-19)', () => {
+describe('diffPages (LAN-21)', () => {
   const base = pageOf(
     [createLanePair(1, [at('1A')]), createLanePair(3, [at('3A')])],
     [at('', 'u1')],
@@ -48,7 +48,7 @@ describe('diffPages (LAN-19)', () => {
   })
 })
 
-describe('describeChange (LAN-19)', () => {
+describe('describeChange (LAN-21)', () => {
   const page = pageOf([createLanePair(5, []), createLanePair(7, []), createLanePair(9, [])])
 
   it('names one pair', () => {

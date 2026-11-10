@@ -120,7 +120,7 @@ async function messageOf(response: Response, fallback: string): Promise<string> 
 }
 
 /**
- * Saves a move (LAN-18, D-216): the bowler to the pair whose first lane is `lane`, or off the lanes
+ * Saves a move (LAN-20, D-216): the bowler to the pair whose first lane is `lane`, or off the lanes
  * when `lane` is `null`. The API picks the seat and returns it. `409` (pair full, session or
  * tournament complete) and `404` (the bowler left the session) keep the API's message.
  */

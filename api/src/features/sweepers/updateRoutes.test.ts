@@ -391,7 +391,7 @@ describe(`GET ${url}/edit-info`, () => {
   })
 })
 
-describe('live updates after an edit (LAN-20, D-219)', () => {
+describe('live updates after an edit (LAN-22, D-219)', () => {
   it('tells the open lane pages of the sweeper when a field changes', async () => {
     const { events, published } = recordingEvents()
     const made = setup()

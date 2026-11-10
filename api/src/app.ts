@@ -4,6 +4,7 @@ import express from 'express'
 import helmet from 'helmet'
 import type { Config } from './config.ts'
 import type { Logger } from './shared/logger.ts'
+import { HttpError } from './shared/errors.ts'
 import { createRateLimiter } from './shared/rateLimit.ts'
 import { requestIdHeader, requestLogging } from './shared/requestLogging.ts'
 import { createDivisionCreateRouter } from './features/divisions/createRoutes.ts'
@@ -44,6 +45,8 @@ import type { ScoreRepository } from './features/scores/repository.ts'
 import { createSkipRouter } from './features/skip/routes.ts'
 import type { SkipStore } from './features/skip/store.ts'
 import { createDnfRouter } from './features/dnf/routes.ts'
+import { createLiveNotifier } from './features/results/liveEvents.ts'
+import { createTournamentEventsRouter } from './shared/events/sseRoute.ts'
 import type { DnfStore } from './features/dnf/store.ts'
 import { createSquadRouter } from './features/squads/routes.ts'
 import type { SquadRepository } from './features/squads/repository.ts'
@@ -170,6 +173,16 @@ export function createApp({
   // complete, a lane move, a session edit, or a registration write gets the new page (D-232).
   const scoreCache = createScoreCache()
   const events = dropCacheOnPublish(sessionEvents, scoreCache)
+  // A score save, a DNF flag, or a complete tells the TV page which division gained a full game (RES-49).
+  const liveNotifier = createLiveNotifier({
+    events,
+    cache: scoreCache,
+    lanes,
+    scores,
+    divisions,
+    dnf: dnfStore,
+    logger,
+  })
   // Every registration write, desk or vendor, tells the open lane pages of the sessions it touches
   // (LAN-22, D-219). The routes below see only this wrapper.
   const registrationWriter = createPublishingRegistrationWriter(
@@ -325,7 +338,7 @@ export function createApp({
         path: '/v1/tournaments/:id/squads',
         access: { permission: 'squads.write' }, // SQD-15, D-193: complete; no API key
         methods: ['POST'],
-        router: createSquadCompleteRouter(squadWriter, logger, events),
+        router: createSquadCompleteRouter(squadWriter, logger, events, liveNotifier),
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/complete-info',
@@ -372,7 +385,7 @@ export function createApp({
         path: '/v1/tournaments/:id/sweepers',
         access: { permission: 'squads.write' }, // SQD-16, D-193: complete; no API key
         methods: ['POST'],
-        router: createSweeperCompleteRouter(sweeperWriter, logger, events),
+        router: createSweeperCompleteRouter(sweeperWriter, logger, events, liveNotifier),
       },
       {
         path: '/v1/tournaments/:id/sweepers/:sessionId/complete-info',
@@ -479,6 +492,19 @@ export function createApp({
         }),
       },
       {
+        path: '/v1/tournaments/:id/live-results/events',
+        access: 'public', // RES-49, D-242, D-243: the TV page and anyone may watch; no sign-in
+        router: createTournamentEventsRouter({
+          events,
+          logger,
+          check: async (tournamentId) => {
+            if (!(await tournaments.get(tournamentId))) {
+              throw new HttpError(404, 'Tournament not found')
+            }
+          },
+        }),
+      },
+      {
         path: '/v1/tournaments/:id/squads/:sessionId/scores/games',
         access: { permission: 'scores.write' }, // SCR-22, D-234: entry only; the API key cannot reach it
         router: createGamesRouter('squad', findSquad(squads), {
@@ -510,6 +536,7 @@ export function createApp({
         access: { permission: 'scores.write' }, // SCR-24, D-249: no API key
         methods: ['PUT', 'DELETE'],
         router: createDnfRouter('squad', {
+          live: liveNotifier,
           store: dnfStore,
           findSession: findSquad(squads),
           tournaments,
@@ -524,6 +551,7 @@ export function createApp({
         access: { permission: 'scores.write' }, // SCR-24, D-249
         methods: ['PUT', 'DELETE'],
         router: createDnfRouter('sweeper', {
+          live: liveNotifier,
           store: dnfStore,
           findSession: findSweeper(sweepers),
           tournaments,
@@ -538,6 +566,7 @@ export function createApp({
         access: { permission: 'scores.write' }, // SCR-19, D-228: no API key
         methods: ['PUT', 'DELETE'],
         router: createScoreWriteRouter('squad', {
+          live: liveNotifier,
           writer: scoreWriter,
           cache: scoreCache,
           events,
@@ -549,6 +578,7 @@ export function createApp({
         access: { permission: 'scores.write' }, // SCR-19, D-228
         methods: ['PUT', 'DELETE'],
         router: createScoreWriteRouter('sweeper', {
+          live: liveNotifier,
           writer: scoreWriter,
           cache: scoreCache,
           events,

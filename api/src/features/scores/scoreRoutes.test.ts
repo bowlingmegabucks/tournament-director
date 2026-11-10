@@ -3,6 +3,7 @@ import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 import { apiKeyHeader } from '../../shared/auth/caller.ts'
 import { createSessionEvents, type ChangeEvent } from '../../shared/events/sessionEvents.ts'
+import { liveKey } from '../../shared/events/sseRoute.ts'
 import {
   createDivision,
   createLaneEntry,
@@ -73,6 +74,11 @@ function setup(options: { complete?: boolean; tournamentComplete?: boolean } = {
       end: () => undefined,
     })
   }
+  const live: ChangeEvent[] = []
+  events.subscribe(liveKey(tournament.id), {
+    send: (event) => live.push(event),
+    end: () => undefined,
+  })
   const overrides = {
     logger: captured.logger,
     events,
@@ -102,6 +108,7 @@ function setup(options: { complete?: boolean; tournamentComplete?: boolean } = {
     inSweeper,
     state,
     seen,
+    live,
     captured,
     dnf,
   }
@@ -358,6 +365,41 @@ describe('PUT .../scores/:registrationId/:game (SCR-19)', () => {
       filledGames: 2,
     })
     expect(JSON.stringify(captured.records())).not.toContain('Ann Lee')
+  })
+})
+
+describe('a save tells the TV page when a game fills (RES-49, D-243)', () => {
+  it('sends game-full only when the last bowler of the division fills the game, and reopened on a clear', async () => {
+    const { overrides, url, live, squad, ann, cal } = setup()
+    const app = createSignedInTestApp(overrides)
+    const kinds = () => live.map((event) => [event.kind, event.detail?.game])
+
+    await request(app).put(url(ann.registrationId, 1)).send({ score: 200 })
+    expect(kinds()).toEqual([['game-full', 1]])
+
+    await request(app).put(url(cal.registrationId, 1)).send({ score: 190 })
+    await request(app).put(url(ann.registrationId, 2)).send({ score: 210 })
+    expect(kinds()).toEqual([['game-full', 1]])
+
+    await request(app).put(url(cal.registrationId, 2)).send({ score: 205 })
+    expect(kinds()).toEqual([
+      ['game-full', 1],
+      ['game-full', 2],
+    ])
+    expect(live[1]?.detail).toMatchObject({ sessionId: squad.id, sessionKind: 'squad' })
+
+    await request(app).delete(url(cal.registrationId, 2))
+    expect(live.at(-1)).toMatchObject({ kind: 'reopened' })
+  })
+
+  it('says nothing for a refused save, and nothing is read when nobody watches', async () => {
+    const { overrides, url, live, ann } = setup({ complete: true })
+    const app = createSignedInTestApp(overrides)
+
+    const response = await request(app).put(url(ann.registrationId, 1)).send({ score: 200 })
+
+    expect(response.status).toBe(409)
+    expect(live).toEqual([])
   })
 })
 

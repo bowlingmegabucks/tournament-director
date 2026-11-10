@@ -137,7 +137,17 @@ describe('the live score routes count apart (D-232)', () => {
     })
   }
 
-  it.each([live, stream, games, skip, `${live}/${id}/2`])('names %s a live path', (path) => {
+  it.each([
+    live,
+    stream,
+    games,
+    skip,
+    `${live}/${id}/2`,
+    `/v1/tournaments/${id}/squads/${id}/results`,
+    `/v1/tournaments/${id}/sweepers/${id}/results`,
+    `/v1/tournaments/${id}/live-results`,
+    `/v1/tournaments/${id}/live-results/events`,
+  ])('names %s a live path', (path) => {
     expect(isLivePath(path)).toBe(true)
   })
 
@@ -145,8 +155,11 @@ describe('the live score routes count apart (D-232)', () => {
     '/v1/tournaments',
     `/v1/tournaments/${id}`,
     `/v1/tournaments/${id}/squads/${id}/lanes`,
-    `/v1/tournaments/${id}/squads/${id}/results`,
     `/v1/tournaments/${id}/squads/${id}/events`,
+    `/v1/tournaments/${id}/live-results/other`,
+    `/v1/tournaments/${id}/super-sweeper`,
+    `/v1/tournaments/${id}/at-large`,
+    `/v1/tournaments/${id}/squads/${id}/results/extra`,
     `/v1/tournaments/${id}/squads/${id}/recap-sheets`,
     `/v1/tournaments/${id}/squads/${id}/scoresheet`,
     `/v1/tournaments/${id}/squads/${id}/skipper`,

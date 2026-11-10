@@ -7,6 +7,7 @@ import type { Logger } from '../../shared/logger.ts'
 import { requestLogger } from '../../shared/requestLogging.ts'
 import type { FindSession } from '../lanes/loadLanePage.ts'
 import type { LaneRepository } from '../lanes/repository.ts'
+import type { LiveNotifier } from '../results/liveEvents.ts'
 import type { ScoreRepository } from '../scores/repository.ts'
 import type { TournamentRepository } from '../tournaments/repository.ts'
 import type { DnfStore } from './store.ts'
@@ -14,6 +15,7 @@ import type { DnfStore } from './store.ts'
 const params = z.object({ id: z.uuid(), sessionId: z.uuid(), registrationId: z.uuid() })
 
 export interface DnfRouterDeps {
+  live: LiveNotifier
   store: DnfStore
   findSession: FindSession
   tournaments: TournamentRepository
@@ -35,7 +37,7 @@ export interface DnfRouterDeps {
  */
 export function createDnfRouter(
   kind: 'squad' | 'sweeper',
-  { store, findSession, tournaments, lanes, scores, events, logger }: DnfRouterDeps,
+  { live, store, findSession, tournaments, lanes, scores, events, logger }: DnfRouterDeps,
 ): Router {
   const router = Router({ mergeParams: true })
   const label = kind === 'squad' ? 'Squad' : 'Sweeper'
@@ -74,6 +76,7 @@ export function createDnfRouter(
         throw new HttpError(409, 'This bowler has no score yet, so there is nothing to finish.')
       }
     }
+    const before = await live.before(id, kind, sessionId)
     const changed = flag
       ? await store.set(sessionId, registrationId)
       : await store.clear(sessionId, registrationId)
@@ -81,6 +84,7 @@ export function createDnfRouter(
       log.info(ids, flag ? 'Did not finish set' : 'Did not finish cleared')
       // The counted games may move, so every open entry and scores page asks again.
       events.publish(sessionId, 'scores')
+      await live.after(before)
     }
   }
 

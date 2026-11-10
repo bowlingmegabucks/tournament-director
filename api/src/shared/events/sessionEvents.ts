@@ -2,11 +2,25 @@ import type { Meter } from '@opentelemetry/api'
 import type { Logger } from '../logger.ts'
 
 /** Why a session changed (D-218): a lane move or a session edit, an entry added, changed, or removed, or a score saved or cleared (D-232). */
-export type ChangeKind = 'lanes' | 'entries' | 'scores'
+export type ChangeKind = 'lanes' | 'entries' | 'scores' | 'game-full' | 'reopened' | 'complete'
+
+/**
+ * Where a live-results message points (D-243): ids and a number, never a score. Only the tournament
+ * stream carries one; a session stream sends none.
+ */
+export interface ChangeDetail {
+  sessionId: string
+  sessionKind: 'squad' | 'sweeper'
+  /** The division of a squad. A sweeper has none. */
+  divisionId?: string
+  /** The game that just filled (`game-full`). */
+  game?: number
+}
 
 /** What a screen is told (D-218): that something changed, never what. The page refetches. */
 export interface ChangeEvent {
   kind: ChangeKind
+  detail?: ChangeDetail
   /** Counts up for the whole process, so a client can tell two messages apart. */
   version: number
 }
@@ -26,7 +40,9 @@ export interface SessionEvents {
   /** Start watching a session. `undefined` when the process holds too many streams; else a way to stop. */
   subscribe(sessionId: string, subscriber: Subscriber): (() => void) | undefined
   /** Tell every screen watching the session. Never throws: a failed send is logged, not raised. */
-  publish(sessionId: string, kind: ChangeKind): void
+  publish(sessionId: string, kind: ChangeKind, detail?: ChangeDetail): void
+  /** Whether anyone is watching this id now. A cheap check before work only a watcher needs. */
+  watching(sessionId: string): boolean
   /** End every stream, for a shutdown: an open stream never finishes on its own. */
   closeAll(): void
   /** Streams open now. */
@@ -79,9 +95,9 @@ export function createSessionEvents(
       }
     },
 
-    publish(sessionId, kind) {
+    publish(sessionId, kind, detail) {
       version += 1
-      const event: ChangeEvent = { kind, version }
+      const event: ChangeEvent = detail ? { kind, detail, version } : { kind, version }
       const set = watchers.get(sessionId)
       published.add(1, { kind })
       logger.debug({ sessionId, kind, watchers: set?.size ?? 0 }, 'Change published')
@@ -94,6 +110,8 @@ export function createSessionEvents(
         }
       }
     },
+
+    watching: (sessionId) => (watchers.get(sessionId)?.size ?? 0) > 0,
 
     closeAll() {
       for (const [sessionId, set] of watchers) {

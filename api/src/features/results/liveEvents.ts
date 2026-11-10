@@ -1,0 +1,125 @@
+import type { SessionEvents } from '../../shared/events/sessionEvents.ts'
+import { liveKey } from '../../shared/events/sseRoute.ts'
+import type { Logger } from '../../shared/logger.ts'
+import type { DivisionRepository } from '../divisions/repository.ts'
+import type { DnfStore } from '../dnf/store.ts'
+import type { LaneRepository } from '../lanes/repository.ts'
+import type { ScoreCache } from '../scores/scoreCache.ts'
+import type { ScoreRepository } from '../scores/repository.ts'
+import { buildResultEntries } from './entries.ts'
+import { limitToCountedGames } from './fullGame.ts'
+
+type SessionKind = 'squad' | 'sweeper'
+
+/** The games counted before a change: one number for each division of a squad, or one for a sweeper. */
+export interface LiveSnapshot {
+  tournamentId: string
+  kind: SessionKind
+  sessionId: string
+  counted: ReadonlyMap<string, number>
+}
+
+/**
+ * Tells the TV page when a change moved its board (RES-49, D-243). A score save, a clear, or a DNF
+ * flag can lift a division's last full game (or lower it). The route takes a snapshot before the
+ * write and calls `after` once it is done; the notifier then publishes on the tournament stream, one
+ * message for each division that changed.
+ */
+export interface LiveNotifier {
+  /** The counted games before a change. `undefined` when nobody watches the tournament, or the read failed. */
+  before(
+    tournamentId: string,
+    kind: SessionKind,
+    sessionId: string,
+  ): Promise<LiveSnapshot | undefined>
+  /** Compare with the snapshot and publish. Never throws: a failed read is logged, not raised. */
+  after(snapshot: LiveSnapshot | undefined): Promise<void>
+  /** A session completed (RES-49): the TV refetches it, now official. */
+  completed(tournamentId: string, kind: SessionKind, sessionId: string): void
+}
+
+export interface LiveNotifierDeps {
+  events: SessionEvents
+  cache: ScoreCache
+  lanes: LaneRepository
+  scores: ScoreRepository
+  divisions: DivisionRepository
+  dnf: DnfStore
+  logger: Logger
+}
+
+/** The key of a sweeper in a snapshot: a sweeper is one group. */
+const SWEEPER = ''
+
+export function createLiveNotifier({
+  events,
+  cache,
+  lanes,
+  scores,
+  divisions,
+  dnf,
+  logger,
+}: LiveNotifierDeps): LiveNotifier {
+  /** The counted games of each group of one session, as a result page counts them (RES-40, RES-55). */
+  async function read(tournamentId: string, kind: SessionKind, sessionId: string) {
+    const [entries, stored, all, flagged] = await Promise.all([
+      lanes.listEntries(sessionId),
+      scores.listScores(sessionId),
+      divisions.listByTournament(tournamentId),
+      dnf.listFlagged([sessionId]),
+    ])
+    const built = buildResultEntries(entries, stored, all, () => 0)
+    const { through } = limitToCountedGames(
+      built.entries,
+      kind === 'squad' ? (entry) => entry.divisionId : () => SWEEPER,
+      flagged.get(sessionId) ?? new Set(),
+    )
+    return through
+  }
+
+  return {
+    async before(tournamentId, kind, sessionId) {
+      // Nobody on the TV page: the diff would go nowhere, so skip two reads of the whole session.
+      if (!events.watching(liveKey(tournamentId))) return undefined
+      try {
+        return { tournamentId, kind, sessionId, counted: await read(tournamentId, kind, sessionId) }
+      } catch (err) {
+        logger.warn({ err, tournamentId, sessionId }, 'Could not read the counted games')
+        return undefined
+      }
+    },
+
+    async after(snapshot) {
+      if (!snapshot) return
+      const { tournamentId, kind, sessionId, counted } = snapshot
+      try {
+        const now = await read(tournamentId, kind, sessionId)
+        const groups = new Set([...counted.keys(), ...now.keys()])
+        const changes = [...groups].flatMap((group) => {
+          const was = counted.get(group) ?? 0
+          const game = now.get(group) ?? 0
+          if (game === was) return []
+          return [{ group, game, up: game > was }]
+        })
+        if (changes.length === 0) return
+        // The feed holds the old boards: drop it before the message that tells the TV to ask again.
+        cache.dropTournament(tournamentId)
+        for (const { group, game, up } of changes) {
+          events.publish(liveKey(tournamentId), up ? 'game-full' : 'reopened', {
+            sessionId,
+            sessionKind: kind,
+            ...(group === SWEEPER ? {} : { divisionId: group }),
+            ...(up ? { game } : {}),
+          })
+        }
+      } catch (err) {
+        logger.warn({ err, tournamentId, sessionId }, 'Could not tell the live results of a change')
+      }
+    },
+
+    completed(tournamentId, kind, sessionId) {
+      cache.dropTournament(tournamentId)
+      events.publish(liveKey(tournamentId), 'complete', { sessionId, sessionKind: kind })
+    },
+  }
+}

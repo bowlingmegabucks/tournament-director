@@ -21,23 +21,30 @@ export interface SseRouteDeps {
   heartbeatMs?: number
 }
 
+/** The hub id of a tournament's live-results stream (D-243). A session id is a UUID, so no clash. */
+export const liveKey = (tournamentId: string) => `live:${tournamentId.toLowerCase()}`
+
+interface StreamDeps {
+  events: SessionEvents
+  logger: Logger
+  heartbeatMs?: number
+}
+
 /**
- * `GET /:...` of one squad or sweeper: a server-sent event stream (D-217). It sends `retry`, a
- * `changed` event whenever the session publishes (D-218), and a comment every 25 s so no proxy
- * closes it as idle. No compression and no caching, or the messages would wait in a buffer.
- * The browser's `EventSource` reconnects by itself; the page refetches when it does.
+ * The stream itself: a server-sent event stream (D-217). It sends `retry`, a `changed` event
+ * whenever the hub id publishes (D-218), and a comment every 25 s so no proxy closes it as idle. No
+ * compression and no caching, or the messages would wait in a buffer. `resolve` checks the request
+ * and names the hub id to watch, or throws the 404. The browser's `EventSource` reconnects by itself;
+ * the page refetches when it does.
  */
-export function createSessionEventsRouter({
-  events,
-  check,
-  logger,
-  heartbeatMs = HEARTBEAT_MS,
-}: SseRouteDeps): Router {
+function createStreamRouter(
+  { events, logger, heartbeatMs = HEARTBEAT_MS }: StreamDeps,
+  resolve: (params: unknown) => Promise<{ watchId: string; fields: Record<string, string> }>,
+): Router {
   const router = Router({ mergeParams: true })
 
   // Stryker disable next-line StringLiteral: '' and '/' match the same path.
   router.get('/', async (req, res) => {
-    const { id, sessionId } = params.parse(req.params)
     // Listen first: a browser that leaves during the check must not leave a stream behind.
     let closed = false
     let cleanup = () => undefined
@@ -45,10 +52,10 @@ export function createSessionEventsRouter({
       closed = true
       cleanup()
     })
-    await check(id, sessionId)
+    const { watchId, fields } = await resolve(req.params)
     if (closed) return
 
-    const stop = events.subscribe(sessionId, {
+    const stop = events.subscribe(watchId, {
       send: (event) => {
         res.write(`event: changed\ndata: ${JSON.stringify(event)}\n\n`)
       },
@@ -73,8 +80,50 @@ export function createSessionEventsRouter({
       clearInterval(heartbeat)
       stop()
     }
-    requestLogger(res, logger).debug({ sessionId }, 'Event stream started')
+    requestLogger(res, logger).debug(fields, 'Event stream started')
   })
 
   return router
+}
+
+/** The stream of one squad or sweeper (D-217). */
+export function createSessionEventsRouter({
+  events,
+  check,
+  logger,
+  heartbeatMs,
+}: SseRouteDeps): Router {
+  return createStreamRouter({ events, logger, heartbeatMs }, async (raw) => {
+    const { id, sessionId } = params.parse(raw)
+    await check(id, sessionId)
+    return { watchId: sessionId, fields: { sessionId } }
+  })
+}
+
+const tournamentParams = z.object({ id: z.uuid() })
+
+export interface TournamentSseDeps {
+  events: SessionEvents
+  /** Resolves when the tournament exists, or throws the 404. */
+  check: (tournamentId: string) => Promise<void>
+  logger: Logger
+  heartbeatMs?: number
+}
+
+/**
+ * The stream of a whole tournament's live results (RES-49, D-243): a message for each division
+ * that gained a full game, and for each session that completes. It carries ids and a game number,
+ * never a score; the TV refetches.
+ */
+export function createTournamentEventsRouter({
+  events,
+  check,
+  logger,
+  heartbeatMs,
+}: TournamentSseDeps): Router {
+  return createStreamRouter({ events, logger, heartbeatMs }, async (raw) => {
+    const { id } = tournamentParams.parse(raw)
+    await check(id)
+    return { watchId: liveKey(id), fields: { tournamentId: id } }
+  })
 }

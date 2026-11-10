@@ -180,6 +180,24 @@ describe('PUT .../scores/:registrationId/:game (SCR-19)', () => {
     expect(JSON.stringify(response.body)).toContain('Game must be a whole number')
   })
 
+  it('reads a game of one to three digits and nothing else (SCR-02)', async () => {
+    const { overrides, url, ann } = setup()
+    const app = createSignedInTestApp(overrides)
+    const at = async (game: string) =>
+      (
+        await request(app)
+          .put(url(ann.registrationId, 1).replace(/\/1$/, `/${game}`))
+          .send({ score: 200 })
+      ).body
+    // Digits that are a game, but past the session's games, are the plan's message.
+    expect(await at('10')).toEqual({ message: 'Game must be from 1 to 3.' })
+    expect(await at('100')).toEqual({ message: 'Game must be from 1 to 3.' })
+    // Anything else around digits is not a game at all.
+    for (const game of ['1x', 'x1', '1234', '-1', '1%20']) {
+      expect(JSON.stringify(await at(game))).toContain('Game must be a whole number')
+    }
+  })
+
   it('logs a refusal with ids and no name (SCR-14, D-231)', async () => {
     const { overrides, url, captured, squad } = setup({ complete: true })
     await request(createSignedInTestApp(overrides)).put(url()).send({ score: 200 })

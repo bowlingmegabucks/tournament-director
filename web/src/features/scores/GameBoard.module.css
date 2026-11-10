@@ -2,6 +2,8 @@
   display: grid;
   gap: var(--space-3);
   align-content: start;
+  /* minmax(0, 1fr), not auto: an input's default width must not widen the column past the pane. */
+  grid-template-columns: minmax(0, 1fr);
   min-inline-size: 0;
 }
 
@@ -70,6 +72,10 @@
   font-size: var(--font-size-sm);
 }
 
+.search input {
+  inline-size: 100%;
+}
+
 .search {
   display: grid;
   gap: var(--space-1);
@@ -79,6 +85,7 @@
 .search input,
 .range input {
   box-sizing: border-box;
+  min-inline-size: 0;
   min-block-size: var(--target-min);
   padding: 0 var(--space-3);
   background: var(--color-surface);

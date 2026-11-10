@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TV page, continuous scroll</title>
+<link rel="stylesheet" href="../../../web/src/styles/tokens.css" />
+<link rel="stylesheet" href="mock.css" />
+<link rel="stylesheet" href="tv.css" />
+<style>
+.track { will-change: transform; }
+@media (prefers-reduced-motion: no-preference) {
+  .track { animation: scroll 40s linear infinite; }
+  @keyframes scroll { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+}
+</style>
+</head>
+<body>
+<main class="page">
+<h1>TV page, layout A: continuous scroll</h1>
+<p class="mockup-note">Option A. One tall list of every division and session, scrolling up at a steady pace and starting over. In the real page the track is the list plus a copy of it, so the loop has no jump. The frame is 16:9, at the size of a TV. Notice strip at the top; the updated table has a gold outline for a few seconds. This mockup scrolls on its own (unless your system asks for less motion).</p>
+
+<div class="frame">
+<header class="bar"><span>Live results &middot; Northeast MegaBuck$ Spring Classic</span><span class="clock">3:42 pm</span></header>
+<div class="strip" role="status">Open Division &ndash; Game 3 complete</div>
+<div class="view"><div class="track">
+<section class="block hl"><h2>Squad &middot; Sat 10:00 am &middot; Open Division <span class="tag">Through game 3</span></h2><table class="table"><caption class="hidden">Open division</caption><thead><tr><th scope="col">Place</th><th scope="col">Name</th><th scope="col"><span class="hidden">Total against 200 a game</span></th><th scope="col" class="num">G1</th><th scope="col" class="num">G2</th><th scope="col" class="num">G3</th><th scope="col" class="num">Total</th></tr></thead><tbody>
+<tr><td>1</td><th scope="row" class="who">Dana Whitcomb</th><td class="num">+140</td><td class="num">238</td><td class="num">247</td><td class="num">255</td><td class="total">740</td></tr>
+<tr class="line"><td colspan="7">Cut Line</td></tr>
+<tr><td>2</td><th scope="row" class="who">Mike Orsini</th><td class="num">+136</td><td class="num">226</td><td class="num">251</td><td class="num">259</td><td class="total">736</td></tr>
+<tr class="line"><td colspan="7">Cash Line</td></tr>
+<tr><td>3</td><th scope="row" class="who">Lou Brandt</th><td class="num">+129</td><td class="num">241</td><td class="num">233</td><td class="num">255</td><td class="total">729</td></tr>
+<tr><td>4</td><th scope="row" class="who">Pat Sullivan</th><td class="num">+119</td><td class="num">229</td><td class="num">244</td><td class="num">246</td><td class="total">719</td></tr>
+<tr><td>5</td><th scope="row" class="who">Jen Okafor</th><td class="num">+113</td><td class="num">218</td><td class="num">237</td><td class="num">258</td><td class="total">713</td></tr>
+<tr><td>6</td><th scope="row" class="who">Sam Ritter</th><td class="num">+101</td><td class="num">224</td><td class="num">226</td><td class="num">251</td><td class="total">701</td></tr>
+</tbody></table></section>
+<section class="block"><h2>Squad &middot; Sat 10:00 am &middot; Senior Division <span class="tag">Through game 3</span></h2><table class="table"><caption class="hidden">Senior division</caption><thead><tr><th scope="col">Place</th><th scope="col">Name</th><th scope="col"><span class="hidden">Total against 200 a game</span></th><th scope="col" class="num">G1</th><th scope="col" class="num">G2</th><th scope="col" class="num">G3</th><th scope="col" class="num">Total</th></tr></thead><tbody>
+<tr><td>1</td><th scope="row" class="who">Walt Henning</th><td class="num">+122</td><td class="num">231</td><td class="num">240</td><td class="num">251</td><td class="total">722</td></tr>
+<tr class="line"><td colspan="7">Cut Line</td></tr>
+<tr><td>2</td><th scope="row" class="who">Rita Maddox</th><td class="num">+104</td><td class="num">220</td><td class="num">238</td><td class="num">246</td><td class="total">704</td></tr>
+<tr class="line"><td colspan="7">Cash Line</td></tr>
+<tr><td>3</td><th scope="row" class="who">Gus Pellegrino</th><td class="num">+91</td><td class="num">212</td><td class="num">236</td><td class="num">243</td><td class="total">691</td></tr>
+<tr><td>4</td><th scope="row" class="who">Ed Lindqvist</th><td class="num">+77</td><td class="num">205</td><td class="num">229</td><td class="num">243</td><td class="total">677</td></tr>
+</tbody></table></section>
+<section class="block"><h2>Sweeper &middot; Sat 2:00 pm <span class="tag unofficial-tag">Unofficial</span></h2><table class="table"><caption class="hidden">Sweeper</caption><thead><tr><th scope="col">Place</th><th scope="col">Name</th><th scope="col"><span class="hidden">Total against 200 a game</span></th><th scope="col" class="num">G1</th><th scope="col" class="num">G2</th><th scope="col" class="num">Total</th></tr></thead><tbody>
+<tr><td>1</td><th scope="row" class="who">Tom Garrity<span class="sub">Open</span></th><td class="num">+98</td><td class="num">256</td><td class="num">242</td><td class="total">498</td></tr>
+<tr><td>2</td><th scope="row" class="who">Dana Whitcomb<span class="sub">Open</span></th><td class="num">+81</td><td class="num">233</td><td class="num">248</td><td class="total">481</td></tr>
+<tr class="line"><td colspan="6">Cash Line</td></tr>
+<tr><td>3</td><th scope="row" class="who">Rita Maddox<span class="sub">Senior</span></th><td class="num">+70</td><td class="num">225</td><td class="num">245</td><td class="total">470</td></tr>
+<tr><td>4</td><th scope="row" class="who">Lou Brandt<span class="sub">Open</span></th><td class="num">+66</td><td class="num">231</td><td class="num">235</td><td class="total">466</td></tr>
+</tbody></table></section>
+<section class="block"><h2>Super sweeper <span class="tag unofficial-tag">Unofficial</span></h2><table class="table"><caption class="hidden">Super sweeper</caption><thead><tr><th scope="col">Place</th><th scope="col">Name</th><th scope="col" class="num">Sat 2:00 pm</th><th scope="col" class="num">Sun 10:00 am</th><th scope="col" class="num">Cumulative</th></tr></thead><tbody>
+<tr><td>1</td><th scope="row" class="who">Tom Garrity</th><td class="num">498</td><td class="num">&ndash;</td><td class="total">498</td></tr>
+<tr><td>2</td><th scope="row" class="who">Dana Whitcomb</th><td class="num">481</td><td class="num">&ndash;</td><td class="total">481</td></tr>
+<tr><td>3</td><th scope="row" class="who">Rita Maddox</th><td class="num">470</td><td class="num">&ndash;</td><td class="total">470</td></tr>
+</tbody></table></section>
+<div aria-hidden="true">
+<section class="block"><h2>Squad &middot; Sat 10:00 am &middot; Open Division <span class="tag">Through game 3</span></h2><table class="table"><caption class="hidden">Open division</caption><thead><tr><th scope="col">Place</th><th scope="col">Name</th><th scope="col"><span class="hidden">Total against 200 a game</span></th><th scope="col" class="num">G1</th><th scope="col" class="num">G2</th><th scope="col" class="num">G3</th><th scope="col" class="num">Total</th></tr></thead><tbody>
+<tr><td>1</td><th scope="row" class="who">Dana Whitcomb</th><td class="num">+140</td><td class="num">238</td><td class="num">247</td><td class="num">255</td><td class="total">740</td></tr>
+<tr class="line"><td colspan="7">Cut Line</td></tr>
+<tr><td>2</td><th scope="row" class="who">Mike Orsini</th><td class="num">+136</td><td class="num">226</td><td class="num">251</td><td class="num">259</td><td class="total">736</td></tr>
+<tr class="line"><td colspan="7">Cash Line</td></tr>
+<tr><td>3</td><th scope="row" class="who">Lou Brandt</th><td class="num">+129</td><td class="num">241</td><td class="num">233</td><td class="num">255</td><td class="total">729</td></tr>
+<tr><td>4</td><th scope="row" class="who">Pat Sullivan</th><td class="num">+119</td><td class="num">229</td><td class="num">244</td><td class="num">246</td><td class="total">719</td></tr>
+<tr><td>5</td><th scope="row" class="who">Jen Okafor</th><td class="num">+113</td><td class="num">218</td><td class="num">237</td><td class="num">258</td><td class="total">713</td></tr>
+<tr><td>6</td><th scope="row" class="who">Sam Ritter</th><td class="num">+101</td><td class="num">224</td><td class="num">226</td><td class="num">251</td><td class="total">701</td></tr>
+</tbody></table></section>
+<section class="block"><h2>Squad &middot; Sat 10:00 am &middot; Senior Division <span class="tag">Through game 3</span></h2><table class="table"><caption class="hidden">Senior division</caption><thead><tr><th scope="col">Place</th><th scope="col">Name</th><th scope="col"><span class="hidden">Total against 200 a game</span></th><th scope="col" class="num">G1</th><th scope="col" class="num">G2</th><th scope="col" class="num">G3</th><th scope="col" class="num">Total</th></tr></thead><tbody>
+<tr><td>1</td><th scope="row" class="who">Walt Henning</th><td class="num">+122</td><td class="num">231</td><td class="num">240</td><td class="num">251</td><td class="total">722</td></tr>
+<tr class="line"><td colspan="7">Cut Line</td></tr>
+<tr><td>2</td><th scope="row" class="who">Rita Maddox</th><td class="num">+104</td><td class="num">220</td><td class="num">238</td><td class="num">246</td><td class="total">704</td></tr>
+<tr class="line"><td colspan="7">Cash Line</td></tr>
+<tr><td>3</td><th scope="row" class="who">Gus Pellegrino</th><td class="num">+91</td><td class="num">212</td><td class="num">236</td><td class="num">243</td><td class="total">691</td></tr>
+<tr><td>4</td><th scope="row" class="who">Ed Lindqvist</th><td class="num">+77</td><td class="num">205</td><td class="num">229</td><td class="num">243</td><td class="total">677</td></tr>
+</tbody></table></section>
+<section class="block"><h2>Sweeper &middot; Sat 2:00 pm <span class="tag unofficial-tag">Unofficial</span></h2><table class="table"><caption class="hidden">Sweeper</caption><thead><tr><th scope="col">Place</th><th scope="col">Name</th><th scope="col"><span class="hidden">Total against 200 a game</span></th><th scope="col" class="num">G1</th><th scope="col" class="num">G2</th><th scope="col" class="num">Total</th></tr></thead><tbody>
+<tr><td>1</td><th scope="row" class="who">Tom Garrity<span class="sub">Open</span></th><td class="num">+98</td><td class="num">256</td><td class="num">242</td><td class="total">498</td></tr>
+<tr><td>2</td><th scope="row" class="who">Dana Whitcomb<span class="sub">Open</span></th><td class="num">+81</td><td class="num">233</td><td class="num">248</td><td class="total">481</td></tr>
+<tr class="line"><td colspan="6">Cash Line</td></tr>
+<tr><td>3</td><th scope="row" class="who">Rita Maddox<span class="sub">Senior</span></th><td class="num">+70</td><td class="num">225</td><td class="num">245</td><td class="total">470</td></tr>
+<tr><td>4</td><th scope="row" class="who">Lou Brandt<span class="sub">Open</span></th><td class="num">+66</td><td class="num">231</td><td class="num">235</td><td class="total">466</td></tr>
+</tbody></table></section>
+<section class="block"><h2>Super sweeper <span class="tag unofficial-tag">Unofficial</span></h2><table class="table"><caption class="hidden">Super sweeper</caption><thead><tr><th scope="col">Place</th><th scope="col">Name</th><th scope="col" class="num">Sat 2:00 pm</th><th scope="col" class="num">Sun 10:00 am</th><th scope="col" class="num">Cumulative</th></tr></thead><tbody>
+<tr><td>1</td><th scope="row" class="who">Tom Garrity</th><td class="num">498</td><td class="num">&ndash;</td><td class="total">498</td></tr>
+<tr><td>2</td><th scope="row" class="who">Dana Whitcomb</th><td class="num">481</td><td class="num">&ndash;</td><td class="total">481</td></tr>
+<tr><td>3</td><th scope="row" class="who">Rita Maddox</th><td class="num">470</td><td class="num">&ndash;</td><td class="total">470</td></tr>
+</tbody></table></section>
+</div>
+</div></div>
+</div>
+<p class="caption">Screen readers: the copy for the loop is hidden from them (<code>aria-hidden</code>), so the list reads once.</p>
+
+<h2>Reduced motion</h2>
+<p class="mockup-note">With "reduce motion" on, the page does not scroll. It switches to layout B (one division at a time, changing every 20 s), so a TV set that asks for less motion still works. See <a href="tv-flip.html">layout B</a>.</p>
+<p><a href="index.html">Back to the index</a></p>
+</main>
+</body>
+</html>

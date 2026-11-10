@@ -11,6 +11,7 @@ import {
 } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createTestApp } from '../../test/testApp.ts'
+import { createInMemoryDnfStore } from '../dnf/store.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
 import { createInMemoryLaneRepository } from '../lanes/repository.ts'
 import { createInMemoryScoreRepository } from '../scores/repository.ts'
@@ -171,6 +172,7 @@ describe('GET /v1/tournaments/:id/super-sweeper', () => {
     expect(Object.keys(response.body.rows[0]).toSorted()).toEqual(
       [
         'divisionName',
+        'dnf',
         'flags',
         'games',
         'group',
@@ -276,6 +278,7 @@ describe('finals cache', () => {
         sweepers: createInMemorySweeperRepository([]),
         lanes: createInMemoryLaneRepository([]),
         scores: createInMemoryScoreRepository([]),
+        dnf: createInMemoryDnfStore().store,
         logger: createCapturedLogger().logger,
       },
       cacheMs,

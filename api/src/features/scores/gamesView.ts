@@ -19,6 +19,7 @@ export function buildGamesView(
   scores: readonly ScoreRow[],
   games: number,
   skip: Skip,
+  flagged: ReadonlySet<string> = new Set(),
 ): GamesView {
   const bowlerOf = new Map(entries.map((entry) => [entry.registrationId, entry.bowlerId]))
   const storedOf = new Map<string, Map<number, number>>()
@@ -90,6 +91,7 @@ export function buildGamesView(
             score: row.scores[index] ?? null,
             scores: row.scores,
             total: row.total,
+            dnf: flagged.has(row.bowler.registrationId),
           })),
       }))
     const everyone = pairs.flatMap((pair) => pair.bowlers)

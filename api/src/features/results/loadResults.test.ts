@@ -8,6 +8,7 @@ import {
   createTournament,
 } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
+import { createInMemoryDnfStore } from '../dnf/store.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
 import type { Division } from '../divisions/types.ts'
 import { createInMemoryLaneRepository } from '../lanes/repository.ts'
@@ -42,6 +43,8 @@ function setup(options: {
   sweepers?: Sweeper[]
   seats?: Seat[]
   divisions?: Division[]
+  /** Registrations flagged DNF (D-248). */
+  flags?: { sessionId: string; registrationId: string }[]
 }) {
   const tournament = createTournament()
   const seats = options.seats ?? []
@@ -62,6 +65,7 @@ function setup(options: {
   }
   const deps: ResultsDeps = {
     tournaments: createInMemoryTournamentRepository([tournament]),
+    dnf: createInMemoryDnfStore(options.flags).store,
     divisions: createInMemoryDivisionRepository(
       (options.divisions ?? [open]).map((division) => ({
         tournamentId: tournament.id,
@@ -692,5 +696,130 @@ describe('loadSweeperResults ranking modes (RES-41, RES-43, RES-55)', () => {
     expect((await run(new Map([[sweeper.id, new Set([walked.registrationId])]]))).throughGame).toBe(
       3,
     )
+  })
+})
+
+describe('DNF flags in the results (RES-55, RES-56, D-248, D-251)', () => {
+  /** An open squad of three games. Walt walked off after two; Dana and Mike have three. */
+  function walkOff(over: Partial<Squad> = {}) {
+    const squad = squadAt(morning, { complete: false, ...over })
+    const walt = bowler(open.id)
+    const dana = bowler(open.id)
+    const mike = bowler(open.id)
+    const seats = [
+      { sessionId: squad.id, entry: walt, games: [250, 250] },
+      { sessionId: squad.id, entry: dana, games: [200, 200, 200] },
+      { sessionId: squad.id, entry: mike, games: [190, 190, 190] },
+    ]
+    return { squad, walt, dana, mike, seats }
+  }
+
+  it('reads the flags from the store when the mode is full-game (RES-55)', async () => {
+    const { squad, walt, seats } = walkOff()
+    const waiting = setup({ squads: [squad], seats })
+    const flagged = setup({
+      squads: [squad],
+      seats,
+      flags: [{ sessionId: squad.id, registrationId: walt.registrationId }],
+    })
+    const run = (world: typeof waiting) =>
+      loadSquadResults(world.deps, world.reporting, world.tournament.id, squad.id, {
+        mode: 'full-game',
+      })
+
+    expect((await run(waiting)).divisions[0]?.throughGame).toBe(2)
+    expect((await run(flagged)).divisions[0]?.throughGame).toBe(3)
+  })
+
+  it('tags a flagged bowler on an open squad and nobody else (RES-56)', async () => {
+    const { squad, walt, dana, seats } = walkOff()
+    const world = setup({
+      squads: [squad],
+      seats,
+      flags: [{ sessionId: squad.id, registrationId: walt.registrationId }],
+    })
+
+    const result = await loadSquadResults(
+      world.deps,
+      world.reporting,
+      world.tournament.id,
+      squad.id,
+    )
+
+    expect(rowOf(result, walt)?.dnf).toBe(true)
+    expect(rowOf(result, dana)?.dnf).toBe(false)
+    expect(squadResultsSchema.safeParse(result).success).toBe(true)
+  })
+
+  it('drops the tag and the flag once the squad is complete (RES-56, RES-30)', async () => {
+    const { squad, walt, seats } = walkOff({ complete: true })
+    const world = setup({
+      squads: [squad],
+      seats,
+      flags: [{ sessionId: squad.id, registrationId: walt.registrationId }],
+    })
+
+    const result = await loadSquadResults(
+      world.deps,
+      world.reporting,
+      world.tournament.id,
+      squad.id,
+      { mode: 'full-game' },
+    )
+
+    expect(result.divisions[0]?.rows.some((row) => row.dnf)).toBe(false)
+    expect(result.divisions[0]?.didNotFinish.map((row) => row.registrationId)).toEqual([
+      walt.registrationId,
+    ])
+    expect(result.divisions[0]?.throughGame).toBe(squad.games)
+  })
+
+  it('tags a flagged bowler on an open sweeper and leaves them out of the count (RES-55, RES-56)', async () => {
+    const sweeper = createSweeper({ cashRatio: 2, games: 3, complete: false })
+    const walt = bowler(open.id)
+    const world = setup({
+      sweepers: [sweeper],
+      seats: [
+        { sessionId: sweeper.id, entry: walt, games: [250, 250] },
+        { sessionId: sweeper.id, entry: bowler(open.id), games: [200, 200, 200] },
+        { sessionId: sweeper.id, entry: bowler(open.id), games: [190, 190, 190] },
+      ],
+      flags: [{ sessionId: sweeper.id, registrationId: walt.registrationId }],
+    })
+
+    const result = await loadSweeperResults(
+      world.deps,
+      world.reporting,
+      world.tournament.id,
+      sweeper.id,
+      {
+        mode: 'full-game',
+      },
+    )
+
+    expect(result.throughGame).toBe(3)
+    expect(result.rows.filter((row) => row.dnf).map((row) => row.registrationId)).toEqual([
+      walt.registrationId,
+    ])
+    expect(sweeperResultsSchema.safeParse(result).success).toBe(true)
+  })
+
+  it('shows no tag on a complete sweeper (RES-56)', async () => {
+    const sweeper = createSweeper({ cashRatio: 2, games: 3, complete: true })
+    const walt = bowler(open.id)
+    const world = setup({
+      sweepers: [sweeper],
+      seats: [{ sessionId: sweeper.id, entry: walt, games: [250, 250, 250] }],
+      flags: [{ sessionId: sweeper.id, registrationId: walt.registrationId }],
+    })
+
+    const result = await loadSweeperResults(
+      world.deps,
+      world.reporting,
+      world.tournament.id,
+      sweeper.id,
+    )
+
+    expect(result.rows.some((row) => row.dnf)).toBe(false)
   })
 })

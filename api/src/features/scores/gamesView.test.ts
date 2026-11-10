@@ -28,7 +28,13 @@ const dee = createLaneEntry({ divisionId: open.id, position: '4A', name: 'Dee Pa
 const late = createLaneEntry({ divisionId: open.id, position: '', name: 'Lou Late' })
 
 function view(
-  options: { skip?: Skip; scores?: ScoreRow[]; games?: number; extra?: (typeof ann)[] } = {},
+  options: {
+    skip?: Skip
+    scores?: ScoreRow[]
+    games?: number
+    extra?: (typeof ann)[]
+    flagged?: Set<string>
+  } = {},
 ) {
   const entries = [ann, bea, cal, dee, late, ...(options.extra ?? [])]
   const { page } = buildLanePage(session, entries, [open])
@@ -38,6 +44,7 @@ function view(
     options.scores ?? [],
     options.games ?? 3,
     options.skip ?? 'staggered',
+    options.flagged,
   )
 }
 
@@ -46,6 +53,22 @@ const labels = (built: ReturnType<typeof view>, game: number) =>
     lanes: pair.lanes,
     bowlers: pair.bowlers.map((bowler) => `${bowler.lane} ${bowler.name}`),
   }))
+
+describe('buildGamesView and the DNF flag (SCR-24)', () => {
+  it('marks a flagged bowler and no one else', () => {
+    const built = view({ flagged: new Set([ann.registrationId, 'someone-else']) })
+
+    const bowlers = built.games.flatMap((game) => game.pairs.flatMap((pair) => pair.bowlers))
+    const flagged = bowlers.filter((bowler) => bowler.dnf)
+    expect(flagged.map((bowler) => bowler.name)).toEqual(['Ann Lee', 'Ann Lee', 'Ann Lee'])
+  })
+
+  it('marks nobody without flags', () => {
+    const bowlers = view().games.flatMap((game) => game.pairs.flatMap((pair) => pair.bowlers))
+    expect(bowlers.some((bowler) => bowler.dnf)).toBe(false)
+    expect(gamesViewSchema.safeParse(view()).success).toBe(true)
+  })
+})
 
 describe('buildGamesView', () => {
   it('lists every game with the pairs as bowled in that game (SCR-22, D-234)', () => {

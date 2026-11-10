@@ -13,6 +13,7 @@ import {
 } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createSignedInTestApp, createTestApp } from '../../test/testApp.ts'
+import { createInMemoryDnfStore } from '../dnf/store.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
 import { createInMemoryLaneRepository } from '../lanes/repository.ts'
 import { createInMemorySquadRepository } from '../squads/repository.ts'
@@ -34,22 +35,26 @@ function setup(options: { complete?: boolean; tournamentComplete?: boolean } = {
   const ann = createLaneEntry({ divisionId: open.id, position: '1A', name: 'Ann Lee' })
   const cal = createLaneEntry({ divisionId: open.id, position: '3A', name: 'Cal Ode' })
   const inSweeper = createLaneEntry({ divisionId: open.id, position: '11A', name: 'Sue Swept' })
-  const { writer, state } = createInMemoryScoreWriter({
-    tournaments: [{ id: tournament.id, complete: options.tournamentComplete, games: 3 }],
-    sessions: [
-      { id: squad.id, tournamentId: tournament.id, complete: options.complete },
-      { id: sweeper.id, tournamentId: tournament.id, kind: 'sweeper', games: 2 },
-    ],
-    entries: [
-      { sessionId: squad.id, registrationId: ann.registrationId, bowlerId: ann.bowlerId },
-      { sessionId: squad.id, registrationId: cal.registrationId, bowlerId: cal.bowlerId },
-      {
-        sessionId: sweeper.id,
-        registrationId: inSweeper.registrationId,
-        bowlerId: inSweeper.bowlerId,
-      },
-    ],
-  })
+  const dnf = createInMemoryDnfStore()
+  const { writer, state } = createInMemoryScoreWriter(
+    {
+      tournaments: [{ id: tournament.id, complete: options.tournamentComplete, games: 3 }],
+      sessions: [
+        { id: squad.id, tournamentId: tournament.id, complete: options.complete },
+        { id: sweeper.id, tournamentId: tournament.id, kind: 'sweeper', games: 2 },
+      ],
+      entries: [
+        { sessionId: squad.id, registrationId: ann.registrationId, bowlerId: ann.bowlerId },
+        { sessionId: squad.id, registrationId: cal.registrationId, bowlerId: cal.bowlerId },
+        {
+          sessionId: sweeper.id,
+          registrationId: inSweeper.registrationId,
+          bowlerId: inSweeper.bowlerId,
+        },
+      ],
+    },
+    dnf.store,
+  )
   // The public page reads what the writer wrote, so a test can see the cache at work.
   const scores: ScoreRepository = {
     listScores: (sessionId) =>
@@ -72,6 +77,7 @@ function setup(options: { complete?: boolean; tournamentComplete?: boolean } = {
     logger: captured.logger,
     events,
     scoreWriter: writer,
+    dnfStore: dnf.store,
     scores,
     tournaments: createInMemoryTournamentRepository([tournament]),
     divisions: createInMemoryDivisionRepository([{ tournamentId: tournament.id, division: open }]),
@@ -85,7 +91,20 @@ function setup(options: { complete?: boolean; tournamentComplete?: boolean } = {
   }
   const url = (entry = ann.registrationId, game = 1, session = squad.id, plural = 'squads') =>
     `/v1/tournaments/${tournament.id}/${plural}/${session}/scores/${entry}/${game}`
-  return { overrides, url, tournament, squad, sweeper, ann, cal, inSweeper, state, seen, captured }
+  return {
+    overrides,
+    url,
+    tournament,
+    squad,
+    sweeper,
+    ann,
+    cal,
+    inSweeper,
+    state,
+    seen,
+    captured,
+    dnf,
+  }
 }
 
 describe('PUT .../scores/:registrationId/:game (SCR-19)', () => {
@@ -339,6 +358,32 @@ describe('PUT .../scores/:registrationId/:game (SCR-19)', () => {
       filledGames: 2,
     })
     expect(JSON.stringify(captured.records())).not.toContain('Ann Lee')
+  })
+})
+
+describe('a saved score and the DNF flag (SCR-25, D-250)', () => {
+  it('removes the flag of a bowler who scores again, and keeps the flag of everyone else', async () => {
+    const { overrides, url, dnf, squad, ann, cal } = setup()
+    await dnf.store.set(squad.id, ann.registrationId)
+    await dnf.store.set(squad.id, cal.registrationId)
+
+    await request(createSignedInTestApp(overrides))
+      .put(url(ann.registrationId, 1))
+      .send({ score: 180 })
+
+    expect(dnf.state).toEqual(new Set([`${squad.id}|${cal.registrationId}`]))
+  })
+
+  it('keeps the flag when the save is refused or the score is cleared', async () => {
+    const { overrides, url, dnf, squad, ann } = setup()
+    const app = createSignedInTestApp(overrides)
+    await request(app).put(url(ann.registrationId, 1)).send({ score: 180 })
+    await dnf.store.set(squad.id, ann.registrationId)
+
+    await request(app).put(url(ann.registrationId, 1)).send({ score: 0 })
+    await request(app).delete(url(ann.registrationId, 1))
+
+    expect(dnf.state).toEqual(new Set([`${squad.id}|${ann.registrationId}`]))
   })
 })
 

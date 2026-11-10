@@ -198,7 +198,9 @@ export async function loadSuperSweeper(
       return { sweeper, entries, scores }
     }),
   )
-  const built = buildSuperSweeperEntries(inputs, divisions, options)
+  const flagged =
+    options.flagged ?? (await deps.dnf.listFlagged(sweepers.map((sweeper) => sweeper.id)))
+  const built = buildSuperSweeperEntries(inputs, divisions, { ...options, flagged })
   reportSkipped(reporting, tournamentId, built.skipped)
   const outcome = workOutSuperSweeper(built.entries, ratios.superSweeperCashRatio)
   const marks = markCashLine(
@@ -222,6 +224,7 @@ export async function loadSuperSweeper(
     sweeperScores: item.sweeperScores,
     sweeperPins: item.sweeperPins,
     flags: item.flags,
+    dnf: item.dnf,
   })
 
   return {

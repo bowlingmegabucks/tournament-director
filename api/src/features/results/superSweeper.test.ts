@@ -409,3 +409,38 @@ describe('buildSuperSweeperEntries ranking modes (RES-42)', () => {
     expect(buildSuperSweeperEntries([input], [open]).through.get(input.sweeper.id)).toBeNull()
   })
 })
+
+describe('buildSuperSweeperEntries and the DNF flag (RES-56)', () => {
+  it('marks a bowler flagged in an open sweeper', () => {
+    const a = registrant()
+    const b = registrant()
+    const input = sweeperOf({ complete: false, games: 3 }, [
+      { entry: a, scores: [200, 200] },
+      { entry: b, scores: [200, 200, 200] },
+    ])
+    const flagged = new Map([[input.sweeper.id, new Set([a.registrationId])]])
+
+    const { entries } = buildSuperSweeperEntries([input], [open], { flagged })
+
+    const dnfOf = (entry: LaneEntry) =>
+      entries.find((item) => item.entry.registrationId === entry.registrationId)?.dnf
+    expect(dnfOf(a)).toBe(true)
+    expect(dnfOf(b)).toBe(false)
+  })
+
+  it('shows no mark once the sweeper is complete', () => {
+    const a = registrant()
+    const input = sweeperOf({ complete: true, games: 3 }, [{ entry: a, scores: [200, 200] }])
+    const flagged = new Map([[input.sweeper.id, new Set([a.registrationId])]])
+
+    const { entries } = buildSuperSweeperEntries([input], [open], { flagged })
+
+    expect(entries[0]?.dnf).toBe(false)
+  })
+
+  it('marks no one without flags', () => {
+    const a = registrant()
+    const input = sweeperOf({ complete: false, games: 3 }, [{ entry: a, scores: [200] }])
+    expect(buildSuperSweeperEntries([input], [open]).entries[0]?.dnf).toBe(false)
+  })
+})

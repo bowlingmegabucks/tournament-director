@@ -11,6 +11,7 @@ import {
 } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createSignedInTestApp, createTestApp } from '../../test/testApp.ts'
+import { createInMemoryDnfStore } from '../dnf/store.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
 import { createInMemoryLaneRepository } from '../lanes/repository.ts'
 import { createInMemorySkipStore } from '../skip/store.ts'
@@ -35,8 +36,10 @@ function setup(options: { maxPerPair?: number } = {}) {
   const cal = createLaneEntry({ divisionId: open.id, position: '3A', name: 'Cal Ode' })
   const inSweeper = createLaneEntry({ divisionId: open.id, position: '11A', name: 'Sue Swept' })
   const { store: skipStore } = createInMemorySkipStore()
+  const dnf = createInMemoryDnfStore()
   const overrides = {
     skipStore,
+    dnfStore: dnf.store,
     tournaments: createInMemoryTournamentRepository([tournament, other]),
     divisions: createInMemoryDivisionRepository([{ tournamentId: tournament.id, division: open }]),
     squads: createInMemorySquadRepository([
@@ -55,7 +58,7 @@ function setup(options: { maxPerPair?: number } = {}) {
   }
   const url = (session = squad.id, plural = 'squads') =>
     `/v1/tournaments/${tournament.id}/${plural}/${session}/scores/games`
-  return { overrides, url, tournament, other, squad, sweeper, skipStore, open }
+  return { overrides, url, tournament, other, squad, sweeper, skipStore, open, ann, cal, dnf }
 }
 
 describe('GET /v1/tournaments/:id/squads/:sessionId/scores/games (SCR-22)', () => {
@@ -78,6 +81,30 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/scores/games (SCR-22)', () =
       scores: [212, null, null],
       total: 212,
     })
+  })
+
+  it('marks a flagged bowler in every game they appear in (SCR-24, D-249)', async () => {
+    const { overrides, url, squad, ann, dnf } = setup()
+    await dnf.store.set(squad.id, ann.registrationId)
+
+    const body = (await request(createSignedInTestApp(overrides)).get(url())).body
+
+    const bowlers = body.games.flatMap(
+      (game: { pairs: { bowlers: { name: string; dnf: boolean }[] }[] }) =>
+        game.pairs.flatMap((pair) => pair.bowlers),
+    )
+    expect(bowlers.filter((bowler: { dnf: boolean }) => bowler.dnf)).toHaveLength(3)
+    expect(
+      bowlers
+        .filter((bowler: { dnf: boolean }) => bowler.dnf)
+        .every((bowler: { name: string }) => bowler.name === 'Ann Lee'),
+    ).toBe(true)
+  })
+
+  it('marks nobody when no one is flagged (SCR-24)', async () => {
+    const { overrides, url } = setup()
+    const body = (await request(createSignedInTestApp(overrides)).get(url())).body
+    expect(JSON.stringify(body)).not.toContain('"dnf":true')
   })
 
   it('uses the stored skip for the lanes (SCR-23, D-235)', async () => {

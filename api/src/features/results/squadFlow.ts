@@ -77,6 +77,8 @@ export interface WorkedSquad {
   /** Bowlers who advanced in an earlier squad of the tournament. */
   advancedBefore: ReadonlySet<string>
   outcomes: { divisionId: string; throughGame: number | null; outcome: DivisionOutcome }[]
+  /** Registrations flagged DNF while the squad is open (D-248). Empty once it is complete. */
+  flagged: ReadonlySet<string>
   /** Registrations with a score whose division is not one of the tournament's (D-51). */
   skipped: string[]
 }
@@ -107,6 +109,7 @@ export async function workOutSquads(
     for (const { outcome } of outcomes) {
       for (const advancer of outcome.advancers) advanced.add(advancer.bowlerId)
     }
-    return { squad: read.squad, advancedBefore, outcomes, skipped }
+    const flagged = read.squad.complete ? noFlags : (options.flagged?.get(read.squad.id) ?? noFlags)
+    return { squad: read.squad, advancedBefore, outcomes, skipped, flagged }
   })
 }

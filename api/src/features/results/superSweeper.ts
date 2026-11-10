@@ -30,6 +30,8 @@ export interface SuperSweeperEntry {
   /** The pins per game bowled in each sweeper. */
   sweeperPins: number[]
   flags: SweeperFlag[]
+  /** Flagged DNF in a sweeper that is still open (D-248, D-251). */
+  dnf: boolean
 }
 
 export interface SuperSweeperOptions {
@@ -47,6 +49,8 @@ export interface SuperSweeperBuilt {
   skipped: string[]
 }
 
+const noFlags: ReadonlySet<string> = new Set()
+
 /** The scratch games of each bowler in one sweeper. A game saved twice keeps the last score. */
 function gamesByBowler(scores: readonly ScoreRow[]): Map<string, number[]> {
   const byGame = new Map<string, Map<number, number>>()
@@ -61,6 +65,8 @@ function gamesByBowler(scores: readonly ScoreRow[]): Map<string, number[]> {
 interface SweeperScores {
   /** Only this many games of an open sweeper count (RES-42). `null`: every game. */
   limit: number | null
+  /** Registrations flagged DNF while the sweeper is open (D-248). Empty once it is complete. */
+  flagged: ReadonlySet<string>
   sweeper: Sweeper
   pins: (entry: LaneEntry, division: Division) => number
   games: Map<string, number[]>
@@ -130,6 +136,7 @@ function buildEntry(
     sweeperScores,
     sweeperPins: sweeperPinsList,
     flags,
+    dnf: perSweeper.some((each) => each.flagged.has(registrant.registrationId)),
   }
 }
 
@@ -158,10 +165,11 @@ export function buildSuperSweeperEntries(
         const stored = games.get(entry.bowlerId)
         return stored ? [{ registrationId: entry.registrationId, games: stored.length }] : []
       })
-      limit = fewestGames(bowlers, flagged?.get(sweeper.id) ?? new Set()) ?? 0
+      limit = fewestGames(bowlers, flagged?.get(sweeper.id) ?? noFlags) ?? 0
     }
     through.set(sweeper.id, limit ?? (mode === 'full-game' ? sweeper.games : null))
-    return { sweeper, pins: sweeperPins(sweeper.bonusPins), games, limit }
+    const flaggedHere = sweeper.complete ? noFlags : (flagged?.get(sweeper.id) ?? noFlags)
+    return { sweeper, pins: sweeperPins(sweeper.bonusPins), games, limit, flagged: flaggedHere }
   })
 
   const registrants = new Map<string, LaneEntry>()

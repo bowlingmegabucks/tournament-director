@@ -8,6 +8,7 @@ import {
   createTournament,
 } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
+import { createInMemoryDnfStore } from '../dnf/store.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
 import type { Division } from '../divisions/types.ts'
 import { createInMemoryLaneRepository } from '../lanes/repository.ts'
@@ -45,6 +46,7 @@ function setup(options: {
       [tournament],
       options.ratios && { [tournament.id]: options.ratios },
     ),
+    dnf: createInMemoryDnfStore().store,
     divisions: createInMemoryDivisionRepository(
       (options.divisions ?? [open]).map((division) => ({
         tournamentId: tournament.id,

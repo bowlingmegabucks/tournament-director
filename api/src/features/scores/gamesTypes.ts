@@ -19,6 +19,8 @@ export const gameBowlerSchema = z.object({
   score: z.number().int().nullable(),
   scores: z.array(z.number().int().nullable()),
   total: z.number().int(),
+  /** Flagged "did not finish" (D-248): the full-game count leaves the bowler out. */
+  dnf: z.boolean(),
 })
 
 export type GameBowler = z.infer<typeof gameBowlerSchema>

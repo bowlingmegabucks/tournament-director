@@ -50,6 +50,8 @@ export const squadRowSchema = z.object({
   scores: gameScoresSchema,
   /** True only for an earlier advancer at or above the cut score (D-81). */
   advancedEarlier: z.boolean(),
+  /** Flagged "did not finish" in a squad that is still open (D-248, D-251). */
+  dnf: z.boolean(),
 })
 
 /** A bowler listed apart on a complete squad: no place, no group, no ties (D-75). */
@@ -112,6 +114,8 @@ export const sweeperRowSchema = z.object({
   /** The bonus pins per game of the bowler's division (SCR-09). */
   bonusPins: z.number().int(),
   scores: gameScoresSchema,
+  /** Flagged "did not finish" in a sweeper that is still open (D-248, D-251). */
+  dnf: z.boolean(),
 })
 
 export type SweeperRow = z.infer<typeof sweeperRowSchema>
@@ -233,6 +237,8 @@ export const superSweeperRowSchema = z.object({
   /** The pins added per game bowled in each entry of `sweepers` (SCR-09). */
   sweeperPins: z.array(z.number().int()),
   flags: z.array(sweeperFlagSchema),
+  /** Flagged "did not finish" in a sweeper that is still open (D-248, D-251). */
+  dnf: z.boolean(),
 })
 
 export type SuperSweeperRow = z.infer<typeof superSweeperRowSchema>

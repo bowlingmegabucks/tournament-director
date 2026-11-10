@@ -43,6 +43,8 @@ import { createScoreRouter } from './features/scores/routes.ts'
 import type { ScoreRepository } from './features/scores/repository.ts'
 import { createSkipRouter } from './features/skip/routes.ts'
 import type { SkipStore } from './features/skip/store.ts'
+import { createDnfRouter } from './features/dnf/routes.ts'
+import type { DnfStore } from './features/dnf/store.ts'
 import { createSquadRouter } from './features/squads/routes.ts'
 import type { SquadRepository } from './features/squads/repository.ts'
 import { createSquadCreateRouter } from './features/squads/createRoutes.ts'
@@ -123,6 +125,7 @@ export interface AppDependencies {
   scoreWriter: ScoreWriter
   /** The stored skip of each squad and sweeper (SCR-23, D-235). */
   skipStore: SkipStore
+  dnfStore: DnfStore
   squads: SquadRepository
   /** Adds squads (SQD-01 to SQD-08, D-167). */
   squadWriter: SquadWriter
@@ -154,6 +157,7 @@ export function createApp({
   scores,
   scoreWriter,
   skipStore,
+  dnfStore,
   squads,
   squadWriter,
   sweepers,
@@ -207,7 +211,16 @@ export function createApp({
     logger,
   })
   // The five results routes (squad, sweeper, at-large, seeding, super sweeper) read the same data.
-  const resultsDeps = { tournaments, divisions, squads, sweepers, lanes, scores, logger }
+  const resultsDeps = {
+    tournaments,
+    divisions,
+    squads,
+    sweepers,
+    lanes,
+    scores,
+    dnf: dnfStore,
+    logger,
+  }
 
   // One router serves every method; the two groups below give each its own access.
   const vendorRegistrations = createVendorRegistrationRouter({
@@ -474,6 +487,7 @@ export function createApp({
           divisions,
           scores,
           skipStore,
+          dnfStore,
           logger,
         }),
       },
@@ -486,6 +500,36 @@ export function createApp({
           divisions,
           scores,
           skipStore,
+          dnfStore,
+          logger,
+        }),
+      },
+      // The DNF routes come first: `dnf` would otherwise read as a game number.
+      {
+        path: '/v1/tournaments/:id/squads/:sessionId/scores',
+        access: { permission: 'scores.write' }, // SCR-24, D-249: no API key
+        methods: ['PUT', 'DELETE'],
+        router: createDnfRouter('squad', {
+          store: dnfStore,
+          findSession: findSquad(squads),
+          tournaments,
+          lanes,
+          scores,
+          events,
+          logger,
+        }),
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers/:sessionId/scores',
+        access: { permission: 'scores.write' }, // SCR-24, D-249
+        methods: ['PUT', 'DELETE'],
+        router: createDnfRouter('sweeper', {
+          store: dnfStore,
+          findSession: findSweeper(sweepers),
+          tournaments,
+          lanes,
+          scores,
+          events,
           logger,
         }),
       },

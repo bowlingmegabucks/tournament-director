@@ -1,6 +1,7 @@
 import { HttpError } from '../../shared/errors.ts'
 import type { DivisionRepository } from '../divisions/repository.ts'
 import type { LaneRepository } from '../lanes/repository.ts'
+import type { DnfStore } from '../dnf/store.ts'
 import type { ScoreRepository } from '../scores/repository.ts'
 import type { SquadRepository } from '../squads/repository.ts'
 import type { SweeperRepository } from '../sweepers/repository.ts'
@@ -21,6 +22,7 @@ export interface ResultsDeps {
   sweepers: SweeperRepository
   lanes: LaneRepository
   scores: ScoreRepository
+  dnf: DnfStore
 }
 
 /** What the results routes pass on: the ranking mode (D-239) and the DNF flags (D-248). */
@@ -58,11 +60,12 @@ export async function loadSquadResults(
     })
   }
 
-  const worked = await workOutSquads(deps, upTo, divisions, options)
+  const flagged = options.flagged ?? (await deps.dnf.listFlagged(upTo.map((item) => item.id)))
+  const worked = await workOutSquads(deps, upTo, divisions, { ...options, flagged })
   const current = worked[index]
   // Stryker disable next-line all: unreachable. `worked` has one entry for each squad up to this one.
   if (!current) throw new HttpError(404, 'Squad not found')
-  const { outcomes, skipped, advancedBefore } = current
+  const { outcomes, skipped, advancedBefore, flagged: flaggedHere } = current
   // The advancers of every squad before this one decide who is an earlier advancer (RES-06).
   const divisionById = new Map(divisions.map((division) => [division.id, division]))
   reportSkipped(reporting, sessionId, skipped)
@@ -76,6 +79,7 @@ export async function loadSquadResults(
         markTies(outcome, advancedBefore),
         advancedBefore,
         throughGame,
+        flaggedHere,
       ),
     ]
   })
@@ -111,11 +115,16 @@ export async function loadSweeperResults(
   if (!sweeper) throw new HttpError(404, 'Sweeper not found')
   requireRatios("This sweeper's", { cash: sweeper.cashRatio })
 
-  const [divisions, entries, scores] = await Promise.all([
+  const [divisions, entries, scores, flaggedBySession] = await Promise.all([
     deps.divisions.listByTournament(tournamentId),
     deps.lanes.listEntries(sessionId),
     deps.scores.listScores(sessionId),
+    options.flagged ?? deps.dnf.listFlagged([sessionId]),
   ])
+  // D-248: a flag counts only while the sweeper is open.
+  const flagged = sweeper.complete
+    ? new Set<string>()
+    : (flaggedBySession.get(sessionId) ?? new Set<string>())
   const built = buildResultEntries(entries, scores, divisions, sweeperPins(sweeper.bonusPins))
   reportSkipped(reporting, sessionId, built.skipped)
 
@@ -123,11 +132,7 @@ export async function loadSweeperResults(
   const mode: RankMode = options.mode ?? 'live'
   const limited =
     mode === 'full-game' && !sweeper.complete
-      ? limitToCountedGames(
-          built.entries,
-          () => 'sweeper',
-          options.flagged?.get(sessionId) ?? new Set(),
-        )
+      ? limitToCountedGames(built.entries, () => 'sweeper', flagged)
       : undefined
   const outcome = workOutSweeper(limited?.entries ?? built.entries, sweeper.cashRatio)
   const marks = markCashLine(outcome.cashers, outcome.others)
@@ -142,6 +147,7 @@ export async function loadSweeperResults(
     divisionName: entry.divisionName,
     bonusPins: entry.pins,
     scores: entry.gameScores,
+    dnf: flagged.has(entry.registrationId),
   })
 
   return {

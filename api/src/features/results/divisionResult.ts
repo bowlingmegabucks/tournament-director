@@ -14,6 +14,7 @@ export function toDivisionResult(
   marks: ReadonlyMap<string, Tie[]>,
   advancedBefore: ReadonlySet<string>,
   throughGame: number | null,
+  flagged: ReadonlySet<string> = new Set(),
 ): DivisionResult {
   const { advancers, cashers, others, cutTotal } = outcome
 
@@ -35,6 +36,7 @@ export function toDivisionResult(
     advancedEarlier:
       advancedBefore.has(entry.bowlerId) && cutTotal !== undefined && entry.total >= cutTotal,
     ties: marks.get(entry.registrationId) ?? [],
+    dnf: flagged.has(entry.registrationId),
   }))
 
   const everyone = [

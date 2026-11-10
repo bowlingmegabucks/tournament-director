@@ -35,6 +35,7 @@ import { createVendorRegistrationRouter } from './features/registrations/vendorR
 import { createPublishingRegistrationWriter } from './features/registrations/publishingWriter.ts'
 import type { RegistrationWriter } from './features/registrations/writer.ts'
 import { createFinalsRouter, createResultsRouter } from './features/results/routes.ts'
+import { createGamesRouter } from './features/scores/gamesRoutes.ts'
 import { createScoreRouter } from './features/scores/routes.ts'
 import type { ScoreRepository } from './features/scores/repository.ts'
 import { createSkipRouter } from './features/skip/routes.ts'
@@ -441,6 +442,30 @@ export function createApp({
         router: skipSweeperRouter,
       },
       {
+        path: '/v1/tournaments/:id/squads/:sessionId/scores/games',
+        access: { permission: 'scores.write' }, // SCR-22, D-234: entry only; the API key cannot reach it
+        router: createGamesRouter('squad', findSquad(squads), {
+          lanes,
+          tournaments,
+          divisions,
+          scores,
+          skipStore,
+          logger,
+        }),
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers/:sessionId/scores/games',
+        access: { permission: 'scores.write' }, // SCR-22, D-234
+        router: createGamesRouter('sweeper', findSweeper(sweepers), {
+          lanes,
+          tournaments,
+          divisions,
+          scores,
+          skipStore,
+          logger,
+        }),
+      },
+      {
         path: '/v1/tournaments/:id/squads/:sessionId/scores',
         access: 'public', // D-70: public for good, so viewers who are not signed in watch scores
         router: createScoreRouter('squad', findSquad(squads), {
@@ -490,20 +515,22 @@ export function createApp({
       {
         path: '/v1/tournaments/:id/squads/:sessionId/recap-sheets',
         access: { permission: 'lanes.read' }, // D-66, D-52: signed in; the API key cannot reach it
-        router: createRecapSheetRouter('squad', findSquad(squads), {
-          lanes,
-          tournaments,
-          divisions,
-        }),
+        router: createRecapSheetRouter(
+          'squad',
+          findSquad(squads),
+          { lanes, tournaments, divisions },
+          skipStore,
+        ),
       },
       {
         path: '/v1/tournaments/:id/sweepers/:sessionId/recap-sheets',
         access: { permission: 'lanes.read' }, // D-66, D-52: signed in; the API key cannot reach it
-        router: createRecapSheetRouter('sweeper', findSweeper(sweepers), {
-          lanes,
-          tournaments,
-          divisions,
-        }),
+        router: createRecapSheetRouter(
+          'sweeper',
+          findSweeper(sweepers),
+          { lanes, tournaments, divisions },
+          skipStore,
+        ),
       },
       {
         path: '/v1/tournaments/:id/registrations',

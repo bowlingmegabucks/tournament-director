@@ -1,6 +1,7 @@
 import type { LanePage } from '../lanes/types.ts'
 import { parsePosition } from '../lanes/positions.ts'
 import { crossLanes, lanesInUse, type SkipPattern } from './cross.ts'
+import type { Skip } from '../skip/store.ts'
 import type { RecapSheets } from './types.ts'
 
 /**
@@ -15,6 +16,7 @@ export function buildRecapSheets(
   page: LanePage,
   games: number,
   withoutDivision: number,
+  skip: Skip,
 ): RecapSheets {
   const lanes = lanesInUse(page.pairs)
 
@@ -46,6 +48,7 @@ export function buildRecapSheets(
       games,
       complete: page.session.complete,
     },
+    skip,
     sheets,
     withoutLane: page.unassigned.length + page.other.length,
     withoutDivision,

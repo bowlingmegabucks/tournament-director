@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { localDateTimeSchema } from '../../shared/sessions.ts'
+import { skipSchema } from '../skip/store.ts'
 
 /**
  * One recap sheet (RPT-05): a bowler with a saved lane, and the lane label for each game under
@@ -33,6 +34,8 @@ export const recapSheetsSchema = z.object({
     games: z.number().int(),
     complete: z.boolean(),
   }),
+  /** The skip stored for the session (D-235). The dialog starts from it; both patterns stay in each sheet. */
+  skip: skipSchema,
   /** One per bowler with a saved lane, in lane order, then letter (LAN-04). */
   sheets: z.array(recapSheetSchema),
   /** Bowlers with no sheet: no lane yet, or a position outside the session's lanes (D-61, D-65). */

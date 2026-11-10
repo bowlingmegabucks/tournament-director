@@ -13,6 +13,7 @@ import { createInMemoryLaneRepository } from '../lanes/repository.ts'
 import { createInMemorySquadRepository } from '../squads/repository.ts'
 import { createInMemorySweeperRepository } from '../sweepers/repository.ts'
 import { createInMemoryTournamentRepository } from '../tournaments/repository.ts'
+import { createInMemorySkipStore } from '../skip/store.ts'
 import { recapSheetsSchema } from './types.ts'
 
 function setup(options: { maxPerPair?: number } = {}) {
@@ -27,7 +28,9 @@ function setup(options: { maxPerPair?: number } = {}) {
     games: 4,
     bonusPins: [{ divisionId: open.id, divisionName: 'Open', bonusPinsPerGame: 12 }],
   })
+  const skipStore = createInMemorySkipStore().store
   const app = createSignedInTestApp({
+    skipStore,
     tournaments: createInMemoryTournamentRepository([tournament, other]),
     divisions: createInMemoryDivisionRepository([{ tournamentId: tournament.id, division: open }]),
     squads: createInMemorySquadRepository([
@@ -41,10 +44,19 @@ function setup(options: { maxPerPair?: number } = {}) {
       { sessionId: sweeper.id, entry: createLaneEntry({ divisionId: open.id, position: '11A' }) },
     ]),
   })
-  return { app, tournament, other, squad, sweeper }
+  return { app, tournament, other, squad, sweeper, skipStore }
 }
 
 describe('GET /v1/tournaments/:id/squads/:sessionId/recap-sheets (RPT-08)', () => {
+  it('says which skip is stored: staggered with no row, then the saved one (SCR-23, D-235)', async () => {
+    const { app, tournament, squad, skipStore } = setup()
+    const url = `/v1/tournaments/${tournament.id}/squads/${squad.id}/recap-sheets`
+
+    expect((await request(app).get(url)).body.skip).toBe('staggered')
+    await skipStore.set(squad.id, 'same')
+    expect((await request(app).get(url)).body.skip).toBe('same')
+  })
+
   it('returns a sheet for each bowler with a lane, and the games of the tournament (RPT-05c)', async () => {
     const { app, tournament, squad } = setup()
 

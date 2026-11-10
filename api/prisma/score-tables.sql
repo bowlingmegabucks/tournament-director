@@ -5,6 +5,7 @@
 -- Tests run this exact file (src/test/scoreSchema.ts). No row means staggered.
 
 CREATE TABLE IF NOT EXISTS `SessionSkip` (
+  -- The `Id` of a row in `Squads`, which holds squads and sweepers alike. No foreign key: WinForms owns that table.
   `SessionId` CHAR(36)    NOT NULL,
   -- `staggered` or `same` (LAN-19).
   `Skip`      VARCHAR(16) NOT NULL,

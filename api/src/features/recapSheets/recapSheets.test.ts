@@ -29,7 +29,7 @@ function sheetsFor(
     : division
   const entries = positions.map((position) => createLaneEntry({ divisionId: open.id, position }))
   const { page, skipped } = buildLanePage(options.session ?? session(), entries, [open])
-  return { built: buildRecapSheets(page, options.games ?? 6, skipped.length), entries }
+  return { built: buildRecapSheets(page, options.games ?? 6, skipped.length, 'staggered'), entries }
 }
 
 describe('buildRecapSheets', () => {
@@ -63,7 +63,7 @@ describe('buildRecapSheets', () => {
     const stranger = createLaneEntry({ position: '3A' })
     const { page, skipped } = buildLanePage(session(), [known, stranger], [division])
 
-    const built = buildRecapSheets(page, 3, skipped.length)
+    const built = buildRecapSheets(page, 3, skipped.length, 'staggered')
 
     expect(built.sheets.map((sheet) => sheet.registrationId)).toEqual([known.registrationId])
     expect(built.withoutDivision).toBe(1)

@@ -87,11 +87,24 @@ Metrics ride the same OpenTelemetry pipeline as traces and logs, so Seq and App 
 
 ## Caching
 
-The live public pages poll every 15 seconds, so each route that serves them keeps its answer for `LIVE_CACHE_MS` (5 seconds, `src/shared/ttlCache.ts`) with `createTtlCache`. Ten open tabs then cost one database pass per window, and the delay is shorter than the poll, so viewers do not see it. It holds for a live squad too, so we do not wait for a squad to be complete.
+Until they move to a stream (D-222), the live public pages poll every 15 seconds, so each route that serves them keeps its answer for `LIVE_CACHE_MS` (5 seconds, `src/shared/ttlCache.ts`) with `createTtlCache`. Ten open tabs then cost one database pass per window, and the delay is shorter than the poll, so viewers do not see it. It holds for a live squad too, so we do not wait for a squad to be complete.
 
 - Cached today: squad and sweeper results and scores (keyed by tournament and session), and the at-large, seeding, and super sweeper routes (keyed by tournament).
 - Cache only routes that are public for good (D-70, D-74, D-85): every viewer gets the same answer. Do not cache a route that is signed-in only or differs by user, such as the lane pages, recap sheets, and registrations. If a cached route ever needs sign-in, key the cache by user or drop it.
 - A failed call is not kept, so the next poll tries again. The router takes `cacheMs` as a last argument; tests pass `0` to turn it off.
+
+## Live updates (SSE)
+
+A page that must show other people's changes listens to a server-sent event stream of one squad or sweeper (D-217). The lane page is the first; Scores and Results follow (D-222). The pattern:
+
+- **The hub.** `shared/events/sessionEvents.ts` (`createSessionEvents`) keeps who watches which session, in the Node process. `publish(sessionId, kind)` tells every watcher. `kind` is `lanes` or `entries`. A message is a signal, never data: `event: changed`, `data: {"kind","version"}` (D-218). The page refetches. There is no history and no replay: a page that reconnects refetches once.
+- **The route.** `shared/events/sseRoute.ts` (`createSessionEventsRouter`) opens the stream. It checks the session first, so an unknown id is a plain JSON `404` and never a stream. It sets `text/event-stream`, `no-cache, no-transform`, and `x-accel-buffering: no`; sends `retry: 5000`; and sends `: heartbeat` every 25 s, since Azure closes a quiet connection near 4 minutes. It leaves no stream behind when the browser goes during the check. The .NET twin is a SignalR hub group, with SSE in place of the socket.
+- **Who may listen.** The route group declares its own access, like any route (`lanes.read` for the lane stream). Scores and Results will be `public`.
+- **Who publishes.** The route that wrote, after the commit, and only when something changed: the lane move (`moveRoutes.ts`), the squad and sweeper `PATCH` and `complete`, and every registration write (the `createPublishingRegistrationWriter` wrapper in `app.ts`, which reads the sessions before the write and publishes to each one after it, so the vendor routes need no change). A failed publish is logged and never fails the write.
+- **Shutdown.** An open stream never finishes, so `handleProcessEvents` calls `closeStreams` (the hub's `closeAll`) before it waits for the server. Without that, a deploy would hit the 10 s limit and exit with code 1.
+- **Limits.** 500 open streams (`MAX_STREAMS`), then `503`. One instance only (Q-39).
+- **Telemetry.** The stream's request span is skipped (`isQuietPath`): it lasts hours. The gauge `tournament_director.events.connections` and the counter `tournament_director.events.published` (by `kind`) show use. Logs are at `debug`, with ids and counts and never a name.
+- **Tests.** Supertest cannot read a stream that never ends, so `sseRoute.test.ts` opens a real local server and reads with `fetch`. Test a publisher with `recordingEvents()` (`test/recordingEvents.ts`).
 
 ## Process lifecycle and health
 

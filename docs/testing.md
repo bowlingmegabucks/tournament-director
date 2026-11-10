@@ -10,6 +10,7 @@
 
 - Render the real component with the real hook. Fake only the network, using MSW.
 - `src/test/setup.ts` starts the MSW server and fails any request without a handler. Add a handler per test with `server.use(...)`; resets run after each test.
+- **Server-sent events.** jsdom has no `EventSource`, and MSW's `sse()` handler works in the browser only, so `setup.ts` gives every unit test `FakeEventSource` (`src/test/fakeEventSource.ts`). A test opens, drops, and sends by hand: `FakeEventSource.latest().open()`, `.message()`, `.fail()`. The browser mocks and the e2e tests use MSW's `sse()` through `createEventStreamHandlers()` in `src/mocks/handlers.ts` (kept out of the Node handler list, where MSW cannot build it). The mock lane `PUT` keeps the move and tells the open stream, so a refetch shows it (`resetMockLaneMoves()` clears it between tests).
 - Use `renderWithClient` from `src/test/renderWithClient.tsx` for anything that uses TanStack Query.
 - Use `findBy*` for things that appear after a fetch, `getBy*` for things already there.
 - Use `userEvent` (not `fireEvent`) for clicks and typing.

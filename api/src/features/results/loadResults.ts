@@ -7,8 +7,9 @@ import type { SweeperRepository } from '../sweepers/repository.ts'
 import type { TournamentRepository } from '../tournaments/repository.ts'
 import { toDivisionResult } from './divisionResult.ts'
 import { buildResultEntries, sweeperPins, type ResultEntry } from './entries.ts'
+import { limitToCountedGames, type RankMode } from './fullGame.ts'
 import { compareText, reportSkipped, requireRatios, type Reporting } from './resultHelpers.ts'
-import { workOutSquads } from './squadFlow.ts'
+import { workOutSquads, type FlowOptions } from './squadFlow.ts'
 import { workOutSweeper } from './sweeperResults.ts'
 import { markCashLine, markTies } from './ties.ts'
 import type { SquadResults, SweeperResults } from './types.ts'
@@ -22,8 +23,12 @@ export interface ResultsDeps {
   scores: ScoreRepository
 }
 
+/** What the results routes pass on: the ranking mode (D-239) and the DNF flags (D-248). */
+export type ResultsOptions = FlowOptions
+
 /**
  * RES-01 to RES-11b, D-75, D-81: the results of one squad, division by division.
+ * `options.mode` is `live` unless it says `full-game` (RES-40).
  *
  * Earlier advancers (RES-06) need the result of every squad before this one, so the squads up to
  * and including this one are worked out in date order (SQD-20, D-45), each passing its advancers on.
@@ -34,6 +39,7 @@ export async function loadSquadResults(
   reporting: Reporting,
   tournamentId: string,
   sessionId: string,
+  options: ResultsOptions = {},
 ): Promise<SquadResults> {
   if (!(await deps.tournaments.get(tournamentId))) throw new HttpError(404, 'Tournament not found')
   const [all, divisions] = await Promise.all([
@@ -52,7 +58,7 @@ export async function loadSquadResults(
     })
   }
 
-  const worked = await workOutSquads(deps, upTo, divisions)
+  const worked = await workOutSquads(deps, upTo, divisions, options)
   const current = worked[index]
   // Stryker disable next-line all: unreachable. `worked` has one entry for each squad up to this one.
   if (!current) throw new HttpError(404, 'Squad not found')
@@ -60,10 +66,18 @@ export async function loadSquadResults(
   // The advancers of every squad before this one decide who is an earlier advancer (RES-06).
   const divisionById = new Map(divisions.map((division) => [division.id, division]))
   reportSkipped(reporting, sessionId, skipped)
-  const results = outcomes.flatMap(({ divisionId, outcome }) => {
+  const results = outcomes.flatMap(({ divisionId, outcome, throughGame }) => {
     const division = divisionById.get(divisionId)
     if (!division) return []
-    return [toDivisionResult(division, outcome, markTies(outcome, advancedBefore), advancedBefore)]
+    return [
+      toDivisionResult(
+        division,
+        outcome,
+        markTies(outcome, advancedBefore),
+        advancedBefore,
+        throughGame,
+      ),
+    ]
   })
   return {
     session: {
@@ -73,6 +87,7 @@ export async function loadSquadResults(
       complete: squad.complete,
       games: squad.games,
     },
+    mode: options.mode ?? 'live',
     finalsRatio: squad.finalsRatio,
     cashRatio: squad.cashRatio,
     divisions: results.toSorted((a, b) => compareText(a.name, b.name) || a.number - b.number),
@@ -88,6 +103,7 @@ export async function loadSweeperResults(
   reporting: Reporting,
   tournamentId: string,
   sessionId: string,
+  options: ResultsOptions = {},
 ): Promise<SweeperResults> {
   if (!(await deps.tournaments.get(tournamentId))) throw new HttpError(404, 'Tournament not found')
   const sweepers = await deps.sweepers.listByTournament(tournamentId)
@@ -103,7 +119,17 @@ export async function loadSweeperResults(
   const built = buildResultEntries(entries, scores, divisions, sweeperPins(sweeper.bonusPins))
   reportSkipped(reporting, sessionId, built.skipped)
 
-  const outcome = workOutSweeper(built.entries, sweeper.cashRatio)
+  // RES-41: an open sweeper counts the games every bowler in it has; a complete one counts them all.
+  const mode: RankMode = options.mode ?? 'live'
+  const limited =
+    mode === 'full-game' && !sweeper.complete
+      ? limitToCountedGames(
+          built.entries,
+          () => 'sweeper',
+          options.flagged?.get(sessionId) ?? new Set(),
+        )
+      : undefined
+  const outcome = workOutSweeper(limited?.entries ?? built.entries, sweeper.cashRatio)
   const marks = markCashLine(outcome.cashers, outcome.others)
   const toRow = (entry: ResultEntry, index: number, group: 'casher' | 'other') => ({
     registrationId: entry.registrationId,
@@ -126,6 +152,12 @@ export async function loadSweeperResults(
       complete: sweeper.complete,
       games: sweeper.games,
     },
+    mode,
+    throughGame: limited
+      ? (limited.through.get('sweeper') ?? 0)
+      : mode === 'full-game'
+        ? sweeper.games
+        : null,
     cashRatio: sweeper.cashRatio,
     entries: outcome.entryCount,
     cashers: outcome.cashCount,

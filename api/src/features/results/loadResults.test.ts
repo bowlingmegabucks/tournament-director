@@ -609,3 +609,88 @@ describe('loadSweeperResults (RES-22 to RES-25a)', () => {
     )
   })
 })
+
+describe('loadSweeperResults ranking modes (RES-41, RES-43, RES-55)', () => {
+  // Four-game sweeper. Dana has bowled four games, the others three.
+  function fourGames(over: { complete?: boolean } = {}) {
+    const sweeper = createSweeper({ cashRatio: 2, games: 4, complete: false, ...over })
+    const dana = bowler(open.id)
+    const mike = bowler(seniors.id)
+    const lou = bowler(open.id)
+    const seats = [
+      { sessionId: sweeper.id, entry: dana, games: [210, 210, 210, 300] },
+      { sessionId: sweeper.id, entry: mike, games: [250, 250, 250] },
+      { sessionId: sweeper.id, entry: lou, games: [240, 240, 240] },
+    ]
+    return {
+      sweeper,
+      dana,
+      mike,
+      lou,
+      ...setup({ sweepers: [sweeper], divisions: [open, seniors], seats }),
+    }
+  }
+
+  it('counts the games every bowler has, divisions together (RES-41)', async () => {
+    const { deps, reporting, tournament, sweeper, mike, dana } = fourGames()
+
+    const result = await loadSweeperResults(deps, reporting, tournament.id, sweeper.id, {
+      mode: 'full-game',
+    })
+
+    expect(result).toMatchObject({ mode: 'full-game', throughGame: 3 })
+    expect(result.rows[0]?.registrationId).toBe(mike.registrationId)
+    const danaRow = result.rows.find((row) => row.registrationId === dana.registrationId)
+    expect(danaRow).toMatchObject({ total: 630, games: 3, scores: [210, 210, 210, 300] })
+    expect(sweeperResultsSchema.safeParse(result).success).toBe(true)
+  })
+
+  it('ranks on every saved score in live mode, and by default (RES-41)', async () => {
+    const { deps, reporting, tournament, sweeper, dana } = fourGames()
+
+    const live = await loadSweeperResults(deps, reporting, tournament.id, sweeper.id, {
+      mode: 'live',
+    })
+    const byDefault = await loadSweeperResults(deps, reporting, tournament.id, sweeper.id)
+
+    expect(live).toMatchObject({ mode: 'live', throughGame: null })
+    expect(live.rows[0]?.registrationId).toBe(dana.registrationId)
+    expect(byDefault.mode).toBe('live')
+  })
+
+  it('counts every game of a complete sweeper in both modes (RES-43)', async () => {
+    const { deps, reporting, tournament, sweeper } = fourGames({ complete: true })
+
+    const steady = await loadSweeperResults(deps, reporting, tournament.id, sweeper.id, {
+      mode: 'full-game',
+    })
+    const live = await loadSweeperResults(deps, reporting, tournament.id, sweeper.id, {
+      mode: 'live',
+    })
+
+    expect(steady.rows.map((row) => row.registrationId)).toEqual(
+      live.rows.map((row) => row.registrationId),
+    )
+    expect(steady.throughGame).toBe(4)
+  })
+
+  it('does not wait for a flagged bowler (RES-55)', async () => {
+    const sweeper = createSweeper({ cashRatio: 2, games: 4, complete: false })
+    const walked = bowler(open.id)
+    const { deps, reporting, tournament } = setup({
+      sweepers: [sweeper],
+      seats: [
+        { sessionId: sweeper.id, entry: walked, games: [250, 250] },
+        { sessionId: sweeper.id, entry: bowler(open.id), games: [240, 240, 240] },
+        { sessionId: sweeper.id, entry: bowler(open.id), games: [230, 230, 230] },
+      ],
+    })
+    const run = (flagged: ReadonlyMap<string, ReadonlySet<string>>) =>
+      loadSweeperResults(deps, reporting, tournament.id, sweeper.id, { mode: 'full-game', flagged })
+
+    expect((await run(new Map())).throughGame).toBe(2)
+    expect((await run(new Map([[sweeper.id, new Set([walked.registrationId])]]))).throughGame).toBe(
+      3,
+    )
+  })
+})

@@ -118,6 +118,7 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/results', () => {
         'number',
         'rows',
         'showHandicap',
+        'throughGame',
       ].toSorted(),
     )
   })

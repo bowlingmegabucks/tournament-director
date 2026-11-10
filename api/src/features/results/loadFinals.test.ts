@@ -523,8 +523,8 @@ describe('loadSuperSweeper', () => {
 
     expect(result.rows.map((row) => row.place)).toEqual([1, 2, 3, 4])
     expect(result.sweepers).toEqual([
-      { id: first.id, date: morning, games: 3, complete: true },
-      { id: second.id, date: noon, games: 3, complete: true },
+      { id: first.id, date: morning, games: 3, complete: true, throughGame: null },
+      { id: second.id, date: noon, games: 3, complete: true, throughGame: null },
     ])
     expect(result).toMatchObject({ complete: true, cashRatio: 2, entries: 4, cashers: 2 })
     expect(result.rows.map((row) => row.registrationId)).toEqual([

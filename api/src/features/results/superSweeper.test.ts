@@ -333,3 +333,79 @@ describe('workOutSuperSweeper', () => {
     })
   })
 })
+
+describe('buildSuperSweeperEntries ranking modes (RES-42)', () => {
+  it('counts an open sweeper through its last full game (RES-42)', () => {
+    const a = registrant()
+    const b = registrant()
+    const open3 = sweeperOf({ complete: false, games: 4 }, [
+      { entry: a, scores: [200, 200, 200, 300] },
+      { entry: b, scores: [200, 200, 200] },
+    ])
+
+    const steady = buildSuperSweeperEntries([open3], [open], { mode: 'full-game' })
+    const live = buildSuperSweeperEntries([open3], [open], { mode: 'live' })
+
+    const totalOf = (built: typeof steady, entry: LaneEntry) =>
+      built.entries.find((item) => item.entry.registrationId === entry.registrationId)?.entry.total
+    expect(totalOf(steady, a)).toBe(600)
+    expect(totalOf(live, a)).toBe(900)
+    expect(steady.through.get(open3.sweeper.id)).toBe(3)
+    expect(live.through.get(open3.sweeper.id)).toBeNull()
+  })
+
+  it('counts every game of a complete sweeper (RES-42, RES-43)', () => {
+    const a = registrant()
+    const done = sweeperOf({ complete: true, games: 4 }, [
+      { entry: a, scores: [200, 200, 200, 300] },
+    ])
+
+    const steady = buildSuperSweeperEntries([done], [open], { mode: 'full-game' })
+
+    expect(steady.entries[0]?.entry.total).toBe(900)
+    expect(steady.through.get(done.sweeper.id)).toBe(4)
+  })
+
+  it('counts each sweeper on its own (RES-42)', () => {
+    const a = registrant()
+    const b = registrant()
+    const first = sweeperOf({ complete: true, games: 3 }, [
+      { entry: a, scores: [200, 200, 200] },
+      { entry: b, scores: [200, 200, 200] },
+    ])
+    const second = sweeperOf({ complete: false, games: 3 }, [
+      { entry: a, scores: [200, 200] },
+      { entry: b, scores: [200] },
+    ])
+
+    const built = buildSuperSweeperEntries([first, second], [open], { mode: 'full-game' })
+
+    expect(built.through.get(first.sweeper.id)).toBe(3)
+    expect(built.through.get(second.sweeper.id)).toBe(1)
+    expect(
+      built.entries.find((i) => i.entry.registrationId === a.registrationId)?.entry.total,
+    ).toBe(800)
+  })
+
+  it('does not wait for a flagged bowler (RES-55)', () => {
+    const a = registrant()
+    const walked = registrant()
+    const input = sweeperOf({ complete: false, games: 3 }, [
+      { entry: a, scores: [200, 200, 200] },
+      { entry: walked, scores: [200] },
+    ])
+
+    const built = buildSuperSweeperEntries([input], [open], {
+      mode: 'full-game',
+      flagged: new Map([[input.sweeper.id, new Set([walked.registrationId])]]),
+    })
+
+    expect(built.through.get(input.sweeper.id)).toBe(3)
+  })
+
+  it('is live when no mode is given', () => {
+    const a = registrant()
+    const input = sweeperOf({ complete: false, games: 3 }, [{ entry: a, scores: [200, 200] }])
+    expect(buildSuperSweeperEntries([input], [open]).through.get(input.sweeper.id)).toBeNull()
+  })
+})

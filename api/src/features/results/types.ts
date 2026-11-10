@@ -7,6 +7,9 @@ import { localDateTimeSchema } from '../../shared/sessions.ts'
  * date, address, email, phone, average, or payments (BWL-17).
  */
 
+/** How a results page ranks while games come in (D-239). */
+export const rankModeSchema = z.enum(['full-game', 'live'])
+
 /** What separated two bowlers after the total: the games bowled, or the Nth best game (1 = high game). */
 export const deciderSchema = z.union([
   z.object({ kind: z.literal('games') }),
@@ -67,6 +70,12 @@ export const divisionResultSchema = z.object({
   entries: z.number().int().nonnegative(),
   /** RES-11a: someone in the division has a handicap above 0. */
   showHandicap: z.boolean(),
+  /**
+   * The games counted (D-239): the last game every bowler of the division has, or all the squad's games
+   * once it is complete. `null` in live mode, where every saved score counts. A game above it is shown
+   * dimmed and left out of the totals.
+   */
+  throughGame: z.number().int().nonnegative().nullable(),
   rows: z.array(squadRowSchema),
   didNotFinish: z.array(unplacedRowSchema),
   noShows: z.array(z.object({ registrationId: z.uuid(), name: z.string().min(1) })),
@@ -85,6 +94,7 @@ const sessionFields = {
 
 export const squadResultsSchema = z.object({
   session: z.object({ ...sessionFields, kind: z.literal('squad') }),
+  mode: rankModeSchema,
   /** The squad's effective ratios (RES-03, D-43). */
   finalsRatio: z.number(),
   cashRatio: z.number(),
@@ -108,6 +118,9 @@ export type SweeperRow = z.infer<typeof sweeperRowSchema>
 
 export const sweeperResultsSchema = z.object({
   session: z.object({ ...sessionFields, kind: z.literal('sweeper') }),
+  mode: rankModeSchema,
+  /** As on a squad division (D-239, D-240): `null` in live mode. */
+  throughGame: z.number().int().nonnegative().nullable(),
   cashRatio: z.number(),
   /** `N` (RES-22). */
   entries: z.number().int().nonnegative(),
@@ -225,6 +238,7 @@ export const superSweeperRowSchema = z.object({
 export type SuperSweeperRow = z.infer<typeof superSweeperRowSchema>
 
 export const superSweeperResultsSchema = z.object({
+  mode: rankModeSchema,
   complete: z.boolean(),
   cashRatio: z.number(),
   entries: z.number().int().nonnegative(),
@@ -237,6 +251,8 @@ export const superSweeperResultsSchema = z.object({
       date: localDateTimeSchema,
       games: z.number().int(),
       complete: z.boolean(),
+      /** The games counted in this sweeper (D-240): `null` in live mode. */
+      throughGame: z.number().int().nonnegative().nullable(),
     }),
   ),
   rows: z.array(superSweeperRowSchema),

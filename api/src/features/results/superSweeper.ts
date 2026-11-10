@@ -3,6 +3,7 @@ import type { LaneEntry } from '../lanes/types.ts'
 import type { ScoreRow } from '../scores/types.ts'
 import type { Sweeper } from '../sweepers/types.ts'
 import { sweeperPins, toResultEntry, type ResultEntry } from './entries.ts'
+import { fewestGames, type RankMode } from './fullGame.ts'
 import { rankEntries } from './ranking.ts'
 
 /** One sweeper of the tournament with the entries and scores saved so far. */
@@ -31,7 +32,16 @@ export interface SuperSweeperEntry {
   flags: SweeperFlag[]
 }
 
+export interface SuperSweeperOptions {
+  /** `live` (the default) counts every saved score; `full-game` counts each open sweeper's last full game (D-240). */
+  mode?: RankMode
+  /** Registrations flagged DNF, by sweeper id (D-248). */
+  flagged?: ReadonlyMap<string, ReadonlySet<string>>
+}
+
 export interface SuperSweeperBuilt {
+  /** The games counted in each sweeper, by sweeper id: `null` in live mode, every game once it is complete. */
+  through: Map<string, number | null>
   entries: SuperSweeperEntry[]
   /** Registrations whose division is not one of the tournament's (D-51). Left out. */
   skipped: string[]
@@ -49,6 +59,8 @@ function gamesByBowler(scores: readonly ScoreRow[]): Map<string, number[]> {
 }
 
 interface SweeperScores {
+  /** Only this many games of an open sweeper count (RES-42). `null`: every game. */
+  limit: number | null
   sweeper: Sweeper
   pins: (entry: LaneEntry, division: Division) => number
   games: Map<string, number[]>
@@ -68,9 +80,10 @@ function buildEntry(
   const flags: SweeperFlag[] = []
   let total = 0
 
-  for (const { sweeper, pins, games: stored } of perSweeper) {
+  for (const { sweeper, pins, games: stored, limit } of perSweeper) {
     // Complete writes zero rows for a no-show (D-06), so all zeros is a missed sweeper (D-75, D-90).
-    const rows = stored.get(registrant.bowlerId) ?? []
+    const all = stored.get(registrant.bowlerId) ?? []
+    const rows = limit === null ? all : all.slice(0, limit)
     const bowled = rows.every((score) => score === 0) ? [] : rows
     if (bowled.length === 0 && !sweeper.complete) {
       sweeperTotals.push(null)
@@ -131,13 +144,25 @@ function buildEntry(
 export function buildSuperSweeperEntries(
   inputs: readonly SweeperInput[],
   divisions: readonly Division[],
+  options: SuperSweeperOptions = {},
 ): SuperSweeperBuilt {
   const divisionById = new Map(divisions.map((division) => [division.id, division]))
-  const perSweeper = inputs.map(({ sweeper, scores }) => ({
-    sweeper,
-    pins: sweeperPins(sweeper.bonusPins),
-    games: gamesByBowler(scores),
-  }))
+  const { mode = 'live', flagged } = options
+  const through = new Map<string, number | null>()
+  const perSweeper = inputs.map(({ sweeper, entries, scores }) => {
+    const games = gamesByBowler(scores)
+    // RES-42: an open sweeper counts the games every bowler in it has; a complete one counts them all.
+    let limit: number | null = null
+    if (mode === 'full-game' && !sweeper.complete) {
+      const bowlers = entries.flatMap((entry) => {
+        const stored = games.get(entry.bowlerId)
+        return stored ? [{ registrationId: entry.registrationId, games: stored.length }] : []
+      })
+      limit = fewestGames(bowlers, flagged?.get(sweeper.id) ?? new Set()) ?? 0
+    }
+    through.set(sweeper.id, limit ?? (mode === 'full-game' ? sweeper.games : null))
+    return { sweeper, pins: sweeperPins(sweeper.bonusPins), games, limit }
+  })
 
   const registrants = new Map<string, LaneEntry>()
   for (const { entries } of inputs) {
@@ -159,7 +184,7 @@ export function buildSuperSweeperEntries(
     const item = buildEntry(registrant, division, perSweeper)
     if (item) built.push(item)
   }
-  return { entries: built, skipped }
+  return { through, entries: built, skipped }
 }
 
 export interface SuperSweeperOutcome {

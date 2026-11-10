@@ -13,6 +13,7 @@ export function toDivisionResult(
   outcome: DivisionOutcome,
   marks: ReadonlyMap<string, Tie[]>,
   advancedBefore: ReadonlySet<string>,
+  throughGame: number | null,
 ): DivisionResult {
   const { advancers, cashers, others, cutTotal } = outcome
 
@@ -48,6 +49,7 @@ export function toDivisionResult(
     name: division.name,
     entries: outcome.entryCount,
     showHandicap: everyone.some((entry) => entry.pins > 0),
+    throughGame,
     rows,
     didNotFinish: outcome.didNotFinish.map((entry) => ({
       registrationId: entry.registrationId,

@@ -152,7 +152,7 @@ describe('GET /v1/tournaments/:id/super-sweeper', () => {
     expect(superSweeperResultsSchema.safeParse(response.body).success).toBe(true)
     expect(response.body).toMatchObject({ complete: true, cashRatio: 2, entries: 6, cashers: 3 })
     expect(response.body.sweepers).toEqual([
-      { id: sweeper.id, date: sweeper.date, games: 3, complete: true },
+      { id: sweeper.id, date: sweeper.date, games: 3, complete: true, throughGame: null },
     ])
     expect(response.body.rows[0]).toMatchObject({
       place: 1,

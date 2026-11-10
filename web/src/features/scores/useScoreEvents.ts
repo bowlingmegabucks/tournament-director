@@ -1,10 +1,10 @@
-import { UPDATED_MS, useLivePage, type LivePage } from '../../shared/useLivePage'
+import { useLivePage, type LivePage } from '../../shared/useLivePage'
 import { describeScoreChange, diffScores } from './scoreDiff'
 import type { ScorePage, SessionKind } from './types'
 import { scoreKeys } from './useScores'
 
 /** How long "Updated: Dana Rivers, game 2" and the highlighted rows stay. */
-export const SCORE_UPDATED_MS = UPDATED_MS
+export { UPDATED_MS as SCORE_UPDATED_MS } from '../../shared/useLivePage'
 
 export type ScoreEvents = LivePage<{ ids: string[] }>
 

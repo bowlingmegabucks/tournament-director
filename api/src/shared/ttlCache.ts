@@ -43,7 +43,7 @@ export function createTtlCache<T>(ttlMs: number, now: () => number = Date.now) {
 
   /** Forget every answer whose key passes `test`. */
   const dropWhere = (test: (key: string) => boolean) => {
-    for (const key of [...slots.keys()]) if (test(key)) slots.delete(key)
+    for (const key of slots.keys()) if (test(key)) slots.delete(key)
   }
 
   return Object.assign(cached, { drop, dropWhere })

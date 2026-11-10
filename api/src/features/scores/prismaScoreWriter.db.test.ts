@@ -111,7 +111,7 @@ describe('Prisma score writer', () => {
 
     expect(await stored(friend.bowlerId, squadId)).toEqual([[1, 200]])
     expect(await stored(mine.bowlerId, squadId)).toEqual([])
-    expect((await stored(mine.bowlerId, sweeperId)).length).toBe(1)
+    expect(await stored(mine.bowlerId, sweeperId)).toHaveLength(1)
   })
 
   it('clears the last game and refuses a gap (SCR-06, D-229)', async () => {

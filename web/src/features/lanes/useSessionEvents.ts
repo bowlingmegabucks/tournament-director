@@ -1,17 +1,12 @@
-import type { LiveState } from '../../shared/useEventStream'
-import {
-  UPDATED_MS as SHARED_UPDATED_MS,
-  useLivePage,
-  type LivePage,
-} from '../../shared/useLivePage'
+import { useLivePage, type LivePage } from '../../shared/useLivePage'
 import { describeChange, diffPages } from './pageDiff'
 import type { LanePage, SessionKind } from './types'
 import { laneKeys } from './useLanes'
 
-export type { LiveState }
+export type { LiveState } from '../../shared/useEventStream'
 
 /** How long "Updated: lanes 5-6" stays before the line goes back to "Live". */
-export const UPDATED_MS = SHARED_UPDATED_MS
+export { UPDATED_MS } from '../../shared/useLivePage'
 
 export type SessionEvents = LivePage<{ pairs: number[] }>
 

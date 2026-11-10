@@ -344,7 +344,7 @@ describe('RecapDialog preview', () => {
     expect(screen.getByRole('radio', { name: 'Staggered skip' })).toBeDisabled()
   })
 
-  it('says why when the skip cannot be saved, and keeps the stored skip (SCR-23, D-231)', async () => {
+  it('prints with the chosen skip when the API will not store it, and shows no error (SCR-23, D-231)', async () => {
     signInDirector()
     serveStoredSkip()
     server.use(
@@ -361,10 +361,21 @@ describe('RecapDialog preview', () => {
 
     await userEvent.click(screen.getByRole('radio', { name: 'Same skip' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'This squad is complete. The skip cannot change.',
-    )
-    expect(screen.getByRole('radio', { name: 'Staggered skip' })).toBeChecked()
+    await waitFor(() => {
+      expect(screen.getByRole('radio', { name: 'Same skip' })).toBeChecked()
+    })
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('lets anyone pick the skip on a complete session, and saves nothing (SCR-23, D-231)', async () => {
+    setMockUser(createSignedInUser({ roles: ['director'], permissions: ['lanes.read'] }))
+    const state = serveStoredSkip()
+    await loaded({ ...squad, session: { ...squad.session, complete: true } })
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Same skip' }))
+
+    expect(screen.getByRole('radio', { name: 'Same skip' })).toBeChecked()
+    expect(state.puts).toEqual([])
   })
 
   it('leaves the radios off for someone who cannot score (SCR-23, D-96)', async () => {

@@ -6,6 +6,11 @@ import type { SessionKind } from '../../shared/session'
 /** The step pattern of a squad or sweeper (LAN-19). The API's `features/skip/store.ts` has the same values. */
 export type SkipPattern = 'staggered' | 'same'
 
+/** True for a value the API may send as a skip. The one check every reader of a skip uses. */
+export function isSkipPattern(value: unknown): value is SkipPattern {
+  return value === 'staggered' || value === 'same'
+}
+
 /** A skip that could not be saved. `message` says why, in words the page can show (SCR-23). */
 export class SkipError extends Error {
   /** The status that came back, or `undefined` when the request never got an answer. */
@@ -52,7 +57,7 @@ export async function saveSkip(
   if (!response.ok) throw new SkipError('Could not save the skip. Try again.', response.status)
   const body: unknown = await response.json().catch(() => undefined)
   const saved = field(body, 'skip')
-  if (saved !== 'staggered' && saved !== 'same') {
+  if (!isSkipPattern(saved)) {
     throw new SkipError('Could not save the skip (unexpected response).', response.status)
   }
   return saved

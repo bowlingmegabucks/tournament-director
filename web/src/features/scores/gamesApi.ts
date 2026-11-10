@@ -4,6 +4,7 @@ import { field } from '../../shared/field'
 import { readJson } from '../../shared/readJson'
 import { isSessionDate } from '../../shared/sessionFormat'
 import { LaneSetupError, SessionNotFoundError, type SessionKind } from '../../shared/session'
+import { isSkipPattern } from '../skip/api'
 import type { Game, GameBowler, GamePair, GamesView, ScoreSaveResult } from './gamesTypes'
 
 const isText = (value: unknown) => typeof value === 'string'
@@ -49,7 +50,7 @@ function isGamesView(value: unknown): value is GamesView {
   const skip = field(value, 'skip')
   return (
     isSession(field(value, 'session')) &&
-    (skip === 'staggered' || skip === 'same') &&
+    isSkipPattern(skip) &&
     isEvery(field(value, 'games'), isGame) &&
     isNumber(field(value, 'withoutLane'))
   )

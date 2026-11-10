@@ -11,6 +11,12 @@ export interface StreamHandlers {
   onReconnect: () => void
 }
 
+/** Messages closer together than this reach the page as one. */
+export const MESSAGE_WINDOW_MS = 1000
+
+/** How often a page without a live stream asks again (the poll the stream replaced, D-72). */
+export const FALLBACK_POLL_MS = 15000
+
 /** The kind a message names. A message that does not parse still means "something changed". */
 function kindOf(data: unknown): string {
   if (typeof data !== 'string') return 'unknown'
@@ -46,10 +52,31 @@ export function useEventStream(
   const onChange = useEffectEvent(handlers.onChange)
   const onReconnect = useEffectEvent(handlers.onReconnect)
 
+  // No stream, no refresh: while the stream is not live, ask again on a timer, so a page whose
+  // stream dropped or was refused for good (and a viewer who was rate limited) still catches up.
+  const polling = enabled && supported && state !== 'live'
+  useEffect(() => {
+    if (!polling) return
+    const timer = setInterval(() => {
+      onReconnect()
+    }, FALLBACK_POLL_MS)
+    return () => {
+      clearInterval(timer)
+    }
+  }, [polling])
+
   useEffect(() => {
     if (!enabled || !supported) return
     const source = new EventSource(apiUrl(path), { withCredentials: true })
     let dropped = false
+    // Messages come in bursts when several keepers save. The first runs at once; the rest in the
+    // window join into one call, so a busy squad does not cost every viewer a request per save.
+    let last = Number.NEGATIVE_INFINITY
+    let pending: { kind: string; timer: ReturnType<typeof setTimeout> } | undefined
+    const deliver = (kind: string) => {
+      last = Date.now()
+      onChange(kind)
+    }
 
     source.onopen = () => {
       setState('live')
@@ -64,10 +91,30 @@ export function useEventStream(
       setState(source.readyState === EventSource.CLOSED ? 'off' : 'reconnecting')
     }
     source.addEventListener('changed', (event) => {
-      onChange(kindOf(event.data))
+      const kind = kindOf(event.data)
+      const wait = last + MESSAGE_WINDOW_MS - Date.now()
+      if (wait <= 0 && !pending) {
+        deliver(kind)
+        return
+      }
+      // Joined messages keep the one that matters to more pages: a `scores` message is the one a
+      // lane page ignores, so any other kind in the window wins over it.
+      if (pending) {
+        if (pending.kind === 'scores') pending.kind = kind
+        return
+      }
+      const waiting = {
+        kind,
+        timer: setTimeout(() => {
+          pending = undefined
+          deliver(waiting.kind)
+        }, wait),
+      }
+      pending = waiting
     })
 
     return () => {
+      if (pending) clearTimeout(pending.timer)
       source.close()
     }
   }, [enabled, supported, path])

@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { FakeEventSource } from '../test/fakeEventSource'
-import { useEventStream } from './useEventStream'
+import { FALLBACK_POLL_MS, MESSAGE_WINDOW_MS, useEventStream } from './useEventStream'
 
 function setup(enabled = true) {
   const onChange = vi.fn()
@@ -32,12 +32,55 @@ describe('useEventStream (D-217, D-218, D-232)', () => {
   })
 
   it('tells the page the kind of each change', () => {
+    vi.useFakeTimers()
     const { onChange } = setup()
     act(() => {
       FakeEventSource.latest().message('{"kind":"scores","version":4}')
+    })
+    act(() => {
+      vi.advanceTimersByTime(MESSAGE_WINDOW_MS)
       FakeEventSource.latest().message('{"kind":"lanes","version":5}')
     })
     expect(onChange.mock.calls).toEqual([['scores'], ['lanes']])
+    vi.useRealTimers()
+  })
+
+  it('joins messages inside one window into a single call, keeping a kind other than scores', () => {
+    vi.useFakeTimers()
+    const { onChange } = setup()
+    act(() => {
+      FakeEventSource.latest().message('{"kind":"scores","version":1}')
+      FakeEventSource.latest().message('{"kind":"scores","version":2}')
+      FakeEventSource.latest().message('{"kind":"lanes","version":3}')
+      FakeEventSource.latest().message('{"kind":"scores","version":4}')
+    })
+    expect(onChange.mock.calls).toEqual([['scores']])
+
+    act(() => {
+      vi.advanceTimersByTime(MESSAGE_WINDOW_MS)
+    })
+
+    expect(onChange.mock.calls).toEqual([['scores'], ['lanes']])
+    vi.useRealTimers()
+  })
+
+  it('asks again on a timer while the stream is not live, and stops once it is', () => {
+    vi.useFakeTimers()
+    const { onReconnect } = setup()
+
+    act(() => {
+      vi.advanceTimersByTime(FALLBACK_POLL_MS)
+    })
+    expect(onReconnect).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      FakeEventSource.latest().open()
+    })
+    act(() => {
+      vi.advanceTimersByTime(FALLBACK_POLL_MS * 3)
+    })
+    expect(onReconnect).toHaveBeenCalledTimes(1)
+    vi.useRealTimers()
   })
 
   it.each(['not json', '{"version":1}', '{"kind":7}', 'null', '"text"'])(

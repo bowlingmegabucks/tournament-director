@@ -41,5 +41,10 @@ export function createTtlCache<T>(ttlMs: number, now: () => number = Date.now) {
   /** Forget the answer for `key`, so a write is seen by the next read (D-232). */
   const drop = (key: string) => slots.delete(key)
 
-  return Object.assign(cached, { drop })
+  /** Forget every answer whose key passes `test`. */
+  const dropWhere = (test: (key: string) => boolean) => {
+    for (const key of [...slots.keys()]) if (test(key)) slots.delete(key)
+  }
+
+  return Object.assign(cached, { drop, dropWhere })
 }

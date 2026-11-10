@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react'
-import { Link } from 'react-router'
+import { useRef, useState, type MouseEvent } from 'react'
+import { Link, useNavigate } from 'react-router'
 import { formatPair } from '../lanes/format'
 import { digitsOnly, gamesToFill, priorGames, readScore, sayGames } from './entryLogic'
 import { entryPath } from './entryPaths'
@@ -72,12 +72,15 @@ export function PairSheet({
   readOnly,
 }: Readonly<PairSheetProps>) {
   const save = useSaveScore(kind, tournamentId, sessionId)
+  const navigate = useNavigate()
   const [drafts, setDrafts] = useState<Readonly<Record<string, string>>>({})
   const [marks, setMarks] = useState<Readonly<Record<string, Mark>>>({})
   const inputs = useRef(new Map<string, HTMLInputElement>())
   const nextPairLink = useRef<HTMLAnchorElement | null>(null)
   // A box saves on blur and on Next. Pressing Next blurs first, so the second ask joins the first.
   const inFlight = useRef(new Map<string, Promise<boolean>>())
+  // The text each running save was made from, so a newer entry in the box is not mistaken for it.
+  const inFlightText = useRef(new Map<string, string>())
   // What each box last saved (a score, or `null` for a clear). Moving focus leaves the box, and the
   // blur handler may still hold the render from before the save: this keeps it from saving twice.
   const lastSaved = useRef(new Map<string, number | null>())
@@ -90,17 +93,20 @@ export function PairSheet({
     setMarks((current) => (mark ? { ...without(current, id), [id]: mark } : without(current, id)))
   }
 
-  function dropDraft(id: string) {
-    setDrafts((current) => without(current, id))
+  function dropDraft(id: string, onlyIf?: string) {
+    setDrafts((current) =>
+      onlyIf === undefined || current[id] === onlyIf ? without(current, id) : current,
+    )
   }
 
-  async function send(bowler: GameBowler, score: number | null): Promise<boolean> {
+  async function send(bowler: GameBowler, score: number | null, text: string): Promise<boolean> {
     const id = bowler.registrationId
     setMark(id, { type: 'saving' })
     try {
       await save.mutateAsync({ registrationId: id, game: game.game, score })
       lastSaved.current.set(id, score)
-      dropDraft(id)
+      // Keep a newer entry: the keeper may have changed the box while this save ran.
+      dropDraft(id, text)
       setMark(id, { type: score === null ? 'cleared' : 'saved' })
       return true
     } catch (error) {
@@ -113,9 +119,13 @@ export function PairSheet({
   /** Save what the box holds, if it changed. True when there is nothing left to save. */
   function commit(bowler: GameBowler): Promise<boolean> {
     const id = bowler.registrationId
-    const running = inFlight.current.get(id)
-    if (running) return running
     const draft = drafts[id]
+    const running = inFlight.current.get(id)
+    if (running) {
+      if (draft === undefined || draft === inFlightText.current.get(id)) return running
+      // The box holds something newer than the save in flight: save that once this one is done.
+      return running.then(() => commit(bowler))
+    }
     if (draft === undefined) return Promise.resolve(true)
     if (draft === '' && (bowler.score === null || lastSaved.current.get(id) === null)) {
       dropDraft(id)
@@ -123,7 +133,7 @@ export function PairSheet({
     }
     let job: Promise<boolean>
     if (draft === '') {
-      job = send(bowler, null)
+      job = send(bowler, null, draft)
     } else {
       const read = readScore(draft)
       if ('problem' in read) {
@@ -134,11 +144,29 @@ export function PairSheet({
         dropDraft(id)
         return Promise.resolve(true)
       }
-      job = send(bowler, read.score)
+      job = send(bowler, read.score, draft)
     }
     inFlight.current.set(id, job)
-    void job.finally(() => inFlight.current.delete(id))
+    inFlightText.current.set(id, draft)
+    void job.finally(() => {
+      inFlight.current.delete(id)
+      inFlightText.current.delete(id)
+    })
     return job
+  }
+
+  /**
+   * A link that leaves the sheet saves every box first and goes only if all saved. The sheet would
+   * unmount on the route change, taking a failure or a bad entry with it (D-228). Modified clicks
+   * (new tab) and the like take the normal link path.
+   */
+  function leave(event: MouseEvent<HTMLAnchorElement>, to: string, bowlers: readonly GameBowler[]) {
+    if (event.defaultPrevented || event.button !== 0) return
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    event.preventDefault()
+    void Promise.all(bowlers.map((bowler) => commit(bowler))).then((results) => {
+      if (results.every(Boolean)) void navigate(to)
+    })
   }
 
   async function goNext(bowlers: readonly GameBowler[], index: number) {
@@ -167,13 +195,26 @@ export function PairSheet({
   return (
     <section aria-label={title} className={styles.sheet}>
       <nav className={styles.nav} aria-label="Pairs">
-        <Link className={styles.link} to={board}>
+        <Link
+          className={styles.link}
+          to={board}
+          onClick={(event) => {
+            leave(event, board, bowlers)
+          }}
+        >
           ← Game {game.game}
         </Link>
         {previous && (
           <Link
             className={styles.link}
             to={entryPath(kind, tournamentId, sessionId, game.game, previous.firstLane)}
+            onClick={(event) => {
+              leave(
+                event,
+                entryPath(kind, tournamentId, sessionId, game.game, previous.firstLane),
+                bowlers,
+              )
+            }}
           >
             ← Pair {formatPair(previous).replace(/^Lanes? /, '')}
           </Link>
@@ -183,6 +224,13 @@ export function PairSheet({
             ref={nextPairLink}
             className={styles.link}
             to={entryPath(kind, tournamentId, sessionId, game.game, next.firstLane)}
+            onClick={(event) => {
+              leave(
+                event,
+                entryPath(kind, tournamentId, sessionId, game.game, next.firstLane),
+                bowlers,
+              )
+            }}
           >
             Next pair {formatPair(next).replace(/^Lanes? /, '')} →
           </Link>

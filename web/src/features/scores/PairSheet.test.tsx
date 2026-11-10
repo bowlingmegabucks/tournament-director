@@ -336,6 +336,71 @@ describe('the pair sheet: a late bowler and missed games (SCR-03, D-229)', () =>
   })
 })
 
+describe('the pair sheet: a newer entry and leaving (D-228)', () => {
+  it('saves a newer entry typed while the first save runs, and keeps it on the screen', async () => {
+    const { api, cal } = await openSheet()
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const seen: number[] = []
+    server.use(
+      http.put(
+        '/v1/tournaments/:id/squads/:sessionId/scores/:registrationId/:game',
+        async ({ request }) => {
+          const { score } = (await request.json()) as { score: number }
+          seen.push(score)
+          if (seen.length === 1) await gate
+          return HttpResponse.json({ scores: [200, score, null], total: 200 + score })
+        },
+      ),
+    )
+
+    await userEvent.type(cal, '200')
+    await userEvent.tab()
+    await waitFor(() => {
+      expect(seen).toEqual([200])
+    })
+    await userEvent.clear(cal)
+    await userEvent.type(cal, '190')
+    await userEvent.tab()
+    release()
+
+    await waitFor(() => {
+      expect(seen).toEqual([200, 190])
+    })
+    expect(api.puts).toHaveLength(0)
+    expect(cal).toHaveValue('190')
+  })
+
+  it('stays on the sheet and says why when a save fails as the keeper taps Next pair', async () => {
+    const { cal } = await openSheet()
+    server.use(
+      http.put('/v1/tournaments/:id/squads/:sessionId/scores/:registrationId/:game', () =>
+        HttpResponse.json({ message: 'Could not save that score.' }, { status: 409 }),
+      ),
+    )
+
+    await userEvent.type(cal, '190')
+    await userEvent.click(screen.getByRole('link', { name: 'Next pair 3-4 →' }))
+
+    expect(await screen.findByText('Could not save that score.')).toBeVisible()
+    expect(screen.getByRole('heading', { level: 2, name: 'Game 2 · Lanes 1-2' })).toBeVisible()
+    expect(cal).toHaveValue('190')
+  })
+
+  it('goes to the next pair once every box has saved', async () => {
+    const { cal } = await openSheet()
+
+    await userEvent.type(cal, '190')
+    await userEvent.click(screen.getByRole('link', { name: 'Next pair 3-4 →' }))
+
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Game 2 · Lanes 3-4' }),
+    ).toBeVisible()
+  })
+})
+
 describe('the pair sheet: when saving fails (SCR-15, D-228)', () => {
   it('keeps what was typed, says why, and offers Try again (SCR-15)', async () => {
     const { cal } = await openSheet()

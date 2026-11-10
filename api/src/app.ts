@@ -37,7 +37,7 @@ import type { RegistrationWriter } from './features/registrations/writer.ts'
 import { createFinalsRouter, createResultsRouter } from './features/results/routes.ts'
 import { createScoreWriteRouter } from './features/scores/scoreRoutes.ts'
 import type { ScoreWriter } from './features/scores/scoreWriter.ts'
-import { createScoreCache } from './features/scores/scoreCache.ts'
+import { createScoreCache, dropCacheOnPublish } from './features/scores/scoreCache.ts'
 import { createGamesRouter } from './features/scores/gamesRoutes.ts'
 import { createScoreRouter } from './features/scores/routes.ts'
 import type { ScoreRepository } from './features/scores/repository.ts'
@@ -150,7 +150,7 @@ export function createApp({
   bowlers,
   lanes,
   laneWriter,
-  events,
+  events: sessionEvents,
   scores,
   scoreWriter,
   skipStore,
@@ -162,6 +162,10 @@ export function createApp({
   // Stryker disable next-line StringLiteral: the scope name only labels the metrics.
   meter = metrics.getMeter('tournament-director-api'),
 }: AppDependencies): express.Express {
+  // One cache for the public scores page. Every change message drops it first, so a refetch after a
+  // complete, a lane move, a session edit, or a registration write gets the new page (D-232).
+  const scoreCache = createScoreCache()
+  const events = dropCacheOnPublish(sessionEvents, scoreCache)
   // Every registration write, desk or vendor, tells the open lane pages of the sessions it touches
   // (LAN-22, D-219). The routes below see only this wrapper.
   const registrationWriter = createPublishingRegistrationWriter(
@@ -188,9 +192,6 @@ export function createApp({
   // Before the routes, so each one's access label can see who is calling (D-95, D-96).
   app.use(identifyCaller({ apiKey: config.apiKey, auth, logger }))
 
-  // The five results routes (squad, sweeper, at-large, seeding, super sweeper) read the same data.
-  // One cache for the public scores page, so a save can drop its answer (D-232).
-  const scoreCache = createScoreCache()
   const skipSquadRouter = createSkipRouter('squad', {
     store: skipStore,
     findSession: findSquad(squads),
@@ -205,6 +206,7 @@ export function createApp({
     events,
     logger,
   })
+  // The five results routes (squad, sweeper, at-large, seeding, super sweeper) read the same data.
   const resultsDeps = { tournaments, divisions, squads, sweepers, lanes, scores, logger }
 
   // One router serves every method; the two groups below give each its own access.

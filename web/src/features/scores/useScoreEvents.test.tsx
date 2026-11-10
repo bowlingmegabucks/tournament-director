@@ -123,12 +123,15 @@ describe('useScoreEvents (SCR-18, SCR-20, D-232, D-237)', () => {
 
     await pushChange([211, 187, null])
 
-    await waitFor(() => {
-      expect(result.current.events.updated).toMatchObject({
-        text: 'Updated: Joe Fontaine, game 1',
-        version: 2,
-      })
-    })
+    await waitFor(
+      () => {
+        expect(result.current.events.updated).toMatchObject({
+          text: 'Updated: Joe Fontaine, game 1',
+          version: 2,
+        })
+      },
+      { timeout: 3000 },
+    )
   })
 
   it('restarts the clock when a second change arrives before the first line expires', async () => {

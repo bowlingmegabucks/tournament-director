@@ -10,6 +10,7 @@ import { imagesReady, startPrint } from '../../shared/print'
 import { PrintSheets } from './PrintSheets'
 import styles from './RecapDialog.module.css'
 import { RecapSheet } from './RecapSheet'
+import { SkipError } from '../skip/api'
 import { useSaveSkip } from '../skip/useSaveSkip'
 import type { RecapSheet as Sheet, SkipPattern } from './types'
 import { scoresAddress } from './scoresAddress'
@@ -53,7 +54,27 @@ export function RecapDialog({
   // shows the pattern being saved while the save runs, then the stored one.
   const canChoose = useCan('scores.write')
   const saveSkip = useSaveSkip(kind, tournamentId, sessionId)
-  const pattern: SkipPattern = saveSkip.isPending ? saveSkip.variables : (data?.skip ?? 'staggered')
+  // A complete session or tournament cannot store a new skip (D-231), but both patterns are on
+  // every sheet, so the choice stays on this screen and only changes what prints.
+  const complete = data?.session.complete === true
+  const [printOnly, setPrintOnly] = useState<SkipPattern>()
+  const pattern: SkipPattern = saveSkip.isPending
+    ? saveSkip.variables
+    : (printOnly ?? data?.skip ?? 'staggered')
+  const mayChoose = canChoose || complete
+  function choose(next: SkipPattern) {
+    if (complete) {
+      setPrintOnly(next)
+      return
+    }
+    setPrintOnly(undefined)
+    saveSkip.mutate(next, {
+      // The API refused to store it (a complete tournament): print with it anyway.
+      onError: (failure) => {
+        if (failure instanceof SkipError && failure.status === 409) setPrintOnly(next)
+      },
+    })
+  }
   // Who is NOT checked, so every sheet starts checked, and a refetch adds no surprises.
   const [unchecked, setUnchecked] = useState<ReadonlySet<string>>(new Set())
   const [filter, setFilter] = useState('')
@@ -212,9 +233,9 @@ export function RecapDialog({
                   type="radio"
                   name="skip"
                   checked={pattern === 'staggered'}
-                  disabled={!canChoose || saveSkip.isPending}
+                  disabled={!mayChoose || saveSkip.isPending}
                   onChange={() => {
-                    saveSkip.mutate('staggered')
+                    choose('staggered')
                   }}
                 />
                 <span>Staggered skip</span>
@@ -224,15 +245,15 @@ export function RecapDialog({
                   type="radio"
                   name="skip"
                   checked={pattern === 'same'}
-                  disabled={!canChoose || saveSkip.isPending}
+                  disabled={!mayChoose || saveSkip.isPending}
                   onChange={() => {
-                    saveSkip.mutate('same')
+                    choose('same')
                   }}
                 />
                 <span>Same skip</span>
               </label>
             </fieldset>
-            {saveSkip.isError && (
+            {saveSkip.isError && printOnly === undefined && (
               <p role="alert" className={styles.skipError}>
                 {saveSkip.error.message}
               </p>

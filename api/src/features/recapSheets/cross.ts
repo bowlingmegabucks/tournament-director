@@ -1,5 +1,4 @@
-/** The step pattern the desk picks: the same step every game, or one that varies (LAN-19). */
-export type SkipPattern = 'same' | 'staggered'
+import type { Skip as SkipPattern } from '../skip/store.ts'
 
 /** Lanes per skip step: 16 lanes or fewer skip nothing, then one more for every 8 lanes (LAN-18). */
 const LANES_PER_SKIP = 8

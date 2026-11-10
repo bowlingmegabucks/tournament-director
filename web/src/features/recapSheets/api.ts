@@ -4,6 +4,7 @@ import { field } from '../../shared/field'
 import { readJson } from '../../shared/readJson'
 import { isSessionDate } from '../../shared/sessionFormat'
 import { LaneSetupError, SessionNotFoundError, type SessionKind } from '../../shared/session'
+import { isSkipPattern } from '../skip/api'
 import type { RecapSheets } from './types'
 
 const isText = (value: unknown) => typeof value === 'string'
@@ -41,7 +42,7 @@ function isRecapSheets(value: unknown): value is RecapSheets {
   const sheets = field(value, 'sheets')
   return (
     isSession(field(value, 'session')) &&
-    (field(value, 'skip') === 'staggered' || field(value, 'skip') === 'same') &&
+    isSkipPattern(field(value, 'skip')) &&
     Array.isArray(sheets) &&
     sheets.every(isSheet) &&
     isNumber(field(value, 'withoutLane')) &&

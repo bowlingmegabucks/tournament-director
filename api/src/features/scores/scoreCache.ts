@@ -1,3 +1,4 @@
+import type { SessionEvents } from '../../shared/events/sessionEvents.ts'
 import { cacheKey, createTtlCache, LIVE_CACHE_MS } from '../../shared/ttlCache.ts'
 
 /**
@@ -9,6 +10,8 @@ export interface ScoreCache {
   cached: ReturnType<typeof createTtlCache<unknown>>
   /** Forget the page of one session. */
   drop(tournamentId: string, sessionId: string): void
+  /** Forget the page of one session when only its id is known (an event carries no tournament). */
+  dropSession(sessionId: string): void
 }
 
 export function createScoreCache(cacheMs = LIVE_CACHE_MS): ScoreCache {
@@ -17,6 +20,25 @@ export function createScoreCache(cacheMs = LIVE_CACHE_MS): ScoreCache {
     cached,
     drop: (tournamentId, sessionId) => {
       cached.drop(cacheKey(tournamentId, sessionId))
+    },
+    dropSession: (sessionId) => {
+      const suffix = `/${cacheKey(sessionId)}`
+      cached.dropWhere((key) => key.endsWith(suffix))
+    },
+  }
+}
+
+/**
+ * The same events, but every message first drops the session's cached scores page. The page shows
+ * lanes, entries, the complete flag, and scores, so any change a screen is told about makes the
+ * cached page old. Dropping first means the refetch that follows gets the new page.
+ */
+export function dropCacheOnPublish(events: SessionEvents, cache: ScoreCache): SessionEvents {
+  return {
+    ...events,
+    publish(sessionId, kind) {
+      cache.dropSession(sessionId)
+      events.publish(sessionId, kind)
     },
   }
 }

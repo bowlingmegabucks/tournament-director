@@ -26,6 +26,20 @@ describe('createTtlCache', () => {
     expect(await cached('b', load)).toBe(2)
   })
 
+  it('forgets every key that passes the test on dropWhere and keeps the rest', async () => {
+    const cached = createTtlCache<number>(1000, () => 0)
+    const load = vi.fn(() => Promise.resolve(load.mock.calls.length))
+    await cached('t1/s1', load)
+    await cached('t2/s1', load)
+    await cached('t1/s2', load)
+
+    cached.dropWhere((key) => key.endsWith('/s1'))
+
+    expect(await cached('t1/s1', load)).toBe(4)
+    expect(await cached('t2/s1', load)).toBe(5)
+    expect(await cached('t1/s2', load)).toBe(3)
+  })
+
   it('keeps keys apart', async () => {
     const cached = createTtlCache<string>(1000, () => 0)
     expect(await cached('a', () => Promise.resolve('A'))).toBe('A')

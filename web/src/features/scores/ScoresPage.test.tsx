@@ -575,11 +575,25 @@ describe('ScoresPage live (SCR-18, SCR-20, D-232)', () => {
     const live = serveChanging(page)
     open(page)
     await screen.findByRole('table', { name: 'Scores for lanes 1-2' }, { timeout: 3000 })
+    connect()
     const before = live.asked()
 
     await vi.advanceTimersByTimeAsync(60_000)
 
     expect(live.asked()).toBe(before)
+  })
+
+  it('asks again every 15 s while the stream is not live (no stream, no refresh)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const page = filled()
+    const live = serveChanging(page)
+    open(page)
+    await screen.findByRole('table', { name: 'Scores for lanes 1-2' }, { timeout: 3000 })
+    const before = live.asked()
+
+    await vi.advanceTimersByTimeAsync(16_000)
+
+    expect(live.asked()).toBeGreaterThan(before)
   })
 
   it('asks again when a lane move changes the pairs, and says nothing new about scores (D-218)', async () => {

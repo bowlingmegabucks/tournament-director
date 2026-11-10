@@ -180,32 +180,29 @@ describe('request line', () => {
     const { logger, records } = createCapturedLogger()
     const app = express()
     app.use(requestLogging(logger))
-    let arrived = () => undefined
-    const received = new Promise<void>((resolve) => {
-      arrived = () => {
-        resolve()
-        return undefined
-      }
-    })
+    let arrived = false
     app.get('/slow', () => {
       // Never answers; tells the test the request is in.
-      arrived()
+      arrived = true
     })
     const server = app.listen(0)
-    const { port } = server.address() as AddressInfo
-    const controller = new AbortController()
+    try {
+      const { port } = server.address() as AddressInfo
+      const controller = new AbortController()
 
-    const call = fetch(`http://127.0.0.1:${port}/slow`, { signal: controller.signal }).catch(
-      () => undefined,
-    )
-    // Abort only after the server holds the request, whatever the machine load.
-    await received
-    controller.abort()
-    await call
-    await vi.waitFor(() => expect(records()).toHaveLength(1))
-    server.close()
+      const call = fetch(`http://127.0.0.1:${port}/slow`, { signal: controller.signal }).catch(
+        () => undefined,
+      )
+      // Abort only after the server holds the request, whatever the machine load.
+      await vi.waitFor(() => expect(arrived).toBe(true), { timeout: 5000 })
+      controller.abort()
+      await call
+      await vi.waitFor(() => expect(records()).toHaveLength(1), { timeout: 5000 })
 
-    expect(records()).toMatchObject([{ path: '/slow', aborted: true }])
+      expect(records()).toMatchObject([{ path: '/slow', aborted: true }])
+    } finally {
+      server.close()
+    }
   })
 })
 

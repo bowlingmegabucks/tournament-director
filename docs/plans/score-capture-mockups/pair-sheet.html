@@ -1,0 +1,64 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="../../../web/src/styles/tokens.css"><link rel="stylesheet" href="../../../web/src/styles/base.css"><link rel="stylesheet" href="mockup.css"><title>Score entry pair sheet</title></head><body><main class="page">
+<h1>Pair sheet <span class="muted">(Game 2, lanes 13–14)</span></h1>
+<div class="states">
+
+<section class="state"><h2>Game 2 on lanes 13–14</h2><div class="phone">
+<nav class="footbar" aria-label="Pairs"><a class="btn-secondary" href="board.html">← Game 2</a><a class="btn-secondary" href="#">Next pair 15–16 →</a></nav>
+<h1>Game 2 · Lanes 13–14</h1>
+<p class="live"><span class="dot" aria-hidden="true"></span>Live: scores by others show here as they happen.</p>
+<div class="bowler"><header><span><span class="lane">13A</span> <strong>Dana Rivers</strong></span><span class="muted">Total 178</span></header>
+<div class="entry"><input aria-label="Lane 13A, Dana Rivers, game 2" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value=""><button class="btn-secondary nextbtn" type="button">Next</button><span class="mark" role="status"></span></div>
+<p class="prior">Game 1: 178</p></div>
+<div class="bowler"><header><span><span class="lane">13B</span> <strong>Lee Park</strong></span><span class="muted">Total 415</span></header>
+<div class="entry"><input aria-label="Lane 13B, Lee Park, game 2" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="214"><button class="btn-secondary nextbtn" type="button">Next</button><span class="mark saved" role="status">Saved</span></div>
+<p class="prior">Game 1: 201</p></div>
+<div class="bowler"><header><span><span class="lane">14A</span> <strong>Sam Ortiz</strong></span><span class="muted">Total 156</span></header>
+<div class="entry"><input aria-label="Lane 14A, Sam Ortiz, game 2" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value=""><button class="btn-secondary nextbtn" type="button">Next</button><span class="mark" role="status"></span></div>
+<p class="prior">Game 1: 156</p></div>
+<div class="bowler"><header><span><span class="lane">14B</span> <strong>Pat Nguyen</strong></span><span class="muted">Total 188</span></header>
+<div class="entry"><input aria-label="Lane 14B, Pat Nguyen, game 2" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value=""><button class="btn-secondary nextbtn" type="button">Next</button><span class="mark" role="status"></span></div>
+<p class="prior">Game 1: 188</p></div>
+<p class="muted">The Next button (or Enter on a keyboard) saves the score and moves to the next bowler. The phone shows a number pad only. To fix game 1, switch to Game 1 on the board.</p>
+</div></section>
+
+<section class="state"><h2>Fast pair: game 3 on lanes 11–12</h2><div class="phone">
+<h1>Game 3 · Lanes 11–12</h1>
+<div class="bowler"><header><span><span class="lane">11A</span> <strong>Kim Alvarez</strong></span><span class="muted">Total 392</span></header>
+<div class="entry"><input aria-label="Lane 11A, Kim Alvarez, game 3" inputmode="numeric" value=""><button class="btn-secondary nextbtn" type="button">Next</button><span class="mark" role="status"></span></div>
+<p class="prior">Game 1: 190 · Game 2: 202</p></div>
+<p class="muted">Game 3 is separate from game 2. Taking 11–12 here changes nothing on 13–14 in game 2.</p>
+</div></section>
+
+<section class="state"><h2>Late bowler: games before are empty</h2><div class="phone">
+<h1>Game 3 · Lanes 15–16</h1>
+<div class="bowler"><header><span><span class="lane">15B</span> <strong>Jo Hart</strong></span><span class="muted">Total 0</span></header>
+<div class="entry"><input aria-label="Lane 15B, Jo Hart, game 3" inputmode="numeric" value="167"><button class="btn-secondary nextbtn" type="button">Next</button><span class="mark" role="status">Typing…</span></div>
+<p class="hint" role="note">No scores for games 1 and 2. Saving game 3 saves them as 0 (missed).</p></div>
+<div class="bowler"><header><span><span class="lane">16A</span> <strong>Jo's partner Max</strong></span><span class="muted">Total 167</span></header>
+<div class="entry"><input aria-label="Lane 16A, Max, game 3" inputmode="numeric" value="167"><button class="btn-secondary nextbtn" type="button">Next</button><span class="mark saved" role="status">Saved</span></div>
+<p class="prior">Game 1: 0 · missed · Game 2: 0 · missed</p><p class="hint">Games 1 and 2 were saved as 0 with this score.</p></div>
+</div></section>
+
+<section class="state"><h2>Invalid entry</h2><div class="phone"><div class="bowler"><header><span><span class="lane">13A</span> <strong>Dana Rivers</strong></span></header>
+<div class="entry"><input aria-label="Lane 13A, Dana Rivers, game 2" inputmode="numeric" aria-invalid="true" aria-describedby="e1" value="305"><button class="btn-secondary nextbtn" type="button">Next</button><span class="mark" role="status"></span></div>
+<p class="field-error" id="e1">Enter a score from 1 to 300.</p></div></div></section>
+
+<section class="state"><h2>Save failed (network)</h2><div class="phone"><div class="bowler"><header><span><span class="lane">13B</span> <strong>Lee Park</strong></span></header>
+<div class="entry"><input aria-label="Lane 13B, Lee Park, game 2" inputmode="numeric" aria-invalid="true" aria-describedby="e2" value="214"><button class="btn-secondary nextbtn" type="button">Next</button><span class="mark fail" role="alert">Not saved</span></div>
+<p class="field-error" id="e2">Could not save. Check the connection.</p><button class="btn-secondary" type="button">Try again</button></div></div></section>
+
+<section class="state"><h2>Clear a score</h2><div class="phone"><div class="bowler"><header><span><span class="lane">13B</span> <strong>Lee Park</strong></span></header>
+<div class="entry"><input aria-label="Lane 13B, Lee Park, game 2" inputmode="numeric" value=""><button class="btn-secondary nextbtn" type="button">Next</button><span class="mark" role="status">Cleared</span></div>
+<p class="hint">An empty box clears the score. If this bowler has a later game saved, it says: "Clear game 3 first."</p></div></div></section>
+
+<section class="state"><h2>Refused: squad completed by someone else</h2><div class="phone"><div class="notice err" role="alert"><p>This squad is complete. Scores cannot change.</p></div><p class="muted">Fields turn read only; the last typed value is not saved.</p></div></section>
+
+<section class="state"><h2>Pair done</h2><div class="phone"><h1>Game 2 · Lanes 13–14</h1><p class="notice"><span class="badge ok">All 4 scores are in for game 2 on these lanes.</span></p><div class="footbar"><a class="btn-secondary" href="board.html">Game 2</a><a class="primary" href="#">Next pair 15–16</a></div></div></section>
+
+<section class="state"><h2>Someone else saved while you type</h2><div class="phone"><div class="bowler"><header><span><span class="lane">14A</span> <strong>Sam Ortiz</strong></span></header>
+<div class="entry"><input aria-label="Lane 14A, Sam Ortiz, game 2" inputmode="numeric" value="17"><button class="btn-secondary nextbtn" type="button">Next</button><span class="mark" role="status">Typing…</span></div>
+<p class="muted">Your box stays as you typed it. Boxes you have not touched update by themselves.</p></div></div></section>
+
+<section class="state"><h2>Loading / error / no bowlers</h2><div class="phone"><p class="muted" role="status">Loading pair…</p><div class="skeleton"></div><div class="notice err" role="alert"><p>Could not load this pair.</p><button class="btn-secondary" type="button">Try again</button></div><p class="muted">If no bowler is on these lanes in this game any more: "No bowlers on lanes 13–14 in game 2." with a link back to the board.</p></div></section>
+
+</div></main></body></html>

@@ -1,0 +1,57 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="../../../web/src/styles/tokens.css"><link rel="stylesheet" href="../../../web/src/styles/base.css"><link rel="stylesheet" href="mockup.css"><title>Score entry board</title></head><body><main class="page">
+<h1>Game board <span class="muted">(Squad 1 · Sat 9:00 AM · 3 games · 40 bowlers)</span></h1>
+<div class="states">
+
+<section class="state"><h2>Game 2 picked (phone)</h2><div class="phone">
+<p class="live"><span class="dot" aria-hidden="true"></span>Live: scores by others show here as they happen.</p>
+<div class="gamebar" role="group" aria-label="Game">
+<button type="button" aria-pressed="false">Game 1<small>40 of 40 ✓</small></button>
+<button type="button" aria-pressed="true">Game 2<small>22 of 40</small></button>
+<button type="button" aria-pressed="false">Game 3<small>4 of 40</small></button></div>
+<p class="skipline">Skip: <strong>Staggered</strong> <a class="btn-secondary" href="#">Change</a></p>
+<label class="search">Find a bowler<input type="search" placeholder="Name" autocomplete="off"></label>
+<form class="filter" aria-label="Lanes"><label>From lane<input inputmode="numeric" value="1"></label><label>To lane<input inputmode="numeric" value="20"></label><button class="btn-secondary" type="button">Show all</button></form>
+<p class="muted">Lanes as they are bowled in game 2. 10 pairs in lanes 1 to 20.</p>
+<ul class="tiles">
+<li><a class="tile done" href="pair-sheet.html"><strong>Lanes 1–2</strong><span class="badge ok">4 of 4 in</span></a></li>
+<li><a class="tile done" href="pair-sheet.html"><strong>Lanes 3–4</strong><span class="badge ok">4 of 4 in</span></a></li>
+<li><a class="tile partial" href="pair-sheet.html"><strong>Lanes 5–6</strong><span class="badge part">2 of 4 in</span></a></li>
+<li><a class="tile" href="pair-sheet.html"><strong>Lanes 7–8</strong><span class="badge wait">0 of 4 in</span></a></li>
+<li><a class="tile" href="pair-sheet.html"><strong>Lanes 9–10</strong><span class="badge wait">0 of 3 in</span></a></li>
+<li><a class="tile partial" href="pair-sheet.html"><strong>Lanes 13–14</strong><span class="badge part">2 of 4 in</span></a></li>
+</ul>
+<p class="muted">The bowlers on lanes 13–14 in game 2 started on other pairs. Switch to Game 3 to collect the fast pair that just finished it.</p>
+</div></section>
+
+<section class="state"><h2>Game 3 picked: the fast pair</h2><div class="phone">
+<div class="gamebar" role="group" aria-label="Game">
+<button type="button" aria-pressed="false">Game 1<small>40 of 40 ✓</small></button>
+<button type="button" aria-pressed="false">Game 2<small>22 of 40</small></button>
+<button type="button" aria-pressed="true">Game 3<small>4 of 40</small></button></div>
+<ul class="tiles">
+<li><a class="tile" href="pair-sheet.html"><strong>Lanes 11–12</strong><span class="badge wait">0 of 4 in</span></a></li>
+<li><a class="tile partial" href="pair-sheet.html"><strong>Lanes 15–16</strong><span class="badge part">4 of 4 in</span></a></li></ul>
+<p class="muted">Every pair shows in every game, so nothing is hidden because it is ahead or behind.</p>
+</div></section>
+
+<section class="state"><h2>Find a bowler (a bowler who is not where the cross says)</h2><div class="phone">
+<label class="search">Find a bowler<input type="search" value="par" autocomplete="off"></label>
+<ul class="found"><li><a href="pair-sheet.html"><span>Lee Park</span><span class="muted">Game 2 · <span class="lane">13B</span></span></a></li><li><a href="pair-sheet.html"><span>Dana Parrish</span><span class="muted">Game 2 · <span class="lane">7A</span></span></a></li></ul>
+<p class="muted">The result opens the pair sheet that holds the bowler in the picked game. A broken lane that moved people stays out of scope: find the bowler here and enter the score.</p>
+</div></section>
+
+<section class="state"><h2>Loading</h2><div class="phone"><p class="muted" role="status">Loading games…</p><div class="skeleton"></div><div class="skeleton"></div></div></section>
+
+<section class="state"><h2>Empty: nobody has a lane</h2><div class="phone"><p>No one has a lane yet. Assign lanes first.</p><a class="btn-secondary" href="#">Go to Lane assignments</a></div></section>
+
+<section class="state"><h2>Empty: the filter shows no pair</h2><div class="phone"><form class="filter"><label>From lane<input inputmode="numeric" value="41"></label><label>To lane<input inputmode="numeric" value="60"></label><button class="btn-secondary" type="button">Show all</button></form><p>No pair with bowlers in lanes 41 to 60 in game 2.</p></div></section>
+
+<section class="state"><h2>Error</h2><div class="phone"><div class="notice err" role="alert"><p>Could not load the games.</p><button class="btn-secondary" type="button">Try again</button></div></div></section>
+
+<section class="state"><h2>Setup problem (a lane pair cannot be worked out)</h2><div class="phone"><div class="notice err" role="alert"><p>Lanes cannot be worked out: 3 bowlers share a pair of 2 lanes. Fix the lane assignments, then enter scores.</p><a class="btn-secondary" href="#">Go to Lane assignments</a></div></div></section>
+
+<section class="state"><h2>Complete squad (read only)</h2><div class="phone"><p class="notice">This squad is complete. Scores cannot change.</p><a class="btn-secondary" href="scores-live.html">View scores</a></div></section>
+
+<section class="state"><h2>Live connection lost</h2><div class="phone"><p class="live"><span class="dot wait" aria-hidden="true"></span>Reconnecting… The page refreshes when it is back.</p><p class="muted">Saving still works while reconnecting.</p></div></section>
+
+</div></main></body></html>

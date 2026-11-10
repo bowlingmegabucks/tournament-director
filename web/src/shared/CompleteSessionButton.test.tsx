@@ -14,6 +14,9 @@ import {
 } from '../mocks/data'
 import { renderApp } from '../test/renderApp'
 
+/** The success toast. The Scores tab has a live line with the same role, so ask by its words (SCR-18). */
+const completedNotice = () => screen.findByText(/^(Squad|Sweeper) completed/)
+
 const tournament = createTournament({ name: 'Spring Open' })
 const id = tournament.id
 const date = 'Sat 10/24/2026 9:00 AM'
@@ -235,7 +238,7 @@ describe.each(kinds)(
           await within(await dialog()).findByRole('button', { name: `Complete ${word}` }),
         )
 
-        expect(await screen.findByRole('status')).toHaveTextContent(
+        expect(await completedNotice()).toHaveTextContent(
           kind === 'squads' ? 'Squad completed. 3 bowlers got zeros.' : 'Sweeper completed.',
         )
         await waitFor(() => {
@@ -265,7 +268,7 @@ describe.each(kinds)(
         const saving = await screen.findByRole('button', { name: 'Completing…' })
         expect(saving).toBeDisabled()
         expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled()
-        await screen.findByRole('status')
+        await completedNotice()
       })
     })
 
@@ -329,7 +332,7 @@ describe.each(kinds)(
 
           await press(user)
 
-          await screen.findByRole('status')
+          await completedNotice()
           expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
         })
 
@@ -376,7 +379,7 @@ describe.each(kinds)(
           await within(opened).findByRole('button', { name: 'Completing…' })
           expect(within(opened).queryByRole('alert')).not.toBeInTheDocument()
           release()
-          await screen.findByRole('status')
+          await completedNotice()
         })
 
         it('ignores a reply that lands after the dialog was closed', async () => {
@@ -452,7 +455,7 @@ describe('the toast words (D-190, D-195)', () => {
         name: 'Complete squad',
       }),
     )
-    return screen.findByRole('status')
+    return completedNotice()
   }
 
   it('says no zeros when nobody was a no-show', async () => {

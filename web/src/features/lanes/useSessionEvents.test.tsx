@@ -129,6 +129,21 @@ describe('useSessionEvents (LAN-21, D-217, D-218)', () => {
     expect(result.current.events.updated?.version).toBe(1)
   })
 
+  it('ignores a scores message: it belongs to the Scores tab (D-232)', async () => {
+    const { result, client } = setup()
+    await waitFor(() => {
+      expect(result.current.lanes.data).toBeDefined()
+    })
+    const fetches = vi.spyOn(client, 'invalidateQueries')
+
+    act(() => {
+      FakeEventSource.latest().message('{"kind":"scores","version":3}')
+    })
+
+    expect(fetches).not.toHaveBeenCalled()
+    expect(result.current.events.updated).toBeUndefined()
+  })
+
   it('names the pair another desk changed (LAN-21)', async () => {
     const { result, api } = setup()
     await waitFor(() => {

@@ -41,6 +41,7 @@ function isRecapSheets(value: unknown): value is RecapSheets {
   const sheets = field(value, 'sheets')
   return (
     isSession(field(value, 'session')) &&
+    (field(value, 'skip') === 'staggered' || field(value, 'skip') === 'same') &&
     Array.isArray(sheets) &&
     sheets.every(isSheet) &&
     isNumber(field(value, 'withoutLane')) &&

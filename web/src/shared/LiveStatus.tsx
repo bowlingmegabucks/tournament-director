@@ -1,5 +1,5 @@
 import styles from './LiveStatus.module.css'
-import type { LiveState } from './useSessionEvents'
+import type { LiveState } from './useEventStream'
 
 interface LiveStatusProps {
   state: LiveState
@@ -8,7 +8,7 @@ interface LiveStatusProps {
 }
 
 /**
- * The line over the lane page that says whether it keeps itself fresh (LAN-21, D-217). It is a
+ * The line over the lane page that says whether it keeps itself fresh (LAN-21, SCR-18, D-217, D-232). It is a
  * polite status, so a screen reader hears a change of state and nothing more. The dot is a second
  * cue; the words carry the meaning.
  */

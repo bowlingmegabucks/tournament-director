@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { Link, useOutletContext, useParams } from 'react-router'
 import { Can } from '../auth/Can'
+import { LiveStatus } from '../../shared/LiveStatus'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { formatSessionDate } from '../../shared/sessionFormat'
@@ -10,9 +11,10 @@ import { countListed, formatNoLane } from './format'
 import { ScoreTable } from './ScoreTable'
 import styles from './ScoresPage.module.css'
 import type { ScorePage, SessionKind } from './types'
+import { useScoreEvents } from './useScoreEvents'
 import { useScores } from './useScores'
 
-function OtherPositions({ page }: Readonly<{ page: ScorePage }>) {
+function OtherPositions({ page, fresh }: Readonly<{ page: ScorePage; fresh: readonly string[] }>) {
   const titleId = useId()
   return (
     <section aria-labelledby={titleId} className={styles.other}>
@@ -26,6 +28,7 @@ function OtherPositions({ page }: Readonly<{ page: ScorePage }>) {
         bowlers={page.other}
         games={page.session.games}
         label="Scores for other positions"
+        fresh={fresh}
       />
     </section>
   )
@@ -33,14 +36,17 @@ function OtherPositions({ page }: Readonly<{ page: ScorePage }>) {
 
 /**
  * The scores of one squad or sweeper, grouped by lane pair (SCR-13, SCR-17, D-69). Read only in
- * both states: entry is a later slice. It asks again every 15 seconds (D-72), and a failed refresh
- * leaves the last scores on screen.
+ * both states: entry has its own pages. It refreshes from the public stream (SCR-18, D-232) and
+ * says what changed; a failed refresh leaves the last scores on screen.
  */
 export function ScoresPage({ kind }: Readonly<{ kind: SessionKind }>) {
   // Stryker disable next-line StringLiteral: the route always has these params; this only satisfies the type.
   const { id = '', sessionId = '' } = useParams()
   const tournament = useOutletContext<Tournament>()
   const { data, error, refetch } = useScores(kind, id, sessionId)
+  // A complete session cannot change (D-10), so it opens no stream.
+  const live = useScoreEvents(kind, id, sessionId, data !== undefined && !data.session.complete)
+  const fresh = live.updated?.ids ?? []
 
   if (!data) {
     if (error) {
@@ -76,11 +82,12 @@ export function ScoresPage({ kind }: Readonly<{ kind: SessionKind }>) {
                 bowlers={pair.bowlers}
                 games={session.games}
                 label={`Scores for ${formatPair(pair).toLowerCase()}`}
+                fresh={fresh}
               />
             </li>
           ))}
         </ul>
-        {data.other.length > 0 && <OtherPositions page={data} />}
+        {data.other.length > 0 && <OtherPositions page={data} fresh={fresh} />}
       </>
     )
   }
@@ -88,8 +95,10 @@ export function ScoresPage({ kind }: Readonly<{ kind: SessionKind }>) {
   return (
     <>
       <title>{`Scores · ${formatSessionDate(session.date)} · ${tournament.name} · Tournament Director`}</title>
-      {session.complete && (
+      {session.complete ? (
         <p className={styles.note}>This {kind} is complete. Scores cannot change.</p>
+      ) : (
+        <LiveStatus state={live.state} updated={live.updated?.text} />
       )}
       {data.noLane > 0 && (
         <p className={styles.note}>

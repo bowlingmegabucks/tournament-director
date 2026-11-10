@@ -4,7 +4,8 @@ import userEvent from '@testing-library/user-event'
 import { QRCodeSVG } from 'qrcode.react'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
-import { createRecapSheet, createRecapSheets } from '../../mocks/data'
+import { setMockUser } from '../../mocks/authHandlers'
+import { createRecapSheet, createRecapSheets, createSignedInUser } from '../../mocks/data'
 import { renderWithClient } from '../../test/renderWithClient'
 import { RecapDialog } from './RecapDialog'
 import type { RecapSheets } from './types'
@@ -83,6 +84,36 @@ async function loaded(recap = squad) {
   const onClose = open()
   await screen.findByRole('button', { name: 'Print all' })
   return onClose
+}
+
+/** Serve the sheets with a skip that the `PUT` changes, as the API stores it (D-235). */
+function serveStoredSkip(stored: 'staggered' | 'same' = 'staggered') {
+  const state = { skip: stored, puts: [] as unknown[], asked: 0 }
+  server.use(
+    http.get(path, () => {
+      state.asked += 1
+      return HttpResponse.json({ ...squad, skip: state.skip })
+    }),
+    http.put('/v1/tournaments/:id/squads/:sessionId/skip', async ({ request }) => {
+      const body = (await request.json()) as { skip: 'staggered' | 'same' }
+      state.puts.push(body)
+      state.skip = body.skip
+      return HttpResponse.json({ skip: body.skip })
+    }),
+  )
+  return state
+}
+
+const signInDirector = () => {
+  setMockUser(createSignedInUser({ roles: ['director'] }))
+}
+
+async function chooseEnabled(name: string) {
+  const radio = screen.getByRole('radio', { name })
+  await waitFor(() => {
+    expect(radio).toBeEnabled()
+  })
+  return radio
 }
 
 describe('RecapDialog states', () => {
@@ -256,37 +287,95 @@ describe('RecapDialog preview', () => {
     ])
   })
 
-  it('starts on the staggered skip, and the radios switch every sheet (D-64)', async () => {
-    await loaded()
+  it('starts on the stored skip, staggered when nothing is stored (SCR-23, D-235)', async () => {
+    serveStoredSkip()
+    open()
+    await screen.findByRole('button', { name: 'Print all' })
     expect(screen.getByRole('radio', { name: 'Staggered skip' })).toBeChecked()
     expect(screen.getAllByRole('cell', { name: '7A' })).toHaveLength(1)
+  })
+
+  it('starts on the same skip when that is stored (SCR-23, D-235)', async () => {
+    serveStoredSkip('same')
+    open()
+    await screen.findByRole('button', { name: 'Print all' })
+    expect(screen.getByRole('radio', { name: 'Same skip' })).toBeChecked()
+    expect(screen.queryByRole('cell', { name: '9A' })).not.toBeInTheDocument()
+  })
+
+  it('saves the skip when it changes, and shows the sheets of the new one (SCR-23, D-64, D-235)', async () => {
+    signInDirector()
+    const state = serveStoredSkip()
+    open()
+    await screen.findByRole('button', { name: 'Print all' })
+    await chooseEnabled('Same skip')
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Same skip' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('radio', { name: 'Same skip' })).toBeChecked()
+    })
+    expect(state.puts).toEqual([{ skip: 'same' }])
+    expect(await screen.findByRole('cell', { name: '5A' })).toBeInTheDocument()
+    expect(screen.queryByRole('cell', { name: '9A' })).not.toBeInTheDocument()
+
+    await userEvent.click(await chooseEnabled('Staggered skip'))
+
+    expect(await screen.findByRole('cell', { name: '9A' })).toBeInTheDocument()
+    expect(state.puts).toEqual([{ skip: 'same' }, { skip: 'staggered' }])
+  })
+
+  it('shows the pattern being saved while the save runs (SCR-23)', async () => {
+    signInDirector()
+    serveStoredSkip()
+    server.use(
+      http.put(
+        '/v1/tournaments/:id/squads/:sessionId/skip',
+        () => new Promise<Response>(() => undefined),
+      ),
+    )
+    open()
+    await screen.findByRole('button', { name: 'Print all' })
+    await chooseEnabled('Same skip')
 
     await userEvent.click(screen.getByRole('radio', { name: 'Same skip' }))
 
     expect(screen.getByRole('radio', { name: 'Same skip' })).toBeChecked()
-    expect(screen.getByRole('cell', { name: '7A' })).toBeInTheDocument() // Maria's same cross ends on 7A
-    expect(screen.getByRole('cell', { name: '5A' })).toBeInTheDocument()
-    expect(screen.queryByRole('cell', { name: '9A' })).not.toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole('radio', { name: 'Staggered skip' }))
-
-    expect(screen.getByRole('cell', { name: '9A' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Staggered skip' })).toBeDisabled()
   })
 
-  it('does not ask the API again when the skip changes (D-65)', async () => {
-    let asked = 0
+  it('says why when the skip cannot be saved, and keeps the stored skip (SCR-23, D-231)', async () => {
+    signInDirector()
+    serveStoredSkip()
     server.use(
-      http.get(path, () => {
-        asked += 1
-        return HttpResponse.json(squad)
-      }),
+      http.put('/v1/tournaments/:id/squads/:sessionId/skip', () =>
+        HttpResponse.json(
+          { message: 'This squad is complete. The skip cannot change.' },
+          { status: 409 },
+        ),
+      ),
     )
     open()
     await screen.findByRole('button', { name: 'Print all' })
+    await chooseEnabled('Same skip')
 
     await userEvent.click(screen.getByRole('radio', { name: 'Same skip' }))
 
-    expect(asked).toBe(1)
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This squad is complete. The skip cannot change.',
+    )
+    expect(screen.getByRole('radio', { name: 'Staggered skip' })).toBeChecked()
+  })
+
+  it('leaves the radios off for someone who cannot score (SCR-23, D-96)', async () => {
+    setMockUser(createSignedInUser({ roles: ['director'], permissions: ['lanes.read'] }))
+    const state = serveStoredSkip()
+    open()
+    await screen.findByRole('button', { name: 'Print all' })
+
+    expect(screen.getByRole('radio', { name: 'Same skip' })).toBeDisabled()
+    expect(screen.getByRole('radio', { name: 'Staggered skip' })).toBeDisabled()
+    expect(state.puts).toEqual([])
   })
 })
 
@@ -483,8 +572,12 @@ describe('RecapDialog printing (D-62)', () => {
   })
 
   it('prints the skip pattern on screen (D-64)', async () => {
-    await loaded()
-    await userEvent.click(screen.getByRole('radio', { name: 'Same skip' }))
+    signInDirector()
+    serveStoredSkip()
+    open()
+    await screen.findByRole('button', { name: 'Print all' })
+    await userEvent.click(await chooseEnabled('Same skip'))
+    await screen.findByRole('cell', { name: '5A' })
     print.mockImplementation(() => {
       expect(within(printCopy()[2] as HTMLElement).getByRole('cell', { name: '7A' })).toBeVisible()
     })

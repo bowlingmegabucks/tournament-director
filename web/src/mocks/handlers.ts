@@ -99,12 +99,15 @@ function withListedRegistrations(page: LanePage): LanePage {
 
 /** Moves made through the mock `PUT`, by session and then registration. Lost when the page reloads. */
 const laneMoves = new Map<string, Map<string, Move>>()
+/** The skip saved through the mock `PUT`, by session (SCR-23). No entry means staggered. */
+const skips = new Map<string, 'staggered' | 'same'>()
 /** What each open mock event stream can be told, by session (LAN-21). */
 const streams = new Map<string, Set<(message: string) => void>>()
 
 /** Forget the moves and the streams, so one test cannot see another's (the test setup calls it). */
 export function resetMockLaneMoves() {
   laneMoves.clear()
+  skips.clear()
   streams.clear()
 }
 
@@ -118,6 +121,23 @@ function publishMock(sessionId: string, kind: 'lanes' | 'entries' = 'lanes') {
   for (const send of streams.get(sessionId) ?? []) {
     send(JSON.stringify({ kind, version: Date.now() }))
   }
+}
+
+/** The mock twin of `PUT .../skip` (SCR-23): unknown ids are 404, a bad value 400, a complete session 409. */
+function saveMockSkip(tournamentId: string, sessionId: string, kind: SessionKind, body: unknown) {
+  if (!tournaments.some((candidate) => candidate.id === tournamentId)) {
+    return problem('Tournament not found', 404)
+  }
+  const session = (kind === 'squad' ? squads : sweepers).find((entry) => entry.id === sessionId)
+  if (!session) return problem(`${kind === 'squad' ? 'Squad' : 'Sweeper'} not found`, 404)
+  const skip = typeof body === 'object' && body !== null && 'skip' in body ? body.skip : undefined
+  if (skip !== 'staggered' && skip !== 'same') return problem('Skip must be staggered or same', 400)
+  if (session.complete) return problem(`This ${kind} is complete. The skip cannot change.`, 409)
+  if ((skips.get(sessionId) ?? 'staggered') !== skip) {
+    skips.set(sessionId, skip)
+    publishMock(sessionId)
+  }
+  return HttpResponse.json({ skip })
 }
 
 function problem(message: string, status: number) {
@@ -184,13 +204,21 @@ function laneMoveHandler(kind: SessionKind, sessions: { id: string; complete: bo
  * where `EventSource` exists: the browser sets these up, the Node test server does not.
  */
 export function createEventStreamHandlers() {
-  return [eventsHandler('squad'), eventsHandler('sweeper')]
+  return [
+    eventsHandler('squad'),
+    eventsHandler('sweeper'),
+    eventsHandler('squad', '/scores/events'),
+    eventsHandler('sweeper', '/scores/events'),
+  ]
 }
 
-/** The mock event stream of a session: it sends `changed` whenever the mock `PUT` saves a move (LAN-21). */
-function eventsHandler(kind: SessionKind) {
+/**
+ * The mock event stream of a session: it sends `changed` whenever the mock `PUT` saves a move
+ * (LAN-21). The public score stream (SCR-20) shares the same list, as the API's hub does.
+ */
+function eventsHandler(kind: SessionKind, suffix = '/events') {
   return sse<{ changed: string }>(
-    `/v1/tournaments/:id/${kind}s/:sessionId/events`,
+    `/v1/tournaments/:id/${kind}s/:sessionId${suffix}`,
     ({ client, params }) => {
       const sessionId = String(params['sessionId'])
       const send = (data: string) => {
@@ -663,16 +691,34 @@ export const handlers = [
     if (!tournaments.some((candidate) => candidate.id === params.id)) return notFound()
     const squad = squads.find((candidate) => candidate.id === params.sessionId)
     return squad
-      ? HttpResponse.json(createDemoRecapSheets('squad', squad, divisions))
+      ? HttpResponse.json({
+          ...createDemoRecapSheets('squad', squad, divisions),
+          skip: skips.get(squad.id) ?? 'staggered',
+        })
       : HttpResponse.json({ message: 'Squad not found' }, { status: 404 })
   }),
   http.get('/v1/tournaments/:id/sweepers/:sessionId/recap-sheets', ({ params }) => {
     if (!tournaments.some((candidate) => candidate.id === params.id)) return notFound()
     const sweeper = sweepers.find((candidate) => candidate.id === params.sessionId)
     return sweeper
-      ? HttpResponse.json(createDemoRecapSheets('sweeper', sweeper, divisions))
+      ? HttpResponse.json({
+          ...createDemoRecapSheets('sweeper', sweeper, divisions),
+          skip: skips.get(sweeper.id) ?? 'staggered',
+        })
       : HttpResponse.json({ message: 'Sweeper not found' }, { status: 404 })
   }),
+  // SCR-23, D-235: the mock keeps the skip in memory and tells the streams the lanes changed.
+  http.put('/v1/tournaments/:id/squads/:sessionId/skip', async ({ params, request }) =>
+    saveMockSkip(String(params['id']), String(params['sessionId']), 'squad', await request.json()),
+  ),
+  http.put('/v1/tournaments/:id/sweepers/:sessionId/skip', async ({ params, request }) =>
+    saveMockSkip(
+      String(params['id']),
+      String(params['sessionId']),
+      'sweeper',
+      await request.json(),
+    ),
+  ),
   http.get('/v1/tournaments/:id/sweepers', ({ params }) =>
     tournaments.some((candidate) => candidate.id === params.id)
       ? HttpResponse.json({ sweepers })

@@ -581,6 +581,7 @@ export function createRecapSheets(overrides: Partial<RecapSheets> = {}): RecapSh
       complete: false,
       ...session,
     },
+    skip: 'staggered',
     sheets: [],
     withoutLane: 0,
     withoutDivision: 0,

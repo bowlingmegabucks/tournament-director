@@ -35,6 +35,9 @@ import { createVendorRegistrationRouter } from './features/registrations/vendorR
 import { createPublishingRegistrationWriter } from './features/registrations/publishingWriter.ts'
 import type { RegistrationWriter } from './features/registrations/writer.ts'
 import { createFinalsRouter, createResultsRouter } from './features/results/routes.ts'
+import { createScoreWriteRouter } from './features/scores/scoreRoutes.ts'
+import type { ScoreWriter } from './features/scores/scoreWriter.ts'
+import { createScoreCache } from './features/scores/scoreCache.ts'
 import { createGamesRouter } from './features/scores/gamesRoutes.ts'
 import { createScoreRouter } from './features/scores/routes.ts'
 import type { ScoreRepository } from './features/scores/repository.ts'
@@ -116,6 +119,8 @@ export interface AppDependencies {
   /** Tells open screens that a session changed (D-217). */
   events: SessionEvents
   scores: ScoreRepository
+  /** Saves and clears one score at a time (SCR-19, D-228). */
+  scoreWriter: ScoreWriter
   /** The stored skip of each squad and sweeper (SCR-23, D-235). */
   skipStore: SkipStore
   squads: SquadRepository
@@ -147,6 +152,7 @@ export function createApp({
   laneWriter,
   events,
   scores,
+  scoreWriter,
   skipStore,
   squads,
   squadWriter,
@@ -183,6 +189,8 @@ export function createApp({
   app.use(identifyCaller({ apiKey: config.apiKey, auth, logger }))
 
   // The five results routes (squad, sweeper, at-large, seeding, super sweeper) read the same data.
+  // One cache for the public scores page, so a save can drop its answer (D-232).
+  const scoreCache = createScoreCache()
   const skipSquadRouter = createSkipRouter('squad', {
     store: skipStore,
     findSession: findSquad(squads),
@@ -467,25 +475,45 @@ export function createApp({
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/scores',
-        access: 'public', // D-70: public for good, so viewers who are not signed in watch scores
-        router: createScoreRouter('squad', findSquad(squads), {
-          lanes,
-          tournaments,
-          divisions,
-          scores,
+        access: { permission: 'scores.write' }, // SCR-19, D-228: no API key
+        methods: ['PUT', 'DELETE'],
+        router: createScoreWriteRouter('squad', {
+          writer: scoreWriter,
+          cache: scoreCache,
+          events,
           logger,
         }),
       },
       {
         path: '/v1/tournaments/:id/sweepers/:sessionId/scores',
-        access: 'public', // D-70
-        router: createScoreRouter('sweeper', findSweeper(sweepers), {
-          lanes,
-          tournaments,
-          divisions,
-          scores,
+        access: { permission: 'scores.write' }, // SCR-19, D-228
+        methods: ['PUT', 'DELETE'],
+        router: createScoreWriteRouter('sweeper', {
+          writer: scoreWriter,
+          cache: scoreCache,
+          events,
           logger,
         }),
+      },
+      {
+        path: '/v1/tournaments/:id/squads/:sessionId/scores',
+        access: 'public', // D-70: public for good, so viewers who are not signed in watch scores
+        router: createScoreRouter(
+          'squad',
+          findSquad(squads),
+          { lanes, tournaments, divisions, scores, logger },
+          scoreCache,
+        ),
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers/:sessionId/scores',
+        access: 'public', // D-70
+        router: createScoreRouter(
+          'sweeper',
+          findSweeper(sweepers),
+          { lanes, tournaments, divisions, scores, logger },
+          scoreCache,
+        ),
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/results',

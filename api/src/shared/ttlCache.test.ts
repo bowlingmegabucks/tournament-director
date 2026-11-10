@@ -14,6 +14,18 @@ describe('createTtlCache', () => {
     expect(await cached('a', load)).toBe(2)
   })
 
+  it('forgets one key on drop and keeps the others (D-232)', async () => {
+    const cached = createTtlCache<number>(1000, () => 0)
+    const load = vi.fn(() => Promise.resolve(load.mock.calls.length))
+    await cached('a', load)
+    await cached('b', load)
+
+    cached.drop('a')
+
+    expect(await cached('a', load)).toBe(3)
+    expect(await cached('b', load)).toBe(2)
+  })
+
   it('keeps keys apart', async () => {
     const cached = createTtlCache<string>(1000, () => 0)
     expect(await cached('a', () => Promise.resolve('A'))).toBe('A')

@@ -1,6 +1,7 @@
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { metrics } from '@opentelemetry/api'
 import { createApp } from './app.ts'
+import { createPrismaScoreWriter } from './features/scores/prismaScoreWriter.ts'
 import { createPrismaSkipStore } from './features/skip/prismaStore.ts'
 import { createPrismaLaneWriter } from './features/lanes/prismaWriter.ts'
 import { createSessionEvents } from './shared/events/sessionEvents.ts'
@@ -64,6 +65,7 @@ const app = createApp({
   laneWriter: createPrismaLaneWriter(database, logger),
   events,
   scores: createPrismaScoreRepository(database, logger),
+  scoreWriter: createPrismaScoreWriter(database, logger),
   skipStore: createPrismaSkipStore(database, logger),
   squads: createPrismaSquadRepository(database, logger),
   squadWriter: createPrismaSquadWriter(database, logger),

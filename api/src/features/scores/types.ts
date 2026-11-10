@@ -53,3 +53,16 @@ export interface ScoreRow {
   game: number
   score: number
 }
+
+/**
+ * What a saved or cleared score answers (SCR-19): the bowler's scores after the write, one entry
+ * per game (`null` for none), and the scratch total. A save that fills earlier games with 0
+ * (D-229) shows them here, so the writer's screen needs no second read.
+ * `web/src/features/scores/types.ts` expects this shape. Change both together.
+ */
+export const scoreSaveResultSchema = z.object({
+  scores: z.array(z.number().int().nullable()),
+  total: z.number().int(),
+})
+
+export type ScoreSaveResult = z.infer<typeof scoreSaveResultSchema>

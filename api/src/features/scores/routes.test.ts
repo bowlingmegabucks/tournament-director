@@ -19,6 +19,7 @@ import { createInMemorySweeperRepository } from '../sweepers/repository.ts'
 import { createInMemoryTournamentRepository } from '../tournaments/repository.ts'
 import { createInMemoryScoreRepository } from './repository.ts'
 import { createScoreRouter } from './routes.ts'
+import { createScoreCache } from './scoreCache.ts'
 import { scorePageSchema } from './types.ts'
 
 function setup(options: { maxPerPair?: number; complete?: boolean } = {}) {
@@ -268,7 +269,7 @@ describe('score cache', () => {
         scores,
         logger: createCapturedLogger().logger,
       },
-      cacheMs,
+      createScoreCache(cacheMs),
     )
     const app = express().use('/:id/:sessionId', router)
     return { app, path: `/${tournament.id}/${squad.id}`, calls: () => calls }

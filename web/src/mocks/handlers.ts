@@ -120,6 +120,33 @@ function publishMock(sessionId: string, kind: 'lanes' | 'entries' = 'lanes') {
   }
 }
 
+function problem(message: string, status: number) {
+  return HttpResponse.json({ message }, { status })
+}
+
+/** The mock refusal for a move into a pair (D-216), or the planned move. */
+function planPairMove(
+  kind: SessionKind,
+  page: LanePage,
+  bowler: LaneBowler,
+  lane: unknown,
+): Move | Response {
+  const pair = page.pairs.find((candidate) => candidate.firstLane === lane)
+  if (!pair) {
+    return problem(`Lane ${String(lane)} is not the first lane of a pair in this ${kind}`, 400)
+  }
+  if (pair.bowlers.some((candidate) => candidate.registrationId === bowler.registrationId)) {
+    return HttpResponse.json({ position: bowler.position })
+  }
+  if (pair.bowlers.length >= pair.capacity) {
+    return problem(
+      `${formatPair(pair)} ${pair.lanes.length === 1 ? 'is' : 'are'} full (${pair.bowlers.length} of ${pair.capacity}). Pick another pair.`,
+      409,
+    )
+  }
+  return planMove(bowler, pair)
+}
+
 /** The mock twin of the lane move (D-216): refuse a full pair, pick the seat, remember it, tell the streams. */
 function laneMoveHandler(kind: SessionKind, sessions: { id: string; complete: boolean }[]) {
   const label = kind === 'squad' ? 'Squad' : 'Sweeper'
@@ -130,12 +157,9 @@ function laneMoveHandler(kind: SessionKind, sessions: { id: string; complete: bo
       const found = (kind === 'squad' ? squads : sweepers).find(
         (candidate) => candidate.id === params['sessionId'],
       )
-      if (!found) return HttpResponse.json({ message: `${label} not found` }, { status: 404 })
+      if (!found) return problem(`${label} not found`, 404)
       if (sessions.find((candidate) => candidate.id === found.id)?.complete ?? found.complete) {
-        return HttpResponse.json(
-          { message: `This ${kind} is complete. Lanes cannot change.` },
-          { status: 409 },
-        )
+        return problem(`This ${kind} is complete. Lanes cannot change.`, 409)
       }
       const body: unknown = await request.json()
       const lane = typeof body === 'object' && body !== null ? Reflect.get(body, 'lane') : undefined
@@ -144,36 +168,10 @@ function laneMoveHandler(kind: SessionKind, sessions: { id: string; complete: bo
       const bowler = everyone.find(
         (candidate) => candidate.registrationId === params['registrationId'],
       )
-      if (!bowler) {
-        return HttpResponse.json(
-          { message: `Bowler is not registered for this ${kind}` },
-          { status: 404 },
-        )
-      }
-      let move: Move
-      if (lane === null) {
-        move = planMove(bowler, 'unassigned')
-      } else {
-        const pair = page.pairs.find((candidate) => candidate.firstLane === lane)
-        if (!pair) {
-          return HttpResponse.json(
-            { message: `Lane ${String(lane)} is not the first lane of a pair in this ${kind}` },
-            { status: 400 },
-          )
-        }
-        if (pair.bowlers.some((candidate) => candidate.registrationId === bowler.registrationId)) {
-          return HttpResponse.json({ position: bowler.position })
-        }
-        if (pair.bowlers.length >= pair.capacity) {
-          return HttpResponse.json(
-            {
-              message: `${formatPair(pair)} ${pair.lanes.length === 1 ? 'is' : 'are'} full (${pair.bowlers.length} of ${pair.capacity}). Pick another pair.`,
-            },
-            { status: 409 },
-          )
-        }
-        move = planMove(bowler, pair)
-      }
+      if (!bowler) return problem(`Bowler is not registered for this ${kind}`, 404)
+      const move =
+        lane === null ? planMove(bowler, 'unassigned') : planPairMove(kind, page, bowler, lane)
+      if (move instanceof Response) return move
       laneMoves.set(found.id, new Map(laneMoves.get(found.id)).set(bowler.registrationId, move))
       publishMock(found.id)
       return HttpResponse.json({ position: move.position })

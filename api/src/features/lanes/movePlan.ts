@@ -39,7 +39,7 @@ export type MoveOutcome =
 const label = (kind: 'squad' | 'sweeper') => (kind === 'squad' ? 'squad' : 'sweeper')
 
 function pairText(pair: Pair): string {
-  const [first, last] = [pair.lanes[0], pair.lanes[pair.lanes.length - 1]]
+  const [first, last] = [pair.lanes[0], pair.lanes.at(-1)]
   return pair.lanes.length === 1 ? `Lane ${first}` : `Lanes ${first}-${last}`
 }
 

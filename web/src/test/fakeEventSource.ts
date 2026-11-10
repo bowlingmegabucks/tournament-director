@@ -8,7 +8,7 @@ export class FakeEventSource {
   static readonly OPEN = 1
   static readonly CLOSED = 2
   /** Every stream the page under test opened, oldest first, and not yet cleared. */
-  static instances: FakeEventSource[] = []
+  static readonly instances: FakeEventSource[] = []
 
   readonly url: string
   readonly withCredentials: boolean
@@ -51,7 +51,7 @@ export class FakeEventSource {
   }
 
   static reset(): void {
-    FakeEventSource.instances = []
+    FakeEventSource.instances.length = 0
   }
 
   /** The newest stream. Throws when the page opened none. */

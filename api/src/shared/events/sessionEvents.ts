@@ -85,8 +85,8 @@ export function createSessionEvents(
       const set = watchers.get(sessionId)
       published.add(1, { kind })
       logger.debug({ sessionId, kind, watchers: set?.size ?? 0 }, 'Change published')
-      // Copy first: a send that fails may close its stream and leave the set while we loop.
-      for (const subscriber of [...(set ?? [])]) {
+      // A Set may lose members while we loop over it: the loop skips them and stays safe.
+      for (const subscriber of set ?? []) {
         try {
           subscriber.send(event)
         } catch (err) {
@@ -96,8 +96,8 @@ export function createSessionEvents(
     },
 
     closeAll() {
-      for (const [sessionId, set] of [...watchers]) {
-        for (const subscriber of [...set]) {
+      for (const [sessionId, set] of watchers) {
+        for (const subscriber of set) {
           remove(sessionId, subscriber)
           try {
             subscriber.end()

@@ -402,6 +402,102 @@ describe('ScoresPage', () => {
   })
 })
 
+describe('ScoresPage: the way into score entry (SCR-21)', () => {
+  const settings = http.get('/v1/tournaments/:id/settings', () =>
+    HttpResponse.json({
+      settings: {
+        games: 3,
+        entryFee: 50,
+        finalsRatio: 7,
+        cashRatio: 5,
+        superSweeperCashRatio: 5,
+        completed: false,
+      },
+    }),
+  )
+
+  it('shows Enter scores to someone who may enter them, and links to the entry start', async () => {
+    setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+    const page = filled()
+    serve(page)
+    server.use(settings)
+
+    open(page)
+
+    const link = await screen.findByRole('link', { name: 'Enter scores' })
+    expect(link).toHaveAttribute(
+      'href',
+      `/tournaments/${tournament.id}/squads/${page.session.id}/scores/entry`,
+    )
+  })
+
+  it('links the sweeper tab to the sweeper entry', async () => {
+    setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+    const page = filled({ session: { ...createScorePage().session, kind: 'sweeper' } })
+    serve(page)
+    server.use(settings)
+
+    open(page)
+
+    expect(await screen.findByRole('link', { name: 'Enter scores' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/sweepers/'),
+    )
+  })
+
+  it('hides it from a visitor who is not signed in (D-102)', async () => {
+    const page = filled()
+    serve(page)
+    open(page)
+    await screen.findByRole('table', { name: 'Scores for lanes 1-2' }, { timeout: 3000 })
+    expect(screen.queryByRole('link', { name: 'Enter scores' })).not.toBeInTheDocument()
+  })
+
+  it('hides it from someone without the score permission (D-96)', async () => {
+    setMockUser(createSignedInUser({ roles: ['director'], permissions: ['lanes.read'] }))
+    const page = filled()
+    serve(page)
+    open(page)
+    await screen.findByRole('table', { name: 'Scores for lanes 1-2' }, { timeout: 3000 })
+    expect(screen.queryByRole('link', { name: 'Enter scores' })).not.toBeInTheDocument()
+  })
+
+  it('hides it on a complete session (D-231)', async () => {
+    setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+    const page = filled({ session: { ...createScorePage().session, complete: true } })
+    serve(page)
+    server.use(settings)
+    open(page)
+    await screen.findByRole('table', { name: 'Scores for lanes 1-2' }, { timeout: 3000 })
+    expect(screen.queryByRole('link', { name: 'Enter scores' })).not.toBeInTheDocument()
+  })
+
+  it('hides it on a complete tournament (D-231)', async () => {
+    setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+    const page = filled()
+    serve(page)
+    server.use(
+      http.get('/v1/tournaments/:id/settings', () =>
+        HttpResponse.json({
+          settings: {
+            games: 3,
+            entryFee: 50,
+            finalsRatio: 7,
+            cashRatio: 5,
+            superSweeperCashRatio: 5,
+            completed: true,
+          },
+        }),
+      ),
+    )
+    open(page)
+    await screen.findByRole('table', { name: 'Scores for lanes 1-2' }, { timeout: 3000 })
+    await waitFor(() => {
+      expect(screen.queryByRole('link', { name: 'Enter scores' })).not.toBeInTheDocument()
+    })
+  })
+})
+
 describe('ScoresPage live (SCR-18, SCR-20, D-232)', () => {
   const streamUrl = (page: ScorePage) =>
     `/v1/tournaments/${tournament.id}/${page.session.kind}s/${page.session.id}/scores/events`

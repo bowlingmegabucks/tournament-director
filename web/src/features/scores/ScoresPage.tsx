@@ -7,12 +7,29 @@ import { QueryError } from '../../shared/QueryError'
 import { formatSessionDate } from '../../shared/sessionFormat'
 import { formatPair } from '../lanes/format'
 import type { Tournament } from '../tournaments/types'
+import { useTournamentOpen } from '../tournaments/useTournamentOpen'
 import { countListed, formatNoLane } from './format'
 import { ScoreTable } from './ScoreTable'
 import styles from './ScoresPage.module.css'
 import type { ScorePage, SessionKind } from './types'
+import { entryPath } from './entryPaths'
 import { useScoreEvents } from './useScoreEvents'
 import { useScores } from './useScores'
+
+/** The way into score entry (SCR-21). It reads the tournament settings, so it sits inside `<Can>`: only a keeper asks. */
+function EnterScoresLink({
+  kind,
+  tournamentId,
+  sessionId,
+}: Readonly<{ kind: SessionKind; tournamentId: string; sessionId: string }>) {
+  const open = useTournamentOpen(tournamentId)
+  if (!open) return null
+  return (
+    <Link className={styles.enter} to={entryPath(kind, tournamentId, sessionId)}>
+      Enter scores
+    </Link>
+  )
+}
 
 function OtherPositions({ page, fresh }: Readonly<{ page: ScorePage; fresh: readonly string[] }>) {
   const titleId = useId()
@@ -98,7 +115,12 @@ export function ScoresPage({ kind }: Readonly<{ kind: SessionKind }>) {
       {session.complete ? (
         <p className={styles.note}>This {kind} is complete. Scores cannot change.</p>
       ) : (
-        <LiveStatus state={live.state} updated={live.updated?.text} />
+        <>
+          <LiveStatus state={live.state} updated={live.updated?.text} />
+          <Can permission="scores.write">
+            <EnterScoresLink kind={kind} tournamentId={id} sessionId={sessionId} />
+          </Can>
+        </>
       )}
       {data.noLane > 0 && (
         <p className={styles.note}>

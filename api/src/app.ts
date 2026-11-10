@@ -450,6 +450,20 @@ export function createApp({
         router: skipSweeperRouter,
       },
       {
+        path: '/v1/tournaments/:id/squads/:sessionId/scores/events',
+        access: 'public', // SCR-20, D-232: bowlers watch scores come in, so no sign-in
+        router: createLaneEventsRouter('squad', findSquad(squads), { tournaments, events, logger }),
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers/:sessionId/scores/events',
+        access: 'public', // SCR-20, D-232
+        router: createLaneEventsRouter('sweeper', findSweeper(sweepers), {
+          tournaments,
+          events,
+          logger,
+        }),
+      },
+      {
         path: '/v1/tournaments/:id/squads/:sessionId/scores/games',
         access: { permission: 'scores.write' }, // SCR-22, D-234: entry only; the API key cannot reach it
         router: createGamesRouter('squad', findSquad(squads), {

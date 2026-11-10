@@ -23,7 +23,7 @@ describe('loadConfig', () => {
       auth: { secret: authSecret, baseUrl: authBaseUrl },
       mail: undefined,
       logLevel: 'info',
-      rateLimit: { max: 100, windowSeconds: 60 },
+      rateLimit: { max: 100, liveMax: 600, windowSeconds: 60 },
       trustProxy: 0,
       corsOrigins: [],
       telemetry: {
@@ -161,8 +161,17 @@ describe('loadConfig', () => {
   })
 
   it('reads the rate limit', () => {
-    const config = loadConfig({ ...baseEnv, RATE_LIMIT_MAX: '5', RATE_LIMIT_WINDOW_SECONDS: '10' })
-    expect(config.rateLimit).toEqual({ max: 5, windowSeconds: 10 })
+    const config = loadConfig({
+      ...baseEnv,
+      RATE_LIMIT_MAX: '5',
+      LIVE_RATE_LIMIT_MAX: '50',
+      RATE_LIMIT_WINDOW_SECONDS: '10',
+    })
+    expect(config.rateLimit).toEqual({ max: 5, liveMax: 50, windowSeconds: 10 })
+  })
+
+  it('gives the live score routes 600 requests a window unless told otherwise (D-232)', () => {
+    expect(loadConfig(baseEnv).rateLimit.liveMax).toBe(600)
   })
 
   it('reads the number of trusted proxies', () => {
@@ -172,6 +181,7 @@ describe('loadConfig', () => {
   it.each([
     ['RATE_LIMIT_MAX', '0'],
     ['RATE_LIMIT_WINDOW_SECONDS', '0'],
+    ['LIVE_RATE_LIMIT_MAX', '0'],
     ['TRUST_PROXY', '-1'],
     ['TRUST_PROXY', '6'],
     ['TRUST_PROXY', 'yes'],

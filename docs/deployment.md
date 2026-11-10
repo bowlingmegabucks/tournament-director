@@ -60,7 +60,7 @@ The lane page keeps itself fresh over server-sent events: `GET /v1/tournaments/{
 - **One instance only (D-224).** The hub that tells open pages about a change lives in the Node process. With two instances, a change saved on one never reaches a page connected to the other, and the plan bill doubles. Do not scale the plan out; no autoscale rule.
 - **Deploys.** A deploy drops every stream. The server ends them first on SIGTERM, so shutdown does not wait out the 10 s limit, and each browser reconnects and refetches by itself.
 - The API refuses a stream past 500 open connections with `503`.
-- **Rate limit (D-223).** The default 100 requests a minute per address stays: two people do desk work. Raise `RATE_LIMIT_MAX` if more desks or many viewers share one address.
+- **Rate limit (D-223, D-232).** The default 100 requests a minute per address stays for every route except the live score routes, which count apart at `LIVE_RATE_LIMIT_MAX` (default 600) so a venue full of phones watching scores does not lock out the keepers. Raise `RATE_LIMIT_MAX` if more desks share one address, and `LIVE_RATE_LIMIT_MAX` if more viewers do.
 
 ### Custom domain (0.4.0)
 

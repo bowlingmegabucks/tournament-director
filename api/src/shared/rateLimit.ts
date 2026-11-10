@@ -16,15 +16,26 @@ export function clientKey(ip: string): string {
 }
 
 /**
+ * The live score routes (D-232): the public scores page and its stream, score entry, and the skip.
+ * Many phones watch these from one venue address, and a keeper saves often, so they count in their
+ * own, larger bucket and never use up the general one.
+ */
+const livePath = /^\/v1\/tournaments\/[^/]+\/(?:squads|sweepers)\/[^/]+\/(?:scores(?:\/.*)?|skip)$/
+
+export const isLivePath = (path: string) => livePath.test(path)
+
+/**
  * Fixed window per client IP, counted in memory. That is right for one server (the free App
  * Service plan); a scaled-out API needs a shared store such as Redis.
  *
- * A request over the limit gets a 429 through the error handler (body `{ message }`), with
- * `Retry-After` and `RateLimit` headers. `/health` never counts, so probes cannot lock out a deploy.
- * Each rejection adds one to the `tournament_director.rate_limit.rejections` metric.
+ * Two buckets (D-232): `max` for every route, and `liveMax` for the live score routes, which
+ * `isLivePath` names. A request counts in one bucket only. A request over the limit gets a 429
+ * through the error handler (body `{ message }`), with `Retry-After` and `RateLimit` headers.
+ * `/health` never counts, so probes cannot lock out a deploy. Each rejection adds one to the
+ * `tournament_director.rate_limit.rejections` metric.
  */
 export function createRateLimiter(
-  { max, windowSeconds }: RateLimitConfig,
+  { max, liveMax, windowSeconds }: RateLimitConfig,
   meter: Meter,
 ): RequestHandler {
   const rejections = meter.createCounter('tournament_director.rate_limit.rejections', {
@@ -32,19 +43,29 @@ export function createRateLimiter(
     unit: '{request}',
   })
 
-  return rateLimit({
-    limit: max,
-    windowMs: windowSeconds * 1000,
-    standardHeaders: 'draft-7',
-    legacyHeaders: false,
-    skip: (req) => req.path === '/health',
-    // Stryker disable next-line StringLiteral: unreachable, a live socket always has an address.
-    keyGenerator: (req) => clientKey(req.ip ?? req.socket.remoteAddress ?? 'unknown'),
-    // The library reads the function text for `ipKeyGenerator`. We call it inside clientKey.
-    validate: { keyGeneratorIpFallback: false },
-    handler: (_req, _res, next) => {
-      rejections.add(1)
-      next(new HttpError(429, 'Too many requests. Try again later.'))
-    },
-  })
+  const bucket = (limit: number, skip: (path: string) => boolean) =>
+    rateLimit({
+      limit,
+      windowMs: windowSeconds * 1000,
+      standardHeaders: 'draft-7',
+      legacyHeaders: false,
+      skip: (req) => skip(req.path),
+      // Stryker disable next-line StringLiteral: unreachable, a live socket always has an address.
+      keyGenerator: (req) => clientKey(req.ip ?? req.socket.remoteAddress ?? 'unknown'),
+      // The library reads the function text for `ipKeyGenerator`. We call it inside clientKey.
+      validate: { keyGeneratorIpFallback: false },
+      handler: (_req, _res, next) => {
+        rejections.add(1)
+        next(new HttpError(429, 'Too many requests. Try again later.'))
+      },
+    })
+
+  const general = bucket(max, (path) => path === '/health' || isLivePath(path))
+  const live = bucket(liveMax, (path) => !isLivePath(path))
+  return (req, res, next) => {
+    general(req, res, (error?: unknown) => {
+      if (error) next(error)
+      else live(req, res, next)
+    })
+  }
 }

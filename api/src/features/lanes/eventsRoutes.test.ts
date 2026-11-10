@@ -1,5 +1,3 @@
-import { createServer, type Server } from 'node:http'
-import type { AddressInfo } from 'node:net'
 import { metrics } from '@opentelemetry/api'
 import request from 'supertest'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -7,6 +5,7 @@ import { apiKeyHeader } from '../../shared/auth/caller.ts'
 import { createSessionEvents } from '../../shared/events/sessionEvents.ts'
 import { createSquad, createSweeper, createTournament, testApiKey } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
+import { createStreamReader } from '../../test/streamReader.ts'
 import { createSignedInTestApp, createTestApp } from '../../test/testApp.ts'
 import { createInMemorySquadRepository } from '../squads/repository.ts'
 import { createInMemorySweeperRepository } from '../sweepers/repository.ts'
@@ -30,46 +29,8 @@ function setup() {
   return { overrides, events, tournament, squad, sweeper, squadUrl, sweeperUrl }
 }
 
-const servers: Server[] = []
-const controllers: AbortController[] = []
-afterEach(async () => {
-  for (const controller of controllers.splice(0)) controller.abort()
-  await Promise.all(
-    servers.splice(0).map(
-      (server) =>
-        new Promise<void>((resolve) => {
-          server.closeAllConnections()
-          server.close(() => {
-            resolve()
-          })
-        }),
-    ),
-  )
-})
-
-/** Open the stream on a real socket and read until `needle` shows. */
-async function readStream(app: Parameters<typeof createServer>[1], url: string, needle: string) {
-  const server = createServer(app)
-  servers.push(server)
-  await new Promise<void>((resolve) => server.listen(0, resolve))
-  const controller = new AbortController()
-  controllers.push(controller)
-  const response = await fetch(`http://127.0.0.1:${(server.address() as AddressInfo).port}${url}`, {
-    signal: controller.signal,
-  })
-  const reader = response.body?.getReader()
-  const decoder = new TextDecoder()
-  let text = ''
-  async function until(target: string) {
-    while (!text.includes(target)) {
-      const chunk = await reader?.read()
-      if (!chunk || chunk.done) break
-      text += decoder.decode(chunk.value)
-    }
-    return text
-  }
-  return { response, until: () => until(needle), untilText: until }
-}
+const { readStream, closeAll } = createStreamReader()
+afterEach(closeAll)
 
 describe('GET /v1/tournaments/:id/squads/:sessionId/events', () => {
   it('streams to a signed-in director, and carries a published change (LAN-21, D-217)', async () => {

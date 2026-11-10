@@ -10,6 +10,7 @@ import { PrintSheets } from './PrintSheets'
 import styles from './RecapDialog.module.css'
 import { RecapSheet } from './RecapSheet'
 import type { RecapSheet as Sheet, SkipPattern } from './types'
+import { scoresAddress } from './scoresAddress'
 import { useRecapSheets } from './useRecapSheets'
 
 interface RecapDialogProps {
@@ -44,6 +45,8 @@ export function RecapDialog({
   const titleId = useId()
   const filterId = useId()
   const { data, error, isPending, refetch } = useRecapSheets(kind, tournamentId, sessionId)
+  // Every sheet's QR code opens this session's Scores tab (RPT-10, D-226).
+  const address = scoresAddress(window.location.origin, kind, tournamentId, sessionId)
   const [pattern, setPattern] = useState<SkipPattern>('staggered')
   // Who is NOT checked, so every sheet starts checked, and a refetch adds no surprises.
   const [unchecked, setUnchecked] = useState<ReadonlySet<string>>(new Set())
@@ -144,7 +147,12 @@ export function RecapDialog({
                     <span className={styles.badge}>{on ? 'Printing' : 'Not printing'}</span>
                   </p>
                   <div className={styles.preview}>
-                    <RecapSheet sheet={sheet} session={data.session} pattern={pattern} />
+                    <RecapSheet
+                      sheet={sheet}
+                      session={data.session}
+                      scoresAddress={address}
+                      pattern={pattern}
+                    />
                   </div>
                 </div>
               </li>
@@ -323,7 +331,12 @@ export function RecapDialog({
         {body}
       </div>
       {printing && data && (
-        <PrintSheets sheets={printing} session={data.session} pattern={pattern} />
+        <PrintSheets
+          sheets={printing}
+          session={data.session}
+          scoresAddress={address}
+          pattern={pattern}
+        />
       )}
     </dialog>
   )

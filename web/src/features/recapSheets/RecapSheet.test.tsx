@@ -1,12 +1,25 @@
 import { render, screen, within } from '@testing-library/react'
+import { QRCodeSVG } from 'qrcode.react'
 import { describe, expect, it } from 'vitest'
 import { createRecapSheet } from '../../mocks/data'
 import { RecapSheet } from './RecapSheet'
 
-const session = { date: '2026-10-24T19:00:00', games: 3 }
+const session = { date: '2026-10-24T19:00:00', games: 3, kind: 'squad' } as const
+const address = 'https://example.com/tournaments/t-1/squads/s-9/scores'
 
-function show(sheet = createRecapSheet(), pattern: 'staggered' | 'same' = 'staggered') {
-  render(<RecapSheet sheet={sheet} session={session} pattern={pattern} />)
+function show(
+  sheet = createRecapSheet(),
+  pattern: 'staggered' | 'same' = 'staggered',
+  kind: 'squad' | 'sweeper' = 'squad',
+) {
+  render(
+    <RecapSheet
+      sheet={sheet}
+      session={{ ...session, kind }}
+      scoresAddress={address}
+      pattern={pattern}
+    />,
+  )
   return within(screen.getByRole('article', { name: `Recap sheet for ${sheet.name}` }))
 }
 
@@ -85,5 +98,65 @@ describe('RecapSheet', () => {
     const sheet = show(createRecapSheet({ cross: { staggered: ['1A', '4A', '1A'], same: [] } }))
 
     expect(sheet.getAllByRole('cell', { name: '1A' })).toHaveLength(2)
+  })
+
+  it('captions the QR code "Squad scores" on a squad sheet (RPT-10, D-225)', () => {
+    const sheet = show()
+
+    expect(sheet.getByText('Squad scores')).toBeInTheDocument()
+    expect(sheet.queryByText('Sweeper scores')).not.toBeInTheDocument()
+  })
+
+  it('captions the QR code "Sweeper scores" on a sweeper sheet (RPT-10, D-225)', () => {
+    const sheet = show(createRecapSheet(), 'staggered', 'sweeper')
+
+    expect(sheet.getByText('Sweeper scores')).toBeInTheDocument()
+    expect(sheet.queryByText('Squad scores')).not.toBeInTheDocument()
+  })
+
+  it('draws one QR code that encodes the Scores address (RPT-10, D-226)', () => {
+    show()
+
+    const codes = screen.getByRole('article').querySelectorAll('svg')
+    expect(codes).toHaveLength(1)
+    // A scan cannot run in a test, so compare with the same code drawn from the expected address.
+    const { container } = render(
+      <QRCodeSVG value={address} level="M" marginSize={4} fgColor="#000000" bgColor="#ffffff" />,
+    )
+    const expected = container.querySelector('svg')
+    expect(codes[0]?.getAttribute('viewBox')).toBe(expected?.getAttribute('viewBox'))
+    expect(codes[0]?.innerHTML).toBe(expected?.innerHTML)
+  })
+
+  it('draws a different code for a different address (RPT-10, D-226)', () => {
+    const { container } = render(
+      <QRCodeSVG
+        value={address.replace('s-9', 's-10')}
+        level="M"
+        marginSize={4}
+        fgColor="#000000"
+        bgColor="#ffffff"
+      />,
+    )
+    show()
+
+    const drawn = screen.getByRole('article').querySelector('svg')
+    expect(drawn?.innerHTML).not.toBe(container.querySelector('svg')?.innerHTML)
+  })
+
+  it('hides the QR code from a screen reader, and the caption names it (RPT-10, D-225)', () => {
+    show()
+
+    const code = screen.getByRole('article').querySelector('svg')
+    expect(code).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.getByRole('figure')).toHaveTextContent('Squad scores')
+  })
+
+  it('prints the QR code black on white whatever the theme (RPT-10, D-225)', () => {
+    show()
+
+    const paths = screen.getByRole('article').querySelectorAll('svg path')
+    expect(paths[0]).toHaveAttribute('fill', '#ffffff')
+    expect(paths[1]).toHaveAttribute('fill', '#000000')
   })
 })

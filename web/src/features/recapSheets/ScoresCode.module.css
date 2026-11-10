@@ -1,0 +1,17 @@
+/* The code is 0.8 in square including its white margin (D-225). Sizes in inches and points, as the sheet. */
+.root {
+  display: grid;
+  justify-items: center;
+  gap: 0.02in;
+  margin: 0;
+}
+
+.code {
+  inline-size: 0.8in;
+  block-size: 0.8in;
+}
+
+.caption {
+  font-size: 9pt;
+  font-weight: 700;
+}

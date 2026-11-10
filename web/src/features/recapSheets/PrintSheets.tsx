@@ -5,16 +5,28 @@ import type { RecapSession, RecapSheet as Sheet, SkipPattern } from './types'
 
 interface PrintSheetsProps {
   sheets: readonly Sheet[]
-  session: Pick<RecapSession, 'date' | 'games'>
+  session: Pick<RecapSession, 'date' | 'games' | 'kind'>
+  scoresAddress: string
   pattern: SkipPattern
 }
 
 /** The sheets to print, one per page, in a portal on `document.body` (D-62). Hidden on screen. */
-export function PrintSheets({ sheets, session, pattern }: Readonly<PrintSheetsProps>) {
+export function PrintSheets({
+  sheets,
+  session,
+  scoresAddress,
+  pattern,
+}: Readonly<PrintSheetsProps>) {
   return createPortal(
     <div className={styles.root} data-recap-print-copy="">
       {sheets.map((sheet) => (
-        <RecapSheet key={sheet.registrationId} sheet={sheet} session={session} pattern={pattern} />
+        <RecapSheet
+          key={sheet.registrationId}
+          sheet={sheet}
+          session={session}
+          scoresAddress={scoresAddress}
+          pattern={pattern}
+        />
       ))}
     </div>,
     document.body,

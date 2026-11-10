@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { QRCodeSVG } from 'qrcode.react'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import { createRecapSheet, createRecapSheets } from '../../mocks/data'
@@ -412,6 +413,22 @@ describe('RecapDialog printing (D-62)', () => {
     expect(print).toHaveBeenCalledTimes(1)
   })
 
+  it('puts the QR code on every printed sheet (RPT-10, D-225)', async () => {
+    await loaded()
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Print Dana Ortiz' }))
+    print.mockImplementation(() => {
+      const copies = printCopy()
+      expect(copies).toHaveLength(2)
+      for (const sheet of copies) {
+        expect(within(sheet).getByText('Squad scores')).toBeInTheDocument()
+      }
+    })
+
+    await pressPrint('Print selected (2)')
+
+    expect(print).toHaveBeenCalledTimes(1)
+  })
+
   it('Print selected prints only the checked sheets (D-64)', async () => {
     await loaded()
     await userEvent.click(screen.getByRole('checkbox', { name: 'Print Dana Ortiz' }))
@@ -704,5 +721,35 @@ describe('RecapDialog print safety (D-62)', () => {
 
     expect(print).toHaveBeenCalledTimes(1)
     expect(printCopy()).toHaveLength(3)
+  })
+})
+
+describe('RecapDialog QR code (RPT-10, D-225, D-226)', () => {
+  it('shows one "Squad scores" code per sheet in the preview', async () => {
+    await loaded()
+
+    expect(screen.getAllByText('Squad scores')).toHaveLength(3)
+  })
+
+  it('shows the code on a complete squad too', async () => {
+    await loaded({ ...squad, session: { ...squad.session, complete: true }, sheets: [joey, dana] })
+
+    expect(screen.getAllByText('Squad scores')).toHaveLength(2)
+  })
+
+  it("encodes this squad's Scores address on this site", async () => {
+    await loaded(createRecapSheets({ sheets: [joey] }))
+
+    const { container } = render(
+      <QRCodeSVG
+        value={`${window.location.origin}/tournaments/t1/squads/s1/scores`}
+        level="M"
+        marginSize={4}
+        fgColor="#000000"
+        bgColor="#ffffff"
+      />,
+    )
+    const shown = screen.getByRole('article').querySelector('svg')
+    expect(shown?.innerHTML).toBe(container.querySelector('svg')?.innerHTML)
   })
 })

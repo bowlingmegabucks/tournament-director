@@ -351,6 +351,8 @@ test('the recap sheets dialog previews every sheet, switches the skip, and picks
   await expect(dialog.getByRole('article')).toHaveCount(7)
   await expect(dialog.getByText(/4 bowlers have no lane and get no sheet/)).toBeVisible()
   await expect(dialog.getByText('7 of 7 selected')).toBeVisible()
+  // Every sheet has its own QR code to the Scores tab (RPT-10, D-225).
+  await expect(dialog.getByText('Squad scores')).toHaveCount(7)
 
   const first = dialog.getByRole('article').first()
   const staggered = await first.getByRole('cell').allTextContents()
@@ -367,6 +369,32 @@ test('the recap sheets dialog previews every sheet, switches the skip, and picks
   await page.keyboard.press('Escape')
   await expect(dialog).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Recap sheets' })).toBeFocused()
+})
+
+test('the QR code sits inside the sheet, under the table, clear of Office Check (RPT-10, D-225)', async ({
+  page,
+}) => {
+  await openSquad(page, '1:00 PM')
+  await page.getByRole('button', { name: 'Recap sheets' }).click()
+  const sheet = page
+    .getByRole('dialog', { name: /^Recap sheets/ })
+    .getByRole('article')
+    .first()
+
+  const box = async (locator: typeof sheet) => {
+    const found = await locator.boundingBox()
+    if (!found) throw new Error('not on the page')
+    return found
+  }
+  const paper = await box(sheet)
+  const table = await box(sheet.getByRole('table'))
+  const figure = await box(sheet.getByRole('figure'))
+  const office = await box(sheet.getByText('Office Check'))
+
+  expect(figure.y).toBeGreaterThanOrEqual(table.y + table.height - 1)
+  expect(figure.y + figure.height).toBeLessThanOrEqual(paper.y + paper.height)
+  expect(figure.x).toBeGreaterThanOrEqual(table.x - 1)
+  expect(figure.x + figure.width).toBeLessThanOrEqual(office.x)
 })
 
 test('Print all lays out one half sheet per page, 8.5 by 5.5 inches (RPT-05b, D-62)', async ({

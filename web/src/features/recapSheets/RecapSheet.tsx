@@ -1,21 +1,25 @@
 import sponsors from '../../assets/score-sheet-sponsors.png'
 import { formatSheetDate, formatSheetTime } from '../../shared/sessionFormat'
 import { formatHandicap, formatHandicapTotal } from './format'
+import { ScoresCode } from './ScoresCode'
 import styles from './RecapSheet.module.css'
 import type { RecapSession, RecapSheet as Sheet, SkipPattern } from './types'
 
 interface RecapSheetProps {
   sheet: Sheet
-  session: Pick<RecapSession, 'date' | 'games'>
+  session: Pick<RecapSession, 'date' | 'games' | 'kind'>
+  /** Where the QR code leads: the session's Scores tab (RPT-10). */
+  scoresAddress: string
   pattern: SkipPattern
 }
 
 /**
  * One recap sheet (RPT-05, RPT-05a, D-63): the sponsor image, date, time, name, division, and the
  * signature lines on the left; one row per game and a Totals row on the right. The scores are
- * written by hand, so Score and Total stay blank. The lane for each game comes from the API.
+ * written by hand, so Score and Total stay blank. The lane for each game comes from the API. The footer
+ * holds the QR code to the Scores tab (RPT-10) and the Office Check line.
  */
-export function RecapSheet({ sheet, session, pattern }: Readonly<RecapSheetProps>) {
+export function RecapSheet({ sheet, session, scoresAddress, pattern }: Readonly<RecapSheetProps>) {
   const handicap = formatHandicap(sheet.handicap)
   const lanes = sheet.cross[pattern]
   return (
@@ -73,7 +77,10 @@ export function RecapSheet({ sheet, session, pattern }: Readonly<RecapSheetProps
             </tr>
           </tbody>
         </table>
-        <p className={styles.office}>Office Check: __________</p>
+        <div className={styles.footer}>
+          <ScoresCode address={scoresAddress} kind={session.kind} />
+          <p className={styles.office}>Office Check: __________</p>
+        </div>
       </div>
     </article>
   )

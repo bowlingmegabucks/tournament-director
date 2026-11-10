@@ -41,21 +41,22 @@ What the user sees and can do.
 
 ## Index
 
-| Feature                                               | File                                             |
-| ----------------------------------------------------- | ------------------------------------------------ |
-| Tournaments (create, edit, list, Home card, overview) | [tournaments.md](tournaments.md)                 |
-| Divisions (list, create, edit, delete)                | [divisions.md](divisions.md)                     |
-| Squads and sweepers (lists, add, edit, delete, and complete)   | [squads-and-sweepers.md](squads-and-sweepers.md) |
-| Registrations (list)                                  | [registrations.md](registrations.md)             |
-| Registration API (create, append, get, OpenAPI)       | [registration-api.md](registration-api.md)       |
-| Add registration (desk: search, three steps, fees)    | [add-registration.md](add-registration.md)       |
-| Edit registration (desk: squads, division, average, move, remove) | [edit-registration.md](edit-registration.md) |
-| Delete registration (desk: dialog, refund view, payment warning) | [delete-registration.md](delete-registration.md) |
-| Lane assignments (page, drag, portal)                 | [lane-assignments.md](lane-assignments.md)       |
-| Recap sheets (preview, print, the cross, QR code)     | [recap-sheets.md](recap-sheets.md)               |
-| Scores (view)                                         | [scores.md](scores.md)                           |
-| Results (squad and sweeper)                           | [results.md](results.md)                         |
-| Results (at-large, seeding, super sweeper)            | [finals-results.md](finals-results.md)           |
-| Navigation and layout                                 | [navigation.md](navigation.md)                   |
-| API route access                                      | [api-access.md](api-access.md)                   |
-| Sign-in (web)                                         | [sign-in.md](sign-in.md)                         |
+| Feature                                                           | File                                             |
+| ----------------------------------------------------------------- | ------------------------------------------------ |
+| Tournaments (create, edit, list, Home card, overview)             | [tournaments.md](tournaments.md)                 |
+| Divisions (list, create, edit, delete)                            | [divisions.md](divisions.md)                     |
+| Squads and sweepers (lists, add, edit, delete, and complete)      | [squads-and-sweepers.md](squads-and-sweepers.md) |
+| Registrations (list)                                              | [registrations.md](registrations.md)             |
+| Registration API (create, append, get, OpenAPI)                   | [registration-api.md](registration-api.md)       |
+| Add registration (desk: search, three steps, fees)                | [add-registration.md](add-registration.md)       |
+| Edit registration (desk: squads, division, average, move, remove) | [edit-registration.md](edit-registration.md)     |
+| Delete registration (desk: dialog, refund view, payment warning)  | [delete-registration.md](delete-registration.md) |
+| Lane assignments (page, drag, portal)                             | [lane-assignments.md](lane-assignments.md)       |
+| Recap sheets (preview, print, the cross, QR code)                 | [recap-sheets.md](recap-sheets.md)               |
+| Scores (view)                                                     | [scores.md](scores.md)                           |
+| Score entry (game board, pair sheet, stored skip, live)           | [score-entry.md](score-entry.md)                 |
+| Results (squad and sweeper)                                       | [results.md](results.md)                         |
+| Results (at-large, seeding, super sweeper)                        | [finals-results.md](finals-results.md)           |
+| Navigation and layout                                             | [navigation.md](navigation.md)                   |
+| API route access                                                  | [api-access.md](api-access.md)                   |
+| Sign-in (web)                                                     | [sign-in.md](sign-in.md)                         |

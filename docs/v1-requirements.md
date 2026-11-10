@@ -45,6 +45,7 @@ Version numbers follow content, not a countdown. 0.10.0 is fine.
 - [x] Add a registration at the desk: bowler search, a stored or new bowler, three steps with a fee table, append for a registered bowler, from the Registrations page or a lane page (`createRegistration`, `REG-01` to `REG-08`, `REG-10` to `REG-14`, `REG-22`, `BWL-14`, `BWL-15`, D-157 to D-166; [add-registration.md](requirements/add-registration.md)).
 - [x] Edit a registration at the desk: add or drop a squad or sweeper, switch squads, move the division, change the average, turn super sweeper on or off, correct the bowler; Move and Remove from a lane page; a stale-save guard and a collect, refund, and net Review (`editRegistration`, `REG-15` to `REG-18`, `REG-20`, `REG-21`, `REG-25`, `BWL-16`, `BWL-18`, D-197 to D-207; [edit-registration.md](requirements/edit-registration.md)).
 - [x] Delete a registration at the desk: a dialog with the fees and recorded payments, a warning and a tick for a real payment, refused with scores or on a complete tournament; every delete trigger is now a red outline button apart from routine actions, with a Danger zone on edit pages (`deleteRegistration`, `REG-19`, `REG-25`, D-208 to D-215; [delete-registration.md](requirements/delete-registration.md)).
+- [x] Score entry for a phone or a tablet: a game board and a pair sheet, one score at a time, earlier empty games saved as 0, the server refusing a complete session, a skip stored for each squad or sweeper, and a stream that updates every viewer (`scores`, `SCR-01` to `SCR-06`, `SCR-14`, `SCR-15`, `SCR-19` to `SCR-23`, D-228 to D-238; [score-entry.md](requirements/score-entry.md)). Lanes that break down mid-squad are out of scope (D-236).
 
 ## Data and cutover
 
@@ -105,7 +106,8 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 - [ ] Database backups run, and a restore test passed.
 - [ ] Alerts set in Application Insights.
 - [ ] Hosting tier decided (the free App Service tier is slow after idle).
-- [ ] Live score updates reach every open Scores tab, signed in or not, without polling (Q-33; polls every 15 s until then, D-72).
+- [x] Live score updates reach every open Scores tab, signed in or not, without polling (`SCR-18`, `SCR-20`, D-232; [score-entry.md](requirements/score-entry.md)).
+- [ ] Live results: squad, sweeper, and finals results update from the stream too (Q-41, D-233); they poll every 15 s until then.
 - [ ] Load test with a full tournament's users and score entry.
 - [ ] Tournament lifecycle test: one UI-driven Playwright run on its own database and API (3 divisions, 4 squads, 2 sweepers, about 150 bowlers, 300 squad entries and 150 sweeper entries, scripted failures, hand-written expected results). Manual trigger, plus a job on `main` that deploy does not wait for. Built in stages as the features land. See [lifecycle-e2e.md](plans/lifecycle-e2e.md).
 - [x] Several desk users can work at once: lane moves and new registrations show on every open lane page over server-sent events (D-217 to D-219, Q-27), and two people racing for the last seat of a pair get one winner and a clear message for the other (D-216, D-220, Q-28). Scores and Results move to the stream in their own slice (D-222). The hub is one process (D-224).

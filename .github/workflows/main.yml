@@ -1,6 +1,7 @@
 name: Main
 
-# Push to main: scan with SonarCloud, run mutation tests (reported to the Stryker Dashboard), and deploy, in parallel.
+# Push to main: scan with SonarCloud, run mutation tests (reported to the Stryker Dashboard), run the
+# lifecycle test, and deploy, in parallel. Deploy does not wait for the lifecycle test.
 # Add new main-branch work as another job here.
 on:
   push:
@@ -15,6 +16,10 @@ jobs:
     uses: ./.github/workflows/sonar.yml
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  lifecycle:
+    name: Lifecycle test
+    uses: ./.github/workflows/lifecycle.yml
 
   deploy:
     name: Deploy

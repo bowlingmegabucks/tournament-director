@@ -10,13 +10,15 @@ The other suites check one screen or route at a time, on mocks or small data. Th
 
 ## Status
 
-Built so far (branch `results`, 1.0.0-rc.1): the harness and stages 0 and 1, in `web/lifecycle/`. Run `npm run test:lifecycle` in `web/` (needs Docker and `python3`).
+Built so far (branch `results`, 1.0.0-rc.1): the harness and stages 0 to 3, in `web/lifecycle/`. Run `npm run test:lifecycle` in `web/` (needs Docker and `python3`).
 
 - **Stack.** `web/lifecycle/docker-compose.yml` (its own MariaDB on 15406 and Mailpit on 15425, no volume), the API on 3100 (empty tables from `npm run db:tables` in `api/`), and the production web build (`dist-lifecycle`, sign-in on, `check:dist` run on it) on 4273. `globalTeardown` removes the containers; `LIFECYCLE_KEEP=1` keeps them.
 - **Stage 0 so far.** First admin from `users:create-admin` through a pseudo-terminal (`support/answerPrompts.py`, because the script refuses piped input), then director and score keeper through the add-user page, invites read from Mailpit, passwords set, sign-in with the real login page. **Not yet:** the earlier tournament and its 50 returning bowlers.
 - **Stage 1.** Create, edit the bowling center, check the overview and the list.
 - **Rule 9 gap.** "No live cache" needs a setting: `LIVE_CACHE_MS` is a constant in `ttlCache.ts`. Add an env var before stage 7.
-- Stages 2 and up: not built.
+- **Stage 2.** Three divisions (scratch, 90% of 220 handicap, senior women 50+ with averages 100 to 180), the list and numbering, and the used-name 409.
+- **Stage 3.** Four squads (38 lanes edited to 40, 48 lanes with a $75 fee, 32 lanes with a 1 in 5 cash ratio, 40 lanes), two sweepers (one with bonus pins for the seniors, one edited from $25 to $30), a spare of each deleted, and the squad-outside-the-dates 409. The two scripted failures that need entries or lane saves wait for stages 4 and 5.
+- Stages 4 and up: not built.
 
 ## Rules
 
@@ -93,9 +95,10 @@ Start with these; add one whenever a feature brings a new refusal.
 
 ## Running it
 
-- On demand, by hand, and on `workflow_dispatch`.
-- As its own job on `main`, beside Sonar, mutation, and deploy. Deploy does not wait for it. It does not run on pull requests.
-- Aim for 15 minutes; fail at 30. A failure turns the main run red; the owner decides what to do about the deploy.
+- By hand (`npm run test:lifecycle` in `web/`), on `workflow_dispatch`, and from `.github/workflows/lifecycle.yml`, one workflow that two others call.
+- **On every pull request** (`pull-request.yml`, job `Lifecycle test`) and **on every push to `main`** (`main.yml`), beside Sonar, mutation, and deploy. Deploy does not wait for it. The owner decided on 2026-11-11 to run it on pull requests too, not only on `main`.
+- Aim for 15 minutes; fail at 30. A failure turns the run red; the owner decides what to do about the deploy. Make the job a required check on pull requests once it has been steady for a week.
+- A failed run uploads `lifecycle-evidence` (traces, screenshots, video, the HTML report).
 
 ## Open questions
 

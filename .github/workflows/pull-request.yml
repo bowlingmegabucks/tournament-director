@@ -92,6 +92,12 @@ jobs:
           path: web/coverage
           if-no-files-found: ignore
 
+  # The whole-tournament test, beside the other checks. Docs-only changes still run it: it is the
+  # check that the app's parts agree.
+  lifecycle:
+    name: Lifecycle test
+    uses: ./.github/workflows/lifecycle.yml
+
   sonar:
     name: SonarCloud
     uses: ./.github/workflows/sonar.yml

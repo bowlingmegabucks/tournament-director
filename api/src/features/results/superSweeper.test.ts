@@ -161,6 +161,25 @@ describe('buildSuperSweeperEntries', () => {
     expect(entries[0]?.flags).toEqual([])
   })
 
+  it('counts the games of an open sweeper in a run from game 1, as the squads do (RES-42)', () => {
+    const steady = registrant()
+    const gapped = registrant()
+    const running = sweeperOf({ complete: false, games: 3 }, [
+      { entry: steady, scores: [200, 200] },
+      { entry: gapped, scores: [] },
+    ])
+    // Games 1 and 3 saved, game 2 missing: the run is 1 game, not 2.
+    running.scores = [
+      ...running.scores,
+      { bowlerId: gapped.bowlerId, game: 1, score: 180 },
+      { bowlerId: gapped.bowlerId, game: 3, score: 190 },
+    ]
+
+    const { through } = buildSuperSweeperEntries([running], [open], { mode: 'full-game' })
+
+    expect(through.get(running.sweeper.id)).toBe(1)
+  })
+
   it('leaves out a bowler with no game at all while every sweeper is open', () => {
     const bowler = registrant()
     const running = sweeperOf({ complete: false }, [{ entry: bowler, scores: [] }])

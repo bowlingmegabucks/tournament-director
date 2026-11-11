@@ -17,8 +17,13 @@ export function useWakeLock(): void {
       navigator.wakeLock
         .request('screen')
         .then((sentinel) => {
-          if (stopped) void sentinel.release()
-          else lock = sentinel
+          if (stopped) {
+            void sentinel.release().catch(() => undefined)
+            return
+          }
+          // A second request must not strand the first lock: cleanup releases only `lock`.
+          void lock?.release().catch(() => undefined)
+          lock = sentinel
         })
         .catch(() => undefined)
     }

@@ -19,7 +19,7 @@ import { createInMemoryScoreRepository } from '../scores/repository.ts'
 import { createInMemorySquadRepository } from '../squads/repository.ts'
 import { createInMemorySweeperRepository } from '../sweepers/repository.ts'
 import { createInMemoryTournamentRepository } from '../tournaments/repository.ts'
-import { createInMemoryDnfStore } from './store.ts'
+import { createInMemoryDnfStore, type DnfStore } from './store.ts'
 
 function setup(options: { complete?: boolean; tournamentComplete?: boolean } = {}) {
   const tournament = createTournament()
@@ -91,6 +91,11 @@ function setup(options: { complete?: boolean; tournamentComplete?: boolean } = {
   }
 }
 
+/** The store, but its guarded write always answers `outcome`, as if a rival write came first. */
+function dnf409(store: DnfStore, outcome: 'complete' | 'no-score'): DnfStore {
+  return { ...store, setIfOpen: () => Promise.resolve(outcome) }
+}
+
 describe('PUT .../scores/:registrationId/dnf (SCR-24)', () => {
   it('flags a bowler who has a score, answers 204, and tells the screens (D-248, D-249, D-251)', async () => {
     const { overrides, url, scored, squad, dnf, seen } = setup()
@@ -111,6 +116,33 @@ describe('PUT .../scores/:registrationId/dnf (SCR-24)', () => {
     seen.length = 0
 
     expect((await request(app).put(url(scored.registrationId))).status).toBe(204)
+    expect(seen).toEqual([])
+  })
+
+  it('answers 409 when the write itself finds the squad complete, and tells nobody (D-249)', async () => {
+    // A Complete landed after the route's reads: the store's own check refuses.
+    const { overrides, url, scored, seen } = setup()
+    const racing = { ...dnf409(overrides.dnfStore, 'complete') }
+
+    const response = await request(createSignedInTestApp({ ...overrides, dnfStore: racing })).put(
+      url(scored.registrationId),
+    )
+
+    expect(response.status).toBe(409)
+    expect(response.body.message).toMatch(/complete/)
+    expect(seen).toEqual([])
+  })
+
+  it('answers 409 when the write finds the score gone, and tells nobody (D-249)', async () => {
+    const { overrides, url, scored, seen } = setup()
+    const racing = { ...dnf409(overrides.dnfStore, 'no-score') }
+
+    const response = await request(createSignedInTestApp({ ...overrides, dnfStore: racing })).put(
+      url(scored.registrationId),
+    )
+
+    expect(response.status).toBe(409)
+    expect(response.body.message).toMatch(/no score/)
     expect(seen).toEqual([])
   })
 

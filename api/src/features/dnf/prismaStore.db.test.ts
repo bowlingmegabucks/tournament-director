@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from 'vitest'
 import { createDatabaseClient, type PrismaClient } from '../../shared/database.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
+import { legacyRows } from '../../test/legacyRows.ts'
 import { resetDatabase } from '../../test/resetDatabase.ts'
 import { createPrismaDnfStore } from './prismaStore.ts'
 
@@ -59,5 +60,54 @@ describe('Prisma DNF store', () => {
     await store().clear(sessionB, bowler1)
 
     expect((await store().listFlagged([sessionA])).get(sessionA)).toEqual(new Set([bowler1]))
+  })
+
+  describe('the guarded write (D-249)', () => {
+    async function world(options: { completed?: boolean; sessionComplete?: boolean } = {}) {
+      const rows = legacyRows(client)
+      const tournamentId = await rows.tournament({ completed: options.completed })
+      const divisionId = await rows.division(tournamentId)
+      const sessionId = await rows.session(tournamentId, 'squad', '2026-10-24 09:00:00')
+      if (options.sessionComplete) {
+        await client.$executeRawUnsafe('UPDATE Squads SET Complete = 1 WHERE Id = ?', sessionId)
+      }
+      const { registrationId, bowlerId } = await rows.registration(divisionId)
+      await rows.squadEntry(registrationId, sessionId, '1A')
+      const score = () =>
+        client.$executeRawUnsafe(
+          'INSERT INTO SquadScores (BowlerId, SquadId, Game, Score) VALUES (?, ?, 1, 200)',
+          bowlerId,
+          sessionId,
+        )
+      const input = { tournamentId, kind: 'squad' as const, sessionId, registrationId }
+      return { input, score }
+    }
+
+    it('flags a bowler with a score in an open session, and a repeat changes nothing', async () => {
+      const { input, score } = await world()
+      await score()
+
+      expect(await store().setIfOpen(input)).toBe('set')
+      expect(await store().setIfOpen(input)).toBe('same')
+      expect(await client.sessionDnf.count()).toBe(1)
+    })
+
+    it('refuses a bowler with no score and writes nothing', async () => {
+      const { input } = await world()
+
+      expect(await store().setIfOpen(input)).toBe('no-score')
+      expect(await client.sessionDnf.count()).toBe(0)
+    })
+
+    it('refuses a complete session and a complete tournament and writes nothing', async () => {
+      for (const options of [{ sessionComplete: true }, { completed: true }]) {
+        await resetDatabase(client)
+        const { input, score } = await world(options)
+        await score()
+
+        expect(await store().setIfOpen(input)).toBe('complete')
+        expect(await client.sessionDnf.count()).toBe(0)
+      }
+    })
   })
 })

@@ -14,6 +14,7 @@ import type { LiveScreen } from './liveLogic'
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
 })
 
 const division = createDivisionResult({
@@ -81,12 +82,11 @@ describe('ScreenSection (D-242, D-254)', () => {
         disconnect() {}
       },
     )
-    const height = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(96)
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(96)
 
     render(<ScreenSection screen={squadScreen} highlighted={false} />)
 
     expect(screen.getByRole('region').style.getPropertyValue('--pinned')).toBe('96px')
-    height.mockRestore()
   })
 
   it('measures again when the heading changes size, and stops watching when it goes', () => {
@@ -111,6 +111,5 @@ describe('ScreenSection (D-242, D-254)', () => {
 
     unmount()
     expect(disconnect).toHaveBeenCalled()
-    height.mockRestore()
   })
 })

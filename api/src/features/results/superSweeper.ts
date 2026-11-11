@@ -62,6 +62,24 @@ function gamesByBowler(scores: readonly ScoreRow[]): Map<string, number[]> {
   return new Map([...byGame.entries()].map(([bowlerId, games]) => [bowlerId, [...games.values()]]))
 }
 
+/**
+ * Each bowler's games in one run from game 1: a game with no stored score ends it. Squads and
+ * sweepers count this way (`run` in fullGame.ts), so a bowler with games 1 and 3 has 1 here too.
+ */
+function runsByBowler(scores: readonly ScoreRow[]): Map<string, number> {
+  const have = new Map<string, Set<number>>()
+  for (const { bowlerId, game } of scores) {
+    have.set(bowlerId, (have.get(bowlerId) ?? new Set<number>()).add(game))
+  }
+  return new Map(
+    [...have.entries()].map(([bowlerId, games]) => {
+      let run = 0
+      while (games.has(run + 1)) run += 1
+      return [bowlerId, run]
+    }),
+  )
+}
+
 interface SweeperScores {
   /** Only this many games of an open sweeper count (RES-42). `null`: every game. */
   limit: number | null
@@ -158,12 +176,13 @@ export function buildSuperSweeperEntries(
   const through = new Map<string, number | null>()
   const perSweeper = inputs.map(({ sweeper, entries, scores }) => {
     const games = gamesByBowler(scores)
+    const runs = runsByBowler(scores)
     // RES-42: an open sweeper counts the games every bowler in it has; a complete one counts them all.
     let limit: number | null = null
     if (mode === 'full-game' && !sweeper.complete) {
       const bowlers = entries.flatMap((entry) => {
-        const stored = games.get(entry.bowlerId)
-        return stored ? [{ registrationId: entry.registrationId, games: stored.length }] : []
+        const run = runs.get(entry.bowlerId)
+        return run === undefined ? [] : [{ registrationId: entry.registrationId, games: run }]
       })
       limit = fewestGames(bowlers, flagged?.get(sweeper.id) ?? noFlags) ?? 0
     }

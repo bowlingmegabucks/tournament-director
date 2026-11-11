@@ -546,7 +546,15 @@ describe('GET /v1/tournaments/:id/live-results (RES-47)', () => {
     expect((await request(app).get('/v1/tournaments/nope/live-results')).status).toBe(400)
   })
 
-  it('answers 422 when a squad has a ratio of 0 (D-83)', async () => {
+  it('answers 422 when a squad with scores has a ratio of 0 (D-83)', async () => {
+    const { app, tournament } = setup({ squadOver: { cashRatio: 0 } })
+
+    const response = await request(app).get(`/v1/tournaments/${tournament.id}/live-results`)
+
+    expect(response.status).toBe(422)
+  })
+
+  it('leaves out an empty squad with a ratio of 0 instead of failing the feed', async () => {
     const tournament = createTournament()
     const squad = createSquad({ cashRatio: 0 })
     const app = createTestApp({
@@ -556,7 +564,8 @@ describe('GET /v1/tournaments/:id/live-results (RES-47)', () => {
 
     const response = await request(app).get(`/v1/tournaments/${tournament.id}/live-results`)
 
-    expect(response.status).toBe(422)
+    expect(response.status).toBe(200)
+    expect(response.body.sessions).toEqual([])
   })
 
   it('keeps the answer for the cache window, and a drop of the tournament clears it (D-244)', async () => {

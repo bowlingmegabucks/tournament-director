@@ -14,4 +14,18 @@ describe('in-memory DNF store', () => {
     expect(await store.clear('s1', 'r1')).toBe(false)
     expect((await store.listFlagged(['s1'])).size).toBe(0)
   })
+
+  it('flags through the guarded write and says whether the flag is new (D-249)', async () => {
+    const { store, state } = createInMemoryDnfStore()
+    const input = {
+      tournamentId: 't1',
+      kind: 'squad' as const,
+      sessionId: 's1',
+      registrationId: 'r1',
+    }
+
+    expect(await store.setIfOpen(input)).toBe('set')
+    expect(await store.setIfOpen(input)).toBe('same')
+    expect(state).toEqual(new Set(['s1|r1']))
+  })
 })

@@ -77,9 +77,23 @@ export function createDnfRouter(
       }
     }
     const before = await live.before(id, kind, sessionId)
-    const changed = flag
-      ? await store.set(sessionId, registrationId)
-      : await store.clear(sessionId, registrationId)
+    let changed: boolean
+    if (flag) {
+      // The reads above give the messages; this write checks again inside one transaction, so a
+      // Complete or a cleared score that landed since cannot leave a flag behind (D-249).
+      const outcome = await store.setIfOpen({ tournamentId: id, kind, sessionId, registrationId })
+      if (outcome === 'complete') {
+        log.info(ids, `DNF change refused: ${kind} or tournament complete`)
+        throw new HttpError(409, `This ${kind} is complete. Did not finish cannot change.`)
+      }
+      if (outcome === 'no-score') {
+        log.info(ids, 'DNF change refused: no score')
+        throw new HttpError(409, 'This bowler has no score yet, so there is nothing to finish.')
+      }
+      changed = outcome === 'set'
+    } else {
+      changed = await store.clear(sessionId, registrationId)
+    }
     if (changed) {
       log.info(ids, flag ? 'Did not finish set' : 'Did not finish cleared')
       // The counted games may move, so every open entry and scores page asks again.

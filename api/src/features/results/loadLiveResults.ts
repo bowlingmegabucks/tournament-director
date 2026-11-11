@@ -25,9 +25,6 @@ export async function loadLiveResults(
     deps.sweepers.listByTournament(tournamentId),
     deps.divisions.listByTournament(tournamentId),
   ])
-  for (const squad of squads) {
-    requireRatios("A squad's", { finals: squad.finalsRatio, cash: squad.cashRatio })
-  }
   const flagged = await deps.dnf.listFlagged([
     ...squads.map((squad) => squad.id),
     ...sweepers.map((sweeper) => sweeper.id),
@@ -38,14 +35,22 @@ export async function loadLiveResults(
   const squadSessions = worked.flatMap((each) => {
     reportSkipped(reporting, each.squad.id, each.skipped)
     const results = toSquadResults(each.squad, each, divisions, 'full-game')
-    return results.divisions.length > 0 ? [{ kind: 'squad' as const, results }] : []
+    if (results.divisions.length === 0) return []
+    // Only a squad that shows on the screen needs working ratios: an empty one with a bad ratio
+    // must not blank the rest (D-83 still holds for a squad with scores).
+    requireRatios("A squad's", { finals: each.squad.finalsRatio, cash: each.squad.cashRatio })
+    return [{ kind: 'squad' as const, results }]
   })
 
-  const sweeperSessions = []
-  for (const sweeper of sweepers) {
-    const results = await loadSweeperResults(deps, reporting, tournamentId, sweeper.id, options)
-    if (results.rows.length > 0) sweeperSessions.push({ kind: 'sweeper' as const, results })
-  }
+  // The sweepers are independent reads, so they run together.
+  const sweeperResults = await Promise.all(
+    sweepers.map((sweeper) =>
+      loadSweeperResults(deps, reporting, tournamentId, sweeper.id, options),
+    ),
+  )
+  const sweeperSessions = sweeperResults.flatMap((results) =>
+    results.rows.length > 0 ? [{ kind: 'sweeper' as const, results }] : [],
+  )
 
   const superSweeper = await loadSuperSweeper(deps, reporting, tournamentId, options).then(
     (results) => (results.rows.length > 0 ? results : null),

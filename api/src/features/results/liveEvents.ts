@@ -78,50 +78,74 @@ export function createLiveNotifier({
     return through
   }
 
+  // Two keepers can save at once, so each snapshot may be older than the last write that landed.
+  // Each session keeps the counts it last compared (`seen`) and compares one `after` at a time, so
+  // a rise is published once and a rise a late snapshot missed is still published.
+  const seen = new Map<string, ReadonlyMap<string, number>>()
+  const queue = new Map<string, Promise<void>>()
+
   return {
     async before(tournamentId, kind, sessionId) {
       // Nobody on the TV page: the diff would go nowhere, so skip two reads of the whole session.
-      if (!events.watching(liveKey(tournamentId))) return undefined
+      // What was seen goes stale while nobody listens, so forget it.
+      if (!events.watching(liveKey(tournamentId))) {
+        seen.delete(sessionId)
+        return undefined
+      }
       try {
-        return { tournamentId, kind, sessionId, counted: await read(tournamentId, kind, sessionId) }
+        const counted = await read(tournamentId, kind, sessionId)
+        // The first snapshot of a quiet session is what was last seen, however late the others come.
+        if (!seen.has(sessionId)) seen.set(sessionId, counted)
+        return { tournamentId, kind, sessionId, counted }
       } catch (err) {
         logger.warn({ err, tournamentId, sessionId }, 'Could not read the counted games')
         return undefined
       }
     },
 
-    async after(snapshot) {
-      if (!snapshot) return
-      const { tournamentId, kind, sessionId, counted } = snapshot
-      try {
-        const now = await read(tournamentId, kind, sessionId)
-        const groups = new Set([...counted.keys(), ...now.keys()])
-        const changes = [...groups].flatMap((group) => {
-          const was = counted.get(group) ?? 0
-          const game = now.get(group) ?? 0
-          if (game === was) return []
-          // Stryker disable next-line EqualityOperator: equal counts left the loop above, so `>` and `>=` agree.
-          return [{ group, game, up: game > was }]
-        })
-        if (changes.length === 0) return
-        // The feed holds the old boards: drop it before the message that tells the TV to ask again.
-        cache.dropTournament(tournamentId)
-        for (const { group, game, up } of changes) {
-          events.publish(liveKey(tournamentId), up ? 'game-full' : 'reopened', {
-            sessionId,
-            sessionKind: kind,
-            ...(group === SWEEPER ? {} : { divisionId: group }),
-            ...(up ? { game } : {}),
-          })
-        }
-      } catch (err) {
-        logger.warn({ err, tournamentId, sessionId }, 'Could not tell the live results of a change')
-      }
+    after(snapshot) {
+      if (!snapshot) return Promise.resolve()
+      const { sessionId } = snapshot
+      const run = (queue.get(sessionId) ?? Promise.resolve()).then(() => compare(snapshot))
+      queue.set(sessionId, run)
+      return run.finally(() => {
+        if (queue.get(sessionId) === run) queue.delete(sessionId)
+      })
     },
 
     completed(tournamentId, kind, sessionId) {
       cache.dropTournament(tournamentId)
       events.publish(liveKey(tournamentId), 'complete', { sessionId, sessionKind: kind })
     },
+  }
+
+  async function compare(snapshot: LiveSnapshot): Promise<void> {
+    const { tournamentId, kind, sessionId } = snapshot
+    try {
+      const now = await read(tournamentId, kind, sessionId)
+      const counted = seen.get(sessionId) ?? snapshot.counted
+      seen.set(sessionId, now)
+      const groups = new Set([...counted.keys(), ...now.keys()])
+      const changes = [...groups].flatMap((group) => {
+        const was = counted.get(group) ?? 0
+        const game = now.get(group) ?? 0
+        if (game === was) return []
+        // Stryker disable next-line EqualityOperator: equal counts left the loop above, so `>` and `>=` agree.
+        return [{ group, game, up: game > was }]
+      })
+      if (changes.length === 0) return
+      // The feed holds the old boards: drop it before the message that tells the TV to ask again.
+      cache.dropTournament(tournamentId)
+      for (const { group, game, up } of changes) {
+        events.publish(liveKey(tournamentId), up ? 'game-full' : 'reopened', {
+          sessionId,
+          sessionKind: kind,
+          ...(group === SWEEPER ? {} : { divisionId: group }),
+          ...(up ? { game } : {}),
+        })
+      }
+    } catch (err) {
+      logger.warn({ err, tournamentId, sessionId }, 'Could not tell the live results of a change')
+    }
   }
 }

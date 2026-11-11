@@ -94,4 +94,29 @@ describe('useWakeLock (RES-52, D-246)', () => {
       expect(release).toHaveBeenCalled()
     })
   })
+
+  it('lets go of the first lock when a second request arrives, so none is stranded', async () => {
+    const releases = [vi.fn(() => Promise.resolve()), vi.fn(() => Promise.resolve())]
+    let next = 0
+    const request = vi.fn(() => Promise.resolve({ release: releases[next++] ?? vi.fn() }))
+    install(request)
+    const { unmount } = renderHook(() => useWakeLock())
+    await vi.waitFor(() => {
+      expect(request).toHaveBeenCalledTimes(1)
+    })
+
+    document.dispatchEvent(new Event('visibilitychange'))
+    await vi.waitFor(() => {
+      expect(request).toHaveBeenCalledTimes(2)
+    })
+    await vi.waitFor(() => {
+      expect(releases[0]).toHaveBeenCalledTimes(1)
+    })
+    expect(releases[1]).not.toHaveBeenCalled()
+
+    unmount()
+    await vi.waitFor(() => {
+      expect(releases[1]).toHaveBeenCalledTimes(1)
+    })
+  })
 })

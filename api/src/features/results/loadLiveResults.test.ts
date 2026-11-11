@@ -253,7 +253,11 @@ describe('loadLiveResults (RES-47, D-242, D-244)', () => {
   })
 
   it('names the squad in the 422 message (D-83)', async () => {
-    const world = setup({ squads: [squadAt('2026-10-24T09:00:00', { cashRatio: 0 })] })
+    const squad = squadAt('2026-10-24T09:00:00', { cashRatio: 0 })
+    const world = setup({
+      squads: [squad],
+      seats: [{ sessionId: squad.id, entry: bowler(), games: [200] }],
+    })
     await expect(loadLiveResults(world.deps, world.reporting, world.tournament.id)).rejects.toThrow(
       /^A squad's cash ratio is 0/,
     )
@@ -283,7 +287,11 @@ describe('loadLiveResults (RES-47, D-242, D-244)', () => {
   })
 
   it('answers 422 for a squad or a sweeper whose ratio cannot work (D-83)', async () => {
-    const bad = setup({ squads: [squadAt('2026-10-24T09:00:00', { cashRatio: 0 })] })
+    const badSquad = squadAt('2026-10-24T09:00:00', { cashRatio: 0 })
+    const bad = setup({
+      squads: [badSquad],
+      seats: [{ sessionId: badSquad.id, entry: bowler(), games: [200] }],
+    })
     await expect(
       loadLiveResults(bad.deps, bad.reporting, bad.tournament.id),
     ).rejects.toBeInstanceOf(HttpError)
@@ -295,6 +303,19 @@ describe('loadLiveResults (RES-47, D-242, D-244)', () => {
     await expect(
       loadLiveResults(badSweeper.deps, badSweeper.reporting, badSweeper.tournament.id),
     ).rejects.toMatchObject({ status: 422 })
+  })
+
+  it('leaves out an empty squad with a bad ratio and keeps the rest (D-83)', async () => {
+    const empty = squadAt('2026-10-24T09:00:00', { cashRatio: 0 })
+    const scored = squadAt('2026-10-24T13:00:00')
+    const { deps, tournament, reporting } = setup({
+      squads: [empty, scored],
+      seats: [{ sessionId: scored.id, entry: bowler(), games: [200, 200, 200] }],
+    })
+
+    const result = await loadLiveResults(deps, reporting, tournament.id)
+
+    expect(result.sessions.map((session) => session.results.session.id)).toEqual([scored.id])
   })
 
   it('sends no personal data (BWL-17)', async () => {

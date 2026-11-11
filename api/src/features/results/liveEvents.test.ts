@@ -231,4 +231,60 @@ describe('live notifier (RES-49, D-243)', () => {
     ])
     expect(dropped).toHaveBeenCalledWith(tournamentId)
   })
+
+  it('publishes a rise once when two saves fill the same game together', async () => {
+    const a = bowler()
+    const b = bowler()
+    const { notifier, seen, state } = setup({ [a.bowlerId]: [200], [b.bowlerId]: [200] }, [a, b])
+    const live = notifier()
+
+    // Both keepers took their snapshot before either write landed.
+    const first = await live.before(tournamentId, 'squad', sessionId)
+    const second = await live.before(tournamentId, 'squad', sessionId)
+    state[a.bowlerId] = [200, 200]
+    state[b.bowlerId] = [200, 200]
+    await Promise.all([live.after(first), live.after(second)])
+
+    expect(seen.filter((event) => event.kind === 'game-full')).toHaveLength(1)
+  })
+
+  it('still publishes a rise that a late snapshot already contains', async () => {
+    const a = bowler()
+    const b = bowler()
+    const { notifier, seen, state } = setup({ [a.bowlerId]: [200], [b.bowlerId]: [200] }, [a, b])
+    const live = notifier()
+
+    const early = await live.before(tournamentId, 'squad', sessionId)
+    state[a.bowlerId] = [200, 200]
+    state[b.bowlerId] = [200, 200]
+    // A snapshot taken after the other save: it already reads game 2, so it alone sees no change.
+    const late = await live.before(tournamentId, 'squad', sessionId)
+    await live.after(late)
+    await live.after(early)
+
+    expect(seen.filter((event) => event.kind === 'game-full')).toHaveLength(1)
+  })
+
+  it('forgets what it saw once nobody watches, so a return does not replay old changes', async () => {
+    const a = bowler()
+    const { notifier, seen, state, watching, hub } = setup({ [a.bowlerId]: [200] }, [a])
+    const live = notifier()
+    const first = await live.before(tournamentId, 'squad', sessionId)
+    state[a.bowlerId] = [200, 200]
+    await live.after(first)
+
+    watching?.()
+    expect(await live.before(tournamentId, 'squad', sessionId)).toBeUndefined()
+    state[a.bowlerId] = [200, 200, 200]
+    hub.subscribe(liveKey(tournamentId), {
+      send: (event) => seen.push(event),
+      end: () => undefined,
+    })
+    seen.length = 0
+    const again = await live.before(tournamentId, 'squad', sessionId)
+    state[a.bowlerId] = [200, 200, 200, 200]
+    await live.after(again)
+
+    expect(seen.map((event) => [event.kind, event.detail?.game])).toEqual([['game-full', 4]])
+  })
 })

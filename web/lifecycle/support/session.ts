@@ -1,0 +1,105 @@
+import { expect, type Locator, type Page } from '@playwright/test'
+import type { SquadData } from '../data/sessions'
+import { openTournamentPage } from './navigate'
+
+/** Open a squad from the Squads list by its date text. Returns its address, without a tab. */
+export async function openSquad(page: Page, squad: SquadData): Promise<string> {
+  await openTournamentPage(page, 'Squads')
+  await page.getByRole('link', { name: squad.label, exact: true }).click()
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Open')
+  const match = /^(\/tournaments\/[^/]+\/squads\/[^/]+)/.exec(new URL(page.url()).pathname)
+  if (!match?.[1]) throw new Error(`Not on a squad page: ${page.url()}`)
+  return match[1]
+}
+
+/**
+ * On a squad's Lane assignments tab, put every unassigned bowler on a pair, one after another round
+ * the pairs, so no pair passes its maximum (the dialog would refuse it) and no one is left over.
+ */
+export async function assignAllLanes(page: Page, squad: SquadData, entered: number) {
+  await page.getByRole('link', { name: 'Lane assignments' }).click()
+  const unassigned = page.getByRole('region', { name: 'Unassigned bowlers' })
+  await expect(unassigned.getByRole('listitem')).toHaveCount(entered)
+  const pairs = squad.lanes / 2
+  for (let placed = 0; placed < entered; placed++) {
+    await unassigned
+      .getByRole('button', { name: /^Assign to lanes:/ })
+      .first()
+      .click()
+    const first = squad.startingLane + 2 * (placed % pairs)
+    await page
+      .getByRole('dialog', { name: /^Assign .* to lanes$/ })
+      .getByRole('button', { name: new RegExp(`^Lanes ${first}-${first + 1}(?!\\d)`) })
+      .click()
+    await expect(unassigned.getByRole('listitem')).toHaveCount(entered - placed - 1)
+  }
+}
+
+/**
+ * Type every score of every game through the pair sheets, as the keeper does: the game board lists
+ * the pairs of a game, each sheet has one box per bowler, and Enter saves a box and moves on.
+ * `scoreOf` gives the score for a bowler's name and a game. Waits for each sheet to say Saved.
+ */
+export async function enterAllScores(
+  page: Page,
+  squadPath: string,
+  games: number,
+  scoreOf: (name: string, game: number) => number,
+) {
+  for (let game = 1; game <= games; game++) {
+    await page.goto(`${squadPath}/scores/entry/${game}`)
+    const tiles = page.getByRole('list', { name: `Pairs for game ${game}` })
+    await expect(tiles).toBeVisible()
+    const hrefs = await tiles
+      .getByRole('link')
+      .evaluateAll((links) => links.map((link) => link.getAttribute('href') ?? ''))
+    for (const href of hrefs) {
+      await page.goto(href)
+      const sheet = page.getByRole('region', { name: new RegExp(`^Game ${game} · Lanes`) })
+      await expect(sheet).toBeVisible()
+      const boxes = await sheet.getByRole('textbox').all()
+      let typed = 0
+      for (const box of boxes) {
+        const label = (await box.getAttribute('aria-label')) ?? ''
+        const name = /^Lane \w+, (.+), game \d+$/.exec(label)?.[1]
+        if (!name) throw new Error(`Unexpected score box: ${label}`)
+        if ((await box.inputValue()) !== '') continue
+        await saveBox(box, String(scoreOf(name, game)))
+        typed++
+      }
+      await expect(sheet.getByText('✓ Saved')).toHaveCount(typed)
+    }
+  }
+}
+
+/** On a session page: complete it after reading the dialog. */
+export async function completeSession(page: Page, kind: 'squad' | 'sweeper', entered: number) {
+  await page.getByRole('button', { name: `Complete ${kind}` }).click()
+  const dialog = page.getByRole('dialog', { name: `Complete this ${kind}?` })
+  await expect(dialog).toContainText(`${entered} bowlers are entered.`)
+  // Every bowler has all their scores, so completing writes no zeros (D-190).
+  if (kind === 'squad')
+    await expect(dialog).toContainText('All have scores, so no zeros are saved.')
+  await dialog.getByRole('button', { name: `Complete ${kind}` }).click()
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Complete')
+  await expect(page.getByRole('button', { name: `Complete ${kind}` })).toHaveCount(0)
+}
+
+/**
+ * Type a score into a box and press Enter, then wait for that bowler's row to say Saved. A live
+ * update can redraw the sheet between the typing and the save and drop the entry, so a box whose row
+ * does not say Saved is typed again.
+ */
+async function saveBox(box: Locator, score: string) {
+  const row = box.locator('xpath=ancestor::li[1]')
+  for (let attempt = 1; ; attempt++) {
+    await box.fill(score)
+    await box.press('Enter')
+    try {
+      await expect(row.getByText('✓ Saved')).toBeVisible({ timeout: 3_000 })
+      return
+    } catch (error) {
+      if (attempt === 3) throw error
+    }
+  }
+}

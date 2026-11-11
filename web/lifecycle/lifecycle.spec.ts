@@ -28,9 +28,11 @@ import {
   divisionRow,
   sessionCard,
 } from './support/forms'
+import { assignAllLanes, completeSession, enterAllScores, openSquad } from './support/session'
+import { scoreFor, scoreOf } from './data/scores'
 import { VendorApi } from './support/vendorApi'
 import { idByDate, idByName, vendorRegistration } from './support/vendorPayload'
-import { deskBowlers, returning, siteBowlers } from './data/bowlers'
+import { deskBowlers, fullName, returning, siteBowlers } from './data/bowlers'
 import {
   afterDeskExpected,
   deskBatchOf,
@@ -361,9 +363,42 @@ test('stage 4: a division that does not fit, and a repeated payment code, change
   }
 })
 
-// Walk-ins arrive before the squad they want, so the desk registers in four batches. Lanes, scores,
-// and completing the squad run between the batches in later slices; until they exist the four
-// batches run one after another.
+function registrationCountsTest() {
+  test('stage 4: after the desk batches, the counts match the hand-worked table', async ({
+    page,
+  }) => {
+    await signIn(page, director)
+    await openTournamentPage(page, 'Registrations')
+    await expect(page.getByText('Bowlers registered').locator('+ dd')).toHaveText(
+      String(afterDeskExpected.registrations),
+    )
+    await expect(page.getByText('Super sweeper', { exact: true }).locator('+ dd')).toHaveText(
+      String(afterDeskExpected.superSweepers),
+    )
+    const bySquad = page.getByRole('region', { name: 'By squad' })
+    const expected = afterDeskExpected.squadEntries
+    for (const [squad, count] of [
+      [squadA, expected.A],
+      [squadB, expected.B],
+      [squadC, expected.C],
+      [squadD, expected.D],
+    ] as const) {
+      await expect(bySquad.getByRole('listitem').filter({ hasText: squad.label })).toContainText(
+        String(count),
+      )
+    }
+    const bySweeper = page.getByRole('region', { name: 'By sweeper' })
+    await expect(
+      bySweeper.getByRole('listitem').filter({ hasText: sweeperOne.label }),
+    ).toContainText(String(afterDeskExpected.sweeperOneEntries))
+    await expect(
+      bySweeper.getByRole('listitem').filter({ hasText: sweeperTwo.label }),
+    ).toContainText(String(afterDeskExpected.sweeperTwoEntries))
+  })
+}
+
+// Walk-ins arrive before the squad they want, so the desk registers in four batches, and each
+// squad is bowled and completed before the next batch arrives.
 for (const batch of deskBatches) {
   const squad = squads[batch]
   test(`stage 4: the desk registers batch ${batch + 1} of 15 new bowlers before squad ${'ABCD'[batch]}`, async ({
@@ -396,36 +431,28 @@ for (const batch of deskBatches) {
       String(before + 15),
     )
   })
-}
 
-test('stage 4: after the desk batches, the counts match the hand-worked table', async ({
-  page,
-}) => {
-  await signIn(page, director)
-  await openTournamentPage(page, 'Registrations')
-  await expect(page.getByText('Bowlers registered').locator('+ dd')).toHaveText(
-    String(afterDeskExpected.registrations),
-  )
-  await expect(page.getByText('Super sweeper', { exact: true }).locator('+ dd')).toHaveText(
-    String(afterDeskExpected.superSweepers),
-  )
-  const bySquad = page.getByRole('region', { name: 'By squad' })
-  const expected = afterDeskExpected.squadEntries
-  for (const [squad, count] of [
-    [squadA, expected.A],
-    [squadB, expected.B],
-    [squadC, expected.C],
-    [squadD, expected.D],
-  ] as const) {
-    await expect(bySquad.getByRole('listitem').filter({ hasText: squad.label })).toContainText(
-      String(count),
-    )
-  }
-  const bySweeper = page.getByRole('region', { name: 'By sweeper' })
-  await expect(bySweeper.getByRole('listitem').filter({ hasText: sweeperOne.label })).toContainText(
-    String(afterDeskExpected.sweeperOneEntries),
-  )
-  await expect(bySweeper.getByRole('listitem').filter({ hasText: sweeperTwo.label })).toContainText(
-    String(afterDeskExpected.sweeperTwoEntries),
-  )
-})
+  // After the last batch, every squad's entries are final: check them against the hand-worked table.
+  if (batch === 3) registrationCountsTest()
+
+  // Then the squad is bowled: lanes, scores, and complete, before the next batch arrives.
+  test(`stage 5 to 7: squad ${'ABCD'[batch]} gets lanes and scores, then completes`, async ({
+    page,
+  }) => {
+    const entered = Object.values(afterDeskExpected.squadEntries)[batch] ?? 0
+    await signIn(page, director)
+    const path = await openSquad(page, squad)
+    await assignAllLanes(page, squad, entered)
+    await enterAllScores(page, path, Number(tournament.games), scoreFor)
+    // The public Scores tab shows what the keeper typed: one site bowler's six games.
+    const bowler = siteBowlers.find((candidate) => squadsFor(candidate).includes(squad))
+    if (!bowler) throw new Error('No site bowler in this squad')
+    await page.goto(`${path}/scores`)
+    const row = page.getByRole('row').filter({ hasText: fullName(bowler) })
+    for (let game = 1; game <= Number(tournament.games); game++) {
+      await expect(row).toContainText(String(scoreOf(bowler, game)))
+    }
+    await page.goto(path)
+    await completeSession(page, 'squad', entered)
+  })
+}

@@ -1,6 +1,6 @@
 ---
 name: release-notes
-description: Generate GitHub release notes (a markdown file) for a new version of this repo. Takes the changes since the last release tag (or since the first commit for a first release), groups them by feature with PR references, derives a release title, and adds a Full Changelog link. Marks 0.x versions as pre-releases. Usage: /release-notes [new-version]
+description: Generate GitHub release notes (a markdown file) for a new version of this repo. Takes the changes since the last release tag (or since the first commit for a first release), groups them by feature with PR references, derives a release title, and adds a Full Changelog link. Marks 0.x and 1.0.0-rc.N versions as pre-releases. Usage: /release-notes [new-version]
 ---
 
 Generate release notes for a new release. Write them to `release-notes.md` at the repo root so they paste straight into a GitHub release.
@@ -76,7 +76,7 @@ Tell the user:
 
 - `release-notes.md` is written at the repo root, and which ref and range it covers.
 - Any commits left out and why.
-- The publish command, every time, with the title from step 5. Add `--prerelease` when the major version is 0, and `--target main`:
+- The publish command, every time, with the title from step 5. Add `--prerelease` when the major version is 0 or the version has an `-rc.N` suffix, and `--target main`:
 
   ```
   gh release create <new-version> --target main --title "<new-version>: <title phrase>" --notes-file release-notes.md [--prerelease]

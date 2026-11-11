@@ -32,11 +32,20 @@ import {
   assignAllLanes,
   checkDivisionResults,
   checkEarlierAdvancer,
+  checkSuperSweeper,
+  checkSweeperResults,
   completeSession,
   enterAllScores,
+  openSession,
   openSquad,
 } from './support/session'
-import { earlierAdvancer, expectedResults } from './data/expectedResults'
+import {
+  earlierAdvancer,
+  expectedResults,
+  superSweeperResults,
+  sweeperOneResults,
+  sweeperTwoResults,
+} from './data/expectedResults'
 import { scoreFor, scoreOf } from './data/scores'
 import { VendorApi } from './support/vendorApi'
 import { idByDate, idByName, vendorRegistration } from './support/vendorPayload'
@@ -472,5 +481,37 @@ for (const batch of deskBatches) {
     if (earlierAdvancer.squad === letter) {
       await checkEarlierAdvancer(page, path, earlierAdvancer.division, earlierAdvancer.name)
     }
+  })
+}
+
+// The sweepers follow the squads, in time order: one on Thursday evening, two on Friday morning.
+// Every entry is in by now (the site's and the desk's), so each gets lanes, three games, and complete.
+for (const [number, sweeper, entered] of [
+  [1, sweeperOne, afterDeskExpected.sweeperOneEntries],
+  [2, sweeperTwo, afterDeskExpected.sweeperTwoEntries],
+] as const) {
+  test(`stage 5 to 7: sweeper ${number === 1 ? 'one' : 'two'} gets lanes and scores, then completes`, async ({
+    page,
+  }) => {
+    const key = `S${number}`
+    await signIn(page, director)
+    const path = await openSession(page, sweeper, 'sweeper')
+    await assignAllLanes(page, sweeper, entered)
+    await enterAllScores(page, path, Number(sweeper.games), (name, game) =>
+      scoreFor(name, game, key),
+    )
+    // The public Scores tab shows what the keeper typed: one site bowler's three games.
+    const bowler = siteBowlers.find((candidate) => sweepersFor(candidate).includes(sweeper))
+    if (!bowler) throw new Error('No site bowler in this sweeper')
+    await page.goto(`${path}/scores`)
+    const row = page.getByRole('row').filter({ hasText: fullName(bowler) })
+    for (let game = 1; game <= Number(sweeper.games); game++) {
+      await expect(row).toContainText(String(scoreOf(bowler, game, key)))
+    }
+    await page.goto(path)
+    await completeSession(page, 'sweeper', entered)
+    await checkSweeperResults(page, path, number === 1 ? sweeperOneResults : sweeperTwoResults)
+    // Both sweepers are complete after the second: the super sweeper is official.
+    if (number === 2) await checkSuperSweeper(page, path, superSweeperResults)
   })
 }

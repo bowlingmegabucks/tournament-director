@@ -1,17 +1,26 @@
 import { expect, type Locator, type Page } from '@playwright/test'
-import type { ExpectedDivision } from '../data/expectedResults'
+import type { ExpectedDivision, ExpectedList } from '../data/expectedResults'
 import type { SquadData } from '../data/sessions'
 import { openTournamentPage } from './navigate'
 
-/** Open a squad from the Squads list by its date text. Returns its address, without a tab. */
-export async function openSquad(page: Page, squad: SquadData): Promise<string> {
-  await openTournamentPage(page, 'Squads')
-  await page.getByRole('link', { name: squad.label, exact: true }).click()
+/** Open a squad or sweeper from its list by its date text. Returns its address, without a tab. */
+export async function openSession(
+  page: Page,
+  session: SquadData,
+  kind: 'squad' | 'sweeper' = 'squad',
+): Promise<string> {
+  const folder = kind === 'squad' ? 'squads' : 'sweepers'
+  await openTournamentPage(page, kind === 'squad' ? 'Squads' : 'Sweepers')
+  await page.getByRole('link', { name: session.label, exact: true }).click()
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Open')
-  const match = /^(\/tournaments\/[^/]+\/squads\/[^/]+)/.exec(new URL(page.url()).pathname)
-  if (!match?.[1]) throw new Error(`Not on a squad page: ${page.url()}`)
+  const match = new RegExp(`^(/tournaments/[^/]+/${folder}/[^/]+)`).exec(
+    new URL(page.url()).pathname,
+  )
+  if (!match?.[1]) throw new Error(`Not on a ${kind} page: ${page.url()}`)
   return match[1]
 }
+
+export const openSquad = (page: Page, squad: SquadData) => openSession(page, squad)
 
 /**
  * On a squad's Lane assignments tab, put every unassigned bowler on a pair, one after another round
@@ -115,22 +124,43 @@ export async function checkDivisionResults(page: Page, squadPath: string, want: 
   await chooseDivision(page, want.division)
   const table = page.getByRole('table', { name: `Results for the ${want.division} division` })
   await expect(table).toBeVisible()
-  const actual = await table.locator('tbody tr').evaluateAll((rows) =>
-    rows.map((row) => {
-      const who = row.querySelector('th[scope="row"]')
+  await expectTable(table, table.locator('tbody tr'), want)
+}
+
+/** A sweeper's Results tab against the hand-written list. */
+export async function checkSweeperResults(page: Page, sweeperPath: string, want: ExpectedList) {
+  await page.goto(`${sweeperPath}/results`)
+  const table = page.getByRole('table', { name: 'Sweeper results' })
+  await expect(table).toBeVisible()
+  await expectTable(table, table.locator('tbody tr'), want)
+}
+
+/** The super sweeper page against the hand-written list (one `tbody` for each bowler or line). */
+export async function checkSuperSweeper(page: Page, sweeperPath: string, want: ExpectedList) {
+  await page.goto(sweeperPath.replace(/\/sweepers\/.*$/, '/super-sweeper'))
+  const table = page.getByRole('table', { name: 'Super sweeper results' })
+  await expect(table).toBeVisible()
+  await expectTable(table, table.locator('tbody'), want)
+}
+
+/** Read each row's name or line label, then compare with the expected order and tie notes. */
+async function expectTable(table: Locator, rows: Locator, want: ExpectedList) {
+  const actual = await rows.evaluateAll((elements) =>
+    elements.map((element) => {
+      const row = element.tagName === 'TR' ? element : element.querySelector('tr')
+      const who = row?.querySelector('th[scope="row"], th[scope="rowgroup"]')
       // The name is the first text of the cell; tags and tie notes follow in spans.
-      return who ? (who.firstChild?.textContent ?? '').trim() : (row.textContent ?? '').trim()
+      return who ? (who.firstChild?.textContent ?? '').trim() : (row?.textContent ?? '').trim()
     }),
   )
   let at = 0
   for (const item of want.order) {
     if (Array.isArray(item)) {
       expect(item).toContain(actual[at])
-      at++
     } else {
       expect(actual[at]).toBe(item)
-      at++
     }
+    at++
   }
   for (const [note, count] of Object.entries(want.notes)) {
     await expect(table.getByText(note, { exact: true })).toHaveCount(count)

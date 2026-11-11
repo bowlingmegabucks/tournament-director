@@ -9,6 +9,11 @@ const name = (index: number) => {
 /** A line between groups, a bowler's name, or the names one of which fills a row (a full tie). */
 export type ExpectedItem = 'Cut Line' | 'Cash Line' | 'No Advancers' | string | string[]
 
+export interface ExpectedList {
+  order: ExpectedItem[]
+  notes: Record<string, number>
+}
+
 export interface ExpectedDivision {
   squad: 'A' | 'B' | 'C' | 'D'
   division: string
@@ -97,3 +102,59 @@ export const expectedResults: ExpectedDivision[] = [
 
 /** Bowler 0 advanced in A, so squad C's Women or Seniors table tags them (RES-06, D-81). */
 export const earlierAdvancer = { squad: 'C', division: 'Women or Seniors', name: name(0) } as const
+
+const either = (a: number, b: number) => [name(a), name(b)]
+
+/**
+ * Sweeper one: N = 50, 7 cash. The formula gives some bowlers the same games, so those pairs list
+ * in either order. 54 and 81 tie fully across the cash line. 24 (bonus pins) ranks above 12.
+ */
+export const sweeperOneResults: ExpectedList = {
+  order: [
+    name(138),
+    name(69),
+    name(48),
+    name(144),
+    name(75),
+    name(6),
+    either(54, 81),
+    'Cash Line',
+    either(54, 81),
+    name(24),
+    name(12),
+  ],
+  notes: { 'Full tie at the cash line.': 2 },
+}
+
+/** Sweeper two: N = 75, 15 cash. 130 and 40 tie fully across the cash line. */
+export const sweeperTwoResults: ExpectedList = {
+  order: [
+    name(138),
+    name(12),
+    name(20),
+    name(48),
+    name(76),
+    either(124, 144),
+    either(124, 144),
+    either(6, 26),
+    either(6, 26),
+    either(34, 54),
+    either(34, 54),
+    either(62, 82),
+    either(62, 82),
+    name(110),
+    either(130, 40),
+    'Cash Line',
+    either(130, 40),
+  ],
+  notes: { 'Full tie at the cash line.': 2 },
+}
+
+/** Super sweeper: 5 bowlers, 1 cashes. 12 and 6 tie on total; 12 has the higher game. */
+export const superSweeperResults: ExpectedList = {
+  order: [name(12), 'Cash Line', name(6), name(0), name(96), name(90)],
+  notes: {
+    'Tied on total at the cash line. Won the spot on high game.': 1,
+    'Tied on total at the cash line. Lost the spot on high game.': 1,
+  },
+}

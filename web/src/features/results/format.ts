@@ -152,11 +152,11 @@ export function formatSweeperTotal(total: number | null): string {
 /** The score a bowler is measured against: 200 a game. */
 export const PAR_PER_GAME = 200
 
-/** "+192", "−12", or "±0": the total against 200 a game for the games bowled (the "+/−" column). */
+/** "+192", "−12", or "EVEN": the total against 200 a game for the games bowled (the "+/−" column). */
 export function formatPlusMinus(total: number, games: number): string {
   const difference = total - PAR_PER_GAME * games
   if (difference > 0) return `+${difference}`
-  return difference === 0 ? '±0' : `−${-difference}`
+  return difference === 0 ? 'EVEN' : `−${-difference}`
 }
 
 /** The sum of the games with a score. */

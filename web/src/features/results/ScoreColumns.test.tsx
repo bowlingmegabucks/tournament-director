@@ -165,3 +165,20 @@ describe('TotalCells', () => {
     }
   })
 })
+
+describe('TotalCells: where the totals start on a phone card', () => {
+  it('marks the first handicap total, so the card puts the three totals on their own line', () => {
+    inRow(<TotalCells scores={[200, 200]} total={430} handicap />)
+
+    const [scratch, handicap, total] = Array.from(screen.getByRole('row').children)
+    expect(scratch).toHaveClass(/totalsStart/)
+    expect(handicap).not.toHaveClass(/totalsStart/)
+    expect(total).not.toHaveClass(/totalsStart/)
+  })
+
+  it('marks nothing without a handicap: the one Total stays with the games', () => {
+    inRow(<TotalCells scores={[200, 200]} total={400} handicap={false} />)
+
+    expect(screen.getByRole('row').children[0]).not.toHaveClass(/totalsStart/)
+  })
+})

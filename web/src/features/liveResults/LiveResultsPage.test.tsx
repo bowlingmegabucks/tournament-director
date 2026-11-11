@@ -265,7 +265,7 @@ describe('LiveResultsPage pinned heading (D-254)', () => {
     const superSweeper = screen
       .getAllByRole('heading', { level: 2 })
       .find((heading) => heading.textContent?.startsWith('Super sweeper'))
-    expect(superSweeper?.closest('div')).toHaveTextContent('Cash line ±0')
+    expect(superSweeper?.closest('div')).toHaveTextContent('Cash line EVEN')
   })
 })
 

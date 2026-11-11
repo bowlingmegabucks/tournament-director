@@ -144,7 +144,7 @@
   .table tr > .place {
     grid-column: 1;
     grid-row: 1 / span 4;
-    align-self: start;
+    align-self: center;
     font-size: var(--font-size-lg);
     font-weight: 700;
   }
@@ -253,11 +253,31 @@
     grid-template-columns: 2.25rem repeat(auto-fill, minmax(3.25rem, 1fr));
   }
 
+  /*
+   * The +/- figure sits on the name's line at the right edge of the card: both take the first row of
+   * the same columns, the figure aligned to the end, and the name leaves room so a long one wraps
+   * before it reaches the figure.
+   */
   .table tr > .plusMinus {
     grid-column: 2 / -1;
-    padding-block-start: var(--space-1);
+    grid-row: 1;
+    align-self: start;
+    justify-self: end;
     font-size: var(--font-size-lg);
-    text-align: start;
+    text-align: end;
+  }
+
+  /*
+   * With a handicap the totals are three cells. They start a new line, under the games, instead of
+   * filling the rest of the games' line and wrapping two cells onto the next.
+   */
+  .table tr > .totalsStart {
+    grid-column: 2;
+  }
+
+  .games tbody tr > .who {
+    grid-row: 1;
+    padding-inline-end: calc(var(--space-6) * 3);
   }
 
   .table td.empty {
@@ -279,7 +299,7 @@
   .table tbody.bowler .place {
     grid-column: 1;
     grid-row: 1 / span 30;
-    align-self: start;
+    align-self: center;
     font-size: var(--font-size-lg);
     font-weight: 700;
   }
@@ -349,7 +369,7 @@
   .table.games tr > .place {
     grid-column: 1;
     grid-row: 1 / span 4;
-    align-self: start;
+    align-self: center;
     font-size: var(--font-size-lg);
     font-weight: 700;
   }

@@ -55,6 +55,15 @@
   --sidebar-width: 15rem;
 }
 
+/* On a phone the TV sizes would fill the screen with the pinned heading, so they shrink. */
+@media (max-width: 48rem) {
+  :root {
+    --font-size-tv-small: 0.875rem;
+    --font-size-tv-body: 1rem;
+    --font-size-tv-head: 1.25rem;
+  }
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     --color-bg: #fbf9f3;

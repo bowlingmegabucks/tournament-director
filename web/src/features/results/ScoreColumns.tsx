@@ -122,7 +122,7 @@ export function TotalCells({
   }
   return (
     <>
-      <td className={styles.num} data-label="Scratch Total">
+      <td className={`${styles.num} ${styles.totalsStart}`} data-label="Scratch Total">
         {figure(scratch)}
       </td>
       <td className={styles.num} data-label="Total HDCP">

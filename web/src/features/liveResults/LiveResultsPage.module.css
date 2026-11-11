@@ -48,7 +48,10 @@
 
 .view {
   block-size: 100%;
-  overflow: hidden;
+  /* The page scrolls itself, but a viewer can take over with a finger or wheel (it then pauses). */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
 }
 
 .block {
@@ -244,4 +247,18 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* A phone: the type is smaller (tokens.css), so the gutters tighten too, to leave room for rows. */
+@media (max-width: 48rem) {
+  .bar,
+  .strip,
+  .heading,
+  .lead {
+    padding-inline: var(--space-3);
+  }
+
+  .table {
+    margin-inline: var(--space-3);
+  }
 }

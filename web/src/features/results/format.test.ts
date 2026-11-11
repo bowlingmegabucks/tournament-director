@@ -352,12 +352,12 @@ describe('formatPlusMinus', () => {
   it('shows the total against 200 a game, with a sign', () => {
     expect(formatPlusMinus(992, 4)).toBe('+192')
     expect(formatPlusMinus(780, 4)).toBe('\u221220')
-    expect(formatPlusMinus(800, 4)).toBe('\u00b10')
+    expect(formatPlusMinus(800, 4)).toBe('EVEN')
   })
 
   it('counts only the games bowled', () => {
     expect(formatPlusMinus(210, 1)).toBe('+10')
-    expect(formatPlusMinus(0, 0)).toBe('\u00b10')
+    expect(formatPlusMinus(0, 0)).toBe('EVEN')
   })
 })
 
@@ -441,11 +441,11 @@ describe('the cut and cash lines as +/− (D-254)', () => {
     expect(lineFigures(createDivisionResult({ rows: two })).cut).toBe('+30')
   })
 
-  it('writes a figure below par with a minus and one on par as ±0', () => {
+  it('writes a figure below par with a minus and one on par as EVEN', () => {
     const below = [createSquadRow({ group: 'casher', total: 590 })]
     const par = [createSquadRow({ group: 'casher', total: 600 })]
     expect(lineFigures(createDivisionResult({ rows: below })).cash).toBe('−10')
-    expect(lineFigures(createDivisionResult({ rows: par })).cash).toBe('±0')
+    expect(lineFigures(createDivisionResult({ rows: par })).cash).toBe('EVEN')
   })
 
   it('has no cut or no cash when no one advances or cashes', () => {

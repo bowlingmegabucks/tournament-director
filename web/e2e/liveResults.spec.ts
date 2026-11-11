@@ -64,6 +64,63 @@ test('the TV page scrolls on its own, and the heading stays pinned at the top (R
   expect(Math.abs(headingTop - mainTop)).toBeLessThan(2)
 })
 
+test('on a phone the pinned heading leaves room for rows, and the page does not scroll sideways (RES-50, D-73)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await openTournament(page)
+  await menuLink(page, 'Live results')
+  const heading = page.getByRole('heading', { level: 2 }).first()
+  await expect(heading).toBeVisible()
+
+  // The heading block (name, counts, cut and cash lines) takes under a third of the screen.
+  const pinned = await heading.evaluate(
+    (node) => node.parentElement?.getBoundingClientRect().height,
+  )
+  expect(pinned).toBeLessThan(844 / 3)
+
+  // A bowler's +/- figure sits on the name's line, at the right edge of the card.
+  const row = page
+    .getByRole('row')
+    .filter({ has: page.getByRole('rowheader') })
+    .first()
+  const name = (await row.getByRole('rowheader').boundingBox()) ?? {
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  }
+  const figure = (await row.getByRole('cell').nth(1).boundingBox()) ?? name
+  const card = (await row.boundingBox()) ?? name
+  expect(Math.abs(figure.y - name.y)).toBeLessThan(8)
+  expect(figure.x).toBeGreaterThan(name.x)
+  expect(card.x + card.width - (figure.x + figure.width)).toBeLessThan(8)
+
+  const sideways = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  )
+  expect(sideways).toBe(false)
+})
+
+test('on a phone a handicap card puts its totals on their own line (D-73)', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await openTournament(page)
+  await menuLink(page, 'Live results')
+  // Only a handicap division has Scratch Total, so its cells are in the table that has the label.
+  const scratch = page.locator('td[data-label="Scratch Total"]').first()
+  await expect(scratch).toBeVisible()
+  const row = scratch.locator('xpath=ancestor::tr[1]')
+  const lastGame = row.locator('td[data-label^="G"]').last()
+  const gameBox = (await lastGame.boundingBox()) ?? { y: 0, height: 0 }
+  const scratchBox = (await scratch.boundingBox()) ?? gameBox
+
+  // The totals sit below the games, not beside them.
+  expect(scratchBox.y).toBeGreaterThan(gameBox.y + gameBox.height - 1)
+  // The three totals share one line.
+  const handicapTotal = (await row.locator('td[data-label="HDCP Total"]').boundingBox()) ?? gameBox
+  expect(Math.abs(handicapTotal.y - scratchBox.y)).toBeLessThan(4)
+})
+
 test('the Results tab keeps the ranking in the address (RES-45, D-239)', async ({ page }) => {
   // The squad page opens on its lanes, which need sign-in; the Results tab itself is public.
   await openTournamentsSignedIn(page)

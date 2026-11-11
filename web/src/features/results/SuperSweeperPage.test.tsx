@@ -249,7 +249,7 @@ describe('SuperSweeperPage', () => {
     expect(first).toEqual([
       '1',
       'Dana WhitfieldOpen',
-      '\u00b10',
+      'EVEN',
       'Fri 10/95 games',
       '200',
       '200',

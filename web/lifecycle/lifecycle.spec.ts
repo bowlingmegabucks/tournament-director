@@ -28,7 +28,15 @@ import {
   divisionRow,
   sessionCard,
 } from './support/forms'
-import { assignAllLanes, completeSession, enterAllScores, openSquad } from './support/session'
+import {
+  assignAllLanes,
+  checkDivisionResults,
+  checkEarlierAdvancer,
+  completeSession,
+  enterAllScores,
+  openSquad,
+} from './support/session'
+import { earlierAdvancer, expectedResults } from './data/expectedResults'
 import { scoreFor, scoreOf } from './data/scores'
 import { VendorApi } from './support/vendorApi'
 import { idByDate, idByName, vendorRegistration } from './support/vendorPayload'
@@ -443,16 +451,26 @@ for (const batch of deskBatches) {
     await signIn(page, director)
     const path = await openSquad(page, squad)
     await assignAllLanes(page, squad, entered)
-    await enterAllScores(page, path, Number(tournament.games), scoreFor)
+    const letter = 'ABCD'[batch] ?? ''
+    await enterAllScores(page, path, Number(tournament.games), (name, game) =>
+      scoreFor(name, game, letter),
+    )
     // The public Scores tab shows what the keeper typed: one site bowler's six games.
     const bowler = siteBowlers.find((candidate) => squadsFor(candidate).includes(squad))
     if (!bowler) throw new Error('No site bowler in this squad')
     await page.goto(`${path}/scores`)
     const row = page.getByRole('row').filter({ hasText: fullName(bowler) })
     for (let game = 1; game <= Number(tournament.games); game++) {
-      await expect(row).toContainText(String(scoreOf(bowler, game)))
+      await expect(row).toContainText(String(scoreOf(bowler, game, letter)))
     }
     await page.goto(path)
     await completeSession(page, 'squad', entered)
+    // The squad's results against the designed scores: places, lines, and tie notes.
+    for (const want of expectedResults.filter((candidate) => candidate.squad === letter)) {
+      await checkDivisionResults(page, path, want)
+    }
+    if (earlierAdvancer.squad === letter) {
+      await checkEarlierAdvancer(page, path, earlierAdvancer.division, earlierAdvancer.name)
+    }
   })
 }

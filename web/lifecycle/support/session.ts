@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test'
+import type { ExpectedDivision } from '../data/expectedResults'
 import type { SquadData } from '../data/sessions'
 import { openTournamentPage } from './navigate'
 
@@ -102,4 +103,56 @@ async function saveBox(box: Locator, score: string) {
       if (attempt === 3) throw error
     }
   }
+}
+
+/**
+ * On a squad's Results tab, pick a division and check its rows, lines, and tie notes against the
+ * hand-written expectation. Rows come as the page lists them: a line row gives its label, a bowler
+ * row gives the name. A list of names means the row holds any one of them (a full tie splits across a line).
+ */
+export async function checkDivisionResults(page: Page, squadPath: string, want: ExpectedDivision) {
+  await page.goto(`${squadPath}/results`)
+  await chooseDivision(page, want.division)
+  const table = page.getByRole('table', { name: `Results for the ${want.division} division` })
+  await expect(table).toBeVisible()
+  const actual = await table.locator('tbody tr').evaluateAll((rows) =>
+    rows.map((row) => {
+      const who = row.querySelector('th[scope="row"]')
+      // The name is the first text of the cell; tags and tie notes follow in spans.
+      return who ? (who.firstChild?.textContent ?? '').trim() : (row.textContent ?? '').trim()
+    }),
+  )
+  let at = 0
+  for (const item of want.order) {
+    if (Array.isArray(item)) {
+      expect(item).toContain(actual[at])
+      at++
+    } else {
+      expect(actual[at]).toBe(item)
+      at++
+    }
+  }
+  for (const [note, count] of Object.entries(want.notes)) {
+    await expect(table.getByText(note, { exact: true })).toHaveCount(count)
+  }
+}
+
+/** The bowler's row on a squad's results shows the earlier-advancer tag (RES-06). */
+export async function checkEarlierAdvancer(
+  page: Page,
+  squadPath: string,
+  division: string,
+  name: string,
+) {
+  await page.goto(`${squadPath}/results`)
+  await chooseDivision(page, division)
+  const table = page.getByRole('table', { name: `Results for the ${division} division` })
+  await expect(table.getByRole('row').filter({ hasText: name })).toContainText('Advanced earlier')
+}
+
+/** Pick a division by its name in the chooser, whose options read "Name (N entries)". */
+async function chooseDivision(page: Page, division: string) {
+  const chooser = page.getByRole('combobox', { name: 'Division' })
+  const option = chooser.getByRole('option', { name: new RegExp(`^${division} \\(`) })
+  await chooser.selectOption(await option.getAttribute('value'))
 }

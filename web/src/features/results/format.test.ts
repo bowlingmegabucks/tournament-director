@@ -13,9 +13,12 @@ import {
   formatDecider,
   formatFlagNote,
   formatFlagTag,
+  formatCashLine,
   formatGamesOf,
+  formatLines,
   formatPlusMinus,
   gameColumnCount,
+  lineTotals,
   formatSeedingSummary,
   formatSummary,
   formatSweeperColumn,
@@ -408,5 +411,47 @@ describe('games not counted yet (RES-46, D-239)', () => {
     expect(formatThroughLabel(3)).toBe('Through game 3')
     expect(formatThroughLabel(0)).toBe('Through the last full game')
     expect(formatThroughLabel(null)).toBe('Through the last full game')
+  })
+})
+
+describe('the totals at the cut and cash lines (D-254)', () => {
+  const rows = [
+    createSquadRow({ group: 'advancer', total: 827 }),
+    createSquadRow({ group: 'advancer', total: 819 }),
+    createSquadRow({ group: 'casher', total: 809 }),
+    createSquadRow({ group: 'casher', total: 790 }),
+    createSquadRow({ group: 'other', total: 700 }),
+  ]
+
+  it('takes the lowest total that advances and the lowest that cashes', () => {
+    expect(lineTotals(createDivisionResult({ rows }))).toEqual({ cut: 819, cash: 790 })
+  })
+
+  it('finds the lowest even when the rows are not in order (an earlier advancer who cashes)', () => {
+    const shuffled = [rows[3], rows[0], rows[2], rows[1]].filter((row) => row !== undefined)
+    expect(lineTotals(createDivisionResult({ rows: shuffled }))).toEqual({ cut: 819, cash: 790 })
+  })
+
+  it('has no cut or no cash when no one advances or cashes', () => {
+    expect(
+      lineTotals(createDivisionResult({ rows: [createSquadRow({ group: 'other', total: 600 })] })),
+    ).toEqual({ cut: null, cash: null })
+    expect(lineTotals(createDivisionResult({ rows: [] }))).toEqual({ cut: null, cash: null })
+  })
+
+  it('writes both lines for the pinned heading', () => {
+    expect(formatLines(createDivisionResult({ rows }))).toBe('Cut line 819 · Cash line 790')
+  })
+
+  it('says so when a line has no one', () => {
+    const noCash = [rows[0], rows[1]].filter((row) => row !== undefined)
+    expect(formatLines(createDivisionResult({ rows: noCash }))).toBe('Cut line 819 · No cash line')
+    expect(formatLines(createDivisionResult({ rows: [] }))).toBe('No cut line · No cash line')
+  })
+
+  it('writes the cash line of a sweeper from its cut score, and nothing without one', () => {
+    expect(formatCashLine(411)).toBe('Cash line 411')
+    expect(formatCashLine(0)).toBe('Cash line 0')
+    expect(formatCashLine(null)).toBe('')
   })
 })

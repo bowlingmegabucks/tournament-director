@@ -34,10 +34,34 @@ function TieMarks({ row }: Readonly<{ row: SquadRow }>) {
  * each game. Scratch Total, Total HDCP, and HDCP Total show only when the API says someone has a
  * handicap. Below 64rem on screen each row is a block. The screen and the print copy both draw it.
  */
+/**
+ * The two lines over a division's table: the counts, and the games it is ranked through (RES-46).
+ * The TV page pins them with the heading (D-254), so they are a part of their own.
+ */
+export function DivisionSummary({ division }: Readonly<{ division: DivisionResult }>) {
+  const pending = pendingGame(
+    division.rows.map((row) => row.scores),
+    division.throughGame,
+  )
+  const throughNote = formatThroughNote(division.throughGame, pending)
+  return (
+    <>
+      <p className={styles.sub}>{formatSummary(division)}</p>
+      {throughNote && <p className={styles.sub}>{throughNote}</p>}
+    </>
+  )
+}
+
 export function DivisionBody({
   division,
   games,
-}: Readonly<{ division: DivisionResult; games: number }>) {
+  summary = true,
+}: Readonly<{
+  division: DivisionResult
+  games: number
+  /** Draw the summary lines (the default). The TV page draws them in its pinned heading instead. */
+  summary?: boolean
+}>) {
   const items = squadItems(division.rows)
   const count = gameColumnCount(games, [
     ...division.rows.map((row) => row.scores),
@@ -49,12 +73,10 @@ export function DivisionBody({
     division.rows.map((row) => row.scores),
     division.throughGame,
   )
-  const throughNote = formatThroughNote(division.throughGame, pending)
 
   return (
     <>
-      <p className={styles.sub}>{formatSummary(division)}</p>
-      {throughNote && <p className={styles.sub}>{throughNote}</p>}
+      {summary && <DivisionSummary division={division} />}
 
       {division.rows.length === 0 ? (
         <p>No bowler in this division has finished the squad.</p>

@@ -23,6 +23,7 @@ export function createInMemoryDnfStore(
     listFlagged(sessionIds) {
       const found = new Map<string, Set<string>>()
       for (const key of state) {
+        // Stryker disable next-line StringLiteral: every key holds a bar, so the defaults are never read.
         const [sessionId = '', registrationId = ''] = key.split('|')
         if (!sessionIds.includes(sessionId)) continue
         found.set(sessionId, (found.get(sessionId) ?? new Set()).add(registrationId))

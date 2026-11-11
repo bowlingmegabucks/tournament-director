@@ -49,6 +49,7 @@ export interface LiveNotifierDeps {
 }
 
 /** The key of a sweeper in a snapshot: a sweeper is one group. */
+// Stryker disable next-line StringLiteral: any text works as the key, as long as it is not a division id.
 const SWEEPER = ''
 
 export function createLiveNotifier({
@@ -99,6 +100,7 @@ export function createLiveNotifier({
           const was = counted.get(group) ?? 0
           const game = now.get(group) ?? 0
           if (game === was) return []
+          // Stryker disable next-line EqualityOperator: equal counts left the loop above, so `>` and `>=` agree.
           return [{ group, game, up: game > was }]
         })
         if (changes.length === 0) return

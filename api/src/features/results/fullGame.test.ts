@@ -117,6 +117,17 @@ describe('limitToCountedGames (RES-40)', () => {
     expect(entries[1]?.total).toBe(630)
   })
 
+  it('leaves a game with no saved score out of a flagged bowler\u2019s games', () => {
+    const gappy = entry([200, null, 200])
+    const { entries } = limitToCountedGames(
+      [gappy, entry([210, 210, 210])],
+      byDivision,
+      new Set([gappy.registrationId]),
+    )
+    expect(entries[0]?.games).toEqual([200, 200])
+    expect(entries[0]?.total).toBe(400)
+  })
+
   it('adds the pins for each counted game only', () => {
     const { entries } = limitToCountedGames(
       [entry([200, 200, 200], { pins: 10 }), entry([200, 200], { pins: 0 })],

@@ -148,14 +148,14 @@ function serve(feed: LiveResults = feedOf()) {
   return { calls, set: (next: LiveResults) => (current = next) }
 }
 
-const open = () => renderApp(`/tournaments/${tournament.id}/liveResults`)
+const open_ = () => renderApp(`/tournaments/${tournament.id}/liveResults`)
 
 const headings = () => screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
 
 describe('LiveResultsPage (RES-50, D-242)', () => {
   it('shows every squad division, the sweeper, and the super sweeper, with one h1', async () => {
     serve()
-    open()
+    open_()
 
     expect(
       await screen.findByRole('heading', { level: 1, name: /Live results · Spring Open/ }),
@@ -170,7 +170,7 @@ describe('LiveResultsPage (RES-50, D-242)', () => {
 
   it('names each screen and tags the unofficial ones with the games counted (D-84, D-239)', async () => {
     serve()
-    open()
+    open_()
     await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
 
     const first = screen.getAllByRole('heading', { level: 2 })[0]
@@ -186,7 +186,7 @@ describe('LiveResultsPage (RES-50, D-242)', () => {
     if (squad?.kind !== 'squad') throw new Error('fixture')
     squad.results.session.complete = true
     serve(feed)
-    open()
+    open_()
     await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
 
     expect(screen.getAllByRole('heading', { level: 2 })[0]).not.toHaveTextContent('Unofficial')
@@ -194,7 +194,7 @@ describe('LiveResultsPage (RES-50, D-242)', () => {
 
   it('has no header, main menu, or tournament sidebar: the page is the screen (D-242)', async () => {
     serve()
-    open()
+    open_()
     await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
 
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument()
@@ -204,7 +204,7 @@ describe('LiveResultsPage (RES-50, D-242)', () => {
 
   it('needs no sign-in', async () => {
     serve()
-    open()
+    open_()
     expect(await screen.findByRole('heading', { level: 1 })).toBeVisible()
     await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
     expect(screen.queryByText(/Sign in/)).not.toBeInTheDocument()
@@ -212,7 +212,7 @@ describe('LiveResultsPage (RES-50, D-242)', () => {
 
   it('sets the page title', async () => {
     serve()
-    open()
+    open_()
     await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
     await waitFor(() => {
       expect(document.title).toBe('Live results · Spring Open · Tournament Director')
@@ -221,10 +221,51 @@ describe('LiveResultsPage (RES-50, D-242)', () => {
 
   it('says when the board last updated on the strip, with nothing else waiting (D-245)', async () => {
     serve()
-    open()
+    open_()
     await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
 
     expect(screen.getAllByRole('status')[0]).toHaveTextContent(/^Updated \d{1,2}:\d{2} (am|pm)$/)
+  })
+})
+
+describe('LiveResultsPage pinned heading (D-254)', () => {
+  it('puts the counts and the totals at the cut and cash lines in the heading block of each screen', async () => {
+    const feed = feedOf()
+    const squad = feed.sessions[0]
+    if (squad?.kind !== 'squad') throw new Error('fixture')
+    const open = squad.results.divisions[0]
+    if (!open) throw new Error('fixture')
+    open.rows = [
+      createSquadRow({ name: 'Dana Whitcomb', place: 1, group: 'advancer', total: 827 }),
+      createSquadRow({ name: 'Mike Orsini', place: 2, group: 'casher', total: 809 }),
+      createSquadRow({ name: 'Lou Brandt', place: 3, group: 'other', total: 700 }),
+    ]
+    serve(feed)
+    open_()
+
+    await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
+
+    const heading = screen.getAllByRole('heading', { level: 2 })[0]
+    const block = heading?.closest('div')
+    expect(block).toHaveTextContent('Cut line 827 · Cash line 809')
+    expect(block).toHaveTextContent('Ranked through game 2.')
+    // The table below holds the rows, not the lines.
+    expect(block?.querySelector('table')).toBeNull()
+  })
+
+  it('gives a sweeper and the super sweeper their cash line', async () => {
+    serve()
+    open_()
+    await screen.findByRole('table', { name: 'Sweeper results' }, { timeout: 3000 })
+
+    const sweeper = screen
+      .getAllByRole('heading', { level: 2 })
+      .find((heading) => heading.textContent?.startsWith('Sweeper'))
+    expect(sweeper?.closest('div')).toHaveTextContent('Cash line 230')
+    const superSweeper = screen
+      .getAllByRole('heading', { level: 2 })
+      .find((heading) => heading.textContent?.startsWith('Super sweeper'))
+    expect(superSweeper?.closest('div')).toHaveTextContent('Cash line 1200')
   })
 })
 
@@ -240,7 +281,7 @@ describe('LiveResultsPage states (RES-50, D-246)', () => {
         return HttpResponse.json(feedOf())
       }),
     )
-    open()
+    open_()
 
     expect(await screen.findByText('Loading results…', {}, { timeout: 3000 })).toBeVisible()
     release()
@@ -249,7 +290,7 @@ describe('LiveResultsPage states (RES-50, D-246)', () => {
 
   it('says "No scores entered yet." and that the page updates on its own', async () => {
     serve(createLiveResults({ tournament: { id: tournament.id, name: 'Spring Open' } }))
-    open()
+    open_()
 
     expect(await screen.findByText('No scores entered yet.', {}, { timeout: 3000 })).toBeVisible()
     expect(screen.getByText(/It updates on its own/)).toBeVisible()
@@ -265,7 +306,7 @@ describe('LiveResultsPage states (RES-50, D-246)', () => {
         return asked <= 2 ? new HttpResponse(null, { status: 500 }) : HttpResponse.json(feedOf())
       }),
     )
-    open()
+    open_()
 
     expect(await screen.findByRole('alert', {}, { timeout: 8000 })).toHaveTextContent(
       'Could not load results.',
@@ -282,7 +323,7 @@ describe('LiveResultsPage states (RES-50, D-246)', () => {
     server.use(
       http.get('/v1/tournaments/:id/live-results', () => new HttpResponse(null, { status: 404 })),
     )
-    open()
+    open_()
     expect(await screen.findByRole('alert', {}, { timeout: 3000 })).toBeVisible()
   })
 })
@@ -292,7 +333,7 @@ describe('LiveResultsPage follows the stream (RES-49, RES-50, D-243 to D-245)', 
 
   async function ready(feed = feedOf()) {
     const served = serve(feed)
-    open()
+    open_()
     await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
     act(() => {
       FakeEventSource.latest().open()
@@ -499,7 +540,7 @@ describe('LiveResultsPage offline and keeping alive (RES-52, D-246)', () => {
   it('keeps the last results and says since when they are old, when a refresh fails', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     serve()
-    open()
+    open_()
     await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
     server.use(
       http.get('/v1/tournaments/:id/live-results', () => new HttpResponse(null, { status: 503 })),
@@ -520,7 +561,7 @@ describe('LiveResultsPage offline and keeping alive (RES-52, D-246)', () => {
   it('drops the line once a refresh works again', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     serve()
-    open()
+    open_()
     await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
     server.use(
       http.get('/v1/tournaments/:id/live-results', () => new HttpResponse(null, { status: 503 })),
@@ -544,7 +585,7 @@ describe('LiveResultsPage offline and keeping alive (RES-52, D-246)', () => {
     const request = vi.fn(() => Promise.resolve({ release: () => Promise.resolve() }))
     Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true })
     serve()
-    open()
+    open_()
     await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
 
     await waitFor(() => {
@@ -562,7 +603,7 @@ describe('LiveResultsPage with reduced motion (RES-53)', () => {
       removeEventListener: () => undefined,
     }))
     serve()
-    open()
+    open_()
 
     await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
 

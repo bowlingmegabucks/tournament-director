@@ -216,6 +216,9 @@ describe('live notifier (RES-49, D-243)', () => {
       'Could not read the counted games',
       'Could not tell the live results of a change',
     ])
+    // Ids and the cause, so the line can be found; never a name or a score.
+    for (const line of lines) expect(line).toMatchObject({ tournamentId, sessionId })
+    expect(lines[0]?.err).toBeDefined()
   })
 
   it('says a session completed and drops the feed (RES-49)', () => {

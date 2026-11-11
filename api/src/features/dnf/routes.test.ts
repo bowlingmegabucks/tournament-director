@@ -28,6 +28,7 @@ function setup(options: { complete?: boolean; tournamentComplete?: boolean } = {
   const sweeper = createSweeper()
   const scored = createLaneEntry({ divisionId: open.id })
   const unscored = createLaneEntry({ divisionId: open.id })
+  const alsoScored = createLaneEntry({ divisionId: open.id })
   const inSweeper = createLaneEntry({ divisionId: open.id })
   const dnf = createInMemoryDnfStore()
   const captured = createCapturedLogger('debug')
@@ -64,10 +65,12 @@ function setup(options: { complete?: boolean; tournamentComplete?: boolean } = {
     lanes: createInMemoryLaneRepository([
       { sessionId: squad.id, entry: scored },
       { sessionId: squad.id, entry: unscored },
+      { sessionId: squad.id, entry: alsoScored },
       { sessionId: sweeper.id, entry: inSweeper },
     ]),
     scores: createInMemoryScoreRepository([
       { sessionId: squad.id, score: { bowlerId: scored.bowlerId, game: 1, score: 200 } },
+      { sessionId: squad.id, score: { bowlerId: alsoScored.bowlerId, game: 1, score: 180 } },
       { sessionId: sweeper.id, score: { bowlerId: inSweeper.bowlerId, game: 1, score: 190 } },
     ]),
   }
@@ -208,6 +211,32 @@ describe('PUT .../scores/:registrationId/dnf (SCR-24)', () => {
     const line = captured.records().find((entry) => entry.msg === 'Did not finish set')
     expect(line).toMatchObject({ squadId: squad.id, registrationId: scored.registrationId })
     expect(JSON.stringify(line)).not.toContain(scored.name)
+  })
+})
+
+describe('PUT .../scores/:registrationId/dnf: which scores count (SCR-24)', () => {
+  it('looks at the bowler\u2019s own score, not at everyone\u2019s, and logs a refusal', async () => {
+    const { overrides, url, scored, unscored, dnf, captured } = setup()
+    const app = createSignedInTestApp(overrides)
+
+    // Another bowler of the squad has a score too (see `alsoScored` in the setup).
+    expect((await request(app).put(url(scored.registrationId))).status).toBe(204)
+    expect((await request(app).put(url(unscored.registrationId))).status).toBe(409)
+
+    expect(dnf.state.size).toBe(1)
+    expect(captured.records().some((line) => line.msg === 'DNF change refused: no score')).toBe(
+      true,
+    )
+  })
+
+  it('logs when a flag is taken off', async () => {
+    const { overrides, url, scored, captured } = setup()
+    const app = createSignedInTestApp(overrides)
+    await request(app).put(url(scored.registrationId))
+
+    await request(app).delete(url(scored.registrationId))
+
+    expect(captured.records().some((line) => line.msg === 'Did not finish cleared')).toBe(true)
   })
 })
 

@@ -203,3 +203,30 @@ export function formatThroughLabel(throughGame: number | null): string {
     ? 'Through the last full game'
     : `Through game ${throughGame}`
 }
+
+/**
+ * The total at each line of a squad division (D-254): the lowest total that advances (the cut line)
+ * and the lowest that cashes (the cash line), `null` when no one does. The totals are the ones the
+ * rows hold, so they count the handicap and only the games counted.
+ */
+export function lineTotals(division: DivisionResult): { cut: number | null; cash: number | null } {
+  const lowest = (group: SquadRow['group']) => {
+    const totals = division.rows.filter((row) => row.group === group).map((row) => row.total)
+    return totals.length === 0 ? null : Math.min(...totals)
+  }
+  return { cut: lowest('advancer'), cash: lowest('casher') }
+}
+
+/** "Cut line 809 · Cash line 790" for the pinned heading of the TV page (D-254). */
+export function formatLines(division: DivisionResult): string {
+  const { cut, cash } = lineTotals(division)
+  return [
+    cut === null ? 'No cut line' : `Cut line ${cut}`,
+    cash === null ? 'No cash line' : `Cash line ${cash}`,
+  ].join(' · ')
+}
+
+/** "Cash line 411" for a sweeper or the super sweeper, from the API's cut score (D-254); empty with none. */
+export function formatCashLine(cutScore: number | null): string {
+  return cutScore === null ? '' : `Cash line ${cutScore}`
+}

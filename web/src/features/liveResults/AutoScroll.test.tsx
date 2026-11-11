@@ -14,6 +14,10 @@ const frames = {
   },
 }
 
+/** What the view was last told to scroll to. The sticky headings need a real scroll, not a transform (D-254). */
+const scrolled: number[] = []
+const position = () => scrolled.at(-1)
+
 function size(list: number, view: number) {
   vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(list)
   vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(view)
@@ -21,6 +25,10 @@ function size(list: number, view: number) {
 
 beforeEach(() => {
   pending = []
+  scrolled.length = 0
+  vi.spyOn(Element.prototype, 'scrollTop', 'set').mockImplementation((value: number) => {
+    scrolled.push(value)
+  })
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
     pending.push(callback)
     return pending.length
@@ -34,9 +42,6 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-/** The element that moves: the parent of the list. */
-const track = () =>
-  screen.getAllByText('Open table')[0]?.closest('div')?.parentElement as HTMLElement
 const content = (
   <>
     <p>Open table</p>
@@ -51,7 +56,7 @@ describe('AutoScroll (RES-50, D-242)', () => {
     frames.at(0)
     frames.at(1000)
 
-    expect(track().style.transform).toBe(`translateY(${-SCROLL_PX_PER_SECOND}px)`)
+    expect(position()).toBe(SCROLL_PX_PER_SECOND)
     expect(SCROLL_PX_PER_SECOND).toBe(40)
   })
 
@@ -63,7 +68,7 @@ describe('AutoScroll (RES-50, D-242)', () => {
     frames.at(250)
     frames.at(2500)
 
-    expect(track().style.transform).toBe('translateY(-100px)')
+    expect(position()).toBe(100)
   })
 
   it('starts over when it has moved one list height, with no jump (the copy is in the same place)', () => {
@@ -72,9 +77,9 @@ describe('AutoScroll (RES-50, D-242)', () => {
 
     frames.at(0)
     frames.at(25_000) // 1000 px: the whole first copy
-    expect(track().style.transform).toBe('translateY(0px)')
+    expect(position()).toBe(0)
     frames.at(26_000)
-    expect(track().style.transform).toBe('translateY(-40px)')
+    expect(position()).toBe(40)
   })
 
   it('draws the content twice, the second copy hidden from screen readers', () => {
@@ -95,7 +100,7 @@ describe('AutoScroll (RES-50, D-242)', () => {
     frames.at(0)
     frames.at(5000)
 
-    expect(track().style.transform).toBe('')
+    expect(position()).toBe(0)
     expect(screen.getAllByText('Open table')[1]?.closest('[aria-hidden="true"]')).not.toBeVisible()
   })
 
@@ -108,11 +113,11 @@ describe('AutoScroll (RES-50, D-242)', () => {
     rerender(<AutoScroll>{content}</AutoScroll>)
     frames.at(1000)
     frames.at(2000)
-    expect(track().style.transform).toBe('translateY(-40px)')
+    expect(position()).toBe(40)
 
     size(300, 400)
     frames.at(3000)
-    expect(track().style.transform).toBe('')
+    expect(position()).toBe(0)
   })
 
   it('keeps its place when the content is swapped for new content (D-244)', () => {
@@ -120,7 +125,7 @@ describe('AutoScroll (RES-50, D-242)', () => {
     const { rerender } = render(<AutoScroll>{content}</AutoScroll>)
     frames.at(0)
     frames.at(5000)
-    expect(track().style.transform).toBe('translateY(-200px)')
+    expect(position()).toBe(200)
 
     rerender(
       <AutoScroll>
@@ -130,7 +135,7 @@ describe('AutoScroll (RES-50, D-242)', () => {
     )
     frames.at(6000)
 
-    expect(track().style.transform).toBe('translateY(-240px)')
+    expect(position()).toBe(240)
   })
 
   it('stops while the tab is hidden, and the first frame back does not jump', () => {
@@ -141,12 +146,12 @@ describe('AutoScroll (RES-50, D-242)', () => {
     const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true)
 
     frames.at(60_000)
-    expect(track().style.transform).toBe('translateY(-40px)')
+    expect(position()).toBe(40)
 
     hidden.mockReturnValue(false)
     frames.at(61_000)
     frames.at(62_000)
-    expect(track().style.transform).toBe('translateY(-80px)')
+    expect(position()).toBe(80)
   })
 
   it('goes at the speed it is given', () => {
@@ -156,7 +161,7 @@ describe('AutoScroll (RES-50, D-242)', () => {
     frames.at(0)
     frames.at(1000)
 
-    expect(track().style.transform).toBe('translateY(-100px)')
+    expect(position()).toBe(100)
   })
 
   it('asks for no more frames once the page goes', () => {

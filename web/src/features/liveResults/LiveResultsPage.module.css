@@ -55,10 +55,40 @@
   padding-block-end: var(--space-6);
 }
 
+/*
+ * The pinned block (D-254): the heading, the counts, and the lines stay at the top of the view
+ * until the next section pushes them out (a sticky box stays inside its own section). It needs a
+ * background, or the rows would show through it.
+ */
+.pinned {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+  background: var(--color-bg);
+}
+
 .heading {
   margin: 0;
   padding: var(--space-4) var(--space-6) var(--space-2);
   font-size: var(--font-size-tv-head);
+}
+
+.lead {
+  padding-inline: var(--space-6);
+  padding-block-end: var(--space-2);
+}
+
+/* The totals at the cut and cash lines: the figures to read from across the room (D-254). */
+.lead p {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-tv-small);
+}
+
+.lead .lines {
+  margin: 0;
+  color: var(--color-accent);
+  font-size: var(--font-size-tv-body);
+  font-weight: 700;
 }
 
 .tag {
@@ -84,6 +114,11 @@
 }
 
 .table table thead th {
+  position: sticky;
+  /* Under the pinned block, whose height the section sets as --pinned. */
+  inset-block-start: var(--pinned, 0);
+  z-index: 1;
+  background: var(--color-bg);
   font-size: var(--font-size-tv-small);
 }
 

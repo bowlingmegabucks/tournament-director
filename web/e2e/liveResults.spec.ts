@@ -40,17 +40,24 @@ test('the sidebar opens the TV page, which fills the screen with every screen of
   await expect(page.getByRole('status').first()).toHaveText(/^Updated \d{1,2}:\d{2} (am|pm)$/)
 })
 
-test('the TV page scrolls on its own (RES-50)', async ({ page }) => {
+test('the TV page scrolls on its own, and the heading stays pinned at the top (RES-50, D-254)', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1280, height: 400 })
   await openTournament(page)
   await menuLink(page, 'Live results')
   const heading = page.getByRole('heading', { level: 2 }).first()
   await expect(heading).toBeVisible()
-  const top = async () => (await heading.boundingBox())?.y ?? 0
-  const before = await top()
+  const view = page.locator('main > div').first()
+  const scrolled = () => view.evaluate((node) => node.scrollTop)
 
-  // 40 pixels a second: half a second is enough to see it move up.
-  await expect.poll(top, { timeout: 5000 }).toBeLessThan(before - 5)
+  // 40 pixels a second: it moves within a few seconds.
+  await expect.poll(scrolled, { timeout: 8000 }).toBeGreaterThan(5)
+
+  // The first division's heading sits at the top of the view while its rows go past.
+  const mainTop = (await page.locator('main').boundingBox())?.y ?? 0
+  const headingTop = (await heading.boundingBox())?.y ?? 0
+  expect(Math.abs(headingTop - mainTop)).toBeLessThan(2)
 })
 
 test('the Results tab keeps the ranking in the address (RES-45, D-239)', async ({ page }) => {

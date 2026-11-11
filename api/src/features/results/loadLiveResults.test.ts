@@ -225,8 +225,52 @@ describe('loadLiveResults (RES-47, D-242, D-244)', () => {
 
     expect(result.superSweeper).toBeNull()
     expect(result.sessions).toHaveLength(2)
+    const line = captured
+      .records()
+      .find((entry) => /left out of the live results/.test(String(entry.msg)))
+    expect(line).toMatchObject({ tournamentId: tournament.id })
+  })
+
+  it('does not hide another failure of the super sweeper (D-93)', async () => {
+    const sweeper = createSweeper({ cashRatio: 2, games: 2 })
+    const world = setup({
+      sweepers: [sweeper],
+      seats: [{ sessionId: sweeper.id, entry: bowler({ superSweeper: true }), games: [200, 200] }],
+    })
+    const failing = {
+      ...world.deps,
+      tournaments: {
+        ...world.deps.tournaments,
+        getRatios: () => Promise.reject(new HttpError(503, 'The database is down')),
+      },
+    }
+
+    await expect(
+      loadLiveResults(failing, world.reporting, world.tournament.id),
+    ).rejects.toMatchObject({
+      status: 503,
+    })
+  })
+
+  it('names the squad in the 422 message (D-83)', async () => {
+    const world = setup({ squads: [squadAt('2026-10-24T09:00:00', { cashRatio: 0 })] })
+    await expect(loadLiveResults(world.deps, world.reporting, world.tournament.id)).rejects.toThrow(
+      /^A squad's cash ratio is 0/,
+    )
+  })
+
+  it('logs an entry whose division is not the tournament\u2019s, once (D-51)', async () => {
+    const squad = squadAt('2026-10-24T09:00:00')
+    const lost = bowler({ divisionId: createDivision().id })
+    const world = setup({
+      squads: [squad],
+      seats: [{ sessionId: squad.id, entry: lost, games: [200] }],
+    })
+
+    await loadLiveResults(world.deps, world.reporting, world.tournament.id)
+
     expect(
-      captured.records().some((line) => /left out of the live results/.test(String(line.msg))),
+      world.captured.records().some((line) => line.registrationId === lost.registrationId),
     ).toBe(true)
   })
 

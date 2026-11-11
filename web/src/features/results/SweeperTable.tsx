@@ -20,15 +20,33 @@ function formatBonus(row: SweeperRow): string {
  * HDCP Total when a division has bonus pins; one Total when not), with a "Cash Line" after the last
  * casher. `games` is the games of the sweeper.
  */
+/** The line over a sweeper's table: the games it is ranked through (RES-46). The TV pins it (D-254). */
+export function SweeperNote({
+  rows,
+  throughGame,
+}: Readonly<{ rows: SweeperResults['rows']; throughGame: number | null }>) {
+  const note = formatThroughNote(
+    throughGame,
+    pendingGame(
+      rows.map((row) => row.scores),
+      throughGame,
+    ),
+  )
+  return note ? <p className={styles.sub}>{note}</p> : null
+}
+
 export function SweeperTable({
   rows,
   games,
   throughGame = null,
+  note = true,
 }: Readonly<{
   rows: SweeperResults['rows']
   games: number
   /** The games counted (RES-41); `null` when every game counts. */
   throughGame?: number | null
+  /** Draw the line over the table (the default). The TV page draws it in its pinned heading. */
+  note?: boolean
 }>) {
   const items = sweeperItems(rows)
   const count = gameColumnCount(
@@ -40,10 +58,9 @@ export function SweeperTable({
     rows.map((row) => row.scores),
     throughGame,
   )
-  const throughNote = formatThroughNote(throughGame, pending)
   return (
     <>
-      {throughNote && <p className={styles.sub}>{throughNote}</p>}
+      {note && <SweeperNote rows={rows} throughGame={throughGame} />}
       <table className={`${styles.table} ${styles.games}`}>
         <caption className={styles.hidden}>Sweeper results</caption>
         <thead className={styles.head}>

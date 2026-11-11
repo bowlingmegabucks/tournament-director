@@ -1,6 +1,6 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AutoScroll, SCROLL_PX_PER_SECOND } from './AutoScroll'
+import { AutoScroll, IDLE_RESUME_MS, SCROLL_PX_PER_SECOND } from './AutoScroll'
 
 /** A frame clock a test steps by hand: each `at(ms)` runs the callbacks asked for since the last. */
 let pending: FrameRequestCallback[] = []
@@ -29,6 +29,8 @@ beforeEach(() => {
   vi.spyOn(Element.prototype, 'scrollTop', 'set').mockImplementation((value: number) => {
     scrolled.push(value)
   })
+  // A real view keeps the position it was given; the pause reads it back to carry on from there.
+  vi.spyOn(Element.prototype, 'scrollTop', 'get').mockImplementation(() => scrolled.at(-1) ?? 0)
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
     pending.push(callback)
     return pending.length
@@ -172,5 +174,75 @@ describe('AutoScroll (RES-50, D-242)', () => {
     unmount()
 
     expect(pending).toEqual([])
+  })
+
+  describe('a viewer takes over (touch, wheel, keys)', () => {
+    // The first div inside Testing Library's container is the scrolling view.
+    const viewOf = () => document.body.querySelector<HTMLElement>('div > div') as HTMLElement
+
+    it('stops while a finger is down, however long', () => {
+      size(1000, 400)
+      render(<AutoScroll>{content}</AutoScroll>)
+      frames.at(0)
+      frames.at(1000)
+      expect(position()).toBe(40)
+
+      fireEvent.touchStart(viewOf())
+      frames.at(2000)
+      frames.at(60_000)
+
+      expect(position()).toBe(40)
+    })
+
+    it('waits for the idle time after the finger lifts, then goes on from the same place', () => {
+      size(1000, 400)
+      render(<AutoScroll>{content}</AutoScroll>)
+      frames.at(0)
+      frames.at(1000)
+      fireEvent.touchStart(viewOf())
+      frames.at(2000)
+      fireEvent.touchEnd(viewOf())
+      frames.at(3000) // the idle time starts here
+
+      frames.at(3000 + IDLE_RESUME_MS - 1)
+      expect(position()).toBe(40)
+
+      frames.at(3000 + IDLE_RESUME_MS)
+      frames.at(3000 + IDLE_RESUME_MS + 1000)
+      expect(position()).toBe(80)
+    })
+
+    it('pauses for the idle time after a wheel turn or a key press', () => {
+      for (const interact of [
+        () => fireEvent.wheel(viewOf()),
+        () => fireEvent.keyDown(viewOf(), { key: 'ArrowDown' }),
+      ]) {
+        pending = []
+        scrolled.length = 0
+        const { unmount } = render(<AutoScroll>{content}</AutoScroll>)
+        size(1000, 400)
+        frames.at(0)
+        frames.at(1000)
+        interact()
+        frames.at(2000)
+        frames.at(2000 + IDLE_RESUME_MS - 1)
+
+        expect(position()).toBe(40)
+        unmount()
+      }
+    })
+
+    it('stops listening when the page goes', () => {
+      size(1000, 400)
+      const { unmount } = render(<AutoScroll>{content}</AutoScroll>)
+      const view = viewOf()
+      unmount()
+
+      act(() => {
+        fireEvent.touchStart(view)
+      })
+
+      expect(pending).toEqual([])
+    })
   })
 })

@@ -4,11 +4,14 @@ export const webUrl = 'http://localhost:4273'
 export const mailUrl = 'http://localhost:15425'
 export const databaseUrl = 'mariadb://lifecycle:lifecycle4money@localhost:15406/lifecycle'
 
+/** The key the registration site sends. */
+export const apiKey = 'lifecycle_apiKey_thisIsForTestingOnly'
+
 /** The API's settings (rule 9): no mocks, a rate limit the run never meets, real mail. */
 export const apiEnv = {
   PORT: '3100',
   DATABASE_URL: databaseUrl,
-  API_KEY: 'lifecycle_apiKey_thisIsForTestingOnly',
+  API_KEY: apiKey,
   AUTH_SECRET: 'lifecycle_authSecret_thisIsForTestingOnly',
   AUTH_BASE_URL: apiUrl,
   CORS_ORIGIN: webUrl,

@@ -1,6 +1,7 @@
 import { useParams } from 'react-router'
 import { Loading } from '../../shared/Loading'
 import { AutoScroll } from './AutoScroll'
+import { GameAnnouncement } from './GameAnnouncement'
 import { formatClock, screenHeading, screensOf } from './liveLogic'
 import styles from './LiveResultsPage.module.css'
 import { PageFlip } from './PageFlip'
@@ -80,6 +81,13 @@ export function LiveResultsPage() {
         {feed.notice ?? idle}
       </div>
       <main className={styles.body}>{body}</main>
+      {feed.announcement && (
+        <GameAnnouncement
+          announcement={feed.announcement}
+          id={feed.announcementId}
+          waiting={feed.waiting}
+        />
+      )}
       {feed.stale && (
         <p className={styles.offline} role="status">
           <strong>Out of date</strong> since {formatClock(new Date(feed.loadedAt).toISOString())}

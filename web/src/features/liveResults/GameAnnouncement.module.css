@@ -1,0 +1,245 @@
+/*
+ * The overlay for a game that filled (D-255). It sits over the whole TV page and takes no clicks.
+ * Sizes follow the page width (container units of .page), so it reads on a TV and on a phone.
+ * Colors are the page's tokens; nothing is drawn outside --duration, the time the message shows.
+ */
+
+.root {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.game {
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.kicker {
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.title {
+  font-weight: 800;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+.more {
+  font-weight: 600;
+}
+
+/* A game: a lower third from the left. The table stays readable. */
+.card {
+  position: absolute;
+  inset-block-end: 4cqw;
+  inset-inline-start: 0;
+  display: flex;
+  align-items: stretch;
+  max-inline-size: 96%;
+  animation: slide var(--duration) cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.card .game {
+  display: grid;
+  place-items: center;
+  padding: 1.2cqw 2.4cqw;
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  font-size: 7cqw;
+}
+
+.text {
+  display: grid;
+  align-content: center;
+  gap: 0.2cqw;
+  min-inline-size: 0;
+  padding: 1.2cqw 4cqw 1.2cqw 2.4cqw;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.card .kicker {
+  color: var(--color-accent);
+  font-size: 1.7cqw;
+}
+
+.card .title {
+  font-size: 3.8cqw;
+}
+
+.card .more {
+  font-size: 1.5cqw;
+  color: var(--color-text-muted);
+}
+
+/* A phone: the width units come out tiny, so the lower third keeps a readable size. */
+@media (max-width: 48rem) {
+  .card {
+    inset-block-end: var(--space-3);
+  }
+
+  .card .game {
+    padding: var(--space-2) var(--space-3);
+    font-size: 2.5rem;
+  }
+
+  .text {
+    padding: var(--space-2) var(--space-4) var(--space-2) var(--space-3);
+  }
+
+  .card .kicker {
+    font-size: 0.75rem;
+  }
+
+  .card .title {
+    font-size: 1.25rem;
+  }
+
+  .card .more {
+    font-size: 0.75rem;
+  }
+}
+
+@keyframes slide {
+  0% {
+    transform: translateX(-105%);
+  }
+  9% {
+    transform: none;
+  }
+  91% {
+    transform: none;
+  }
+  100% {
+    transform: translateX(-105%);
+  }
+}
+
+/* The last game: the screen flashes with the game number, then settles into a strip at the top. */
+.flash {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  block-size: 100%;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 1cqw;
+  overflow: hidden;
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  text-align: center;
+  opacity: 0;
+  animation: flash var(--duration) cubic-bezier(0.3, 0.7, 0.2, 1) forwards;
+}
+
+.flash .game {
+  order: -1;
+  font-size: max(20cqw, 7rem);
+  animation: flash-game var(--duration) cubic-bezier(0.3, 0.7, 0.2, 1) forwards;
+}
+
+.flash .title {
+  font-size: max(6cqw, 2rem);
+  animation: flash-title var(--duration) cubic-bezier(0.3, 0.7, 0.2, 1) forwards;
+}
+
+.flash .kicker {
+  font-size: max(2.2cqw, 0.875rem);
+}
+
+.flash .more {
+  font-size: 1.8cqw;
+}
+
+@keyframes flash {
+  0% {
+    opacity: 0;
+    block-size: 100%;
+  }
+  6% {
+    opacity: 1;
+    block-size: 100%;
+  }
+  34% {
+    opacity: 1;
+    block-size: 100%;
+  }
+  50% {
+    opacity: 1;
+    block-size: max(12cqw, 3.5rem);
+  }
+  94% {
+    opacity: 1;
+    block-size: max(12cqw, 3.5rem);
+  }
+  100% {
+    opacity: 0;
+    block-size: max(12cqw, 3.5rem);
+  }
+}
+
+@keyframes flash-game {
+  0%,
+  34% {
+    font-size: max(20cqw, 7rem);
+  }
+  50%,
+  100% {
+    font-size: max(5cqw, 1.5rem);
+  }
+}
+
+@keyframes flash-title {
+  0%,
+  34% {
+    font-size: max(6cqw, 2rem);
+  }
+  50%,
+  100% {
+    font-size: max(3.4cqw, 1.125rem);
+  }
+}
+
+/* With "reduce motion" the card appears and goes without moving. */
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: fade var(--duration) linear forwards;
+  }
+
+  .flash {
+    animation: fade var(--duration) linear forwards;
+    block-size: max(12cqw, 3.5rem);
+    grid-auto-flow: column;
+    align-content: center;
+    gap: 3cqw;
+  }
+
+  .flash .game,
+  .flash .title {
+    animation: none;
+    font-size: 4cqw;
+  }
+
+  .flash .more,
+  .flash .kicker {
+    display: none;
+  }
+
+  @keyframes fade {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    5%,
+    95% {
+      opacity: 1;
+    }
+  }
+}

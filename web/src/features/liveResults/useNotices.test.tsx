@@ -41,8 +41,8 @@ describe('useNotices (RES-51, D-245)', () => {
     expect(result.current.current).toBeUndefined()
   })
 
-  it('lasts about 8 seconds by default', () => {
-    expect(NOTICE_MS).toBe(8000)
+  it('lasts about 5 seconds by default', () => {
+    expect(NOTICE_MS).toBe(5000)
   })
 
   it('does not restart the message showing when another arrives', () => {
@@ -51,17 +51,58 @@ describe('useNotices (RES-51, D-245)', () => {
       result.current.push('first')
     })
     act(() => {
-      vi.advanceTimersByTime(5000)
+      vi.advanceTimersByTime(3000)
     })
 
     act(() => {
       result.current.push('second')
     })
     act(() => {
-      vi.advanceTimersByTime(3000)
+      vi.advanceTimersByTime(NOTICE_MS - 3000)
     })
 
+    // The first message had its full time from its own start, so the second now shows.
     expect(result.current.current).toBe('second')
+  })
+
+  it('carries the announcement of the message showing, and counts the ones waiting', () => {
+    const { result } = renderHook(() => useNotices())
+    const lower = {
+      variant: 'game',
+      kicker: 'Game 1 complete',
+      title: 'Open Division',
+      game: 1,
+    } as const
+    const last = {
+      variant: 'last',
+      kicker: 'Final game complete',
+      title: 'Sweeper',
+      game: 3,
+    } as const
+
+    act(() => {
+      result.current.push('one', lower)
+      result.current.push('two', last)
+      result.current.push('three')
+    })
+
+    expect(result.current.announcement).toEqual(lower)
+    expect(result.current.waiting).toBe(2)
+    const firstId = result.current.id
+
+    act(() => {
+      vi.advanceTimersByTime(NOTICE_MS)
+    })
+    expect(result.current.announcement).toEqual(last)
+    expect(result.current.waiting).toBe(1)
+    expect(result.current.id).not.toBe(firstId)
+
+    act(() => {
+      vi.advanceTimersByTime(NOTICE_MS)
+    })
+    expect(result.current.current).toBe('three')
+    expect(result.current.announcement).toBeUndefined()
+    expect(result.current.waiting).toBe(0)
   })
 
   it('gives two equal messages in a row each their time', () => {

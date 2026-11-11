@@ -8,6 +8,16 @@ import type {
   SweeperResults,
 } from '../results/types'
 
+/** What the overlay draws for a message (D-255): a lower third, or the flash for a last game. */
+export interface Announcement {
+  variant: 'game' | 'last'
+  /** "Game 2 complete" or "Final game complete". */
+  kicker: string
+  /** "Open Division" or "Sweeper". */
+  title: string
+  game: number
+}
+
 /** One screen of the TV page: a squad division, a sweeper, or the super sweeper (D-242). */
 export type LiveScreen =
   | { key: string; kind: 'squad'; results: SquadResults; division: DivisionResult }
@@ -101,18 +111,45 @@ export function parseLiveEvent(kind: string, detail: unknown): LiveEvent | undef
  * score that filled no game) says nothing either; it only refreshes its division.
  */
 export function noticeText(event: LiveEvent, feed: LiveResults | undefined): string | undefined {
-  const { sessionKind, divisionId, game } = event.detail
+  const { sessionKind, game } = event.detail
   if (event.kind === 'complete') return 'Session complete – results are official'
   if (event.kind !== 'game-full' || game === undefined) return undefined
   if (sessionKind === 'sweeper') return `Sweeper – Game ${game} complete`
+  return `${divisionLabel(event, feed)} – Game ${game} complete`
+}
+
+/** "Open Division" for a squad's division, from the API's name or else the feed. */
+function divisionLabel(event: LiveEvent, feed: LiveResults | undefined): string {
+  const { divisionId } = event.detail
   // The API names the division; the feed is the fallback for a message from an older server.
   const fromFeed = feed?.sessions
     .flatMap((session) => (session.kind === 'squad' ? session.results.divisions : []))
     .find((candidate) => candidate.id === divisionId)?.name
   const name = event.detail.divisionName ?? fromFeed
   // A division already called "... Division" does not get the word twice.
-  const label = name ? (/division$/i.test(name) ? name : `${name} Division`) : 'Division'
-  return `${label} – Game ${game} complete`
+  return name ? (/division$/i.test(name) ? name : `${name} Division`) : 'Division'
+}
+
+/**
+ * What the overlay draws for a game that filled (D-255): a lower third, or the full-screen flash for
+ * the last game of the squad or sweeper. `undefined` for any other message. The session's games come
+ * from the feed; a session the feed does not hold yet gets the lower third.
+ */
+export function announcementOf(
+  event: LiveEvent,
+  feed: LiveResults | undefined,
+): Announcement | undefined {
+  const { sessionId, sessionKind, game } = event.detail
+  if (event.kind !== 'game-full' || game === undefined) return undefined
+  const games = feed?.sessions.find((session) => session.results.session.id === sessionId)?.results
+    .session.games
+  const last = games !== undefined && game >= games
+  return {
+    variant: last ? 'last' : 'game',
+    kicker: last ? 'Final game complete' : `Game ${game} complete`,
+    title: sessionKind === 'sweeper' ? 'Sweeper' : divisionLabel(event, feed),
+    game,
+  }
 }
 
 /**

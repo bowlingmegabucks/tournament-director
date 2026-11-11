@@ -8,6 +8,7 @@ import {
 } from '../../mocks/data'
 import type { LiveEvent } from '../results/types'
 import {
+  announcementOf,
   formatClock,
   isUnofficial,
   noticeText,
@@ -257,5 +258,58 @@ describe('formatClock', () => {
 
   it('is empty for text that is not a time', () => {
     expect(formatClock('not a time')).toBe('')
+  })
+})
+
+describe('announcementOf (D-255)', () => {
+  const ev = (over: Partial<LiveEvent['detail']> & { kind?: LiveEvent['kind'] }): LiveEvent => ({
+    kind: over.kind ?? 'game-full',
+    detail: { sessionId: 'sq1', sessionKind: 'squad', divisionId: 'd1', game: 1, ...over },
+  })
+
+  it('is a lower third for a game before the last, named for the division', () => {
+    // The squad `sq1` has 3 games.
+    expect(announcementOf(ev({ game: 2, divisionName: 'Scratch' }), feed)).toEqual({
+      variant: 'game',
+      kicker: 'Game 2 complete',
+      title: 'Scratch Division',
+      game: 2,
+    })
+  })
+
+  it('is the flash for the last game of the squad', () => {
+    expect(announcementOf(ev({ game: 3, divisionName: 'Scratch' }), feed)).toEqual({
+      variant: 'last',
+      kicker: 'Final game complete',
+      title: 'Scratch Division',
+      game: 3,
+    })
+  })
+
+  it('is the flash for the last game of a sweeper, and says Sweeper', () => {
+    // The sweeper `sw1` has 3 games.
+    const result = announcementOf(
+      ev({ sessionId: 'sw1', sessionKind: 'sweeper', divisionId: undefined, game: 3 }),
+      feed,
+    )
+    expect(result).toMatchObject({ variant: 'last', title: 'Sweeper' })
+    expect(
+      announcementOf(
+        ev({ sessionId: 'sw1', sessionKind: 'sweeper', divisionId: undefined, game: 1 }),
+        feed,
+      ),
+    ).toMatchObject({ variant: 'game', title: 'Sweeper', kicker: 'Game 1 complete' })
+  })
+
+  it('is a lower third when the session is not in the feed yet, so the last game is unknown', () => {
+    expect(announcementOf(ev({ sessionId: 'new', game: 9 }), feed)?.variant).toBe('game')
+    expect(announcementOf(ev({ game: 9 }), undefined)?.variant).toBe('game')
+  })
+
+  it('is nothing for a reopened, scored, or complete message, or one with no game', () => {
+    expect(announcementOf(ev({ kind: 'reopened' }), feed)).toBeUndefined()
+    expect(announcementOf(ev({ kind: 'scored', game: undefined }), feed)).toBeUndefined()
+    expect(announcementOf(ev({ kind: 'complete' }), feed)).toBeUndefined()
+    expect(announcementOf(ev({ game: undefined }), feed)).toBeUndefined()
   })
 })

@@ -5,6 +5,9 @@
  */
 
 .page {
+  /* The overlay sizes itself by this width, and sits over the page. */
+  container-type: inline-size;
+  position: relative;
   display: grid;
   grid-template-rows: auto auto 1fr;
   block-size: 100dvh;

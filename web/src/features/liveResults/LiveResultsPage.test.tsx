@@ -348,6 +348,64 @@ describe('LiveResultsPage follows the stream (RES-49, RES-50, D-243 to D-245)', 
     )
   })
 
+  it('draws a lower third for a game before the last, and the flash for the last (D-255)', async () => {
+    await ready()
+    const send = (game: number) => {
+      act(() => {
+        FakeEventSource.latest().message(
+          message('game-full', {
+            sessionId: squadId,
+            sessionKind: 'squad',
+            divisionId: openId,
+            game,
+          }),
+        )
+      })
+    }
+
+    send(1)
+    expect(await screen.findByText('Game 1 complete')).toBeInTheDocument()
+    expect(screen.queryByText('Final game complete')).not.toBeInTheDocument()
+    // The overlay is for the eye: the strip carries the words for a screen reader.
+    expect(screen.getByText('Game 1 complete').closest('[aria-hidden="true"]')).not.toBeNull()
+  })
+
+  it('draws the flash for the last game of the squad, which has 3 games (D-255)', async () => {
+    await ready()
+
+    act(() => {
+      FakeEventSource.latest().message(
+        message('game-full', {
+          sessionId: squadId,
+          sessionKind: 'squad',
+          divisionId: openId,
+          game: 3,
+        }),
+      )
+    })
+
+    expect(await screen.findByText('Final game complete')).toBeInTheDocument()
+  })
+
+  it('shows how many more are waiting when games finish together (D-255)', async () => {
+    await ready()
+
+    act(() => {
+      for (const game of [1, 2, 3]) {
+        FakeEventSource.latest().message(
+          message('game-full', {
+            sessionId: squadId,
+            sessionKind: 'squad',
+            divisionId: openId,
+            game,
+          }),
+        )
+      }
+    })
+
+    expect(await screen.findByText('+2 more waiting')).toBeInTheDocument()
+  })
+
   it('posts the game on the strip and loads only the division that changed', async () => {
     const { calls } = await ready()
 

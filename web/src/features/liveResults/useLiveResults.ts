@@ -5,7 +5,13 @@ import { useEventStream, type LiveState } from '../../shared/useEventStream'
 import { fetchLiveResults, fetchSquadResults } from '../results/api'
 import { retryUnlessFinalResults } from '../results/useResults'
 import type { LiveResults } from '../results/types'
-import { noticeText, parseLiveEvent, replaceDivision } from './liveLogic'
+import {
+  announcementOf,
+  noticeText,
+  parseLiveEvent,
+  replaceDivision,
+  type Announcement,
+} from './liveLogic'
 import { useNotices } from './useNotices'
 
 /** How often the TV loads everything again, whatever the stream says (RES-52, D-246). */
@@ -28,6 +34,11 @@ export interface LiveFeed {
   stream: LiveState
   /** The message of the strip now, or `undefined` when none waits (D-245). */
   notice: string | undefined
+  /** What the overlay draws for that message, and which message it is (D-255). */
+  announcement: Announcement | undefined
+  announcementId: number | undefined
+  /** Messages waiting behind the one showing. */
+  waiting: number
   /** The screen that just changed: `session/division`, `session` for a sweeper (D-245). */
   highlighted: string | undefined
 }
@@ -81,7 +92,7 @@ export function useLiveResults(tournamentId: string): LiveFeed {
         }
         const current = queryClient.getQueryData<LiveResults>(key)
         const text = noticeText(event, current)
-        if (text) notices.push(text)
+        if (text) notices.push(text, announcementOf(event, current))
 
         const { sessionId, sessionKind, divisionId } = event.detail
         if (event.kind === 'complete' || sessionKind === 'sweeper' || !divisionId || !current) {
@@ -117,6 +128,9 @@ export function useLiveResults(tournamentId: string): LiveFeed {
     loadedAt: query.dataUpdatedAt,
     stream,
     notice: notices.current,
+    announcement: notices.announcement,
+    announcementId: notices.id,
+    waiting: notices.waiting,
     highlighted: highlight,
   }
 }

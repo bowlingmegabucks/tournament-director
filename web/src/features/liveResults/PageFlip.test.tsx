@@ -72,6 +72,53 @@ describe('PageFlip (RES-53)', () => {
     expect(screen.getByText('Open table')).toBeVisible()
   })
 
+  it('marks the screen it is on with a filled dot and the others with an empty one', () => {
+    const { container } = render(<PageFlip screens={screens} />)
+    const dots = () => Array.from(container.querySelectorAll('b')).map((dot) => dot.textContent)
+
+    expect(dots()).toEqual(['\u25CF', '\u25CB', '\u25CB'])
+    act(() => {
+      vi.advanceTimersByTime(FLIP_MS)
+    })
+    expect(dots()).toEqual(['\u25CB', '\u25CF', '\u25CB'])
+    expect(container.querySelectorAll('b')[1]?.className).not.toBe(
+      container.querySelectorAll('b')[0]?.className,
+    )
+  })
+
+  it('flips between two screens, not only three or more', () => {
+    render(<PageFlip screens={screens.slice(0, 2)} />)
+
+    act(() => {
+      vi.advanceTimersByTime(FLIP_MS)
+    })
+
+    expect(screen.getByText('Senior table')).toBeVisible()
+  })
+
+  it('starts flipping when a list of one grows to three', () => {
+    const { rerender } = render(<PageFlip screens={screens.slice(0, 1)} />)
+    rerender(<PageFlip screens={screens} />)
+
+    act(() => {
+      vi.advanceTimersByTime(FLIP_MS)
+    })
+
+    expect(screen.getByText('Senior table')).toBeVisible()
+  })
+
+  it('starts the bar over for each screen, over the time the screen shows', () => {
+    const { container } = render(<PageFlip screens={screens} intervalMs={5000} />)
+    const bar = () => container.querySelector('i')
+
+    expect(bar()?.style.animationDuration).toBe('5000ms')
+    const first = bar()
+    act(() => {
+      vi.advanceTimersByTime(5000)
+    })
+    expect(bar()).not.toBe(first)
+  })
+
   it('uses the interval it is given', () => {
     render(<PageFlip screens={screens} intervalMs={1000} />)
 

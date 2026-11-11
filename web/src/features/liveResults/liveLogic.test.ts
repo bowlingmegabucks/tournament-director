@@ -116,6 +116,7 @@ describe('parseLiveEvent (RES-49, D-243)', () => {
     ['a kind the TV does not handle', 'scores', { sessionId: 's', sessionKind: 'squad' }],
     ['no detail', 'game-full', undefined],
     ['a detail that is not an object', 'game-full', 'text'],
+    ['a null detail', 'game-full', null],
     ['a detail with no session', 'game-full', { sessionKind: 'squad' }],
     ['a session kind that is neither', 'game-full', { sessionId: 's', sessionKind: 'lane' }],
   ])('gives nothing for %s', (_name, kind, detail) => {

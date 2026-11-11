@@ -19,6 +19,7 @@ export function PageFlip({
 }>) {
   const [index, setIndex] = useState(0)
   const count = screens.length
+  // Stryker disable next-line ConditionalExpression: with no screens `index % 0` is NaN and no screen is found, as with 0.
   const shown = count === 0 ? 0 : index % count
 
   useEffect(() => {

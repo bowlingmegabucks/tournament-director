@@ -22,7 +22,9 @@ export function useNotices(duration = NOTICE_MS) {
   const next = useRef(0)
   const current = queue[0]
 
+  // Stryker disable next-line ArrayDeclaration: `setQueue` never changes, so the list of what it depends on is moot.
   const push = useCallback((text: string) => {
+    // Stryker disable next-line AssignmentOperator: ids only need to differ, up or down.
     next.current += 1
     const notice = { id: next.current, text }
     setQueue((waiting) => [...waiting, notice].slice(-MAX_WAITING))

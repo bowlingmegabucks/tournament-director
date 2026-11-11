@@ -10,9 +10,10 @@ afterEach(() => {
 })
 
 describe('useNotices (RES-51, D-245)', () => {
-  it('shows nothing until a message is pushed', () => {
+  it('shows nothing until a message is pushed, and runs no timer meanwhile', () => {
     const { result } = renderHook(() => useNotices())
     expect(result.current.current).toBeUndefined()
+    expect(vi.getTimerCount()).toBe(0)
   })
 
   it('shows one message at a time, each for its time, in order', () => {

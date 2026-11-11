@@ -312,7 +312,13 @@ export function createEventStreamHandlers() {
     eventsHandler('sweeper'),
     eventsHandler('squad', '/scores/events'),
     eventsHandler('sweeper', '/scores/events'),
+    liveResultsStream(),
   ]
+}
+
+/** The mock tournament stream of the TV page (RES-49): it opens and then stays quiet. */
+function liveResultsStream() {
+  return sse<{ changed: string }>('/v1/tournaments/:id/live-results/events', () => undefined)
 }
 
 /**

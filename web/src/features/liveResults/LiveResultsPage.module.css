@@ -1,0 +1,205 @@
+/*
+ * The TV page (RES-50 to RES-53). It fills the screen, in the sizes of the --font-size-tv tokens: a
+ * viewer reads it from across a room. The tables are the ones the Results tab draws; the selectors
+ * below only restyle their cells for the larger type, under classes of this module.
+ */
+
+.page {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  block-size: 100dvh;
+  overflow: hidden;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--font-size-tv-body);
+}
+
+.bar {
+  padding: var(--space-3) var(--space-6);
+  background: var(--color-brand-bg);
+  color: var(--color-accent);
+}
+
+.bar h1 {
+  margin: 0;
+  font-size: var(--font-size-tv-head);
+}
+
+.strip {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--target-min);
+  padding-inline: var(--space-6);
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  font-weight: 700;
+}
+
+.idle {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.body {
+  position: relative;
+  overflow: hidden;
+}
+
+.view {
+  block-size: 100%;
+  overflow: hidden;
+}
+
+.block {
+  padding-block-end: var(--space-6);
+}
+
+.heading {
+  margin: 0;
+  padding: var(--space-4) var(--space-6) var(--space-2);
+  font-size: var(--font-size-tv-head);
+}
+
+.tag {
+  display: inline-block;
+  margin-inline-start: var(--space-3);
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius);
+  color: var(--color-accent);
+  font-size: var(--font-size-tv-small);
+  font-weight: 400;
+  vertical-align: middle;
+}
+
+.table {
+  margin-inline: var(--space-6);
+  font-size: var(--font-size-tv-body);
+}
+
+.table table th,
+.table table td {
+  padding: var(--space-2) var(--space-4);
+}
+
+.table table thead th {
+  font-size: var(--font-size-tv-small);
+}
+
+.sub {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-tv-small);
+}
+
+/* The table that just changed (D-245). Outlined, not only colored: a second cue for the eye. */
+.updated .table {
+  outline: 3px solid var(--color-accent);
+  outline-offset: var(--space-1);
+}
+
+.center {
+  display: grid;
+  place-content: center;
+  block-size: 100%;
+  padding: var(--space-6);
+  text-align: center;
+  font-size: var(--font-size-tv-head);
+}
+
+.center small {
+  display: block;
+  margin-block-start: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-tv-body);
+}
+
+.problem {
+  color: var(--color-danger);
+}
+
+.offline {
+  position: absolute;
+  inset-block-end: var(--space-3);
+  inset-inline-end: var(--space-3);
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border: var(--border-width) solid var(--color-danger);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  font-size: var(--font-size-tv-small);
+}
+
+.offline strong {
+  color: var(--color-danger);
+}
+
+/* Layout B: one screen at a time (RES-53). */
+.flip {
+  display: grid;
+  grid-template-rows: 1fr auto auto;
+  block-size: 100%;
+}
+
+.flipScreen {
+  overflow: hidden;
+}
+
+.progress {
+  block-size: 0.375rem;
+  background: var(--color-surface);
+}
+
+.progress i {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  background: var(--color-accent);
+  transform-origin: left;
+  /* No motion when the viewer asked for none: the bar sits full. */
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .progress i {
+    animation-name: fill;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+
+  @keyframes fill {
+    from {
+      transform: scaleX(0);
+    }
+
+    to {
+      transform: scaleX(1);
+    }
+  }
+}
+
+.dots {
+  margin: 0;
+  padding: var(--space-2);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-tv-small);
+}
+
+.dots b {
+  margin-inline: var(--space-1);
+  font-weight: 400;
+}
+
+.here {
+  color: var(--color-accent);
+}
+
+.hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

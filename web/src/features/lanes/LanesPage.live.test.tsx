@@ -153,7 +153,8 @@ describe('LanesPage live updates (LAN-21, D-217, D-218)', () => {
       await screen.findByText(/This squad is complete/, undefined, { timeout: 3000 }),
     ).toBeVisible()
     expect(FakeEventSource.instances).toHaveLength(0)
-    expect(screen.queryByText(/Live/)).not.toBeInTheDocument()
+    // The status line says "Live: ..."; the sidebar's "Live results" link is not it (RES-54).
+    expect(screen.queryByText(/^Live:/)).not.toBeInTheDocument()
   })
 
   it('opens the sweeper stream for a sweeper (LAN-21)', async () => {

@@ -122,6 +122,11 @@ export function TournamentLayout() {
                 Seeding
               </NavLink>
             </li>
+            <li>
+              <NavLink onClick={closeMenu} to={`/tournaments/${data.id}/liveResults`}>
+                Live results
+              </NavLink>
+            </li>
           </ul>
           <p>
             <Link onClick={closeMenu} to="/tournaments">

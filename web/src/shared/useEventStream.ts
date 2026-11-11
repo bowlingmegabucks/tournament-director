@@ -5,8 +5,11 @@ import { apiUrl } from './apiUrl'
 export type LiveState = 'live' | 'reconnecting' | 'off'
 
 export interface StreamHandlers {
-  /** A `changed` message came. `kind` is why (`lanes`, `entries`, `scores`), or `unknown` (D-218). */
-  onChange: (kind: string) => void
+  /**
+   * A `changed` message came. `kind` is why (`lanes`, `entries`, `scores`), or `unknown` (D-218).
+   * `detail` is what the message points at, when it carries something (the tournament stream, D-243).
+   */
+  onChange: (kind: string, detail?: unknown) => void
   /** The stream came back after a drop. Messages are not replayed, so ask again (D-218). */
   onReconnect: () => void
 }
@@ -17,18 +20,32 @@ export const MESSAGE_WINDOW_MS = 1000
 /** How often a page without a live stream asks again (the poll the stream replaced, D-72). */
 export const FALLBACK_POLL_MS = 15000
 
-/** The kind a message names. A message that does not parse still means "something changed". */
-function kindOf(data: unknown): string {
-  if (typeof data !== 'string') return 'unknown'
+/**
+ * The kind a message names, and its `detail` when it has one. A message that does not parse still
+ * means "something changed".
+ */
+function readMessage(data: unknown): { kind: string; detail: unknown } {
+  if (typeof data !== 'string') return { kind: 'unknown', detail: undefined }
   try {
     const parsed: unknown = JSON.parse(data)
     if (typeof parsed === 'object' && parsed !== null && 'kind' in parsed) {
-      return typeof parsed.kind === 'string' ? parsed.kind : 'unknown'
+      return {
+        kind: typeof parsed.kind === 'string' ? parsed.kind : 'unknown',
+        detail: 'detail' in parsed ? parsed.detail : undefined,
+      }
     }
   } catch {
     // Not JSON: treat it as a change of unknown kind.
   }
-  return 'unknown'
+  return { kind: 'unknown', detail: undefined }
+}
+
+export interface StreamOptions {
+  /**
+   * Join messages that come close together into one call (the default). A page that must see every
+   * message, such as the TV's one for each division, passes `false` (RES-50, D-243).
+   */
+  join?: boolean
 }
 
 /**
@@ -46,6 +63,7 @@ export function useEventStream(
   path: string,
   enabled: boolean,
   handlers: StreamHandlers,
+  { join = true }: StreamOptions = {},
 ): LiveState {
   const supported = typeof EventSource !== 'undefined'
   const [state, setState] = useState<LiveState>('reconnecting')
@@ -72,10 +90,10 @@ export function useEventStream(
     // Messages come in bursts when several keepers save. The first runs at once; the rest in the
     // window join into one call, so a busy squad does not cost every viewer a request per save.
     let last = Number.NEGATIVE_INFINITY
-    let pending: { kind: string; timer: ReturnType<typeof setTimeout> } | undefined
-    const deliver = (kind: string) => {
+    let pending: { kind: string; detail: unknown; timer: ReturnType<typeof setTimeout> } | undefined
+    const deliver = (kind: string, detail: unknown) => {
       last = Date.now()
-      onChange(kind)
+      onChange(kind, detail)
     }
 
     source.onopen = () => {
@@ -91,23 +109,31 @@ export function useEventStream(
       setState(source.readyState === EventSource.CLOSED ? 'off' : 'reconnecting')
     }
     source.addEventListener('changed', (event) => {
-      const kind = kindOf(event.data)
+      const { kind, detail } = readMessage(event.data)
+      if (!join) {
+        deliver(kind, detail)
+        return
+      }
       const wait = last + MESSAGE_WINDOW_MS - Date.now()
       if (wait <= 0 && !pending) {
-        deliver(kind)
+        deliver(kind, detail)
         return
       }
       // Joined messages keep the one that matters to more pages: a `scores` message is the one a
       // lane page ignores, so any other kind in the window wins over it.
       if (pending) {
-        if (pending.kind === 'scores') pending.kind = kind
+        if (pending.kind === 'scores') {
+          pending.kind = kind
+          pending.detail = detail
+        }
         return
       }
       const waiting = {
         kind,
+        detail,
         timer: setTimeout(() => {
           pending = undefined
-          deliver(waiting.kind)
+          deliver(waiting.kind, waiting.detail)
         }, wait),
       }
       pending = waiting
@@ -117,7 +143,7 @@ export function useEventStream(
       if (pending) clearTimeout(pending.timer)
       source.close()
     }
-  }, [enabled, supported, path])
+  }, [enabled, supported, path, join])
 
   return enabled && supported ? state : 'off'
 }

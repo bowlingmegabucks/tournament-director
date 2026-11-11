@@ -71,13 +71,13 @@ export function ScreenSection({
             <>
               <p className={styles.sub}>{counts(screen.results)}</p>
               <SweeperNote rows={screen.results.rows} throughGame={screen.results.throughGame} />
-              <p className={styles.lines}>{formatCashLine(screen.results.cutScore)}</p>
+              <p className={styles.lines}>{formatCashLine(screen.results.rows)}</p>
             </>
           )}
           {screen.kind === 'super-sweeper' && (
             <>
               <p className={styles.sub}>{counts(screen.results)}</p>
-              <p className={styles.lines}>{formatCashLine(screen.results.cutScore)}</p>
+              <p className={styles.lines}>{formatCashLine(screen.results.rows)}</p>
             </>
           )}
         </div>

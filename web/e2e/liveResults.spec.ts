@@ -54,6 +54,10 @@ test('the TV page scrolls on its own, and the heading stays pinned at the top (R
   // 40 pixels a second: it moves within a few seconds.
   await expect.poll(scrolled, { timeout: 8000 }).toBeGreaterThan(5)
 
+  // The line under the column heads is a shadow in the cell, so it stays under the pinned head.
+  const head = page.getByRole('columnheader').first()
+  expect(await head.evaluate((node) => getComputedStyle(node).boxShadow)).not.toBe('none')
+
   // The first division's heading sits at the top of the view while its rows go past.
   const mainTop = (await page.locator('main').boundingBox())?.y ?? 0
   const headingTop = (await heading.boundingBox())?.y ?? 0

@@ -204,29 +204,53 @@ export function formatThroughLabel(throughGame: number | null): string {
     : `Through game ${throughGame}`
 }
 
-/**
- * The total at each line of a squad division (D-254): the lowest total that advances (the cut line)
- * and the lowest that cashes (the cash line), `null` when no one does. The totals are the ones the
- * rows hold, so they count the handicap and only the games counted.
- */
-export function lineTotals(division: DivisionResult): { cut: number | null; cash: number | null } {
-  const lowest = (group: SquadRow['group']) => {
-    const totals = division.rows.filter((row) => row.group === group).map((row) => row.total)
-    return totals.length === 0 ? null : Math.min(...totals)
-  }
-  return { cut: lowest('advancer'), cash: lowest('casher') }
+/** A row's figure against 200 a game: its total and the games the total holds. */
+interface Figure {
+  total: number
+  games: number
 }
 
-/** "Cut line 809 · Cash line 790" for the pinned heading of the TV page (D-254). */
+/** The row with the lowest total in a group: the one at the line (D-254). `null` for no one. */
+function lowest<Row extends Figure & { group: string }>(
+  rows: readonly Row[],
+  group: Row['group'],
+): Row | null {
+  return rows
+    .filter((row) => row.group === group)
+    .reduce<Row | null>((low, row) => (low === null || row.total < low.total ? row : low), null)
+}
+
+/** The "+/−" figure of the row at a line, or `null` when no row is there (D-254). */
+function lineFigure(row: Figure | null): string | null {
+  return row === null ? null : formatPlusMinus(row.total, row.games)
+}
+
+/**
+ * The cut and cash lines of a squad division as the "+/−" of the lowest row that advances and the
+ * lowest that cashes (D-254), the figure the table shows after each name. The row holds the handicap
+ * and only the games counted, so the figure does too.
+ */
+export function lineFigures(division: DivisionResult): { cut: string | null; cash: string | null } {
+  return {
+    cut: lineFigure(lowest(division.rows, 'advancer')),
+    cash: lineFigure(lowest(division.rows, 'casher')),
+  }
+}
+
+/** "Cut line +27 · Cash line +19" for the pinned heading of the TV page (D-254). */
 export function formatLines(division: DivisionResult): string {
-  const { cut, cash } = lineTotals(division)
+  const { cut, cash } = lineFigures(division)
   return [
     cut === null ? 'No cut line' : `Cut line ${cut}`,
     cash === null ? 'No cash line' : `Cash line ${cash}`,
   ].join(' · ')
 }
 
-/** "Cash line 411" for a sweeper or the super sweeper, from the API's cut score (D-254); empty with none. */
-export function formatCashLine(cutScore: number | null): string {
-  return cutScore === null ? '' : `Cash line ${cutScore}`
+/**
+ * "Cash line +30" for a sweeper or the super sweeper: the "+/−" of its lowest casher (D-254). Empty
+ * when no one cashes.
+ */
+export function formatCashLine(rows: readonly (Figure & { group: 'casher' | 'other' })[]): string {
+  const figure = lineFigure(lowest(rows, 'casher'))
+  return figure === null ? '' : `Cash line ${figure}`
 }

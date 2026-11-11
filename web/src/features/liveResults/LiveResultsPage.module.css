@@ -120,6 +120,13 @@
   z-index: 1;
   background: var(--color-bg);
   font-size: var(--font-size-tv-small);
+  /*
+   * The line under the column heads. The table collapses its borders, and a collapsed border stays
+   * where the cell started, so it would slide away under the rows while the head is pinned. A
+   * shadow inside the cell goes with the cell (D-254).
+   */
+  border-block-end: 0;
+  box-shadow: inset 0 calc(var(--border-width) * -2) 0 var(--color-border);
 }
 
 .sub {

@@ -247,7 +247,7 @@ describe('LiveResultsPage pinned heading (D-254)', () => {
 
     const heading = screen.getAllByRole('heading', { level: 2 })[0]
     const block = heading?.closest('div')
-    expect(block).toHaveTextContent('Cut line 827 · Cash line 809')
+    expect(block).toHaveTextContent('Cut line +227 · Cash line +209')
     expect(block).toHaveTextContent('Ranked through game 2.')
     // The table below holds the rows, not the lines.
     expect(block?.querySelector('table')).toBeNull()
@@ -261,11 +261,11 @@ describe('LiveResultsPage pinned heading (D-254)', () => {
     const sweeper = screen
       .getAllByRole('heading', { level: 2 })
       .find((heading) => heading.textContent?.startsWith('Sweeper'))
-    expect(sweeper?.closest('div')).toHaveTextContent('Cash line 230')
+    expect(sweeper?.closest('div')).toHaveTextContent('Cash line +30')
     const superSweeper = screen
       .getAllByRole('heading', { level: 2 })
       .find((heading) => heading.textContent?.startsWith('Super sweeper'))
-    expect(superSweeper?.closest('div')).toHaveTextContent('Cash line 1200')
+    expect(superSweeper?.closest('div')).toHaveTextContent('Cash line ±0')
   })
 })
 

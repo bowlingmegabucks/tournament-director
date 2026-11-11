@@ -18,7 +18,7 @@ import {
   formatLines,
   formatPlusMinus,
   gameColumnCount,
-  lineTotals,
+  lineFigures,
   formatSeedingSummary,
   formatSummary,
   formatSweeperColumn,
@@ -414,7 +414,8 @@ describe('games not counted yet (RES-46, D-239)', () => {
   })
 })
 
-describe('the totals at the cut and cash lines (D-254)', () => {
+describe('the cut and cash lines as +/− (D-254)', () => {
+  // Three games each, so 600 is par: 827 is +227, 819 is +219, 809 is +209, 790 is +190.
   const rows = [
     createSquadRow({ group: 'advancer', total: 827 }),
     createSquadRow({ group: 'advancer', total: 819 }),
@@ -423,35 +424,55 @@ describe('the totals at the cut and cash lines (D-254)', () => {
     createSquadRow({ group: 'other', total: 700 }),
   ]
 
-  it('takes the lowest total that advances and the lowest that cashes', () => {
-    expect(lineTotals(createDivisionResult({ rows }))).toEqual({ cut: 819, cash: 790 })
+  it('takes the +/− of the lowest row that advances and the lowest that cashes', () => {
+    expect(lineFigures(createDivisionResult({ rows }))).toEqual({ cut: '+219', cash: '+190' })
   })
 
   it('finds the lowest even when the rows are not in order (an earlier advancer who cashes)', () => {
     const shuffled = [rows[3], rows[0], rows[2], rows[1]].filter((row) => row !== undefined)
-    expect(lineTotals(createDivisionResult({ rows: shuffled }))).toEqual({ cut: 819, cash: 790 })
+    expect(lineFigures(createDivisionResult({ rows: shuffled }))).toEqual({
+      cut: '+219',
+      cash: '+190',
+    })
+  })
+
+  it('counts the games of that row, so a division ranked through fewer games reads as it does', () => {
+    const two = [createSquadRow({ group: 'advancer', total: 430, games: 2 })]
+    expect(lineFigures(createDivisionResult({ rows: two })).cut).toBe('+30')
+  })
+
+  it('writes a figure below par with a minus and one on par as ±0', () => {
+    const below = [createSquadRow({ group: 'casher', total: 590 })]
+    const par = [createSquadRow({ group: 'casher', total: 600 })]
+    expect(lineFigures(createDivisionResult({ rows: below })).cash).toBe('−10')
+    expect(lineFigures(createDivisionResult({ rows: par })).cash).toBe('±0')
   })
 
   it('has no cut or no cash when no one advances or cashes', () => {
     expect(
-      lineTotals(createDivisionResult({ rows: [createSquadRow({ group: 'other', total: 600 })] })),
+      lineFigures(createDivisionResult({ rows: [createSquadRow({ group: 'other', total: 600 })] })),
     ).toEqual({ cut: null, cash: null })
-    expect(lineTotals(createDivisionResult({ rows: [] }))).toEqual({ cut: null, cash: null })
+    expect(lineFigures(createDivisionResult({ rows: [] }))).toEqual({ cut: null, cash: null })
   })
 
   it('writes both lines for the pinned heading', () => {
-    expect(formatLines(createDivisionResult({ rows }))).toBe('Cut line 819 · Cash line 790')
+    expect(formatLines(createDivisionResult({ rows }))).toBe('Cut line +219 · Cash line +190')
   })
 
   it('says so when a line has no one', () => {
     const noCash = [rows[0], rows[1]].filter((row) => row !== undefined)
-    expect(formatLines(createDivisionResult({ rows: noCash }))).toBe('Cut line 819 · No cash line')
+    expect(formatLines(createDivisionResult({ rows: noCash }))).toBe('Cut line +219 · No cash line')
     expect(formatLines(createDivisionResult({ rows: [] }))).toBe('No cut line · No cash line')
   })
 
-  it('writes the cash line of a sweeper from its cut score, and nothing without one', () => {
-    expect(formatCashLine(411)).toBe('Cash line 411')
-    expect(formatCashLine(0)).toBe('Cash line 0')
-    expect(formatCashLine(null)).toBe('')
+  it('writes the cash line of a sweeper from its lowest casher, and nothing without one', () => {
+    const sweeper = [
+      createSweeperRow({ group: 'casher', total: 411, games: 2 }),
+      createSweeperRow({ group: 'casher', total: 430, games: 2 }),
+      createSweeperRow({ group: 'other', total: 300, games: 2 }),
+    ]
+    expect(formatCashLine(sweeper)).toBe('Cash line +11')
+    expect(formatCashLine([createSweeperRow({ group: 'other' })])).toBe('')
+    expect(formatCashLine([])).toBe('')
   })
 })

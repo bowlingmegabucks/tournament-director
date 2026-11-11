@@ -104,6 +104,18 @@ export function priorGames(bowler: GameBowler, game: number): string {
 }
 
 /**
+ * "N of M in" for some bowlers of one game: those with a score, of those expected to bowl it. A
+ * bowler flagged did not finish with no score in this game is not expected (D-248), so a pair whose
+ * other bowler walked off reads "1 of 1 in".
+ */
+export function countIn(bowlers: readonly GameBowler[]): { entered: number; total: number } {
+  return {
+    entered: bowlers.filter((bowler) => bowler.score !== null).length,
+    total: bowlers.filter((bowler) => bowler.score !== null || !bowler.dnf).length,
+  }
+}
+
+/**
  * Lay what a save answered over the games (SCR-19): the bowler's scores and total in every game
  * they appear in, each game's own score, and each game's count. A save that filled earlier games
  * with 0 shows at once, with no second read.
@@ -130,8 +142,7 @@ export function applySaved(
           : bowler,
       ),
     }))
-    const everyone = pairs.flatMap((pair) => pair.bowlers)
-    return { ...game, pairs, entered: everyone.filter((bowler) => bowler.score !== null).length }
+    return { ...game, pairs, ...countIn(pairs.flatMap((pair) => pair.bowlers)) }
   })
   return { ...view, games }
 }
@@ -140,14 +151,14 @@ export function applySaved(
 export function applyDnf(view: GamesView, registrationId: string, dnf: boolean): GamesView {
   return {
     ...view,
-    games: view.games.map((game) => ({
-      ...game,
-      pairs: game.pairs.map((pair) => ({
+    games: view.games.map((game) => {
+      const pairs = game.pairs.map((pair) => ({
         ...pair,
         bowlers: pair.bowlers.map((bowler) =>
           bowler.registrationId === registrationId ? { ...bowler, dnf } : bowler,
         ),
-      })),
-    })),
+      }))
+      return { ...game, pairs, ...countIn(pairs.flatMap((pair) => pair.bowlers)) }
+    }),
   }
 }

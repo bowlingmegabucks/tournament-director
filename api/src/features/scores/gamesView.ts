@@ -98,7 +98,8 @@ export function buildGamesView(
     return {
       game,
       entered: everyone.filter((bowler) => bowler.score !== null).length,
-      total: everyone.length,
+      // A bowler flagged did not finish with no score in this game is not expected to bowl it (D-248).
+      total: everyone.filter((bowler) => bowler.score !== null || !bowler.dnf).length,
       pairs,
     }
   })

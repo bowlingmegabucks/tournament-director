@@ -31,7 +31,10 @@ export interface Game {
   game: number
   /** Bowlers with a score in this game. */
   entered: number
-  /** Every bowler with a lane. */
+  /**
+   * Bowlers expected to bowl it: everyone with a lane, except one flagged did not finish who has no
+   * score in this game.
+   */
   total: number
   pairs: GamePair[]
 }

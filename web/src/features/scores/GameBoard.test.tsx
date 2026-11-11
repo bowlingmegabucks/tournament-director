@@ -305,3 +305,45 @@ describe('GameBoard on a complete session (D-231)', () => {
     expect(screen.getByRole('radio', { name: 'Same' })).toBeDisabled()
   })
 })
+
+describe('GameBoard progress with a bowler who did not finish (SCR-24, D-248)', () => {
+  const walked = createGameBowler({
+    registrationId: 'dee',
+    name: 'Dee Park',
+    lane: '1B',
+    score: null,
+    dnf: true,
+  })
+
+  it('does not wait for the bowler who walked off: 1 of 1 in, with a check', () => {
+    const view = createGamesView({
+      games: [createGame(3, [createGamePair(1, [ann(200), walked])])],
+    })
+
+    renderBoard({ view, game: 3 })
+
+    expect(screen.getByText('✓ 1 of 1 in')).toBeInTheDocument()
+    expect(screen.getByText(/^1 of 1/)).toBeInTheDocument()
+  })
+
+  it('still counts a flagged bowler who has a score in the game', () => {
+    const scored = createGameBowler({ registrationId: 'dee', lane: '1B', score: 150, dnf: true })
+    const view = createGamesView({
+      games: [createGame(1, [createGamePair(1, [ann(200), scored])])],
+    })
+
+    renderBoard({ view, game: 1 })
+
+    expect(screen.getByText('✓ 2 of 2 in')).toBeInTheDocument()
+  })
+
+  it('shows a pair that still waits on a bowler as partly in', () => {
+    const view = createGamesView({
+      games: [createGame(2, [createGamePair(1, [ann(200), bea(null), walked])])],
+    })
+
+    renderBoard({ view, game: 2 })
+
+    expect(screen.getByText('◐ 1 of 2 in')).toBeInTheDocument()
+  })
+})

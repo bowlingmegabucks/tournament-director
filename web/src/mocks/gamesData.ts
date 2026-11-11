@@ -36,7 +36,8 @@ export function createGame(
   return {
     game,
     entered: everyone.filter((bowler) => bowler.score !== null).length,
-    total: everyone.length,
+    // Bowlers expected to bowl it: not one flagged did not finish with no score (D-248).
+    total: everyone.filter((bowler) => bowler.score !== null || !bowler.dnf).length,
     pairs,
     ...overrides,
   }

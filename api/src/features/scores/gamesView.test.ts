@@ -63,6 +63,22 @@ describe('buildGamesView and the DNF flag (SCR-24)', () => {
     expect(flagged.map((bowler) => bowler.name)).toEqual(['Ann Lee', 'Ann Lee', 'Ann Lee'])
   })
 
+  it('does not expect a flagged bowler with no score in a game, and still counts one who bowled it', () => {
+    const scores: ScoreRow[] = [
+      { bowlerId: ann.bowlerId, game: 1, score: 200 },
+      { bowlerId: bea.bowlerId, game: 1, score: 190 },
+    ]
+
+    const built = view({ scores, flagged: new Set([ann.registrationId]) })
+
+    // Five bowlers have a lane or are listed; four have lanes. Ann bowled game 1, so she still counts there.
+    const all = view({ scores })
+    expect(built.games[0]).toMatchObject({ entered: 2, total: all.games[0]?.total })
+    // In game 2 Ann has no score and walked off: one fewer is expected.
+    expect(built.games[1]?.total).toBe((all.games[1]?.total ?? 0) - 1)
+    expect(built.games[1]?.entered).toBe(all.games[1]?.entered)
+  })
+
   it('marks nobody without flags', () => {
     const bowlers = view().games.flatMap((game) => game.pairs.flatMap((pair) => pair.bowlers))
     expect(bowlers.some((bowler) => bowler.dnf)).toBe(false)

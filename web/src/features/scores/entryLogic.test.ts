@@ -5,8 +5,11 @@ import {
   createGamePair,
   createGamesView,
 } from '../../mocks/gamesData'
+import type { GameBowler } from './gamesTypes'
 import {
+  applyDnf,
   applySaved,
+  countIn,
   digitsOnly,
   findBowlers,
   firstOpenGame,
@@ -192,6 +195,46 @@ describe('priorGames (D-229)', () => {
     const bowler = createGameBowler({ scores: [178, 190, null] })
     expect(priorGames(bowler, 2)).toBe('Game 1: 178')
     expect(priorGames(createGameBowler({ scores: [null, null, null] }), 1)).toBe('')
+  })
+})
+
+describe('countIn and applyDnf (SCR-24, D-248)', () => {
+  const bowler = (over: Partial<GameBowler>) => createGameBowler({ score: null, ...over })
+
+  it('counts those with a score, of those expected to bowl', () => {
+    expect(countIn([bowler({ score: 200 }), bowler({}), bowler({ dnf: true })])).toEqual({
+      entered: 1,
+      total: 2,
+    })
+  })
+
+  it('counts a flagged bowler who has a score', () => {
+    expect(countIn([bowler({ score: 200, dnf: true })])).toEqual({ entered: 1, total: 1 })
+  })
+
+  it('counts nothing for no bowlers', () => {
+    expect(countIn([])).toEqual({ entered: 0, total: 0 })
+  })
+
+  it('recounts every game when a bowler is flagged or unflagged', () => {
+    const view = createGamesView({
+      games: [
+        createGame(1, [createGamePair(1, [bowler({ registrationId: 'a', score: 200 })])]),
+        createGame(2, [
+          createGamePair(1, [
+            bowler({ registrationId: 'a', score: 190 }),
+            bowler({ registrationId: 'b' }),
+          ]),
+        ]),
+      ],
+    })
+    expect(view.games[1]).toMatchObject({ entered: 1, total: 2 })
+
+    const flagged = applyDnf(view, 'b', true)
+    expect(flagged.games[1]).toMatchObject({ entered: 1, total: 1 })
+
+    const back = applyDnf(flagged, 'b', false)
+    expect(back.games[1]).toMatchObject({ entered: 1, total: 2 })
   })
 })
 

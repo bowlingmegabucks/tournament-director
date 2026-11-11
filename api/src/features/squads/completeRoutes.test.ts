@@ -263,6 +263,10 @@ describe('live updates after Complete (LAN-22, D-10, D-219)', () => {
 
     expect(first.status).toBe(200)
     expect(second.status).toBe(409)
-    expect(published).toEqual([{ sessionId, kind: 'lanes' }])
+    // The session's pages, then the TV page's stream (RES-49); the refused second try says nothing.
+    expect(published).toEqual([
+      { sessionId, kind: 'lanes' },
+      { sessionId: `live:${tournamentId}`, kind: 'complete' },
+    ])
   })
 })

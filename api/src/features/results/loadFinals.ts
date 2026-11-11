@@ -11,7 +11,11 @@ import {
 import type { ResultsDeps } from './loadResults.ts'
 import { compareText, reportSkipped, requireRatios, type Reporting } from './resultHelpers.ts'
 import { workOutSquads } from './squadFlow.ts'
-import { buildSuperSweeperEntries, workOutSuperSweeper } from './superSweeper.ts'
+import {
+  buildSuperSweeperEntries,
+  workOutSuperSweeper,
+  type SuperSweeperOptions,
+} from './superSweeper.ts'
 import { markCashLine, markCutLine } from './ties.ts'
 import type {
   AtLargeResults,
@@ -174,6 +178,7 @@ export async function loadSuperSweeper(
   deps: ResultsDeps,
   reporting: Reporting,
   tournamentId: string,
+  options: SuperSweeperOptions = {},
 ): Promise<SuperSweeperResults> {
   const ratios = await deps.tournaments.getRatios(tournamentId)
   if (!ratios) throw new HttpError(404, 'Tournament not found')
@@ -193,7 +198,9 @@ export async function loadSuperSweeper(
       return { sweeper, entries, scores }
     }),
   )
-  const built = buildSuperSweeperEntries(inputs, divisions)
+  const flagged =
+    options.flagged ?? (await deps.dnf.listFlagged(sweepers.map((sweeper) => sweeper.id)))
+  const built = buildSuperSweeperEntries(inputs, divisions, { ...options, flagged })
   reportSkipped(reporting, tournamentId, built.skipped)
   const outcome = workOutSuperSweeper(built.entries, ratios.superSweeperCashRatio)
   const marks = markCashLine(
@@ -217,15 +224,23 @@ export async function loadSuperSweeper(
     sweeperScores: item.sweeperScores,
     sweeperPins: item.sweeperPins,
     flags: item.flags,
+    dnf: item.dnf,
   })
 
   return {
+    mode: options.mode ?? 'live',
     complete: sweepers.length > 0 && sweepers.every((sweeper) => sweeper.complete),
     cashRatio: ratios.superSweeperCashRatio,
     entries: outcome.entryCount,
     cashers: outcome.cashCount,
     cutScore: outcome.cutScore,
-    sweepers: sweepers.map(({ id, date, games, complete }) => ({ id, date, games, complete })),
+    sweepers: sweepers.map(({ id, date, games, complete }) => ({
+      id,
+      date,
+      games,
+      complete,
+      throughGame: built.through.get(id) ?? null,
+    })),
     rows: [
       ...outcome.cashers.map((item, index) => toRow(item, index, 'casher')),
       ...outcome.others.map((item, index) => toRow(item, outcome.cashCount + index, 'other')),

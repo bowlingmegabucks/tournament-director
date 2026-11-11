@@ -1,5 +1,13 @@
 import { useId } from 'react'
-import { formatGamesOf, formatSummary, formatTie, gameColumnCount, squadItems } from './format'
+import {
+  formatGamesOf,
+  formatSummary,
+  formatThroughNote,
+  formatTie,
+  gameColumnCount,
+  pendingGame,
+  squadItems,
+} from './format'
 import {
   GameCells,
   GameHeaders,
@@ -26,10 +34,34 @@ function TieMarks({ row }: Readonly<{ row: SquadRow }>) {
  * each game. Scratch Total, Total HDCP, and HDCP Total show only when the API says someone has a
  * handicap. Below 64rem on screen each row is a block. The screen and the print copy both draw it.
  */
+/**
+ * The two lines over a division's table: the counts, and the games it is ranked through (RES-46).
+ * The TV page pins them with the heading (D-254), so they are a part of their own.
+ */
+export function DivisionSummary({ division }: Readonly<{ division: DivisionResult }>) {
+  const pending = pendingGame(
+    division.rows.map((row) => row.scores),
+    division.throughGame,
+  )
+  const throughNote = formatThroughNote(division.throughGame, pending)
+  return (
+    <>
+      <p className={styles.sub}>{formatSummary(division)}</p>
+      {throughNote && <p className={styles.sub}>{throughNote}</p>}
+    </>
+  )
+}
+
 export function DivisionBody({
   division,
   games,
-}: Readonly<{ division: DivisionResult; games: number }>) {
+  summary = true,
+}: Readonly<{
+  division: DivisionResult
+  games: number
+  /** Draw the summary lines (the default). The TV page draws them in its pinned heading instead. */
+  summary?: boolean
+}>) {
   const items = squadItems(division.rows)
   const count = gameColumnCount(games, [
     ...division.rows.map((row) => row.scores),
@@ -37,10 +69,14 @@ export function DivisionBody({
   ])
   const columns = 3 + count + (division.showHandicap ? 3 : 1)
   const anyEarlier = division.rows.some((row) => row.advancedEarlier)
+  const pending = pendingGame(
+    division.rows.map((row) => row.scores),
+    division.throughGame,
+  )
 
   return (
     <>
-      <p className={styles.sub}>{formatSummary(division)}</p>
+      {summary && <DivisionSummary division={division} />}
 
       {division.rows.length === 0 ? (
         <p>No bowler in this division has finished the squad.</p>
@@ -67,23 +103,36 @@ export function DivisionBody({
                   <td className={styles.place}>{item.row.place}</td>
                   <th scope="row" className={styles.who}>
                     {item.row.name}
+                    {item.row.dnf && <span className={styles.tag}>DNF</span>}
                     {item.row.advancedEarlier && (
                       <span className={styles.tag}>Advanced earlier</span>
                     )}
                     <TieMarks row={item.row} />
                   </th>
                   <PlusMinusCell total={item.row.total} games={item.row.games} />
-                  <GameCells scores={item.row.scores} count={count} />
+                  <GameCells
+                    scores={item.row.scores}
+                    count={count}
+                    counted={division.throughGame}
+                  />
                   <TotalCells
                     scores={item.row.scores}
                     total={item.row.total}
                     handicap={division.showHandicap}
+                    counted={division.throughGame}
                   />
                 </tr>
               ),
             )}
           </tbody>
         </table>
+      )}
+
+      {pending && (
+        <p className={styles.sub}>
+          † Game {pending.game} is not complete yet. These scores show, but places and totals do not
+          count them until every bowler in the division has a game {pending.game} score.
+        </p>
       )}
 
       {anyEarlier && (

@@ -197,3 +197,34 @@ describe('createSessionEvents', () => {
     ).toEqual({ lanes: 2, entries: 1 })
   })
 })
+
+describe('createSessionEvents detail and watching (RES-49, D-243)', () => {
+  it('sends the detail with a message, and none when there is none', () => {
+    const events = createSessionEvents(createCapturedLogger().logger, noMeter)
+    const a = watcher()
+    events.subscribe('live:t1', a.subscriber)
+
+    events.publish('live:t1', 'game-full', { sessionId: 's1', sessionKind: 'squad', game: 2 })
+    events.publish('live:t1', 'complete', { sessionId: 's1', sessionKind: 'squad' })
+    events.publish('live:t1', 'scores')
+
+    expect(a.received).toEqual([
+      { kind: 'game-full', detail: { sessionId: 's1', sessionKind: 'squad', game: 2 }, version: 1 },
+      { kind: 'complete', detail: { sessionId: 's1', sessionKind: 'squad' }, version: 2 },
+      { kind: 'scores', version: 3 },
+    ])
+  })
+
+  it('says whether anyone watches an id', () => {
+    const events = createSessionEvents(createCapturedLogger().logger, noMeter)
+    const a = watcher()
+    expect(events.watching('s1')).toBe(false)
+
+    const stop = events.subscribe('s1', a.subscriber)
+    expect(events.watching('s1')).toBe(true)
+    expect(events.watching('s2')).toBe(false)
+
+    stop?.()
+    expect(events.watching('s1')).toBe(false)
+  })
+})

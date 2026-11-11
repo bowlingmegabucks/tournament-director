@@ -76,6 +76,10 @@ export function createPrismaScoreWriter(client: PrismaClient, logger: Logger): S
               }),
             ),
           )
+          // D-250: a bowler who scores again is counted again.
+          await tx.sessionDnf.deleteMany({
+            where: { sessionId: input.sessionId, registrationId: input.registrationId },
+          })
         } else if (plan.type === 'clear') {
           await tx.squadScore.delete({
             where: {

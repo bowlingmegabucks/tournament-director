@@ -76,7 +76,7 @@ describe('fetchSquadResults', () => {
   it('reads the results of a squad (RES-31)', async () => {
     respondWith(squadPath, squad)
 
-    await expect(fetchSquadResults('t1', 's1')).resolves.toEqual(squad)
+    await expect(fetchSquadResults('t1', 's1', 'full-game')).resolves.toEqual(squad)
   })
 
   it('asks for the tournament and squad it was given', async () => {
@@ -88,7 +88,7 @@ describe('fetchSquadResults', () => {
       }),
     )
 
-    await fetchSquadResults('abc-123', 'def-456')
+    await fetchSquadResults('abc-123', 'def-456', 'full-game')
 
     expect(asked).toEqual({ id: 'abc-123', sessionId: 'def-456' })
   })
@@ -96,7 +96,9 @@ describe('fetchSquadResults', () => {
   it.each([404, 400])('reports a missing squad for status %i', async (status) => {
     server.use(http.get(squadPath, () => new HttpResponse(null, { status })))
 
-    const failure = await fetchSquadResults('t1', 's1').catch((error: unknown) => error)
+    const failure = await fetchSquadResults('t1', 's1', 'full-game').catch(
+      (error: unknown) => error,
+    )
 
     expect(failure).toBeInstanceOf(SessionNotFoundError)
     expect(failure).toHaveProperty('message', 'Squad not found')
@@ -109,7 +111,9 @@ describe('fetchSquadResults', () => {
       ),
     )
 
-    const failure = await fetchSquadResults('t1', 's1').catch((error: unknown) => error)
+    const failure = await fetchSquadResults('t1', 's1', 'full-game').catch(
+      (error: unknown) => error,
+    )
 
     expect(failure).toBeInstanceOf(ResultsUnavailableError)
     expect(failure).toHaveProperty('message', "This squad's finals ratio is 0.")
@@ -118,7 +122,7 @@ describe('fetchSquadResults', () => {
   it('reports a 422 whose body is not JSON', async () => {
     server.use(http.get(squadPath, () => new HttpResponse('<html></html>', { status: 422 })))
 
-    await expect(fetchSquadResults('t1', 's1')).rejects.toThrow(
+    await expect(fetchSquadResults('t1', 's1', 'full-game')).rejects.toThrow(
       'Failed to load results (response is not JSON)',
     )
   })
@@ -126,13 +130,17 @@ describe('fetchSquadResults', () => {
   it('has a plain message when a 422 carries none', async () => {
     server.use(http.get(squadPath, () => HttpResponse.json({}, { status: 422 })))
 
-    await expect(fetchSquadResults('t1', 's1')).rejects.toThrow('The results cannot be worked out')
+    await expect(fetchSquadResults('t1', 's1', 'full-game')).rejects.toThrow(
+      'The results cannot be worked out',
+    )
   })
 
   it('reports the status for another failure', async () => {
     server.use(http.get(squadPath, () => new HttpResponse(null, { status: 503 })))
 
-    const failure = await fetchSquadResults('t1', 's1').catch((error: unknown) => error)
+    const failure = await fetchSquadResults('t1', 's1', 'full-game').catch(
+      (error: unknown) => error,
+    )
 
     expect(failure).toEqual(new Error('Failed to load results (503)'))
     expect(failure).not.toBeInstanceOf(SessionNotFoundError)
@@ -142,7 +150,7 @@ describe('fetchSquadResults', () => {
   it('rejects a body that is not JSON', async () => {
     server.use(http.get(squadPath, () => new HttpResponse('<html></html>')))
 
-    await expect(fetchSquadResults('t1', 's1')).rejects.toThrow(
+    await expect(fetchSquadResults('t1', 's1', 'full-game')).rejects.toThrow(
       'Failed to load results (response is not JSON)',
     )
   })
@@ -355,7 +363,7 @@ describe('fetchSquadResults', () => {
   ])('rejects %s', async (_label, body) => {
     respondWith(squadPath, body)
 
-    await expect(fetchSquadResults('t1', 's1')).rejects.toThrow(
+    await expect(fetchSquadResults('t1', 's1', 'full-game')).rejects.toThrow(
       'Failed to load results (unexpected response)',
     )
   })
@@ -365,20 +373,20 @@ describe('fetchSweeperResults', () => {
   it('reads the results of a sweeper from the sweeper path (RES-31)', async () => {
     respondWith(sweeperPath, sweeper)
 
-    await expect(fetchSweeperResults('t1', 's1')).resolves.toEqual(sweeper)
+    await expect(fetchSweeperResults('t1', 's1', 'full-game')).resolves.toEqual(sweeper)
   })
 
   it('accepts a sweeper with no entries and no cut score (D-77)', async () => {
     const empty = createSweeperResults()
     respondWith(sweeperPath, empty)
 
-    await expect(fetchSweeperResults('t1', 's1')).resolves.toEqual(empty)
+    await expect(fetchSweeperResults('t1', 's1', 'full-game')).resolves.toEqual(empty)
   })
 
   it('names a missing sweeper as one', async () => {
     server.use(http.get(sweeperPath, () => new HttpResponse(null, { status: 404 })))
 
-    await expect(fetchSweeperResults('t1', 's1')).rejects.toThrow('Sweeper not found')
+    await expect(fetchSweeperResults('t1', 's1', 'full-game')).rejects.toThrow('Sweeper not found')
   })
 
   it('carries the API message when the ratio cannot work (D-83)', async () => {
@@ -388,7 +396,9 @@ describe('fetchSweeperResults', () => {
       ),
     )
 
-    await expect(fetchSweeperResults('t1', 's1')).rejects.toBeInstanceOf(ResultsUnavailableError)
+    await expect(fetchSweeperResults('t1', 's1', 'full-game')).rejects.toBeInstanceOf(
+      ResultsUnavailableError,
+    )
   })
 
   const first = sweeper.rows[0]
@@ -408,7 +418,7 @@ describe('fetchSweeperResults', () => {
   ])('rejects %s', async (_label, body) => {
     respondWith(sweeperPath, body)
 
-    await expect(fetchSweeperResults('t1', 's1')).rejects.toThrow(
+    await expect(fetchSweeperResults('t1', 's1', 'full-game')).rejects.toThrow(
       'Failed to load results (unexpected response)',
     )
   })
@@ -438,7 +448,7 @@ describe.each([
   {
     name: 'fetchSuperSweeper',
     path: '/v1/tournaments/:id/super-sweeper',
-    fetch: fetchSuperSweeper,
+    fetch: (tournamentId: string) => fetchSuperSweeper(tournamentId, 'full-game'),
     valid: createSuperSweeperResults({
       cutScore: 1200,
       rows: [
@@ -690,7 +700,7 @@ describe('the at-large, seeding, and super sweeper shape checks (RES-37)', () =>
   ])('super sweeper rejects %s', async (_label, body) => {
     respondWith('/v1/tournaments/:id/super-sweeper', body)
 
-    await expect(fetchSuperSweeper('t1')).rejects.toThrow(
+    await expect(fetchSuperSweeper('t1', 'full-game')).rejects.toThrow(
       'Failed to load results (unexpected response)',
     )
   })

@@ -4,6 +4,7 @@ import express from 'express'
 import helmet from 'helmet'
 import type { Config } from './config.ts'
 import type { Logger } from './shared/logger.ts'
+import { HttpError } from './shared/errors.ts'
 import { createRateLimiter } from './shared/rateLimit.ts'
 import { requestIdHeader, requestLogging } from './shared/requestLogging.ts'
 import { createDivisionCreateRouter } from './features/divisions/createRoutes.ts'
@@ -34,7 +35,11 @@ import { createEditRegistrationRouter } from './features/registrations/editRoute
 import { createVendorRegistrationRouter } from './features/registrations/vendorRoutes.ts'
 import { createPublishingRegistrationWriter } from './features/registrations/publishingWriter.ts'
 import type { RegistrationWriter } from './features/registrations/writer.ts'
-import { createFinalsRouter, createResultsRouter } from './features/results/routes.ts'
+import {
+  createFinalsRouter,
+  createLiveResultsRouter,
+  createResultsRouter,
+} from './features/results/routes.ts'
 import { createScoreWriteRouter } from './features/scores/scoreRoutes.ts'
 import type { ScoreWriter } from './features/scores/scoreWriter.ts'
 import { createScoreCache, dropCacheOnPublish } from './features/scores/scoreCache.ts'
@@ -43,6 +48,10 @@ import { createScoreRouter } from './features/scores/routes.ts'
 import type { ScoreRepository } from './features/scores/repository.ts'
 import { createSkipRouter } from './features/skip/routes.ts'
 import type { SkipStore } from './features/skip/store.ts'
+import { createDnfRouter } from './features/dnf/routes.ts'
+import { createLiveNotifier } from './features/results/liveEvents.ts'
+import { createTournamentEventsRouter } from './shared/events/sseRoute.ts'
+import type { DnfStore } from './features/dnf/store.ts'
 import { createSquadRouter } from './features/squads/routes.ts'
 import type { SquadRepository } from './features/squads/repository.ts'
 import { createSquadCreateRouter } from './features/squads/createRoutes.ts'
@@ -123,6 +132,7 @@ export interface AppDependencies {
   scoreWriter: ScoreWriter
   /** The stored skip of each squad and sweeper (SCR-23, D-235). */
   skipStore: SkipStore
+  dnfStore: DnfStore
   squads: SquadRepository
   /** Adds squads (SQD-01 to SQD-08, D-167). */
   squadWriter: SquadWriter
@@ -154,6 +164,7 @@ export function createApp({
   scores,
   scoreWriter,
   skipStore,
+  dnfStore,
   squads,
   squadWriter,
   sweepers,
@@ -166,6 +177,16 @@ export function createApp({
   // complete, a lane move, a session edit, or a registration write gets the new page (D-232).
   const scoreCache = createScoreCache()
   const events = dropCacheOnPublish(sessionEvents, scoreCache)
+  // A score save, a DNF flag, or a complete tells the TV page which division gained a full game (RES-49).
+  const liveNotifier = createLiveNotifier({
+    events,
+    cache: scoreCache,
+    lanes,
+    scores,
+    divisions,
+    dnf: dnfStore,
+    logger,
+  })
   // Every registration write, desk or vendor, tells the open lane pages of the sessions it touches
   // (LAN-22, D-219). The routes below see only this wrapper.
   const registrationWriter = createPublishingRegistrationWriter(
@@ -207,7 +228,16 @@ export function createApp({
     logger,
   })
   // The five results routes (squad, sweeper, at-large, seeding, super sweeper) read the same data.
-  const resultsDeps = { tournaments, divisions, squads, sweepers, lanes, scores, logger }
+  const resultsDeps = {
+    tournaments,
+    divisions,
+    squads,
+    sweepers,
+    lanes,
+    scores,
+    dnf: dnfStore,
+    logger,
+  }
 
   // One router serves every method; the two groups below give each its own access.
   const vendorRegistrations = createVendorRegistrationRouter({
@@ -312,7 +342,7 @@ export function createApp({
         path: '/v1/tournaments/:id/squads',
         access: { permission: 'squads.write' }, // SQD-15, D-193: complete; no API key
         methods: ['POST'],
-        router: createSquadCompleteRouter(squadWriter, logger, events),
+        router: createSquadCompleteRouter(squadWriter, logger, events, liveNotifier),
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/complete-info',
@@ -359,7 +389,7 @@ export function createApp({
         path: '/v1/tournaments/:id/sweepers',
         access: { permission: 'squads.write' }, // SQD-16, D-193: complete; no API key
         methods: ['POST'],
-        router: createSweeperCompleteRouter(sweeperWriter, logger, events),
+        router: createSweeperCompleteRouter(sweeperWriter, logger, events, liveNotifier),
       },
       {
         path: '/v1/tournaments/:id/sweepers/:sessionId/complete-info',
@@ -466,6 +496,24 @@ export function createApp({
         }),
       },
       {
+        path: '/v1/tournaments/:id/live-results',
+        access: 'public', // RES-47, D-242: the TV page loads this; no sign-in
+        router: createLiveResultsRouter(resultsDeps, scoreCache),
+      },
+      {
+        path: '/v1/tournaments/:id/live-results/events',
+        access: 'public', // RES-49, D-242, D-243: the TV page and anyone may watch; no sign-in
+        router: createTournamentEventsRouter({
+          events,
+          logger,
+          check: async (tournamentId) => {
+            if (!(await tournaments.get(tournamentId))) {
+              throw new HttpError(404, 'Tournament not found')
+            }
+          },
+        }),
+      },
+      {
         path: '/v1/tournaments/:id/squads/:sessionId/scores/games',
         access: { permission: 'scores.write' }, // SCR-22, D-234: entry only; the API key cannot reach it
         router: createGamesRouter('squad', findSquad(squads), {
@@ -474,6 +522,7 @@ export function createApp({
           divisions,
           scores,
           skipStore,
+          dnfStore,
           logger,
         }),
       },
@@ -486,6 +535,38 @@ export function createApp({
           divisions,
           scores,
           skipStore,
+          dnfStore,
+          logger,
+        }),
+      },
+      // The DNF routes come first: `dnf` would otherwise read as a game number.
+      {
+        path: '/v1/tournaments/:id/squads/:sessionId/scores',
+        access: { permission: 'scores.write' }, // SCR-24, D-249: no API key
+        methods: ['PUT', 'DELETE'],
+        router: createDnfRouter('squad', {
+          live: liveNotifier,
+          store: dnfStore,
+          findSession: findSquad(squads),
+          tournaments,
+          lanes,
+          scores,
+          events,
+          logger,
+        }),
+      },
+      {
+        path: '/v1/tournaments/:id/sweepers/:sessionId/scores',
+        access: { permission: 'scores.write' }, // SCR-24, D-249
+        methods: ['PUT', 'DELETE'],
+        router: createDnfRouter('sweeper', {
+          live: liveNotifier,
+          store: dnfStore,
+          findSession: findSweeper(sweepers),
+          tournaments,
+          lanes,
+          scores,
+          events,
           logger,
         }),
       },
@@ -494,6 +575,7 @@ export function createApp({
         access: { permission: 'scores.write' }, // SCR-19, D-228: no API key
         methods: ['PUT', 'DELETE'],
         router: createScoreWriteRouter('squad', {
+          live: liveNotifier,
           writer: scoreWriter,
           cache: scoreCache,
           events,
@@ -505,6 +587,7 @@ export function createApp({
         access: { permission: 'scores.write' }, // SCR-19, D-228
         methods: ['PUT', 'DELETE'],
         router: createScoreWriteRouter('sweeper', {
+          live: liveNotifier,
           writer: scoreWriter,
           cache: scoreCache,
           events,
@@ -534,12 +617,12 @@ export function createApp({
       {
         path: '/v1/tournaments/:id/squads/:sessionId/results',
         access: 'public', // D-74: public for good, so bowlers check the standings
-        router: createResultsRouter('squad', resultsDeps),
+        router: createResultsRouter('squad', resultsDeps, scoreCache),
       },
       {
         path: '/v1/tournaments/:id/sweepers/:sessionId/results',
         access: 'public', // D-74
-        router: createResultsRouter('sweeper', resultsDeps),
+        router: createResultsRouter('sweeper', resultsDeps, scoreCache),
       },
       {
         path: '/v1/tournaments/:id/at-large',

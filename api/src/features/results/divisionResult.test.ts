@@ -8,7 +8,11 @@ import { markTies } from './ties.ts'
 const division = createDivision({ number: 3, name: 'Open' })
 const flat = (score: number, pins = 0) => createResultEntry({ games: [score, score, score], pins })
 
-function build(entries: ResultEntry[], over: Partial<DivisionInput> = {}) {
+function build(
+  entries: ResultEntry[],
+  over: Partial<DivisionInput> = {},
+  throughGame: number | null = null,
+) {
   const input: DivisionInput = {
     entries,
     advancedBefore: new Set(),
@@ -24,12 +28,18 @@ function build(entries: ResultEntry[], over: Partial<DivisionInput> = {}) {
     outcome,
     markTies(outcome, input.advancedBefore),
     input.advancedBefore,
+    throughGame,
   )
 }
 
 const forty = () => Array.from({ length: 40 }, (_, index) => flat(40 - index))
 
 describe('toDivisionResult', () => {
+  it('carries the games counted (RES-40)', () => {
+    expect(build(forty(), {}, 2).throughGame).toBe(2)
+    expect(build(forty()).throughGame).toBeNull()
+  })
+
   it('names the division and counts its entries', () => {
     const result = build(forty())
 

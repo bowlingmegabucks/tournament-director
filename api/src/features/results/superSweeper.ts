@@ -3,6 +3,7 @@ import type { LaneEntry } from '../lanes/types.ts'
 import type { ScoreRow } from '../scores/types.ts'
 import type { Sweeper } from '../sweepers/types.ts'
 import { sweeperPins, toResultEntry, type ResultEntry } from './entries.ts'
+import { fewestGames, type RankMode } from './fullGame.ts'
 import { rankEntries } from './ranking.ts'
 
 /** One sweeper of the tournament with the entries and scores saved so far. */
@@ -29,13 +30,26 @@ export interface SuperSweeperEntry {
   /** The pins per game bowled in each sweeper. */
   sweeperPins: number[]
   flags: SweeperFlag[]
+  /** Flagged DNF in a sweeper that is still open (D-248, D-251). */
+  dnf: boolean
+}
+
+export interface SuperSweeperOptions {
+  /** `live` (the default) counts every saved score; `full-game` counts each open sweeper's last full game (D-240). */
+  mode?: RankMode
+  /** Registrations flagged DNF, by sweeper id (D-248). */
+  flagged?: ReadonlyMap<string, ReadonlySet<string>>
 }
 
 export interface SuperSweeperBuilt {
+  /** The games counted in each sweeper, by sweeper id: `null` in live mode, every game once it is complete. */
+  through: Map<string, number | null>
   entries: SuperSweeperEntry[]
   /** Registrations whose division is not one of the tournament's (D-51). Left out. */
   skipped: string[]
 }
+
+const noFlags: ReadonlySet<string> = new Set()
 
 /** The scratch games of each bowler in one sweeper. A game saved twice keeps the last score. */
 function gamesByBowler(scores: readonly ScoreRow[]): Map<string, number[]> {
@@ -48,10 +62,36 @@ function gamesByBowler(scores: readonly ScoreRow[]): Map<string, number[]> {
   return new Map([...byGame.entries()].map(([bowlerId, games]) => [bowlerId, [...games.values()]]))
 }
 
+/**
+ * Each bowler's games in one run from game 1: a game with no stored score ends it. Squads and
+ * sweepers count this way (`run` in fullGame.ts), so a bowler with games 1 and 3 has 1 here too.
+ */
+function runsByBowler(scores: readonly ScoreRow[]): Map<string, number> {
+  const have = new Map<string, Set<number>>()
+  for (const { bowlerId, game } of scores) {
+    have.set(bowlerId, (have.get(bowlerId) ?? new Set<number>()).add(game))
+  }
+  return new Map(
+    [...have.entries()].map(([bowlerId, games]) => {
+      let run = 0
+      while (games.has(run + 1)) run += 1
+      return [bowlerId, run]
+    }),
+  )
+}
+
 interface SweeperScores {
+  /** Only this many games of an open sweeper count (RES-42). `null`: every game. */
+  limit: number | null
+  /** Registrations flagged DNF while the sweeper is open (D-248). Empty once it is complete. */
+  flagged: ReadonlySet<string>
   sweeper: Sweeper
   pins: (entry: LaneEntry, division: Division) => number
   games: Map<string, number[]>
+}
+
+function flagFor(sweeperId: string, gamesBowled: number): SweeperFlag {
+  return { kind: gamesBowled === 0 ? 'missed' : 'unfinished', sweeperId, gamesBowled }
 }
 
 /** One bowler's combined entry, or `null` with no game in any sweeper. */
@@ -68,9 +108,10 @@ function buildEntry(
   const flags: SweeperFlag[] = []
   let total = 0
 
-  for (const { sweeper, pins, games: stored } of perSweeper) {
+  for (const { sweeper, pins, games: stored, limit } of perSweeper) {
     // Complete writes zero rows for a no-show (D-06), so all zeros is a missed sweeper (D-75, D-90).
-    const rows = stored.get(registrant.bowlerId) ?? []
+    const all = stored.get(registrant.bowlerId) ?? []
+    const rows = limit === null ? all : all.slice(0, limit)
     const bowled = rows.every((score) => score === 0) ? [] : rows
     if (bowled.length === 0 && !sweeper.complete) {
       sweeperTotals.push(null)
@@ -82,13 +123,7 @@ function buildEntry(
     const scratch = bowled.reduce((sum, score) => sum + score, 0)
     const sweeperTotal = scratch + pinsPerGame * bowled.length
     const missing = sweeper.complete ? Math.max(sweeper.games - bowled.length, 0) : 0
-    if (missing > 0) {
-      flags.push({
-        kind: bowled.length === 0 ? 'missed' : 'unfinished',
-        sweeperId: sweeper.id,
-        gamesBowled: bowled.length,
-      })
-    }
+    if (missing > 0) flags.push(flagFor(sweeper.id, bowled.length))
     const filled = [...bowled, ...Array.from({ length: missing }, () => 0)]
     sweeperScores.push(filled)
     sweeperPinsList.push(pinsPerGame)
@@ -117,6 +152,7 @@ function buildEntry(
     sweeperScores,
     sweeperPins: sweeperPinsList,
     flags,
+    dnf: perSweeper.some((each) => each.flagged.has(registrant.registrationId)),
   }
 }
 
@@ -131,13 +167,31 @@ function buildEntry(
 export function buildSuperSweeperEntries(
   inputs: readonly SweeperInput[],
   divisions: readonly Division[],
+  options: SuperSweeperOptions = {},
 ): SuperSweeperBuilt {
   const divisionById = new Map(divisions.map((division) => [division.id, division]))
-  const perSweeper = inputs.map(({ sweeper, scores }) => ({
-    sweeper,
-    pins: sweeperPins(sweeper.bonusPins),
-    games: gamesByBowler(scores),
-  }))
+  const { mode = 'live', flagged } = options
+  const through = new Map<string, number | null>()
+  const perSweeper = inputs.map(({ sweeper, entries, scores }) => {
+    const games = gamesByBowler(scores)
+    const runs = runsByBowler(scores)
+    // RES-42: an open sweeper counts the games every bowler in it has; a complete one counts them all.
+    let limit: number | null = null
+    if (mode === 'full-game' && !sweeper.complete) {
+      // A bowler entered in the sweeper with no score has bowled no game, so no game is full yet.
+      // A bowler with no lane (taken off the lane assignment) cannot bowl, so no one waits for them.
+      const bowlers = entries
+        .filter((entry) => runs.has(entry.bowlerId) || entry.position !== '')
+        .map((entry) => ({
+          registrationId: entry.registrationId,
+          games: runs.get(entry.bowlerId) ?? 0,
+        }))
+      limit = fewestGames(bowlers, flagged?.get(sweeper.id) ?? noFlags) ?? 0
+    }
+    through.set(sweeper.id, limit ?? (mode === 'full-game' ? sweeper.games : null))
+    const flaggedHere = sweeper.complete ? noFlags : (flagged?.get(sweeper.id) ?? noFlags)
+    return { sweeper, pins: sweeperPins(sweeper.bonusPins), games, limit, flagged: flaggedHere }
+  })
 
   const registrants = new Map<string, LaneEntry>()
   for (const { entries } of inputs) {
@@ -159,7 +213,7 @@ export function buildSuperSweeperEntries(
     const item = buildEntry(registrant, division, perSweeper)
     if (item) built.push(item)
   }
-  return { entries: built, skipped }
+  return { through, entries: built, skipped }
 }
 
 export interface SuperSweeperOutcome {

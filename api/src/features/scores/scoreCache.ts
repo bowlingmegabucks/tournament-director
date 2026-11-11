@@ -12,6 +12,8 @@ export interface ScoreCache {
   drop(tournamentId: string, sessionId: string): void
   /** Forget the page of one session when only its id is known (an event carries no tournament). */
   dropSession(sessionId: string): void
+  /** Forget the TV feed of one tournament (D-244). */
+  dropTournament(tournamentId: string): void
 }
 
 export function createScoreCache(cacheMs = LIVE_CACHE_MS): ScoreCache {
@@ -25,6 +27,9 @@ export function createScoreCache(cacheMs = LIVE_CACHE_MS): ScoreCache {
       const suffix = `/${cacheKey(sessionId)}`
       cached.dropWhere((key) => key.endsWith(suffix))
     },
+    dropTournament: (tournamentId) => {
+      cached.drop(cacheKey('live-results', tournamentId))
+    },
   }
 }
 
@@ -36,9 +41,9 @@ export function createScoreCache(cacheMs = LIVE_CACHE_MS): ScoreCache {
 export function dropCacheOnPublish(events: SessionEvents, cache: ScoreCache): SessionEvents {
   return {
     ...events,
-    publish(sessionId, kind) {
+    publish(sessionId, kind, detail) {
       cache.dropSession(sessionId)
-      events.publish(sessionId, kind)
+      events.publish(sessionId, kind, detail)
     },
   }
 }

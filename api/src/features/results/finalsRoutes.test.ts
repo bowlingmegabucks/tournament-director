@@ -11,6 +11,7 @@ import {
 } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createTestApp } from '../../test/testApp.ts'
+import { createInMemoryDnfStore } from '../dnf/store.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
 import { createInMemoryLaneRepository } from '../lanes/repository.ts'
 import { createInMemoryScoreRepository } from '../scores/repository.ts'
@@ -150,9 +151,15 @@ describe('GET /v1/tournaments/:id/super-sweeper', () => {
 
     expect(response.status).toBe(200)
     expect(superSweeperResultsSchema.safeParse(response.body).success).toBe(true)
-    expect(response.body).toMatchObject({ complete: true, cashRatio: 2, entries: 6, cashers: 3 })
+    expect(response.body).toMatchObject({
+      mode: 'full-game',
+      complete: true,
+      cashRatio: 2,
+      entries: 6,
+      cashers: 3,
+    })
     expect(response.body.sweepers).toEqual([
-      { id: sweeper.id, date: sweeper.date, games: 3, complete: true },
+      { id: sweeper.id, date: sweeper.date, games: 3, complete: true, throughGame: 3 },
     ])
     expect(response.body.rows[0]).toMatchObject({
       place: 1,
@@ -165,6 +172,7 @@ describe('GET /v1/tournaments/:id/super-sweeper', () => {
     expect(Object.keys(response.body.rows[0]).toSorted()).toEqual(
       [
         'divisionName',
+        'dnf',
         'flags',
         'games',
         'group',
@@ -187,6 +195,21 @@ describe('GET /v1/tournaments/:id/super-sweeper', () => {
 
     expect(response.status).toBe(422)
     expect(response.body.message).toMatch(/super sweeper cash ratio is 0/)
+  })
+
+  it('ranks on every saved score with ?mode=live and refuses an unknown mode (RES-45, D-252)', async () => {
+    const { app, tournament, sweeper } = setup()
+    const base = `/v1/tournaments/${tournament.id}/super-sweeper`
+
+    const live = await request(app).get(`${base}?mode=live`)
+    const bad = await request(app).get(`${base}?mode=fast`)
+
+    expect(live.status).toBe(200)
+    expect(live.body.mode).toBe('live')
+    expect(live.body.sweepers).toEqual([
+      { id: sweeper.id, date: sweeper.date, games: 3, complete: true, throughGame: null },
+    ])
+    expect(bad.status).toBe(400)
   })
 })
 
@@ -255,6 +278,7 @@ describe('finals cache', () => {
         sweepers: createInMemorySweeperRepository([]),
         lanes: createInMemoryLaneRepository([]),
         scores: createInMemoryScoreRepository([]),
+        dnf: createInMemoryDnfStore().store,
         logger: createCapturedLogger().logger,
       },
       cacheMs,

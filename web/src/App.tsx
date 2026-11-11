@@ -9,6 +9,7 @@ import { DivisionsPage } from './features/divisions/DivisionsPage'
 import { EditDivisionPage } from './features/divisions/EditDivisionPage'
 import { NewDivisionPage } from './features/divisions/NewDivisionPage'
 import { LanesPage } from './features/lanes/LanesPage'
+import { LiveResultsPage } from './features/liveResults/LiveResultsPage'
 import { AtLargePage } from './features/results/AtLargePage'
 import { SeedingPage } from './features/results/SeedingPage'
 import { SuperSweeperPage } from './features/results/SuperSweeperPage'
@@ -41,6 +42,8 @@ import { NotFoundPage } from './shared/NotFoundPage'
 export default function App() {
   return (
     <Routes>
+      {/* The TV page fills the screen: no header, menu, or sidebar (RES-50, D-242). */}
+      <Route path="tournaments/:id/liveResults" element={<LiveResultsPage />} />
       <Route element={<AppShell />}>
         <Route index element={<HomePage />} />
         <Route path="tournaments" element={<TournamentsPage />} />

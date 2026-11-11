@@ -6,6 +6,7 @@ import type { SessionEvents } from '../../shared/events/sessionEvents.ts'
 import { jsonBody } from '../../shared/jsonBody.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { requestLogger } from '../../shared/requestLogging.ts'
+import type { LiveNotifier } from '../results/liveEvents.ts'
 import type { ScoreCache } from './scoreCache.ts'
 import { totalOf } from './scorePlan.ts'
 import type { ScoreChangeResult, ScoreWriter, SessionKind } from './scoreWriter.ts'
@@ -28,6 +29,7 @@ const body = z.strictObject({ score: z.number() })
 const sessionName = (kind: SessionKind) => (kind === 'squad' ? 'Squad' : 'Sweeper')
 
 export interface ScoreWriteDeps {
+  live: LiveNotifier
   writer: ScoreWriter
   cache: ScoreCache
   events: SessionEvents
@@ -43,7 +45,7 @@ export interface ScoreWriteDeps {
  */
 export function createScoreWriteRouter(
   kind: SessionKind,
-  { writer, cache, events, logger }: ScoreWriteDeps,
+  { live, writer, cache, events, logger }: ScoreWriteDeps,
 ): Router {
   const router = Router({ mergeParams: true })
   const label = sessionName(kind)
@@ -55,6 +57,8 @@ export function createScoreWriteRouter(
     score: number | undefined,
   ) {
     const { id, sessionId, registrationId, game } = params.parse(req.params)
+    // The counted games before the write, for the TV page (RES-49). Nothing if nobody watches.
+    const before = await live.before(id, kind, sessionId, registrationId)
     const outcome: ScoreChangeResult = await writer.change({
       tournamentId: id,
       kind,
@@ -101,6 +105,7 @@ export function createScoreWriteRouter(
     // Drop the cached public page first, or a screen that asks again at once gets the old one.
     cache.drop(id, sessionId)
     events.publish(sessionId, 'scores')
+    await live.after(before)
     return { scores: plan.scores, total: totalOf(plan.scores) }
   }
 

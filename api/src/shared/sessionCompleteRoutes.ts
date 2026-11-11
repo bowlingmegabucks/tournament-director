@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { callerOf } from './auth/caller.ts'
 import { FieldErrorsError, HttpError } from './errors.ts'
 import type { SessionEvents } from './events/sessionEvents.ts'
+import type { LiveNotifier } from '../features/results/liveEvents.ts'
 import type { Logger } from './logger.ts'
 import { requestLogger } from './requestLogging.ts'
 import type { SessionCompleter } from './sessionComplete.ts'
@@ -41,6 +42,7 @@ export function createSessionCompleteRouter<Session>(
   logger: Logger,
   kind: SessionKind,
   events: SessionEvents,
+  live?: LiveNotifier,
 ): Router {
   const router = Router({ mergeParams: true })
 
@@ -64,6 +66,8 @@ export function createSessionCompleteRouter<Session>(
     )
     // Every open lane page drops to read only, and score pages stop asking (D-10, D-219).
     events.publish(sessionId, 'lanes')
+    // The TV page shows the session as official now (RES-49).
+    live?.completed(id, kind, sessionId)
     res.json(
       kind === 'squad'
         ? { squad: outcome.completed, noShowCount: outcome.noShowCount }

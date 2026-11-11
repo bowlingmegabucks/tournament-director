@@ -8,6 +8,7 @@ import {
   createTournament,
 } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
+import { createInMemoryDnfStore } from '../dnf/store.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
 import type { Division } from '../divisions/types.ts'
 import { createInMemoryLaneRepository } from '../lanes/repository.ts'
@@ -45,6 +46,7 @@ function setup(options: {
       [tournament],
       options.ratios && { [tournament.id]: options.ratios },
     ),
+    dnf: createInMemoryDnfStore().store,
     divisions: createInMemoryDivisionRepository(
       (options.divisions ?? [open]).map((division) => ({
         tournamentId: tournament.id,
@@ -523,8 +525,8 @@ describe('loadSuperSweeper', () => {
 
     expect(result.rows.map((row) => row.place)).toEqual([1, 2, 3, 4])
     expect(result.sweepers).toEqual([
-      { id: first.id, date: morning, games: 3, complete: true },
-      { id: second.id, date: noon, games: 3, complete: true },
+      { id: first.id, date: morning, games: 3, complete: true, throughGame: null },
+      { id: second.id, date: noon, games: 3, complete: true, throughGame: null },
     ])
     expect(result).toMatchObject({ complete: true, cashRatio: 2, entries: 4, cashers: 2 })
     expect(result.rows.map((row) => row.registrationId)).toEqual([

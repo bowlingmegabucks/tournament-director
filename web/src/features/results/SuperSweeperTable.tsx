@@ -77,6 +77,7 @@ export function SuperSweeperTable({ results }: Readonly<{ results: SuperSweeperR
                         rowSpan={lines}
                       >
                         {row.name}
+                        {row.dnf && <span className={styles.tag}>DNF</span>}
                         {row.flags.map((flag) => (
                           <span key={flag.sweeperId} className={styles.tag}>
                             {formatFlagTag(flag)}

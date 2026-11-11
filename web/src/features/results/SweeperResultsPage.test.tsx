@@ -230,7 +230,7 @@ describe('SweeperResultsPage', () => {
     await screen.findByRole('table', { name: 'Sweeper results' }, { timeout: 3000 })
   })
 
-  it('asks again every 15 seconds while the sweeper is open (RES-34, D-79)', async () => {
+  it('asks again every 15 seconds while the sweeper is open and its stream is down (RES-44, D-241)', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const results = filled()
     serve(results)

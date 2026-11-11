@@ -32,6 +32,7 @@ function recordingHub() {
     publish: (sessionId, kind) => published.push({ sessionId, kind }),
     closeAll: () => undefined,
     count: () => 0,
+    watching: () => false,
   }
   return { hub, published }
 }
@@ -236,6 +237,7 @@ describe('createPublishingRegistrationWriter', () => {
       },
       closeAll: () => undefined,
       count: () => 0,
+      watching: () => false,
     }
     const captured = createCapturedLogger()
     const { writer: inner, state } = storage()

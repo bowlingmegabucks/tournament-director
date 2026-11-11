@@ -5,6 +5,12 @@ export type { SessionKind } from '../../shared/session'
  * change both together.
  */
 
+/**
+ * How a results page ranks while games come in (D-239): `full-game` counts only the games every
+ * bowler of a division has (the default), `live` counts every saved score.
+ */
+export type RankMode = 'full-game' | 'live'
+
 /** What separated two bowlers after the total: the games bowled, or the Nth best game (1 = high game). */
 export type Decider = { kind: 'games' } | { kind: 'game'; rank: number }
 
@@ -35,6 +41,8 @@ export interface SquadRow extends RankedRow {
   scores: (number | null)[]
   /** True only for an earlier advancer at or above the cut score (D-81). */
   advancedEarlier: boolean
+  /** Flagged "did not finish" in a squad that is still open (D-248, D-251). */
+  dnf: boolean
 }
 
 /** A bowler listed apart on a complete squad: no place (D-75). */
@@ -55,6 +63,11 @@ export interface DivisionResult {
   entries: number
   /** RES-11a: someone in the division has a handicap above 0. */
   showHandicap: boolean
+  /**
+   * The games counted (D-239): the last game every bowler of the division has, or all the squad's games
+   * once it is complete. `null` in live mode. A game above it shows dimmed and is left out of the figures.
+   */
+  throughGame: number | null
   rows: SquadRow[]
   didNotFinish: UnplacedRow[]
   noShows: { registrationId: string; name: string }[]
@@ -72,6 +85,7 @@ interface ResultsSession {
 /** What `GET /v1/tournaments/{id}/squads/{sessionId}/results` returns. */
 export interface SquadResults {
   session: ResultsSession & { kind: 'squad' }
+  mode: RankMode
   /** The squad's effective ratios (RES-03, D-43). */
   finalsRatio: number
   cashRatio: number
@@ -87,11 +101,16 @@ export interface SweeperRow extends RankedRow {
   bonusPins: number
   /** The scratch pins of each game by game number; `null` is a game with no saved score. */
   scores: (number | null)[]
+  /** Flagged "did not finish" in a sweeper that is still open (D-248, D-251). */
+  dnf: boolean
 }
 
 /** What `GET /v1/tournaments/{id}/sweepers/{sessionId}/results` returns. */
 export interface SweeperResults {
   session: ResultsSession & { kind: 'sweeper' }
+  mode: RankMode
+  /** The games counted (D-239, D-240): `null` in live mode. */
+  throughGame: number | null
   cashRatio: number
   /** `N` (RES-22). */
   entries: number
@@ -191,17 +210,57 @@ export interface SuperSweeperRow extends RankedRow {
   /** The pins added per game bowled in each entry of `sweepers` (SCR-09). */
   sweeperPins: number[]
   flags: SweeperFlag[]
+  /** Flagged "did not finish" in a sweeper that is still open (D-248, D-251). */
+  dnf: boolean
 }
 
 export interface SuperSweeperResults {
+  mode: RankMode
   complete: boolean
   cashRatio: number
   entries: number
   cashers: number
   cutScore: number | null
   /** In date order: one column each. */
-  sweepers: { id: string; date: string; games: number; complete: boolean }[]
+  sweepers: {
+    id: string
+    date: string
+    games: number
+    complete: boolean
+    /** The games counted in this sweeper (D-240): `null` in live mode. */
+    throughGame: number | null
+  }[]
   rows: SuperSweeperRow[]
 }
 
 export type FinalsKind = 'at-large' | 'seeding' | 'super-sweeper'
+
+/**
+ * What the TV page loads once (RES-47, D-244): every squad by division, every sweeper, and the super
+ * sweeper, ranked through the last full game. The API's `features/results/types.ts` has the same
+ * fields: change both together.
+ */
+export type LiveSession =
+  { kind: 'squad'; results: SquadResults } | { kind: 'sweeper'; results: SweeperResults }
+
+export interface LiveResults {
+  tournament: { id: string; name: string }
+  /** When the answer was worked out, an ISO time. */
+  generatedAt: string
+  /** Squads in date order, then sweepers in date order (D-242). */
+  sessions: LiveSession[]
+  superSweeper: SuperSweeperResults | null
+}
+
+/** What a message on the tournament stream says (RES-49, D-243): ids and a game, never a score. */
+export interface LiveEvent {
+  kind: 'game-full' | 'reopened' | 'scored' | 'complete'
+  detail: {
+    sessionId: string
+    sessionKind: 'squad' | 'sweeper'
+    divisionId?: string
+    /** The division's name from the API, so the strip names it before the page has the division. */
+    divisionName?: string
+    game?: number
+  }
+}

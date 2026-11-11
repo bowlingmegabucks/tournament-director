@@ -52,7 +52,7 @@ The site (`https://bowlingmegabucks.com/tournament-director/`) and the API (`*.a
 
 ### Database script for the skip (D-235)
 
-Run `api/prisma/score-tables.sql` once on the production database **before the deploy that ships score entry**. It creates `SessionSkip` if it is missing, so running it again is safe, and it touches no legacy table. Without it the skip routes, recap sheets, and score entry answer `503`. Same way as the sign-in tables ([api-standards](api-standards.md#database)). Locally: `docker exec -i tournament-director-db mariadb -uroot -p<password> <database> < api/prisma/score-tables.sql`.
+Run `api/prisma/score-tables.sql` once on the production database **before the deploy that ships score entry, and again before the deploy that ships live results** (it adds `SessionDnf`). It creates `SessionSkip` and `SessionDnf` (the "did not finish" flags, D-248) if they are missing, so running it again is safe, and it touches no legacy table. Without it the skip routes, recap sheets, and score entry answer `503`, and so do the results routes, which read the flags. Same way as the sign-in tables ([api-standards](api-standards.md#database)). Locally: `docker exec -i tournament-director-db mariadb -uroot -p<password> <database> < api/prisma/score-tables.sql`.
 
 ### Live updates (SSE, D-217)
 

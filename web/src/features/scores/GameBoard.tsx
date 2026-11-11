@@ -4,7 +4,7 @@ import { Can } from '../auth/Can'
 import { LiveStatus } from '../../shared/LiveStatus'
 import type { LiveState } from '../../shared/useEventStream'
 import { formatPair } from '../lanes/format'
-import { digitsOnly, findBowlers, pairsInRange, type LaneRange } from './entryLogic'
+import { countIn, digitsOnly, findBowlers, pairsInRange, type LaneRange } from './entryLogic'
 import { entryPath } from './entryPaths'
 import styles from './GameBoard.module.css'
 import type { GamePair, GamesView } from './gamesTypes'
@@ -26,13 +26,11 @@ interface GameBoardProps {
   onRange: (next: LaneRange) => void
 }
 
-const inCount = (pair: GamePair) => pair.bowlers.filter((bowler) => bowler.score !== null).length
-
 /** "4 of 4 in" with a mark that says it in a symbol too, never color alone (SCR-21). */
 function Progress({ pair }: Readonly<{ pair: GamePair }>) {
-  const done = inCount(pair)
-  const text = `${done} of ${pair.bowlers.length} in`
-  if (done === pair.bowlers.length) return <span className={styles.ok}>✓ {text}</span>
+  const { entered: done, total } = countIn(pair.bowlers)
+  const text = `${done} of ${total} in`
+  if (done === total) return <span className={styles.ok}>✓ {text}</span>
   return (
     <span className={done > 0 ? styles.part : styles.wait}>
       {done > 0 ? '◐' : '○'} {text}

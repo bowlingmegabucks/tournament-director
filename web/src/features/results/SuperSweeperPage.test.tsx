@@ -13,8 +13,20 @@ import type { SuperSweeperResults } from './types'
 import { RESULTS_REFRESH_MS } from './useResults'
 
 const tournament = createTournament({ name: 'Spring Open' })
-const friday = { id: 'a1', date: '2026-10-09T19:00:00', games: 3, complete: true }
-const saturday = { id: 'a2', date: '2026-10-10T19:00:00', games: 3, complete: false }
+const friday = {
+  id: 'a1',
+  date: '2026-10-09T19:00:00',
+  games: 3,
+  complete: true,
+  throughGame: 3,
+}
+const saturday = {
+  id: 'a2',
+  date: '2026-10-10T19:00:00',
+  games: 3,
+  complete: false,
+  throughGame: 2,
+}
 
 function serve(results: SuperSweeperResults | Response) {
   server.use(
@@ -237,7 +249,7 @@ describe('SuperSweeperPage', () => {
     expect(first).toEqual([
       '1',
       'Dana WhitfieldOpen',
-      '\u00b10',
+      'EVEN',
       'Fri 10/95 games',
       '200',
       '200',

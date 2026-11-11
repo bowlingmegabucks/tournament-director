@@ -35,6 +35,7 @@ describe('results schemas', () => {
       name: 'Open',
       entries: 1,
       showHandicap: false,
+      throughGame: null,
       rows: [],
       didNotFinish: [],
     }

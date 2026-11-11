@@ -34,7 +34,7 @@ export function formatDecider(decider: Decider): string {
 export function formatTie(tie: Tie, cutName = 'cut line'): string {
   const line = tie.line === 'cut' ? cutName : 'cash line'
   if (tie.outcome === 'full' || !tie.decidedBy) {
-    return `Full tie at the ${line}. The director decides.`
+    return `Full tie at the ${line}.`
   }
   const result = tie.outcome === 'won' ? 'Won' : 'Lost'
   return `Tied on total at the ${line}. ${result} the spot on ${formatDecider(tie.decidedBy)}.`
@@ -152,11 +152,11 @@ export function formatSweeperTotal(total: number | null): string {
 /** The score a bowler is measured against: 200 a game. */
 export const PAR_PER_GAME = 200
 
-/** "+192", "−12", or "±0": the total against 200 a game for the games bowled (the "+/−" column). */
+/** "+192", "−12", or "EVEN": the total against 200 a game for the games bowled (the "+/−" column). */
 export function formatPlusMinus(total: number, games: number): string {
   const difference = total - PAR_PER_GAME * games
   if (difference > 0) return `+${difference}`
-  return difference === 0 ? '±0' : `−${-difference}`
+  return difference === 0 ? 'EVEN' : `−${-difference}`
 }
 
 /** The sum of the games with a score. */
@@ -170,4 +170,87 @@ export function gameColumnCount(
   scoreLists: readonly (readonly (number | null)[])[],
 ) {
   return Math.max(sessionGames, ...scoreLists.map((scores) => scores.length))
+}
+
+/**
+ * RES-46: the first game that is not complete yet, when some bowler already has a score in it, with how
+ * many bowlers do. `undefined` in live mode (`throughGame` is `null`) or when no one is ahead.
+ */
+export function pendingGame(
+  scoreLists: readonly (readonly (number | null)[])[],
+  throughGame: number | null,
+): { game: number; have: number; of: number } | undefined {
+  if (throughGame === null) return undefined
+  const have = scoreLists.filter((scores) => (scores[throughGame] ?? null) !== null).length
+  return have === 0 ? undefined : { game: throughGame + 1, have, of: scoreLists.length }
+}
+
+/** "Ranked through game 3. Game 4 has 2 of 8 scores." (RES-46). Empty when nothing is pending. */
+export function formatThroughNote(
+  throughGame: number | null,
+  pending: ReturnType<typeof pendingGame>,
+): string {
+  if (throughGame === null || throughGame === 0) return ''
+  const through = `Ranked through game ${throughGame}.`
+  return pending
+    ? `${through} Game ${pending.game} has ${pending.have} of ${plural(pending.of, 'score', 'scores')}.`
+    : through
+}
+
+/** The label of the steady choice in the toggle: "Through game 3" (RES-45). */
+export function formatThroughLabel(throughGame: number | null): string {
+  return throughGame === null || throughGame === 0
+    ? 'Through the last full game'
+    : `Through game ${throughGame}`
+}
+
+/** A row's figure against 200 a game: its total and the games the total holds. */
+interface Figure {
+  total: number
+  games: number
+}
+
+/** The row with the lowest total in a group: the one at the line (D-254). `null` for no one. */
+function lowest<Row extends Figure & { group: string }>(
+  rows: readonly Row[],
+  group: Row['group'],
+): Row | null {
+  return rows
+    .filter((row) => row.group === group)
+    .reduce<Row | null>((low, row) => (low === null || row.total < low.total ? row : low), null)
+}
+
+/** The "+/−" figure of the row at a line, or `null` when no row is there (D-254). */
+function lineFigure(row: Figure | null): string | null {
+  return row === null ? null : formatPlusMinus(row.total, row.games)
+}
+
+/**
+ * The cut and cash lines of a squad division as the "+/−" of the lowest row that advances and the
+ * lowest that cashes (D-254), the figure the table shows after each name. The row holds the handicap
+ * and only the games counted, so the figure does too.
+ */
+export function lineFigures(division: DivisionResult): { cut: string | null; cash: string | null } {
+  return {
+    cut: lineFigure(lowest(division.rows, 'advancer')),
+    cash: lineFigure(lowest(division.rows, 'casher')),
+  }
+}
+
+/** "Cut line +27 · Cash line +19" for the pinned heading of the TV page (D-254). */
+export function formatLines(division: DivisionResult): string {
+  const { cut, cash } = lineFigures(division)
+  return [
+    cut === null ? 'No cut line' : `Cut line ${cut}`,
+    cash === null ? 'No cash line' : `Cash line ${cash}`,
+  ].join(' · ')
+}
+
+/**
+ * "Cash line +30" for a sweeper or the super sweeper: the "+/−" of its lowest casher (D-254). Empty
+ * when no one cashes.
+ */
+export function formatCashLine(rows: readonly (Figure & { group: 'casher' | 'other' })[]): string {
+  const figure = lineFigure(lowest(rows, 'casher'))
+  return figure === null ? '' : `Cash line ${figure}`
 }

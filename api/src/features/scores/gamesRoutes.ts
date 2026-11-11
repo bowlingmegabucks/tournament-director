@@ -4,6 +4,7 @@ import { requestLogger } from '../../shared/requestLogging.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { loadLanePage, type FindSession, type LanePageDeps } from '../lanes/loadLanePage.ts'
 import { reportLanePageProblems } from '../lanes/reportProblems.ts'
+import type { DnfStore } from '../dnf/store.ts'
 import type { SkipStore } from '../skip/store.ts'
 import { buildGamesView } from './gamesView.ts'
 import type { ScoreRepository } from './repository.ts'
@@ -13,6 +14,7 @@ const params = z.object({ id: z.uuid(), sessionId: z.uuid() })
 interface GamesRouterDeps extends LanePageDeps {
   scores: ScoreRepository
   skipStore: SkipStore
+  dnfStore: DnfStore
   logger: Logger
 }
 
@@ -26,7 +28,7 @@ interface GamesRouterDeps extends LanePageDeps {
 export function createGamesRouter(
   kind: 'squad' | 'sweeper',
   findSession: FindSession,
-  { lanes, tournaments, divisions, scores, skipStore, logger }: GamesRouterDeps,
+  { lanes, tournaments, divisions, scores, skipStore, dnfStore, logger }: GamesRouterDeps,
 ): Router {
   const router = Router({ mergeParams: true })
   const label = kind === 'squad' ? 'Squad' : 'Sweeper'
@@ -45,9 +47,22 @@ export function createGamesRouter(
       id,
       sessionId,
     )
-    const [stored, skip] = await Promise.all([storedRead, skipStore.get(sessionId)])
+    const [stored, skip, flagged] = await Promise.all([
+      storedRead,
+      skipStore.get(sessionId),
+      dnfStore.listFlagged([sessionId]),
+    ])
     reportLanePageProblems(reported, requestLogger(res, logger), sessionId, loaded)
-    res.json(buildGamesView(loaded.page, loaded.entries, stored, loaded.session.games, skip))
+    res.json(
+      buildGamesView(
+        loaded.page,
+        loaded.entries,
+        stored,
+        loaded.session.games,
+        skip,
+        flagged.get(sessionId),
+      ),
+    )
   })
 
   return router

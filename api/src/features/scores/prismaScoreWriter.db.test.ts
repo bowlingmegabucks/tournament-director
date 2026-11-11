@@ -204,4 +204,35 @@ describe('Prisma score writer', () => {
       [3, 150],
     ])
   })
+
+  it('removes the flag of a bowler who scores again and leaves the others (SCR-25, D-250)', async () => {
+    const { tournamentId, squadId, enter } = await world()
+    const walked = await enter(squadId)
+    const other = await enter(squadId)
+    await client.sessionDnf.createMany({
+      data: [
+        { sessionId: squadId, registrationId: walked.registrationId },
+        { sessionId: squadId, registrationId: other.registrationId },
+      ],
+    })
+
+    await writer().change(change(tournamentId, squadId, walked.registrationId, 1, 190))
+
+    const left = await client.sessionDnf.findMany()
+    expect(left.map((row) => row.registrationId)).toEqual([other.registrationId])
+  })
+
+  it('keeps the flag when the score is cleared or the save is refused (SCR-25)', async () => {
+    const { tournamentId, squadId, enter } = await world()
+    const walked = await enter(squadId)
+    await writer().change(change(tournamentId, squadId, walked.registrationId, 1, 190))
+    await client.sessionDnf.create({
+      data: { sessionId: squadId, registrationId: walked.registrationId },
+    })
+
+    await writer().change(change(tournamentId, squadId, walked.registrationId, 1))
+    await writer().change(change(tournamentId, squadId, walked.registrationId, 1, 999))
+
+    expect(await client.sessionDnf.count()).toBe(1)
+  })
 })

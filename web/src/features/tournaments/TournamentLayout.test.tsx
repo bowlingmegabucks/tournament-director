@@ -193,6 +193,18 @@ describe('tournament pages', () => {
     },
   )
 
+  it('links to Live results for everyone, to the TV page (RES-54, D-242)', async () => {
+    serveTournament()
+
+    renderApp(`/tournaments/${tournament.id}`)
+
+    const nav = within(await screen.findByRole('navigation', { name: 'Spring Open' }))
+    expect(nav.getByRole('link', { name: 'Live results' })).toHaveAttribute(
+      'href',
+      `/tournaments/${tournament.id}/liveResults`,
+    )
+  })
+
   it('links to At-large and Seeding after Registrations, and marks each on its own page (D-87)', async () => {
     serveTournament()
     server.use(
@@ -213,6 +225,7 @@ describe('tournament pages', () => {
       'Registrations',
       'At-large',
       'Seeding',
+      'Live results',
       'Change tournament',
     ])
     expect(nav.getByRole('link', { name: 'At-large' })).toHaveAttribute(
@@ -319,6 +332,7 @@ describe('tournament pages', () => {
         'Sweepers',
         'At-large',
         'Seeding',
+        'Live results',
         'Change tournament',
       ])
     })

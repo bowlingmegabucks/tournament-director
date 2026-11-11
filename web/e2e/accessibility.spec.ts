@@ -565,7 +565,7 @@ for (const colorScheme of colorSchemes) {
         .getByRole('link', { name: /^[A-Z][a-z]{2} \d{2}\/\d{2}\/\d{4} 9:00 AM$/ })
         .first()
         .click()
-      await page.getByRole('link', { name: 'Results' }).click()
+      await page.getByRole('link', { name: 'Results', exact: true }).click()
       await expect(page.getByRole('heading', { level: 3, name: 'Did not finish' })).toBeVisible()
       await expectNoViolations(page)
 
@@ -587,7 +587,7 @@ for (const colorScheme of colorSchemes) {
         .getByRole('link', { name: 'Sweepers' })
         .click()
       await page.getByRole('link', { name: /^[A-Z][a-z]{2} \d{2}\/\d{2}\/\d{4} 6:00 PM$/ }).click()
-      await page.getByRole('link', { name: 'Results' }).click()
+      await page.getByRole('link', { name: 'Results', exact: true }).click()
       await expect(page.getByRole('table', { name: 'Sweeper results' })).toBeVisible()
       await expectNoViolations(page)
     })

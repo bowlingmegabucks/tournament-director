@@ -3,6 +3,7 @@ import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 import { apiKeyHeader } from '../../shared/auth/caller.ts'
 import { createSessionEvents, type ChangeEvent } from '../../shared/events/sessionEvents.ts'
+import { liveKey } from '../../shared/events/sseRoute.ts'
 import {
   createDivision,
   createLaneEntry,
@@ -13,6 +14,7 @@ import {
 } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createSignedInTestApp, createTestApp } from '../../test/testApp.ts'
+import { createInMemoryDnfStore } from '../dnf/store.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
 import { createInMemoryLaneRepository } from '../lanes/repository.ts'
 import { createInMemorySquadRepository } from '../squads/repository.ts'
@@ -34,22 +36,26 @@ function setup(options: { complete?: boolean; tournamentComplete?: boolean } = {
   const ann = createLaneEntry({ divisionId: open.id, position: '1A', name: 'Ann Lee' })
   const cal = createLaneEntry({ divisionId: open.id, position: '3A', name: 'Cal Ode' })
   const inSweeper = createLaneEntry({ divisionId: open.id, position: '11A', name: 'Sue Swept' })
-  const { writer, state } = createInMemoryScoreWriter({
-    tournaments: [{ id: tournament.id, complete: options.tournamentComplete, games: 3 }],
-    sessions: [
-      { id: squad.id, tournamentId: tournament.id, complete: options.complete },
-      { id: sweeper.id, tournamentId: tournament.id, kind: 'sweeper', games: 2 },
-    ],
-    entries: [
-      { sessionId: squad.id, registrationId: ann.registrationId, bowlerId: ann.bowlerId },
-      { sessionId: squad.id, registrationId: cal.registrationId, bowlerId: cal.bowlerId },
-      {
-        sessionId: sweeper.id,
-        registrationId: inSweeper.registrationId,
-        bowlerId: inSweeper.bowlerId,
-      },
-    ],
-  })
+  const dnf = createInMemoryDnfStore()
+  const { writer, state } = createInMemoryScoreWriter(
+    {
+      tournaments: [{ id: tournament.id, complete: options.tournamentComplete, games: 3 }],
+      sessions: [
+        { id: squad.id, tournamentId: tournament.id, complete: options.complete },
+        { id: sweeper.id, tournamentId: tournament.id, kind: 'sweeper', games: 2 },
+      ],
+      entries: [
+        { sessionId: squad.id, registrationId: ann.registrationId, bowlerId: ann.bowlerId },
+        { sessionId: squad.id, registrationId: cal.registrationId, bowlerId: cal.bowlerId },
+        {
+          sessionId: sweeper.id,
+          registrationId: inSweeper.registrationId,
+          bowlerId: inSweeper.bowlerId,
+        },
+      ],
+    },
+    dnf.store,
+  )
   // The public page reads what the writer wrote, so a test can see the cache at work.
   const scores: ScoreRepository = {
     listScores: (sessionId) =>
@@ -68,10 +74,16 @@ function setup(options: { complete?: boolean; tournamentComplete?: boolean } = {
       end: () => undefined,
     })
   }
+  const live: ChangeEvent[] = []
+  events.subscribe(liveKey(tournament.id), {
+    send: (event) => live.push(event),
+    end: () => undefined,
+  })
   const overrides = {
     logger: captured.logger,
     events,
     scoreWriter: writer,
+    dnfStore: dnf.store,
     scores,
     tournaments: createInMemoryTournamentRepository([tournament]),
     divisions: createInMemoryDivisionRepository([{ tournamentId: tournament.id, division: open }]),
@@ -85,7 +97,21 @@ function setup(options: { complete?: boolean; tournamentComplete?: boolean } = {
   }
   const url = (entry = ann.registrationId, game = 1, session = squad.id, plural = 'squads') =>
     `/v1/tournaments/${tournament.id}/${plural}/${session}/scores/${entry}/${game}`
-  return { overrides, url, tournament, squad, sweeper, ann, cal, inSweeper, state, seen, captured }
+  return {
+    overrides,
+    url,
+    tournament,
+    squad,
+    sweeper,
+    ann,
+    cal,
+    inSweeper,
+    state,
+    seen,
+    live,
+    captured,
+    dnf,
+  }
 }
 
 describe('PUT .../scores/:registrationId/:game (SCR-19)', () => {
@@ -342,6 +368,111 @@ describe('PUT .../scores/:registrationId/:game (SCR-19)', () => {
   })
 })
 
+describe('a save tells the TV page when a game fills (RES-49, D-243)', () => {
+  it('sends game-full only when the last bowler of the division fills the game, and reopened on a clear', async () => {
+    const { overrides, url, live, squad, ann, cal } = setup()
+    const app = createSignedInTestApp(overrides)
+    // `scored` (a score that fills no game) has its own test below.
+    const kinds = () =>
+      live
+        .filter((event) => event.kind !== 'scored')
+        .map((event) => [event.kind, event.detail?.game])
+
+    // Ann scores alone: Cal has not bowled game 1, so the game is not full (RES-40).
+    await request(app).put(url(ann.registrationId, 1)).send({ score: 200 })
+    expect(kinds()).toEqual([])
+
+    await request(app).put(url(cal.registrationId, 1)).send({ score: 190 })
+    expect(kinds()).toEqual([['game-full', 1]])
+    await request(app).put(url(ann.registrationId, 2)).send({ score: 210 })
+    expect(kinds()).toEqual([['game-full', 1]])
+
+    await request(app).put(url(cal.registrationId, 2)).send({ score: 205 })
+    expect(kinds()).toEqual([
+      ['game-full', 1],
+      ['game-full', 2],
+    ])
+    expect(live[1]?.detail).toMatchObject({ sessionId: squad.id, sessionKind: 'squad' })
+
+    await request(app).delete(url(cal.registrationId, 2))
+    expect(live.at(-1)).toMatchObject({ kind: 'reopened' })
+  })
+
+  it('tells the division of a score that fills no game, so the TV shows it at once', async () => {
+    const { overrides, url, live, squad, ann, cal } = setup()
+    const app = createSignedInTestApp(overrides)
+    await request(app).put(url(ann.registrationId, 1)).send({ score: 200 })
+    await request(app).put(url(cal.registrationId, 1)).send({ score: 190 })
+    live.length = 0
+
+    await request(app).put(url(ann.registrationId, 2)).send({ score: 210 })
+
+    expect(live).toHaveLength(1)
+    expect(live[0]).toMatchObject({
+      kind: 'scored',
+      detail: { sessionId: squad.id, sessionKind: 'squad', divisionName: expect.any(String) },
+    })
+    expect(live[0]?.detail?.divisionId).toBeDefined()
+    expect(live[0]?.detail?.game).toBeUndefined()
+  })
+
+  it('says nothing for a score while the division has no counted game yet', async () => {
+    const { overrides, url, live, ann } = setup()
+    const app = createSignedInTestApp(overrides)
+
+    await request(app).put(url(ann.registrationId, 1)).send({ score: 200 })
+
+    expect(live).toEqual([])
+  })
+
+  it('sends game-full and no separate scored message when the score fills the game', async () => {
+    const { overrides, url, live, ann, cal } = setup()
+    const app = createSignedInTestApp(overrides)
+    await request(app).put(url(ann.registrationId, 1)).send({ score: 200 })
+    live.length = 0
+
+    await request(app).put(url(cal.registrationId, 1)).send({ score: 190 })
+
+    expect(live.map((event) => event.kind)).toEqual(['game-full'])
+  })
+
+  it('says nothing for a refused save, and nothing is read when nobody watches', async () => {
+    const { overrides, url, live, ann } = setup({ complete: true })
+    const app = createSignedInTestApp(overrides)
+
+    const response = await request(app).put(url(ann.registrationId, 1)).send({ score: 200 })
+
+    expect(response.status).toBe(409)
+    expect(live).toEqual([])
+  })
+})
+
+describe('a saved score and the DNF flag (SCR-25, D-250)', () => {
+  it('removes the flag of a bowler who scores again, and keeps the flag of everyone else', async () => {
+    const { overrides, url, dnf, squad, ann, cal } = setup()
+    await dnf.store.set(squad.id, ann.registrationId)
+    await dnf.store.set(squad.id, cal.registrationId)
+
+    await request(createSignedInTestApp(overrides))
+      .put(url(ann.registrationId, 1))
+      .send({ score: 180 })
+
+    expect(dnf.state).toEqual(new Set([`${squad.id}|${cal.registrationId}`]))
+  })
+
+  it('keeps the flag when the save is refused or the score is cleared', async () => {
+    const { overrides, url, dnf, squad, ann } = setup()
+    const app = createSignedInTestApp(overrides)
+    await request(app).put(url(ann.registrationId, 1)).send({ score: 180 })
+    await dnf.store.set(squad.id, ann.registrationId)
+
+    await request(app).put(url(ann.registrationId, 1)).send({ score: 0 })
+    await request(app).delete(url(ann.registrationId, 1))
+
+    expect(dnf.state).toEqual(new Set([`${squad.id}|${ann.registrationId}`]))
+  })
+})
+
 describe('DELETE .../scores/:registrationId/:game (SCR-19)', () => {
   it("clears the last game and answers the bowler's scores (SCR-06, D-228)", async () => {
     const { overrides, url, state } = setup()
@@ -402,6 +533,28 @@ describe('DELETE .../scores/:registrationId/:game (SCR-19)', () => {
 
     expect(seen.map((item) => item.event.kind)).toEqual(['scores'])
     expect((await request(app).get(page)).body.pairs[0].bowlers[0].scores[0]).toBeNull()
+  })
+
+  it('drops the cached results of the session on a save and a clear, in both modes (RES-44, D-241)', async () => {
+    const { overrides, url, tournament, squad, ann } = setup()
+    const app = createSignedInTestApp(overrides)
+    const results = (mode: string) =>
+      request(app).get(`/v1/tournaments/${tournament.id}/squads/${squad.id}/results?mode=${mode}`)
+    const firstTotal = async (mode: string) =>
+      (await results(mode)).body.divisions[0]?.rows[0]?.total
+    expect(await firstTotal('full-game')).toBeUndefined()
+    expect(await firstTotal('live')).toBeUndefined()
+
+    await request(app).put(url(ann.registrationId, 1)).send({ score: 212 })
+
+    // Cal has not bowled, so the steady ranking counts no game yet; the live one counts Ann's.
+    expect(await firstTotal('full-game')).toBe(0)
+    expect(await firstTotal('live')).toBe(212)
+
+    await request(app).delete(url(ann.registrationId, 1))
+
+    expect(await firstTotal('full-game')).toBeUndefined()
+    expect(await firstTotal('live')).toBeUndefined()
   })
 
   it('needs scores.write (SCR-19, D-96)', async () => {

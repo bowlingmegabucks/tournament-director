@@ -16,11 +16,13 @@ export function clientKey(ip: string): string {
 }
 
 /**
- * The live score routes (D-232): the public scores page and its stream, score entry, and the skip.
- * Many phones watch these from one venue address, and a keeper saves often, so they count in their
- * own, larger bucket and never use up the general one.
+ * The live routes (D-232, D-253): the public scores page and its stream, score entry, the skip, the
+ * squad and sweeper results, and the TV page with its feed and stream. Many phones and a TV watch
+ * these from one venue address, and a keeper saves often, so they count in their own, larger bucket
+ * and never use up the general one.
  */
-const livePath = /^\/v1\/tournaments\/[^/]+\/(?:squads|sweepers)\/[^/]+\/(?:scores(?:\/.*)?|skip)$/
+const livePath =
+  /^\/v1\/tournaments\/[^/]+\/(?:(?:squads|sweepers)\/[^/]+\/(?:scores(?:\/.*)?|skip|results)|live-results(?:\/events)?)$/
 
 export const isLivePath = (path: string) => livePath.test(path)
 

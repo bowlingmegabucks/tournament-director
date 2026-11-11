@@ -1,6 +1,7 @@
 import type { SessionEvents } from '../../shared/events/sessionEvents.ts'
 import type { Router } from 'express'
 import type { Logger } from '../../shared/logger.ts'
+import type { LiveNotifier } from '../results/liveEvents.ts'
 import {
   createSessionCompleteInfoRouter,
   createSessionCompleteRouter,
@@ -12,8 +13,9 @@ export function createSquadCompleteRouter(
   writer: SquadWriter,
   logger: Logger,
   events: SessionEvents,
+  live?: LiveNotifier,
 ): Router {
-  return createSessionCompleteRouter(writer, logger, 'squad', events)
+  return createSessionCompleteRouter(writer, logger, 'squad', events, live)
 }
 
 /** `GET /:sessionId/complete-info` of a squad (D-194), behind `squads.write`. */

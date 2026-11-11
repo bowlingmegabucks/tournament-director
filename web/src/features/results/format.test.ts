@@ -13,15 +13,21 @@ import {
   formatDecider,
   formatFlagNote,
   formatFlagTag,
+  formatCashLine,
   formatGamesOf,
+  formatLines,
   formatPlusMinus,
   gameColumnCount,
+  lineFigures,
   formatSeedingSummary,
   formatSummary,
   formatSweeperColumn,
   formatSweeperTotal,
+  formatThroughLabel,
+  formatThroughNote,
   formatTie,
   ordinal,
+  pendingGame,
   seedingItems,
   squadItems,
   sum,
@@ -80,24 +86,24 @@ describe('formatTie (D-14, D-16)', () => {
     )
   })
 
-  it('says the director decides a full tie', () => {
+  it('says a full tie', () => {
     expect(formatTie({ line: 'cut', outcome: 'full', decidedBy: null })).toBe(
-      'Full tie at the cut line. The director decides.',
+      'Full tie at the cut line.',
     )
     expect(formatTie({ line: 'cash', outcome: 'full', decidedBy: null })).toBe(
-      'Full tie at the cash line. The director decides.',
+      'Full tie at the cash line.',
     )
   })
 
   it('says a full tie is a full tie even if a tie-breaker is sent', () => {
     expect(formatTie({ line: 'cut', outcome: 'full', decidedBy: { kind: 'games' } })).toBe(
-      'Full tie at the cut line. The director decides.',
+      'Full tie at the cut line.',
     )
   })
 
   it('treats a win with no tie-breaker as a full tie', () => {
     expect(formatTie({ line: 'cut', outcome: 'won', decidedBy: null })).toBe(
-      'Full tie at the cut line. The director decides.',
+      'Full tie at the cut line.',
     )
   })
 })
@@ -212,7 +218,7 @@ describe('formatTie on the at-large page (D-93)', () => {
       'Tied on total at the cash line. Won the spot on high game.',
     )
     expect(formatTie({ line: 'cut', outcome: 'full', decidedBy: null }, 'last at-large spot')).toBe(
-      'Full tie at the last at-large spot. The director decides.',
+      'Full tie at the last at-large spot.',
     )
   })
 })
@@ -289,8 +295,8 @@ describe('at-large and seeding summaries (RES-12, RES-18)', () => {
 
 describe('super sweeper formats (D-90)', () => {
   const sweepers = [
-    { id: 's1', date: '2026-10-09T19:00:00', games: 3, complete: true },
-    { id: 's2', date: '2026-10-10T19:00:00', games: 1, complete: true },
+    { id: 's1', date: '2026-10-09T19:00:00', games: 3, complete: true, throughGame: 3 },
+    { id: 's2', date: '2026-10-10T19:00:00', games: 1, complete: true, throughGame: 1 },
   ]
 
   it('heads a column with the weekday and the day', () => {
@@ -346,12 +352,12 @@ describe('formatPlusMinus', () => {
   it('shows the total against 200 a game, with a sign', () => {
     expect(formatPlusMinus(992, 4)).toBe('+192')
     expect(formatPlusMinus(780, 4)).toBe('\u221220')
-    expect(formatPlusMinus(800, 4)).toBe('\u00b10')
+    expect(formatPlusMinus(800, 4)).toBe('EVEN')
   })
 
   it('counts only the games bowled', () => {
     expect(formatPlusMinus(210, 1)).toBe('+10')
-    expect(formatPlusMinus(0, 0)).toBe('\u00b10')
+    expect(formatPlusMinus(0, 0)).toBe('EVEN')
   })
 })
 
@@ -367,5 +373,106 @@ describe('gameColumnCount', () => {
     expect(gameColumnCount(3, [[200, 200]])).toBe(3)
     expect(gameColumnCount(3, [[200, 200, 200, 200]])).toBe(4)
     expect(gameColumnCount(4, [])).toBe(4)
+  })
+})
+
+describe('games not counted yet (RES-46, D-239)', () => {
+  it('finds the first game after the counted ones and how many bowlers have it', () => {
+    const lists = [
+      [200, 200, 200, 300],
+      [200, 200, 200, null],
+      [200, 200, 200],
+    ]
+    expect(pendingGame(lists, 3)).toEqual({ game: 4, have: 1, of: 3 })
+  })
+
+  it('finds nothing in live mode, or when no one is ahead', () => {
+    expect(pendingGame([[200, 200, 200, 300]], null)).toBeUndefined()
+    expect(pendingGame([[200, 200], [200]], 2)).toBeUndefined()
+    expect(pendingGame([], 3)).toBeUndefined()
+  })
+
+  it('writes the note, with and without a game ahead', () => {
+    expect(formatThroughNote(3, { game: 4, have: 2, of: 8 })).toBe(
+      'Ranked through game 3. Game 4 has 2 of 8 scores.',
+    )
+    expect(formatThroughNote(3, { game: 4, have: 1, of: 1 })).toBe(
+      'Ranked through game 3. Game 4 has 1 of 1 score.',
+    )
+    expect(formatThroughNote(3, undefined)).toBe('Ranked through game 3.')
+  })
+
+  it('writes no note in live mode or before any game counts', () => {
+    expect(formatThroughNote(null, undefined)).toBe('')
+    expect(formatThroughNote(0, { game: 1, have: 1, of: 2 })).toBe('')
+  })
+
+  it('labels the steady choice with the game, or the words when there is none', () => {
+    expect(formatThroughLabel(3)).toBe('Through game 3')
+    expect(formatThroughLabel(0)).toBe('Through the last full game')
+    expect(formatThroughLabel(null)).toBe('Through the last full game')
+  })
+})
+
+describe('the cut and cash lines as +/− (D-254)', () => {
+  // Three games each, so 600 is par: 827 is +227, 819 is +219, 809 is +209, 790 is +190.
+  const rows = [
+    createSquadRow({ group: 'advancer', total: 827 }),
+    createSquadRow({ group: 'advancer', total: 819 }),
+    createSquadRow({ group: 'casher', total: 809 }),
+    createSquadRow({ group: 'casher', total: 790 }),
+    createSquadRow({ group: 'other', total: 700 }),
+  ]
+
+  it('takes the +/− of the lowest row that advances and the lowest that cashes', () => {
+    expect(lineFigures(createDivisionResult({ rows }))).toEqual({ cut: '+219', cash: '+190' })
+  })
+
+  it('finds the lowest even when the rows are not in order (an earlier advancer who cashes)', () => {
+    const shuffled = [rows[3], rows[0], rows[2], rows[1]].filter((row) => row !== undefined)
+    expect(lineFigures(createDivisionResult({ rows: shuffled }))).toEqual({
+      cut: '+219',
+      cash: '+190',
+    })
+  })
+
+  it('counts the games of that row, so a division ranked through fewer games reads as it does', () => {
+    const two = [createSquadRow({ group: 'advancer', total: 430, games: 2 })]
+    expect(lineFigures(createDivisionResult({ rows: two })).cut).toBe('+30')
+  })
+
+  it('writes a figure below par with a minus and one on par as EVEN', () => {
+    const below = [createSquadRow({ group: 'casher', total: 590 })]
+    const par = [createSquadRow({ group: 'casher', total: 600 })]
+    expect(lineFigures(createDivisionResult({ rows: below })).cash).toBe('−10')
+    expect(lineFigures(createDivisionResult({ rows: par })).cash).toBe('EVEN')
+  })
+
+  it('has no cut or no cash when no one advances or cashes', () => {
+    expect(
+      lineFigures(createDivisionResult({ rows: [createSquadRow({ group: 'other', total: 600 })] })),
+    ).toEqual({ cut: null, cash: null })
+    expect(lineFigures(createDivisionResult({ rows: [] }))).toEqual({ cut: null, cash: null })
+  })
+
+  it('writes both lines for the pinned heading', () => {
+    expect(formatLines(createDivisionResult({ rows }))).toBe('Cut line +219 · Cash line +190')
+  })
+
+  it('says so when a line has no one', () => {
+    const noCash = [rows[0], rows[1]].filter((row) => row !== undefined)
+    expect(formatLines(createDivisionResult({ rows: noCash }))).toBe('Cut line +219 · No cash line')
+    expect(formatLines(createDivisionResult({ rows: [] }))).toBe('No cut line · No cash line')
+  })
+
+  it('writes the cash line of a sweeper from its lowest casher, and nothing without one', () => {
+    const sweeper = [
+      createSweeperRow({ group: 'casher', total: 411, games: 2 }),
+      createSweeperRow({ group: 'casher', total: 430, games: 2 }),
+      createSweeperRow({ group: 'other', total: 300, games: 2 }),
+    ]
+    expect(formatCashLine(sweeper)).toBe('Cash line +11')
+    expect(formatCashLine([createSweeperRow({ group: 'other' })])).toBe('')
+    expect(formatCashLine([])).toBe('')
   })
 })

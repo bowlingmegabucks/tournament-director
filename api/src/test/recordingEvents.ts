@@ -8,6 +8,7 @@ export function recordingEvents() {
     publish: (sessionId, kind) => published.push({ sessionId, kind }),
     closeAll: () => undefined,
     count: () => 0,
+    watching: () => false,
   }
   return { events, published }
 }

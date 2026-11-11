@@ -7,6 +7,9 @@ import { localDateTimeSchema } from '../../shared/sessions.ts'
  * date, address, email, phone, average, or payments (BWL-17).
  */
 
+/** How a results page ranks while games come in (D-239). */
+export const rankModeSchema = z.enum(['full-game', 'live'])
+
 /** What separated two bowlers after the total: the games bowled, or the Nth best game (1 = high game). */
 export const deciderSchema = z.union([
   z.object({ kind: z.literal('games') }),
@@ -47,6 +50,8 @@ export const squadRowSchema = z.object({
   scores: gameScoresSchema,
   /** True only for an earlier advancer at or above the cut score (D-81). */
   advancedEarlier: z.boolean(),
+  /** Flagged "did not finish" in a squad that is still open (D-248, D-251). */
+  dnf: z.boolean(),
 })
 
 /** A bowler listed apart on a complete squad: no place, no group, no ties (D-75). */
@@ -67,6 +72,12 @@ export const divisionResultSchema = z.object({
   entries: z.number().int().nonnegative(),
   /** RES-11a: someone in the division has a handicap above 0. */
   showHandicap: z.boolean(),
+  /**
+   * The games counted (D-239): the last game every bowler of the division has, or all the squad's games
+   * once it is complete. `null` in live mode, where every saved score counts. A game above it is shown
+   * dimmed and left out of the totals.
+   */
+  throughGame: z.number().int().nonnegative().nullable(),
   rows: z.array(squadRowSchema),
   didNotFinish: z.array(unplacedRowSchema),
   noShows: z.array(z.object({ registrationId: z.uuid(), name: z.string().min(1) })),
@@ -85,6 +96,7 @@ const sessionFields = {
 
 export const squadResultsSchema = z.object({
   session: z.object({ ...sessionFields, kind: z.literal('squad') }),
+  mode: rankModeSchema,
   /** The squad's effective ratios (RES-03, D-43). */
   finalsRatio: z.number(),
   cashRatio: z.number(),
@@ -102,12 +114,17 @@ export const sweeperRowSchema = z.object({
   /** The bonus pins per game of the bowler's division (SCR-09). */
   bonusPins: z.number().int(),
   scores: gameScoresSchema,
+  /** Flagged "did not finish" in a sweeper that is still open (D-248, D-251). */
+  dnf: z.boolean(),
 })
 
 export type SweeperRow = z.infer<typeof sweeperRowSchema>
 
 export const sweeperResultsSchema = z.object({
   session: z.object({ ...sessionFields, kind: z.literal('sweeper') }),
+  mode: rankModeSchema,
+  /** As on a squad division (D-239, D-240): `null` in live mode. */
+  throughGame: z.number().int().nonnegative().nullable(),
   cashRatio: z.number(),
   /** `N` (RES-22). */
   entries: z.number().int().nonnegative(),
@@ -220,11 +237,14 @@ export const superSweeperRowSchema = z.object({
   /** The pins added per game bowled in each entry of `sweepers` (SCR-09). */
   sweeperPins: z.array(z.number().int()),
   flags: z.array(sweeperFlagSchema),
+  /** Flagged "did not finish" in a sweeper that is still open (D-248, D-251). */
+  dnf: z.boolean(),
 })
 
 export type SuperSweeperRow = z.infer<typeof superSweeperRowSchema>
 
 export const superSweeperResultsSchema = z.object({
+  mode: rankModeSchema,
   complete: z.boolean(),
   cashRatio: z.number(),
   entries: z.number().int().nonnegative(),
@@ -237,9 +257,33 @@ export const superSweeperResultsSchema = z.object({
       date: localDateTimeSchema,
       games: z.number().int(),
       complete: z.boolean(),
+      /** The games counted in this sweeper (D-240): `null` in live mode. */
+      throughGame: z.number().int().nonnegative().nullable(),
     }),
   ),
   rows: z.array(superSweeperRowSchema),
 })
 
 export type SuperSweeperResults = z.infer<typeof superSweeperResultsSchema>
+
+/**
+ * What the TV page loads once (RES-47, D-244): every squad (by division), every sweeper, and the
+ * super sweeper, all ranked through the last full game. Only sessions with scores are listed. Web
+ * only, public, never vendor-visible (D-09). It carries no more personal data than its parts (BWL-17).
+ */
+export const liveResultsSchema = z.object({
+  tournament: z.object({ id: z.uuid(), name: z.string() }),
+  /** When the answer was worked out, for the "Updated 3:41 pm" line. */
+  generatedAt: z.iso.datetime(),
+  /** Squads in date order, then sweepers in date order (D-242). */
+  sessions: z.array(
+    z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('squad'), results: squadResultsSchema }),
+      z.object({ kind: z.literal('sweeper'), results: sweeperResultsSchema }),
+    ]),
+  ),
+  /** `null` when no one has a sweeper score in the super sweeper. */
+  superSweeper: superSweeperResultsSchema.nullable(),
+})
+
+export type LiveResults = z.infer<typeof liveResultsSchema>

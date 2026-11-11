@@ -266,3 +266,13 @@ model SessionSkip {
 
   @@map("SessionSkip")
 }
+
+/// A bowler flagged "did not finish" in an open squad or sweeper (D-248). Created by
+/// prisma/score-tables.sql, not by Prisma, and unknown to WinForms. A saved score deletes the row.
+model SessionDnf {
+  sessionId      String @map("SessionId") @db.Char(36)
+  registrationId String @map("RegistrationId") @db.Char(36)
+
+  @@id([sessionId, registrationId])
+  @@map("SessionDnf")
+}

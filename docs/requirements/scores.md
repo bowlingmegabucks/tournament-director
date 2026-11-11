@@ -53,5 +53,5 @@ Public for good (D-70, D-27). The API's `features/scores/types.ts` and the web a
 ## Notes
 
 - **Built since:** score entry (`SCR-01` to `SCR-06`, `SCR-15`), the server refusal on a complete session (`SCR-14`), the live stream (`SCR-18`, `SCR-20`) and the Enter scores link: see [score-entry.md](score-entry.md). Ranking and handicap (`SCR-07` to `SCR-09`, `SCR-11`, `SCR-12`) came with results, and Complete with its no-show zeros (`SQD-15`) is built.
-- **Live updates:** settled. The tab listens to the public stream (`SCR-20`, D-232); the 15 s poll is gone. Results move to the stream next (Q-41).
+- **Live updates:** settled. The tab listens to the public stream (`SCR-20`, D-232); the 15 s poll is gone. Results moved to the stream too (`RES-44`, D-241).
 - **Local data:** `npm run db:seed` adds 20 scores to each sample tournament: squad 1 (complete) with every game and one no-show, squad 2 (open) part scored on its first pair, sweeper 1 with two of three games for one bowler. Running the seed again resets them.

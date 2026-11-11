@@ -1,3 +1,4 @@
+import type { DnfStore } from '../dnf/store.ts'
 import { planChange, type ScorePlan, type ScoreWrite } from './scorePlan.ts'
 
 export type SessionKind = 'squad' | 'sweeper'
@@ -39,7 +40,7 @@ export interface InMemoryScoreWriterSeed {
 }
 
 /** Storage in memory. `state.scores` lets a test see what was written. */
-export function createInMemoryScoreWriter(seed: InMemoryScoreWriterSeed = {}) {
+export function createInMemoryScoreWriter(seed: InMemoryScoreWriterSeed = {}, dnf?: DnfStore) {
   const state = {
     tournaments: [...(seed.tournaments ?? [])],
     sessions: [...(seed.sessions ?? [])],
@@ -81,6 +82,8 @@ export function createInMemoryScoreWriter(seed: InMemoryScoreWriterSeed = {}) {
         input,
       )
       if (plan.type === 'save') {
+        // D-250: a bowler who scores again is counted again.
+        void dnf?.clear(input.sessionId, input.registrationId)
         for (const write of plan.writes) {
           const found = state.scores.find((row) => mine(row) && row.game === write.game)
           if (found) found.score = write.score

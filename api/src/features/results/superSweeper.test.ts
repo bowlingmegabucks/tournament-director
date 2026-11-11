@@ -15,7 +15,7 @@ const pinsFor = (division: { id: string; name: string }, bonusPinsPerGame: numbe
 })
 
 const registrant = (over: Partial<LaneEntry> = {}) =>
-  createLaneEntry({ superSweeper: true, divisionId: open.id, ...over })
+  createLaneEntry({ superSweeper: true, divisionId: open.id, position: '1A', ...over })
 
 /** A sweeper with the given entries, each bowling `scores`. */
 function sweeperOf(
@@ -159,6 +159,51 @@ describe('buildSuperSweeperEntries', () => {
 
     expect(entries[0]?.sweeperTotals).toEqual([200])
     expect(entries[0]?.flags).toEqual([])
+  })
+
+  it('counts the games of an open sweeper in a run from game 1, as the squads do (RES-42)', () => {
+    const steady = registrant()
+    const gapped = registrant()
+    const running = sweeperOf({ complete: false, games: 3 }, [
+      { entry: steady, scores: [200, 200] },
+      { entry: gapped, scores: [] },
+    ])
+    // Games 1 and 3 saved, game 2 missing: the run is 1 game, not 2.
+    running.scores = [
+      ...running.scores,
+      { bowlerId: gapped.bowlerId, game: 1, score: 180 },
+      { bowlerId: gapped.bowlerId, game: 3, score: 190 },
+    ]
+
+    const { through } = buildSuperSweeperEntries([running], [open], { mode: 'full-game' })
+
+    expect(through.get(running.sweeper.id)).toBe(1)
+  })
+
+  it('waits for a bowler entered in an open sweeper who has not bowled (RES-42)', () => {
+    const bowler = registrant()
+    const waiting = registrant()
+    const running = sweeperOf({ complete: false, games: 3 }, [
+      { entry: bowler, scores: [200, 200] },
+      { entry: waiting, scores: [] },
+    ])
+
+    const { through } = buildSuperSweeperEntries([running], [open], { mode: 'full-game' })
+
+    expect(through.get(running.sweeper.id)).toBe(0)
+  })
+
+  it('does not wait for a bowler with no lane in an open sweeper (RES-42)', () => {
+    const bowler = registrant()
+    const noShow = registrant({ position: '' })
+    const running = sweeperOf({ complete: false, games: 3 }, [
+      { entry: bowler, scores: [200, 200] },
+      { entry: noShow, scores: [] },
+    ])
+
+    const { through } = buildSuperSweeperEntries([running], [open], { mode: 'full-game' })
+
+    expect(through.get(running.sweeper.id)).toBe(2)
   })
 
   it('leaves out a bowler with no game at all while every sweeper is open', () => {
@@ -331,5 +376,116 @@ describe('workOutSuperSweeper', () => {
       cashCount: 0,
       cutScore: null,
     })
+  })
+})
+
+describe('buildSuperSweeperEntries ranking modes (RES-42)', () => {
+  it('counts an open sweeper through its last full game (RES-42)', () => {
+    const a = registrant()
+    const b = registrant()
+    const open3 = sweeperOf({ complete: false, games: 4 }, [
+      { entry: a, scores: [200, 200, 200, 300] },
+      { entry: b, scores: [200, 200, 200] },
+    ])
+
+    const steady = buildSuperSweeperEntries([open3], [open], { mode: 'full-game' })
+    const live = buildSuperSweeperEntries([open3], [open], { mode: 'live' })
+
+    const totalOf = (built: typeof steady, entry: LaneEntry) =>
+      built.entries.find((item) => item.entry.registrationId === entry.registrationId)?.entry.total
+    expect(totalOf(steady, a)).toBe(600)
+    expect(totalOf(live, a)).toBe(900)
+    expect(steady.through.get(open3.sweeper.id)).toBe(3)
+    expect(live.through.get(open3.sweeper.id)).toBeNull()
+  })
+
+  it('counts every game of a complete sweeper (RES-42, RES-43)', () => {
+    const a = registrant()
+    const done = sweeperOf({ complete: true, games: 4 }, [
+      { entry: a, scores: [200, 200, 200, 300] },
+    ])
+
+    const steady = buildSuperSweeperEntries([done], [open], { mode: 'full-game' })
+
+    expect(steady.entries[0]?.entry.total).toBe(900)
+    expect(steady.through.get(done.sweeper.id)).toBe(4)
+  })
+
+  it('counts each sweeper on its own (RES-42)', () => {
+    const a = registrant()
+    const b = registrant()
+    const first = sweeperOf({ complete: true, games: 3 }, [
+      { entry: a, scores: [200, 200, 200] },
+      { entry: b, scores: [200, 200, 200] },
+    ])
+    const second = sweeperOf({ complete: false, games: 3 }, [
+      { entry: a, scores: [200, 200] },
+      { entry: b, scores: [200] },
+    ])
+
+    const built = buildSuperSweeperEntries([first, second], [open], { mode: 'full-game' })
+
+    expect(built.through.get(first.sweeper.id)).toBe(3)
+    expect(built.through.get(second.sweeper.id)).toBe(1)
+    expect(
+      built.entries.find((i) => i.entry.registrationId === a.registrationId)?.entry.total,
+    ).toBe(800)
+  })
+
+  it('does not wait for a flagged bowler (RES-55)', () => {
+    const a = registrant()
+    const walked = registrant()
+    const input = sweeperOf({ complete: false, games: 3 }, [
+      { entry: a, scores: [200, 200, 200] },
+      { entry: walked, scores: [200] },
+    ])
+
+    const built = buildSuperSweeperEntries([input], [open], {
+      mode: 'full-game',
+      flagged: new Map([[input.sweeper.id, new Set([walked.registrationId])]]),
+    })
+
+    expect(built.through.get(input.sweeper.id)).toBe(3)
+  })
+
+  it('is live when no mode is given', () => {
+    const a = registrant()
+    const input = sweeperOf({ complete: false, games: 3 }, [{ entry: a, scores: [200, 200] }])
+    expect(buildSuperSweeperEntries([input], [open]).through.get(input.sweeper.id)).toBeNull()
+  })
+})
+
+describe('buildSuperSweeperEntries and the DNF flag (RES-56)', () => {
+  it('marks a bowler flagged in an open sweeper', () => {
+    const a = registrant()
+    const b = registrant()
+    const input = sweeperOf({ complete: false, games: 3 }, [
+      { entry: a, scores: [200, 200] },
+      { entry: b, scores: [200, 200, 200] },
+    ])
+    const flagged = new Map([[input.sweeper.id, new Set([a.registrationId])]])
+
+    const { entries } = buildSuperSweeperEntries([input], [open], { flagged })
+
+    const dnfOf = (entry: LaneEntry) =>
+      entries.find((item) => item.entry.registrationId === entry.registrationId)?.dnf
+    expect(dnfOf(a)).toBe(true)
+    expect(dnfOf(b)).toBe(false)
+  })
+
+  it('shows no mark once the sweeper is complete', () => {
+    const a = registrant()
+    const input = sweeperOf({ complete: true, games: 3 }, [{ entry: a, scores: [200, 200] }])
+    const flagged = new Map([[input.sweeper.id, new Set([a.registrationId])]])
+
+    const { entries } = buildSuperSweeperEntries([input], [open], { flagged })
+
+    expect(entries[0]?.dnf).toBe(false)
+  })
+
+  it('marks no one without flags', () => {
+    const a = registrant()
+    const input = sweeperOf({ complete: false, games: 3 }, [{ entry: a, scores: [200] }])
+    expect(buildSuperSweeperEntries([input], [open]).entries[0]?.dnf).toBe(false)
   })
 })

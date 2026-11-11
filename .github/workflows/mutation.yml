@@ -36,7 +36,10 @@ permissions:
 jobs:
   mutation:
     name: ${{ inputs.folder }} mutation tests
-    runs-on: ubuntu-latest
+    # Stryker runs one test runner per two cores, so more cores shorten the run. Set the repository
+    # variable MUTATION_RUNNER to the name of a larger runner (Settings > Actions > Runners). With no
+    # variable the job uses the standard runner.
+    runs-on: ${{ vars.MUTATION_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 120
     defaults:
       run:

@@ -22,6 +22,7 @@
   --color-focus: #f3efe3;
   --color-backdrop: rgb(0 0 0 / 0.7); /* the dim layer behind a modal dialog */
   --color-brand-bg: #000000; /* the logo is designed for black, in both themes */
+  --color-brand-text: #c9ae6a; /* gold text on the brand black, in both themes (contrast 9:1) */
   --color-paper: #ffffff; /* a printed sheet is black on white in both themes (D-63) */
   --color-ink: #000000;
 
@@ -31,6 +32,10 @@
   --font-size-base: 1rem;
   --font-size-lg: 1.25rem;
   --font-size-xl: 1.75rem;
+  /* The TV page (RES-50): read from across a room. Colors are the page's own, so contrast is unchanged. */
+  --font-size-tv-small: 1.25rem;
+  --font-size-tv-body: 1.75rem;
+  --font-size-tv-head: 2.25rem;
   --line-height: 1.5;
 
   /* Spacing (4px scale) */
@@ -49,6 +54,15 @@
   --content-width: 48rem;
   --layout-width: 64rem; /* header, menu, and page frame */
   --sidebar-width: 15rem;
+}
+
+/* On a phone the TV sizes would fill the screen with the pinned heading, so they shrink. */
+@media (max-width: 48rem) {
+  :root {
+    --font-size-tv-small: 0.875rem;
+    --font-size-tv-body: 1rem;
+    --font-size-tv-head: 1.25rem;
+  }
 }
 
 @media (prefers-color-scheme: light) {

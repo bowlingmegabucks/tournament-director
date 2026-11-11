@@ -14,9 +14,10 @@ export const IDLE_RESUME_MS = 10_000
  * in where it is: the position is kept, and only wraps when it passes the end (D-244). The frame
  * stops while the tab is hidden.
  *
- * A viewer can take over: a touch, wheel, or key press pauses the scroll while it lasts and for
- * `IDLE_RESUME_MS` after, then the list carries on from where the viewer left it. The idle time
- * counts on the frame clock, so a hidden tab does not use it up.
+ * A viewer can take over: a touch, a wheel turn, or a scroll key (arrows, Page Up and Down, Home,
+ * End, Space) pauses the scroll for `IDLE_RESUME_MS` after the last one, then the list carries on
+ * from where the viewer left it. Each touch event restarts the time, so a drag keeps it paused, and a
+ * touch the browser never ends cannot hold it forever. The time counts on the frame clock.
  *
  * The view really scrolls (`scrollTop`, with no scroll bar), not a transform, so a heading with
  * `position: sticky` stays pinned at the top until the next one pushes it up (D-254).
@@ -36,29 +37,28 @@ export function AutoScroll({
     let frame = 0
     let last: number | undefined
     let offset = 0
-    // A finger is down, or the viewer just acted: `stamp` asks the next frame to note its time.
-    let held = false
+    // The viewer just acted: `stamp` asks the next frame to note its time on the frame clock. A
+    // touch that never ends (the browser lost it) runs out like any other input, so the page cannot
+    // stay stopped for good.
     let stamp = false
     let touchedAt: number | undefined
 
     const touch = () => {
       stamp = true
     }
-    const press = () => {
-      held = true
-      stamp = true
-    }
-    const release = () => {
-      held = false
-      stamp = true
+    // Only the keys that scroll a list; Tab and the rest move focus and leave the scroll alone.
+    const scrollKeys = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '])
+    const key = (event: Event) => {
+      if (event instanceof KeyboardEvent && scrollKeys.has(event.key)) stamp = true
     }
     const element = view.current
-    const listeners: [string, () => void][] = [
-      ['touchstart', press],
-      ['touchend', release],
-      ['touchcancel', release],
+    const listeners: [string, (event: Event) => void][] = [
+      ['touchstart', touch],
+      ['touchmove', touch],
+      ['touchend', touch],
+      ['touchcancel', touch],
       ['wheel', touch],
-      ['keydown', touch],
+      ['keydown', key],
     ]
     for (const [type, handler] of listeners) {
       element?.addEventListener(type, handler, { passive: true })
@@ -72,12 +72,12 @@ export function AutoScroll({
       }
       const viewHeight = view.current?.clientHeight ?? 0
       const listHeight = first.current?.offsetHeight ?? 0
-      const paused = held || (touchedAt !== undefined && now - touchedAt < IDLE_RESUME_MS)
+      const paused = touchedAt !== undefined && now - touchedAt < IDLE_RESUME_MS
       const moving = listHeight > viewHeight && !document.hidden && !paused
       if (copy.current) copy.current.hidden = listHeight <= viewHeight
       if (paused && listHeight > viewHeight && view.current) {
-        // The viewer moves it: follow their position, and wrap as the loop does.
-        if (view.current.scrollTop >= listHeight) view.current.scrollTop -= listHeight
+        // The viewer moves it: follow their position and write nothing, so a drag or a fling is not
+        // interrupted. Once the pause ends, the loop wraps a position past the first copy.
         offset = view.current.scrollTop
       } else if (listHeight <= viewHeight) {
         // It fits: sit at the top.

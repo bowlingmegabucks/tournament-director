@@ -261,4 +261,10 @@
   .table {
     margin-inline: var(--space-3);
   }
+
+  /* The card layout pads its own cells; the TV table padding above would win on specificity. */
+  .table table th,
+  .table table td {
+    padding: 0;
+  }
 }

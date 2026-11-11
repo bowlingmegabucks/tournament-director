@@ -176,29 +176,31 @@ describe('AutoScroll (RES-50, D-242)', () => {
     expect(pending).toEqual([])
   })
 
-  describe('a viewer takes over (touch, wheel, keys)', () => {
+  describe('a viewer takes over (touch, wheel, scroll keys)', () => {
     // The first div inside Testing Library's container is the scrolling view.
     const viewOf = () => document.body.querySelector<HTMLElement>('div > div') as HTMLElement
 
-    it('stops while a finger is down, however long', () => {
+    function start() {
       size(1000, 400)
       render(<AutoScroll>{content}</AutoScroll>)
       frames.at(0)
       frames.at(1000)
       expect(position()).toBe(40)
+    }
 
-      fireEvent.touchStart(viewOf())
-      frames.at(2000)
-      frames.at(60_000)
+    it('stays paused while the finger keeps moving, however long the drag', () => {
+      start()
+
+      for (let at = 2000; at <= 60_000; at += 5000) {
+        fireEvent.touchMove(viewOf())
+        frames.at(at)
+      }
 
       expect(position()).toBe(40)
     })
 
-    it('waits for the idle time after the finger lifts, then goes on from the same place', () => {
-      size(1000, 400)
-      render(<AutoScroll>{content}</AutoScroll>)
-      frames.at(0)
-      frames.at(1000)
+    it('waits for the idle time after the last touch, then goes on from the same place', () => {
+      start()
       fireEvent.touchStart(viewOf())
       frames.at(2000)
       fireEvent.touchEnd(viewOf())
@@ -212,10 +214,46 @@ describe('AutoScroll (RES-50, D-242)', () => {
       expect(position()).toBe(80)
     })
 
-    it('pauses for the idle time after a wheel turn or a key press', () => {
+    it('goes on by itself when a touch never ends (the browser lost it)', () => {
+      start()
+      fireEvent.touchStart(viewOf())
+      frames.at(2000)
+
+      frames.at(2000 + IDLE_RESUME_MS)
+      frames.at(2000 + IDLE_RESUME_MS + 1000)
+
+      expect(position()).toBe(80)
+    })
+
+    it('writes nothing to the view while the viewer has it, so a fling is not cut short', () => {
+      start()
+      fireEvent.touchMove(viewOf())
+      const writes = scrolled.length
+
+      frames.at(2000)
+      frames.at(3000)
+
+      expect(scrolled).toHaveLength(writes)
+    })
+
+    it('wraps a position the viewer left past the first copy once the pause ends', () => {
+      start()
+      fireEvent.touchEnd(viewOf())
+      frames.at(2000)
+      scrolled.push(1100) // the viewer scrolled into the second copy
+
+      frames.at(2000 + IDLE_RESUME_MS)
+      frames.at(2000 + IDLE_RESUME_MS + 1000)
+
+      expect(position()).toBeLessThan(1000)
+    })
+
+    it('pauses for the idle time after a wheel turn or a scroll key', () => {
       for (const interact of [
         () => fireEvent.wheel(viewOf()),
         () => fireEvent.keyDown(viewOf(), { key: 'ArrowDown' }),
+        () => fireEvent.keyDown(viewOf(), { key: ' ' }),
+        () => fireEvent.keyDown(viewOf(), { key: 'PageDown' }),
       ]) {
         pending = []
         scrolled.length = 0
@@ -230,6 +268,16 @@ describe('AutoScroll (RES-50, D-242)', () => {
         expect(position()).toBe(40)
         unmount()
       }
+    })
+
+    it('does not pause for Tab or other keys that only move focus', () => {
+      start()
+
+      fireEvent.keyDown(viewOf(), { key: 'Tab' })
+      frames.at(2000)
+      frames.at(3000)
+
+      expect(position()).toBe(120)
     })
 
     it('stops listening when the page goes', () => {

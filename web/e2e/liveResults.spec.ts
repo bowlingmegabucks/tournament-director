@@ -11,6 +11,15 @@ import { menuLink, openTournamentsSignedIn } from './menu'
 
 const wcagAA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 
+/**
+ * Stop the auto-scroll for ten seconds (a wheel turn pauses it), so boxes measured one after another
+ * come from one moment and not from a page that moved between the reads.
+ */
+async function holdStill(page: Page) {
+  await page.locator('main > div').first().dispatchEvent('wheel')
+  await page.waitForTimeout(100)
+}
+
 async function openTournament(page: Page) {
   await page.goto('/tournaments')
   await page.getByRole('article').first().getByRole('link').click()
@@ -72,6 +81,7 @@ test('on a phone the pinned heading leaves room for rows, and the page does not 
   await menuLink(page, 'Live results')
   const heading = page.getByRole('heading', { level: 2 }).first()
   await expect(heading).toBeVisible()
+  await holdStill(page)
 
   // The heading block (name, counts, cut and cash lines) takes under a third of the screen.
   const pinned = await heading.evaluate(
@@ -109,6 +119,7 @@ test('on a phone a handicap card puts its totals on their own line (D-73)', asyn
   // Only a handicap division has Scratch Total, so its cells are in the table that has the label.
   const scratch = page.locator('td[data-label="Scratch Total"]').first()
   await expect(scratch).toBeVisible()
+  await holdStill(page)
   const row = scratch.locator('xpath=ancestor::tr[1]')
   const lastGame = row.locator('td[data-label^="G"]').last()
   const gameBox = (await lastGame.boundingBox()) ?? { y: 0, height: 0 }

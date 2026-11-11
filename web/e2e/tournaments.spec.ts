@@ -489,9 +489,12 @@ test('the Results tab of a complete squad shows one division at a time, with lin
 }) => {
   await openSquad(page, '9:00 AM')
 
-  await page.getByRole('link', { name: 'Results' }).click()
+  await page.getByRole('link', { name: 'Results', exact: true }).click()
 
-  await expect(page.getByRole('link', { name: 'Results' })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('link', { name: 'Results', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  )
   await expect(page.getByRole('heading', { level: 2, name: 'Open' })).toBeVisible()
   const open = page.getByRole('table', { name: 'Results for the Open division' })
   await expect(open.getByRole('row', { name: 'Cut Line' })).toBeVisible()
@@ -520,7 +523,7 @@ test('the Results tab of an open squad shows a column for each game, with a dash
 }) => {
   await openSquad(page, '1:00 PM')
 
-  await page.getByRole('link', { name: 'Results' }).click()
+  await page.getByRole('link', { name: 'Results', exact: true }).click()
 
   const open = page.getByRole('table', { name: 'Results for the Open division' })
   await expect(open.getByRole('columnheader', { name: 'G3' })).toBeVisible()
@@ -539,7 +542,7 @@ test('the Results tab of a sweeper is one list with a cash line (RES-22, RES-25a
     .click()
   await page.getByRole('link', { name: /^[A-Z][a-z]{2} \d{2}\/\d{2}\/\d{4} 6:00 PM$/ }).click()
 
-  await page.getByRole('link', { name: 'Results' }).click()
+  await page.getByRole('link', { name: 'Results', exact: true }).click()
 
   const list = page.getByRole('table', { name: 'Sweeper results' })
   await expect(list.getByRole('row', { name: 'Cash Line' })).toBeVisible()
@@ -555,7 +558,7 @@ test('Print all divisions prints one letter page for each division (RES-33, D-78
     window.print = () => undefined
   })
   await openSquad(page, '9:00 AM')
-  await page.getByRole('link', { name: 'Results' }).click()
+  await page.getByRole('link', { name: 'Results', exact: true }).click()
   await expect(page.getByRole('heading', { level: 2, name: 'Open' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Print all divisions' }).click()
@@ -583,7 +586,7 @@ test('Print results prints a sweeper on one letter page (RES-33, D-78)', async (
     .getByRole('link', { name: 'Sweepers' })
     .click()
   await page.getByRole('link', { name: /^[A-Z][a-z]{2} \d{2}\/\d{2}\/\d{4} 6:00 PM$/ }).click()
-  await page.getByRole('link', { name: 'Results' }).click()
+  await page.getByRole('link', { name: 'Results', exact: true }).click()
   await expect(page.getByRole('table', { name: 'Sweeper results' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Print results' }).click()
@@ -599,7 +602,7 @@ test('Print results prints a sweeper on one letter page (RES-33, D-78)', async (
 test('the Results tab does not scroll sideways on a phone (D-73)', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 800 })
   await openSquad(page, '9:00 AM')
-  await page.getByRole('link', { name: 'Results' }).click()
+  await page.getByRole('link', { name: 'Results', exact: true }).click()
   await expect(page.getByRole('heading', { level: 2, name: 'Open' })).toBeVisible()
 
   const overflow = await page.evaluate(

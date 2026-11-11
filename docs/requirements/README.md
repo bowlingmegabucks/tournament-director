@@ -55,7 +55,7 @@ What the user sees and can do.
 | Recap sheets (preview, print, the cross, QR code)                 | [recap-sheets.md](recap-sheets.md)               |
 | Scores (view)                                                     | [scores.md](scores.md)                           |
 | Score entry (game board, pair sheet, stored skip, live)           | [score-entry.md](score-entry.md)                 |
-| Results (squad and sweeper)                                       | [results.md](results.md)                         |
+| Results (squad and sweeper, live ranking, TV page, DNF flag)      | [results.md](results.md)                         |
 | Results (at-large, seeding, super sweeper)                        | [finals-results.md](finals-results.md)           |
 | Navigation and layout                                             | [navigation.md](navigation.md)                   |
 | API route access                                                  | [api-access.md](api-access.md)                   |

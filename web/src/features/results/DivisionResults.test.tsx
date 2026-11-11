@@ -98,7 +98,7 @@ describe('DivisionBody', () => {
     expect(screen.queryByRole('heading', { level: 3 })).not.toBeInTheDocument()
   })
 
-  it('notes a game that is not full yet', () => {
+  it('notes a game that is not complete yet', () => {
     const division = createDivisionResult({
       throughGame: 1,
       rows: [
@@ -109,7 +109,7 @@ describe('DivisionBody', () => {
 
     render(<DivisionBody division={division} games={3} />)
 
-    expect(screen.getByText(/Game 2 is not full yet/)).toBeVisible()
+    expect(screen.getByText(/Game 2 is not complete yet/)).toBeVisible()
   })
 
   it('leaves the summary to the caller when summary is false', () => {

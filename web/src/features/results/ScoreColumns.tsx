@@ -51,7 +51,7 @@ export function PlusMinusCell({ total, games }: Readonly<{ total: number; games:
 /**
  * The cells of G1 to Gn. A game the bowler has not bowled shows a dash; a screen reader says "No
  * game". `scores` is `null` for a sweeper that is still open with no score yet. A game from `counted`
- * on is not full yet (RES-46, D-239): it shows, dimmed with a dagger, and the figures leave it out.
+ * on is not complete yet (RES-46, D-239): it shows, dimmed with a dagger, and the figures leave it out.
  * `counted` is `null` when every game counts.
  */
 export function GameCells({

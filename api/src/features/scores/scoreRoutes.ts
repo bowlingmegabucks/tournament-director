@@ -58,7 +58,7 @@ export function createScoreWriteRouter(
   ) {
     const { id, sessionId, registrationId, game } = params.parse(req.params)
     // The counted games before the write, for the TV page (RES-49). Nothing if nobody watches.
-    const before = await live.before(id, kind, sessionId)
+    const before = await live.before(id, kind, sessionId, registrationId)
     const outcome: ScoreChangeResult = await writer.change({
       tournamentId: id,
       kind,

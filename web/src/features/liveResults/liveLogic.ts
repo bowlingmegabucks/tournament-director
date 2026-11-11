@@ -75,7 +75,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
  * detail still means "something changed", so the caller refetches in that case.
  */
 export function parseLiveEvent(kind: string, detail: unknown): LiveEvent | undefined {
-  if (kind !== 'game-full' && kind !== 'reopened' && kind !== 'complete') return undefined
+  if (kind !== 'game-full' && kind !== 'reopened' && kind !== 'scored' && kind !== 'complete') {
+    return undefined
+  }
   if (!isRecord(detail)) return undefined
   const { sessionId, sessionKind, divisionId, divisionName, game } = detail
   if (typeof sessionId !== 'string') return undefined
@@ -95,7 +97,8 @@ export function parseLiveEvent(kind: string, detail: unknown): LiveEvent | undef
 /**
  * The words of the strip for one message (D-245): "Open Division – Game 3 complete", "Sweeper –
  * Game 2 complete", "Session complete – results are official". No squad name: one squad runs at a time.
- * A `reopened` message says nothing: a clear is usually corrected at once.
+ * A `reopened` message says nothing: a clear is usually corrected at once. A `scored` message (a
+ * score that filled no game) says nothing either; it only refreshes its division.
  */
 export function noticeText(event: LiveEvent, feed: LiveResults | undefined): string | undefined {
   const { sessionKind, divisionId, game } = event.detail

@@ -86,7 +86,7 @@
   white-space: nowrap;
 }
 
-/* A game that is not full yet: shown, not counted (RES-46). Italic and a dagger, so color is not the only cue. */
+/* A game that is not complete yet: shown, not counted (RES-46). Italic and a dagger, so color is not the only cue. */
 .pending {
   color: var(--color-text-muted);
   font-style: italic;

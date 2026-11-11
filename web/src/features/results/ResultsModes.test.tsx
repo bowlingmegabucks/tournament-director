@@ -175,7 +175,7 @@ describe('Results tab games not counted yet (RES-46, D-239)', () => {
     expect(dana).toHaveTextContent('630')
     expect(dana).not.toHaveTextContent('930')
     expect(
-      screen.getByText(/Game 4 is not full yet\. These scores show, but places and totals/),
+      screen.getByText(/Game 4 is not complete yet\. These scores show, but places and totals/),
     ).toBeVisible()
     expect(screen.getByText('Ranked through game 3. Game 4 has 1 of 2 scores.')).toBeVisible()
     // Mike has no fourth game: a plain dash, not a dimmed score.
@@ -190,7 +190,7 @@ describe('Results tab games not counted yet (RES-46, D-239)', () => {
     await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
 
     expect(screen.queryByText(/Not counted yet/)).not.toBeInTheDocument()
-    expect(screen.queryByText(/is not full yet/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/is not complete yet/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Ranked through game/)).not.toBeInTheDocument()
   })
 
@@ -215,7 +215,7 @@ describe('Results tab games not counted yet (RES-46, D-239)', () => {
     await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
 
     expect(screen.getByText('Ranked through game 2.')).toBeVisible()
-    expect(screen.queryByText(/is not full yet/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/is not complete yet/)).not.toBeInTheDocument()
   })
 
   it('takes the handicap totals from the counted games only (RES-46, RES-11a)', async () => {

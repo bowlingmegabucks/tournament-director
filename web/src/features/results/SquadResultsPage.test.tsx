@@ -237,7 +237,7 @@ describe('SquadResultsPage', () => {
       'Tied on total at the cut line. Lost the spot on high game.',
     )
     expect(view.getByRole('rowheader', { name: /Rita Alvarez/ })).toHaveTextContent(
-      'Full tie at the cash line. The director decides.',
+      'Full tie at the cash line.',
     )
   })
 

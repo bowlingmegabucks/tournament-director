@@ -17,6 +17,8 @@ export interface LiveSnapshot {
   kind: SessionKind
   sessionId: string
   counted: ReadonlyMap<string, number>
+  /** The registration the change is for, so its division is told even when no game filled. */
+  registrationId?: string
 }
 
 /**
@@ -31,6 +33,7 @@ export interface LiveNotifier {
     tournamentId: string,
     kind: SessionKind,
     sessionId: string,
+    registrationId?: string,
   ): Promise<LiveSnapshot | undefined>
   /** Compare with the snapshot and publish. Never throws: a failed read is logged, not raised. */
   after(snapshot: LiveSnapshot | undefined): Promise<void>
@@ -77,7 +80,13 @@ export function createLiveNotifier({
       built.waiting,
       kind === 'squad' ? (waiter) => waiter.divisionId : () => SWEEPER,
     )
-    return { through, names: new Map(all.map((division) => [division.id, division.name])) }
+    const groupOf = (entry: { divisionId: string }) =>
+      kind === 'squad' ? entry.divisionId : SWEEPER
+    return {
+      through,
+      names: new Map(all.map((division) => [division.id, division.name])),
+      groups: new Map(entries.map((entry) => [entry.registrationId, groupOf(entry)])),
+    }
   }
 
   // Two keepers can save at once, so each snapshot may be older than the last write that landed.
@@ -87,7 +96,7 @@ export function createLiveNotifier({
   const queue = new Map<string, Promise<void>>()
 
   return {
-    async before(tournamentId, kind, sessionId) {
+    async before(tournamentId, kind, sessionId, registrationId) {
       // Nobody on the TV page: the diff would go nowhere, so skip two reads of the whole session.
       // What was seen goes stale while nobody listens, so forget it.
       if (!events.watching(liveKey(tournamentId))) {
@@ -98,7 +107,7 @@ export function createLiveNotifier({
         const { through: counted } = await read(tournamentId, kind, sessionId)
         // The first snapshot of a quiet session is what was last seen, however late the others come.
         if (!seen.has(sessionId)) seen.set(sessionId, counted)
-        return { tournamentId, kind, sessionId, counted }
+        return { tournamentId, kind, sessionId, counted, registrationId }
       } catch (err) {
         logger.warn({ err, tournamentId, sessionId }, 'Could not read the counted games')
         return undefined
@@ -124,7 +133,11 @@ export function createLiveNotifier({
   async function compare(snapshot: LiveSnapshot): Promise<void> {
     const { tournamentId, kind, sessionId } = snapshot
     try {
-      const { through: now, names } = await read(tournamentId, kind, sessionId)
+      const {
+        through: now,
+        names,
+        groups: groupOfRegistration,
+      } = await read(tournamentId, kind, sessionId)
       const counted = seen.get(sessionId) ?? snapshot.counted
       seen.set(sessionId, now)
       const groups = new Set([...counted.keys(), ...now.keys()])
@@ -135,7 +148,17 @@ export function createLiveNotifier({
         // Stryker disable next-line EqualityOperator: equal counts left the loop above, so `>` and `>=` agree.
         return [{ group, game, up: game > was }]
       })
-      if (changes.length === 0) return
+      // A score that fills no game still changes its division's table: tell the division, so the TV
+      // shows the new score (dimmed, not counted yet) at once.
+      const own = snapshot.registrationId
+        ? groupOfRegistration.get(snapshot.registrationId)
+        : undefined
+      // Nothing shows for a group with no counted game yet, so there is nothing to refresh.
+      const alone =
+        own !== undefined &&
+        (now.get(own) ?? 0) > 0 &&
+        !changes.some((change) => change.group === own)
+      if (changes.length === 0 && !alone) return
       // The feed holds the old boards: drop it before the message that tells the TV to ask again.
       cache.dropTournament(tournamentId)
       for (const { group, game, up } of changes) {
@@ -145,6 +168,14 @@ export function createLiveNotifier({
           ...(group === SWEEPER ? {} : { divisionId: group }),
           ...(names.has(group) ? { divisionName: names.get(group) } : {}),
           ...(up ? { game } : {}),
+        })
+      }
+      if (alone) {
+        events.publish(liveKey(tournamentId), 'scored', {
+          sessionId,
+          sessionKind: kind,
+          ...(own === SWEEPER ? {} : { divisionId: own }),
+          ...(names.has(own) ? { divisionName: names.get(own) } : {}),
         })
       }
     } catch (err) {

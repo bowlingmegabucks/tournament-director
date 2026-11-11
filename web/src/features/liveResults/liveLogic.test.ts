@@ -123,6 +123,12 @@ describe('parseLiveEvent (RES-49, D-243)', () => {
         divisionName: 7,
       })?.detail,
     ).not.toHaveProperty('divisionName')
+    expect(
+      parseLiveEvent('scored', { sessionId: 'sq1', sessionKind: 'squad', divisionId: 'd1' }),
+    ).toEqual({
+      kind: 'scored',
+      detail: { sessionId: 'sq1', sessionKind: 'squad', divisionId: 'd1' },
+    })
     expect(parseLiveEvent('complete', { sessionId: 'sw1', sessionKind: 'sweeper' })?.kind).toBe(
       'complete',
     )
@@ -192,6 +198,10 @@ describe('noticeText (D-245)', () => {
     expect(noticeText(event({ kind: 'complete' }), feed)).toBe(
       'Session complete – results are official',
     )
+  })
+
+  it('says nothing for a score that filled no game', () => {
+    expect(noticeText(event({ kind: 'scored', game: undefined }), feed)).toBeUndefined()
   })
 
   it('says nothing for a reopened game (D-245)', () => {

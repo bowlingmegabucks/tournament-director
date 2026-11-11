@@ -318,6 +318,45 @@ describe('loadLiveResults (RES-47, D-242, D-244)', () => {
     expect(result.sessions.map((session) => session.results.session.id)).toEqual([scored.id])
   })
 
+  it('leaves a division out until everyone in it has bowled game 1, then shows it (RES-40)', async () => {
+    const squad = squadAt('2026-10-24T09:00:00', { complete: false })
+    const run = async (lateGames: number[]) => {
+      const world = setup({
+        squads: [squad],
+        seats: [
+          { sessionId: squad.id, entry: bowler(), games: [200, 210] },
+          { sessionId: squad.id, entry: bowler(), games: lateGames },
+        ],
+      })
+      return loadLiveResults(world.deps, world.reporting, world.tournament.id)
+    }
+
+    expect((await run([])).sessions).toEqual([])
+
+    const shown = await run([190])
+    const division =
+      shown.sessions[0]?.kind === 'squad' ? shown.sessions[0].results.divisions[0] : undefined
+    expect(division?.throughGame).toBe(1)
+    // Game 2 shows for the bowler who has it, as the Results tab does.
+    expect(division?.rows.some((row) => row.scores[1] === 210)).toBe(true)
+  })
+
+  it('leaves out a sweeper with no counted game, and the super sweeper with it', async () => {
+    const sweeper = createSweeper({ cashRatio: 2, games: 3, complete: false })
+    const world = setup({
+      sweepers: [sweeper],
+      seats: [
+        { sessionId: sweeper.id, entry: bowler(), games: [200] },
+        { sessionId: sweeper.id, entry: bowler(), games: [] },
+      ],
+    })
+
+    const result = await loadLiveResults(world.deps, world.reporting, world.tournament.id)
+
+    expect(result.sessions).toEqual([])
+    expect(result.superSweeper).toBeNull()
+  })
+
   it('sends no personal data (BWL-17)', async () => {
     const squad = squadAt('2026-10-24T09:00:00')
     const { deps, tournament, reporting } = setup({

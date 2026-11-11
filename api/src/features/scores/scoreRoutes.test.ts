@@ -372,7 +372,11 @@ describe('a save tells the TV page when a game fills (RES-49, D-243)', () => {
   it('sends game-full only when the last bowler of the division fills the game, and reopened on a clear', async () => {
     const { overrides, url, live, squad, ann, cal } = setup()
     const app = createSignedInTestApp(overrides)
-    const kinds = () => live.map((event) => [event.kind, event.detail?.game])
+    // `scored` (a score that fills no game) has its own test below.
+    const kinds = () =>
+      live
+        .filter((event) => event.kind !== 'scored')
+        .map((event) => [event.kind, event.detail?.game])
 
     // Ann scores alone: Cal has not bowled game 1, so the game is not full (RES-40).
     await request(app).put(url(ann.registrationId, 1)).send({ score: 200 })
@@ -392,6 +396,44 @@ describe('a save tells the TV page when a game fills (RES-49, D-243)', () => {
 
     await request(app).delete(url(cal.registrationId, 2))
     expect(live.at(-1)).toMatchObject({ kind: 'reopened' })
+  })
+
+  it('tells the division of a score that fills no game, so the TV shows it at once', async () => {
+    const { overrides, url, live, squad, ann, cal } = setup()
+    const app = createSignedInTestApp(overrides)
+    await request(app).put(url(ann.registrationId, 1)).send({ score: 200 })
+    await request(app).put(url(cal.registrationId, 1)).send({ score: 190 })
+    live.length = 0
+
+    await request(app).put(url(ann.registrationId, 2)).send({ score: 210 })
+
+    expect(live).toHaveLength(1)
+    expect(live[0]).toMatchObject({
+      kind: 'scored',
+      detail: { sessionId: squad.id, sessionKind: 'squad', divisionName: expect.any(String) },
+    })
+    expect(live[0]?.detail?.divisionId).toBeDefined()
+    expect(live[0]?.detail?.game).toBeUndefined()
+  })
+
+  it('says nothing for a score while the division has no counted game yet', async () => {
+    const { overrides, url, live, ann } = setup()
+    const app = createSignedInTestApp(overrides)
+
+    await request(app).put(url(ann.registrationId, 1)).send({ score: 200 })
+
+    expect(live).toEqual([])
+  })
+
+  it('sends game-full and no separate scored message when the score fills the game', async () => {
+    const { overrides, url, live, ann, cal } = setup()
+    const app = createSignedInTestApp(overrides)
+    await request(app).put(url(ann.registrationId, 1)).send({ score: 200 })
+    live.length = 0
+
+    await request(app).put(url(cal.registrationId, 1)).send({ score: 190 })
+
+    expect(live.map((event) => event.kind)).toEqual(['game-full'])
   })
 
   it('says nothing for a refused save, and nothing is read when nobody watches', async () => {

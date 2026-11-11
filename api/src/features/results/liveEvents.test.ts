@@ -293,4 +293,88 @@ describe('live notifier (RES-49, D-243)', () => {
 
     expect(seen.map((event) => [event.kind, event.detail?.game])).toEqual([['game-full', 4]])
   })
+
+  describe('a score that fills no game (the division is told)', () => {
+    // Game 1 is full for both, so the division shows; a bowler's game 2 then fills nothing.
+    const started = (a: LaneEntry, b: LaneEntry) => ({ [a.bowlerId]: [200], [b.bowlerId]: [190] })
+
+    it('sends scored with the division and its name, and no game', async () => {
+      const a = bowler()
+      const b = bowler()
+      const { notifier, seen, state, dropped } = setup(started(a, b), [a, b])
+      const live = notifier()
+
+      const before = await live.before(tournamentId, 'squad', sessionId, a.registrationId)
+      state[a.bowlerId] = [200, 210]
+      await live.after(before)
+
+      expect(seen).toEqual([
+        {
+          kind: 'scored',
+          detail: { sessionId, sessionKind: 'squad', divisionId: open.id, divisionName: 'Open' },
+          version: 1,
+        },
+      ])
+      expect(dropped).toHaveBeenCalledWith(tournamentId)
+    })
+
+    it('says nothing while the division has no counted game: nothing shows yet', async () => {
+      const a = bowler()
+      const b = bowler()
+      const { notifier, seen, state } = setup({ [a.bowlerId]: [], [b.bowlerId]: [] }, [a, b])
+      const live = notifier()
+
+      const before = await live.before(tournamentId, 'squad', sessionId, a.registrationId)
+      state[a.bowlerId] = [200]
+      await live.after(before)
+
+      expect(seen).toEqual([])
+    })
+
+    it('names no division for a sweeper', async () => {
+      const a = bowler()
+      const b = bowler()
+      const { notifier, seen, state } = setup(started(a, b), [a, b])
+      const live = notifier()
+
+      const before = await live.before(tournamentId, 'sweeper', sessionId, a.registrationId)
+      state[a.bowlerId] = [200, 210]
+      await live.after(before)
+
+      expect(seen.map((event) => event.kind)).toEqual(['scored'])
+      expect(seen[0]?.detail).toEqual({ sessionId, sessionKind: 'sweeper' })
+    })
+
+    it('sends only game-full when the score fills the game, and sends nothing with no registration', async () => {
+      const a = bowler()
+      const b = bowler()
+      const { notifier, seen, state } = setup({ [a.bowlerId]: [200], [b.bowlerId]: [] }, [a, b])
+      const live = notifier()
+
+      const first = await live.before(tournamentId, 'squad', sessionId, b.registrationId)
+      state[b.bowlerId] = [190]
+      await live.after(first)
+      expect(seen.map((event) => event.kind)).toEqual(['game-full'])
+
+      seen.length = 0
+      const anonymous = await live.before(tournamentId, 'squad', sessionId)
+      state[a.bowlerId] = [200, 200]
+      await live.after(anonymous)
+      expect(seen).toEqual([])
+    })
+
+    it('tells the division of the bowler, not the other', async () => {
+      const a = bowler()
+      const s = bowler(senior.id)
+      const { notifier, seen, state } = setup({ [a.bowlerId]: [200], [s.bowlerId]: [180] }, [a, s])
+      const live = notifier()
+
+      const before = await live.before(tournamentId, 'squad', sessionId, s.registrationId)
+      state[s.bowlerId] = [180, 190]
+      await live.after(before)
+
+      expect(seen).toHaveLength(1)
+      expect(seen[0]?.detail).toMatchObject({ divisionId: senior.id, divisionName: 'Senior' })
+    })
+  })
 })

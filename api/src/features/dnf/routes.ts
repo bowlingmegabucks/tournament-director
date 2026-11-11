@@ -76,7 +76,7 @@ export function createDnfRouter(
         throw new HttpError(409, 'This bowler has no score yet, so there is nothing to finish.')
       }
     }
-    const before = await live.before(id, kind, sessionId)
+    const before = await live.before(id, kind, sessionId, registrationId)
     let changed: boolean
     if (flag) {
       // The reads above give the messages; this write checks again inside one transaction, so a

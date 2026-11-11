@@ -477,6 +477,27 @@ describe('LiveResultsPage follows the stream (RES-49, RES-50, D-243 to D-245)', 
     expect(screen.queryByText(/complete/)).not.toBeInTheDocument()
   })
 
+  it('refetches only the division of a score that filled no game, and posts and outlines nothing', async () => {
+    const { calls } = await ready()
+
+    act(() => {
+      FakeEventSource.latest().message(
+        message('scored', {
+          sessionId: squadId,
+          sessionKind: 'squad',
+          divisionId: openId,
+          divisionName: 'Open',
+        }),
+      )
+    })
+
+    await waitFor(() => {
+      expect(calls.division).toHaveLength(1)
+    })
+    expect(calls.feed).toBe(1)
+    expect(screen.queryByText(/complete/)).not.toBeInTheDocument()
+  })
+
   it('loads everything when the division is not in the feed yet (D-244)', async () => {
     const { calls } = await ready()
 

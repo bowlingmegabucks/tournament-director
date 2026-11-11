@@ -130,7 +130,7 @@ export function DivisionBody({
 
       {pending && (
         <p className={styles.sub}>
-          † Game {pending.game} is not full yet. These scores show, but places and totals do not
+          † Game {pending.game} is not complete yet. These scores show, but places and totals do not
           count them until every bowler in the division has a game {pending.game} score.
         </p>
       )}

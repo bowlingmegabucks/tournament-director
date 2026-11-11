@@ -254,7 +254,7 @@ export interface LiveResults {
 
 /** What a message on the tournament stream says (RES-49, D-243): ids and a game, never a score. */
 export interface LiveEvent {
-  kind: 'game-full' | 'reopened' | 'complete'
+  kind: 'game-full' | 'reopened' | 'scored' | 'complete'
   detail: {
     sessionId: string
     sessionKind: 'squad' | 'sweeper'

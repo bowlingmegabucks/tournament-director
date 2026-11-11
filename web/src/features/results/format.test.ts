@@ -86,24 +86,24 @@ describe('formatTie (D-14, D-16)', () => {
     )
   })
 
-  it('says the director decides a full tie', () => {
+  it('says a full tie', () => {
     expect(formatTie({ line: 'cut', outcome: 'full', decidedBy: null })).toBe(
-      'Full tie at the cut line. The director decides.',
+      'Full tie at the cut line.',
     )
     expect(formatTie({ line: 'cash', outcome: 'full', decidedBy: null })).toBe(
-      'Full tie at the cash line. The director decides.',
+      'Full tie at the cash line.',
     )
   })
 
   it('says a full tie is a full tie even if a tie-breaker is sent', () => {
     expect(formatTie({ line: 'cut', outcome: 'full', decidedBy: { kind: 'games' } })).toBe(
-      'Full tie at the cut line. The director decides.',
+      'Full tie at the cut line.',
     )
   })
 
   it('treats a win with no tie-breaker as a full tie', () => {
     expect(formatTie({ line: 'cut', outcome: 'won', decidedBy: null })).toBe(
-      'Full tie at the cut line. The director decides.',
+      'Full tie at the cut line.',
     )
   })
 })
@@ -218,7 +218,7 @@ describe('formatTie on the at-large page (D-93)', () => {
       'Tied on total at the cash line. Won the spot on high game.',
     )
     expect(formatTie({ line: 'cut', outcome: 'full', decidedBy: null }, 'last at-large spot')).toBe(
-      'Full tie at the last at-large spot. The director decides.',
+      'Full tie at the last at-large spot.',
     )
   })
 })

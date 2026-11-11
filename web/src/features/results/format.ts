@@ -34,7 +34,7 @@ export function formatDecider(decider: Decider): string {
 export function formatTie(tie: Tie, cutName = 'cut line'): string {
   const line = tie.line === 'cut' ? cutName : 'cash line'
   if (tie.outcome === 'full' || !tie.decidedBy) {
-    return `Full tie at the ${line}. The director decides.`
+    return `Full tie at the ${line}.`
   }
   const result = tie.outcome === 'won' ? 'Won' : 'Lost'
   return `Tied on total at the ${line}. ${result} the spot on ${formatDecider(tie.decidedBy)}.`
@@ -173,7 +173,7 @@ export function gameColumnCount(
 }
 
 /**
- * RES-46: the first game that is not full yet, when some bowler already has a score in it, with how
+ * RES-46: the first game that is not complete yet, when some bowler already has a score in it, with how
  * many bowlers do. `undefined` in live mode (`throughGame` is `null`) or when no one is ahead.
  */
 export function pendingGame(

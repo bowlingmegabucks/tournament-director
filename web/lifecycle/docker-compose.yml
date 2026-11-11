@@ -1,0 +1,39 @@
+# The lifecycle test's own services (docs/plans/lifecycle-e2e.md). A separate Compose project from
+# the repo root, on other ports, so a run never touches the development database. No volume: the
+# database starts empty on every run and `down -v` in the teardown removes it.
+name: tournament-director-lifecycle
+
+services:
+  database:
+    image: mariadb:11.4.7
+    environment:
+      MARIADB_DATABASE: lifecycle
+      MARIADB_USER: lifecycle
+      MARIADB_PASSWORD: lifecycle4money
+      MARIADB_RANDOM_ROOT_PASSWORD: 'yes'
+    ports:
+      - '15406:3306'
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'healthcheck.sh', '--connect', '--innodb_initialized']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mail:
+    image: axllent/mailpit:v1.32
+    environment:
+      MP_SMTP_TLS_CERT: 'sans:localhost'
+      MP_SMTP_TLS_KEY: 'sans:localhost'
+      MP_SMTP_REQUIRE_STARTTLS: 'true'
+      MP_SMTP_AUTH_ACCEPT_ANY: 'true'
+    ports:
+      # Inbox and its API: http://localhost:15425
+      - '15425:8025'
+      - '15125:1025'
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 5s
+      timeout: 3s
+      retries: 10

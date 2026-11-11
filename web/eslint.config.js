@@ -8,7 +8,18 @@ import jsxA11y from 'eslint-plugin-jsx-a11y'
 import prettier from 'eslint-config-prettier'
 
 export default defineConfig(
-  { ignores: ['dist', 'coverage', 'reports', '.stryker-tmp', 'public/mockServiceWorker.js'] },
+  {
+    ignores: [
+      'dist',
+      'dist-lifecycle',
+      'lifecycle-report',
+      'lifecycle-results',
+      'coverage',
+      'reports',
+      '.stryker-tmp',
+      'public/mockServiceWorker.js',
+    ],
+  },
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

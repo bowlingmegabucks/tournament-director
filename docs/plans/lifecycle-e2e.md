@@ -8,6 +8,16 @@ An outline and rules for one UI-driven Playwright test that runs a whole tournam
 
 The other suites check one screen or route at a time, on mocks or small data. They cannot show that create, register, assign, score, and result agree on a tournament of real size. The risk is in that agreement: counts, ranking, handicap, ties, cashers, money.
 
+## Status
+
+Built so far (branch `results`, 1.0.0-rc.1): the harness and stages 0 and 1, in `web/lifecycle/`. Run `npm run test:lifecycle` in `web/` (needs Docker and `python3`).
+
+- **Stack.** `web/lifecycle/docker-compose.yml` (its own MariaDB on 15406 and Mailpit on 15425, no volume), the API on 3100 (empty tables from `npm run db:tables` in `api/`), and the production web build (`dist-lifecycle`, sign-in on, `check:dist` run on it) on 4273. `globalTeardown` removes the containers; `LIFECYCLE_KEEP=1` keeps them.
+- **Stage 0 so far.** First admin from `users:create-admin` through a pseudo-terminal (`support/answerPrompts.py`, because the script refuses piped input), then director and score keeper through the add-user page, invites read from Mailpit, passwords set, sign-in with the real login page. **Not yet:** the earlier tournament and its 50 returning bowlers.
+- **Stage 1.** Create, edit the bowling center, check the overview and the list.
+- **Rule 9 gap.** "No live cache" needs a setting: `LIVE_CACHE_MS` is a constant in `ttlCache.ts`. Add an env var before stage 7.
+- Stages 2 and up: not built.
+
 ## Rules
 
 1. **One real stack, no shortcuts.** A fresh database, the real API, and the production web build, with no mocks. Nothing writes to the database directly: every row comes from the app (the UI, the registration site's API routes, or the app's own scripts). Loading the empty schema is setup, not data.

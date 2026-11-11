@@ -171,3 +171,35 @@ export function gameColumnCount(
 ) {
   return Math.max(sessionGames, ...scoreLists.map((scores) => scores.length))
 }
+
+/**
+ * RES-46: the first game that is not full yet, when some bowler already has a score in it, with how
+ * many bowlers do. `undefined` in live mode (`throughGame` is `null`) or when no one is ahead.
+ */
+export function pendingGame(
+  scoreLists: readonly (readonly (number | null)[])[],
+  throughGame: number | null,
+): { game: number; have: number; of: number } | undefined {
+  if (throughGame === null) return undefined
+  const have = scoreLists.filter((scores) => (scores[throughGame] ?? null) !== null).length
+  return have === 0 ? undefined : { game: throughGame + 1, have, of: scoreLists.length }
+}
+
+/** "Ranked through game 3. Game 4 has 2 of 8 scores." (RES-46). Empty when nothing is pending. */
+export function formatThroughNote(
+  throughGame: number | null,
+  pending: ReturnType<typeof pendingGame>,
+): string {
+  if (throughGame === null || throughGame === 0) return ''
+  const through = `Ranked through game ${throughGame}.`
+  return pending
+    ? `${through} Game ${pending.game} has ${pending.have} of ${plural(pending.of, 'score', 'scores')}.`
+    : through
+}
+
+/** The label of the steady choice in the toggle: "Through game 3" (RES-45). */
+export function formatThroughLabel(throughGame: number | null): string {
+  return throughGame === null || throughGame === 0
+    ? 'Through the last full game'
+    : `Through game ${throughGame}`
+}

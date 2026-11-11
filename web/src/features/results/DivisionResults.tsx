@@ -1,5 +1,13 @@
 import { useId } from 'react'
-import { formatGamesOf, formatSummary, formatTie, gameColumnCount, squadItems } from './format'
+import {
+  formatGamesOf,
+  formatSummary,
+  formatThroughNote,
+  formatTie,
+  gameColumnCount,
+  pendingGame,
+  squadItems,
+} from './format'
 import {
   GameCells,
   GameHeaders,
@@ -37,10 +45,16 @@ export function DivisionBody({
   ])
   const columns = 3 + count + (division.showHandicap ? 3 : 1)
   const anyEarlier = division.rows.some((row) => row.advancedEarlier)
+  const pending = pendingGame(
+    division.rows.map((row) => row.scores),
+    division.throughGame,
+  )
+  const throughNote = formatThroughNote(division.throughGame, pending)
 
   return (
     <>
       <p className={styles.sub}>{formatSummary(division)}</p>
+      {throughNote && <p className={styles.sub}>{throughNote}</p>}
 
       {division.rows.length === 0 ? (
         <p>No bowler in this division has finished the squad.</p>
@@ -67,23 +81,36 @@ export function DivisionBody({
                   <td className={styles.place}>{item.row.place}</td>
                   <th scope="row" className={styles.who}>
                     {item.row.name}
+                    {item.row.dnf && <span className={styles.tag}>DNF</span>}
                     {item.row.advancedEarlier && (
                       <span className={styles.tag}>Advanced earlier</span>
                     )}
                     <TieMarks row={item.row} />
                   </th>
                   <PlusMinusCell total={item.row.total} games={item.row.games} />
-                  <GameCells scores={item.row.scores} count={count} />
+                  <GameCells
+                    scores={item.row.scores}
+                    count={count}
+                    counted={division.throughGame}
+                  />
                   <TotalCells
                     scores={item.row.scores}
                     total={item.row.total}
                     handicap={division.showHandicap}
+                    counted={division.throughGame}
                   />
                 </tr>
               ),
             )}
           </tbody>
         </table>
+      )}
+
+      {pending && (
+        <p className={styles.sub}>
+          † Game {pending.game} is not full yet. These scores show, but places and totals do not
+          count them until every bowler in the division has a game {pending.game} score.
+        </p>
       )}
 
       {anyEarlier && (

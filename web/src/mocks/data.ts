@@ -18,6 +18,8 @@ import type {
   SeedingDivision,
   SeedingResults,
   SeedingRow,
+  LiveResults,
+  RankMode,
   SquadResults,
   SquadRow,
   SuperSweeperResults,
@@ -721,6 +723,7 @@ export function createSquadRow(overrides: Partial<SquadRow> = {}): SquadRow {
     handicap: 0,
     scores: [200, 200, 200],
     advancedEarlier: false,
+    dnf: false,
     ties: [],
     ...overrides,
   }
@@ -734,6 +737,7 @@ export function createDivisionResult(overrides: Partial<DivisionResult> = {}): D
     name: 'Open',
     entries: 0,
     showHandicap: false,
+    throughGame: null,
     rows: [],
     didNotFinish: [],
     noShows: [],
@@ -753,6 +757,7 @@ export function createSquadResults(overrides: Partial<SquadResults> = {}): Squad
       games: 3,
       ...session,
     },
+    mode: 'full-game',
     finalsRatio: 8,
     cashRatio: 5,
     divisions: [],
@@ -773,6 +778,7 @@ export function createSweeperRow(overrides: Partial<SweeperRow> = {}): SweeperRo
     divisionName: 'Open',
     bonusPins: 0,
     scores: [200, 200, 200],
+    dnf: false,
     ...overrides,
   }
 }
@@ -789,6 +795,8 @@ export function createSweeperResults(overrides: Partial<SweeperResults> = {}): S
       games: 3,
       ...session,
     },
+    mode: 'full-game',
+    throughGame: null,
     cashRatio: 4,
     entries: 0,
     cashers: 0,
@@ -856,6 +864,39 @@ function demoRows(players: DemoPlayer[], advance: number, cash: number): SquadRo
  * bowlers have different game counts and the Games column shows (D-75, D-76).
  */
 export function createDemoSquadResults(
+  session: { id: string; date: string; complete: boolean },
+  divisions: Division[],
+  mode: RankMode = 'full-game',
+  divisionId?: string,
+): SquadResults {
+  const demo = createDemoSquad(session, divisions)
+  const results = applyMode(demo, mode)
+  return divisionId
+    ? { ...results, divisions: results.divisions.filter((item) => item.id === divisionId) }
+    : results
+}
+
+/**
+ * Rank a demo squad as `mode` says (D-239): live counts everything and has no counted games; the
+ * steady mode counts all of a complete squad and the fewest games of an open division.
+ */
+function applyMode(results: SquadResults, mode: RankMode): SquadResults {
+  return {
+    ...results,
+    mode,
+    divisions: results.divisions.map((division) => ({
+      ...division,
+      throughGame:
+        mode === 'live'
+          ? null
+          : results.session.complete
+            ? results.session.games
+            : Math.min(...division.rows.map((row) => row.games)),
+    })),
+  }
+}
+
+function createDemoSquad(
   session: { id: string; date: string; complete: boolean },
   divisions: Division[],
 ): SquadResults {
@@ -970,12 +1011,15 @@ export function createDemoSquadResults(
 }
 
 /** For the mock server: the results of a demo sweeper, one list with each division's bonus pins. */
-export function createDemoSweeperResults(session: {
-  id: string
-  date: string
-  complete: boolean
-  games: number
-}): SweeperResults {
+export function createDemoSweeperResults(
+  session: {
+    id: string
+    date: string
+    complete: boolean
+    games: number
+  },
+  mode: RankMode = 'full-game',
+): SweeperResults {
   const players: [string, string, number, number, number][] = [
     ['Dave Kowalski', 'Open', 0, 712, 256],
     ['Linda Perrault', 'Women', 10, 681, 229],
@@ -992,6 +1036,8 @@ export function createDemoSweeperResults(session: {
       complete: session.complete,
       games: session.games,
     },
+    mode,
+    throughGame: mode === 'live' ? null : session.games,
     cashRatio: 3,
     entries: players.length,
     cashers: 2,
@@ -1098,6 +1144,7 @@ export function createSuperSweeperRow(overrides: Partial<SuperSweeperRow> = {}):
     ],
     sweeperPins: [0, 0],
     flags: [],
+    dnf: false,
     ...overrides,
   }
 }
@@ -1107,14 +1154,27 @@ export function createSuperSweeperResults(
   overrides: Partial<SuperSweeperResults> = {},
 ): SuperSweeperResults {
   return {
+    mode: 'full-game',
     complete: false,
     cashRatio: 4,
     entries: 0,
     cashers: 0,
     cutScore: null,
     sweepers: [
-      { id: faker.string.uuid(), date: '2026-10-23T18:00:00', games: 3, complete: true },
-      { id: faker.string.uuid(), date: '2026-10-24T18:00:00', games: 3, complete: true },
+      {
+        id: faker.string.uuid(),
+        date: '2026-10-23T18:00:00',
+        games: 3,
+        complete: true,
+        throughGame: 3,
+      },
+      {
+        id: faker.string.uuid(),
+        date: '2026-10-24T18:00:00',
+        games: 3,
+        complete: true,
+        throughGame: 3,
+      },
     ],
     rows: [],
     ...overrides,
@@ -1208,8 +1268,15 @@ export function createDemoSeeding(): SeedingResults {
 /** For the mock server: the super sweeper over the demo sweepers, with an unfinished sweeper, a missed one, and a no-show last. */
 export function createDemoSuperSweeper(
   sweepers: readonly { id: string; date: string; games: number; complete: boolean }[],
+  mode: RankMode = 'full-game',
 ): SuperSweeperResults {
-  const columns = sweepers.map(({ id, date, games, complete }) => ({ id, date, games, complete }))
+  const columns = sweepers.map(({ id, date, games, complete }) => ({
+    id,
+    date,
+    games,
+    complete,
+    throughGame: mode === 'full-game' ? games : null,
+  }))
   const [first, second] = columns
   const players: [string, string, (number | null)[], number, SuperSweeperRow['flags']][] = [
     ['Dana Whitfield', 'Women/Senior', [712, 698], 1410, []],
@@ -1238,6 +1305,7 @@ export function createDemoSuperSweeper(
     ],
   ]
   return createSuperSweeperResults({
+    mode,
     complete: false,
     cashRatio: 2,
     entries: players.length,
@@ -1371,4 +1439,38 @@ export function createEditInfo(
       ...overrides.locks,
     },
   }
+}
+
+/** Live results with no session in them. Override what a test cares about. */
+export function createLiveResults(overrides: Partial<LiveResults> = {}): LiveResults {
+  return {
+    tournament: { id: faker.string.uuid(), name: 'Spring Classic' },
+    generatedAt: '2026-10-24T15:41:00.000Z',
+    sessions: [],
+    superSweeper: null,
+    ...overrides,
+  }
+}
+
+/** For the mock server: every demo squad and sweeper with scores, and the super sweeper (RES-47). */
+export function createDemoLiveResults(
+  tournament: { id: string; name: string },
+  squads: readonly { id: string; date: string; complete: boolean }[],
+  sweepers: readonly { id: string; date: string; games: number; complete: boolean }[],
+  divisions: Division[],
+): LiveResults {
+  return createLiveResults({
+    tournament,
+    sessions: [
+      ...squads.map((squad) => ({
+        kind: 'squad' as const,
+        results: createDemoSquadResults(squad, divisions, 'full-game'),
+      })),
+      ...sweepers.map((sweeper) => ({
+        kind: 'sweeper' as const,
+        results: createDemoSweeperResults(sweeper, 'full-game'),
+      })),
+    ],
+    superSweeper: createDemoSuperSweeper(sweepers, 'full-game'),
+  })
 }

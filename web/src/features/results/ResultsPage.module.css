@@ -42,3 +42,54 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
+
+/* The "Ranking" choice (RES-45): two radio buttons drawn as one segmented control. */
+.toggle {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.toggle legend {
+  padding: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.segments {
+  display: inline-flex;
+  overflow: hidden;
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius);
+}
+
+.segments label {
+  display: block;
+}
+
+.segments input {
+  position: absolute;
+  opacity: 0;
+}
+
+.segments span {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--target-min);
+  padding-inline: var(--space-4);
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.segments input:checked + span {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  font-weight: 700;
+}
+
+.segments input:focus-visible + span {
+  outline: 2px solid var(--color-focus);
+  outline-offset: calc(var(--space-1) * -1);
+}

@@ -4,24 +4,28 @@ import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import type { Tournament } from '../tournaments/types'
 import { formatRatio } from '../../shared/sessionFormat'
+import { ModeToggle } from './ModeToggle'
 import { PrintSuperSweeper } from './PrintFinals'
 import styles from './ResultsPage.module.css'
 import tableStyles from './ResultsTable.module.css'
 import { SuperSweeperTable } from './SuperSweeperTable'
 import { UnofficialNotice } from './UnofficialNotice'
+import { useChosenMode } from './useChosenMode'
 import { useSuperSweeper } from './useResults'
 import { useResultsPrint } from './useResultsPrint'
 
 /**
  * The super sweeper results: one list for the bowlers who opted in, one column for each sweeper
  * (RES-26 to RES-29a, D-87, D-90). It says "Unofficial results" until every sweeper is complete and
- * asks again every 15 seconds until then (D-88).
+ * asks again every 15 seconds until then (D-88). The ranking is through each sweeper's last full game
+ * unless `?mode=live` (RES-42, RES-45, D-252).
  */
 export function SuperSweeperPage() {
   // Stryker disable next-line StringLiteral: the route always has an :id; this only satisfies the type.
   const { id = '' } = useParams()
   const tournament = useOutletContext<Tournament>()
-  const { data, error, refetch } = useSuperSweeper(id)
+  const mode = useChosenMode()
+  const { data, error, refetch } = useSuperSweeper(id, mode)
   const { printing, print } = useResultsPrint()
 
   if (!data) {
@@ -55,6 +59,7 @@ export function SuperSweeperPage() {
               {plural(data.sweepers.length, 'sweeper', 'sweepers')} · cash ratio{' '}
               {formatRatio(data.cashRatio)}
             </p>
+            <ModeToggle mode={mode} steadyLabel="Through the last full game" />
             <button
               type="button"
               onClick={() => {

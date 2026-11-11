@@ -9,6 +9,8 @@ import type {
   AtLargeResults,
   FinalsKind,
   SeedingResults,
+  LiveResults,
+  RankMode,
   SquadResults,
   SuperSweeperResults,
   SweeperResults,
@@ -20,6 +22,9 @@ export class ResultsUnavailableError extends Error {}
 const isText = (value: unknown) => typeof value === 'string'
 const isNumber = (value: unknown) => typeof value === 'number'
 const isBoolean = (value: unknown) => typeof value === 'boolean'
+/** A games count, or `null` when every game counts (live mode, D-239). */
+const isCount = (value: unknown) => value === null || isNumber(value)
+const isMode = (value: unknown) => value === 'full-game' || value === 'live'
 
 function isEvery(value: unknown, test: (item: unknown) => boolean): boolean {
   return Array.isArray(value) && value.every(test)
@@ -63,7 +68,8 @@ function isSquadRow(value: unknown): boolean {
     (group === 'advancer' || group === 'casher' || group === 'other') &&
     isNumber(field(value, 'handicap')) &&
     isGameScores(field(value, 'scores')) &&
-    isBoolean(field(value, 'advancedEarlier'))
+    isBoolean(field(value, 'advancedEarlier')) &&
+    isBoolean(field(value, 'dnf'))
   )
 }
 
@@ -89,6 +95,7 @@ function isDivision(value: unknown): boolean {
     isText(field(value, 'name')) &&
     isNumber(field(value, 'entries')) &&
     isBoolean(field(value, 'showHandicap')) &&
+    isCount(field(value, 'throughGame')) &&
     isEvery(field(value, 'rows'), isSquadRow) &&
     isEvery(field(value, 'didNotFinish'), isUnplacedRow) &&
     isEvery(field(value, 'noShows'), isNoShow)
@@ -108,6 +115,7 @@ function isSession(value: unknown, kind: SessionKind): boolean {
 function isSquadResults(value: unknown): value is SquadResults {
   return (
     isSession(field(value, 'session'), 'squad') &&
+    isMode(field(value, 'mode')) &&
     isNumber(field(value, 'finalsRatio')) &&
     isNumber(field(value, 'cashRatio')) &&
     isEvery(field(value, 'divisions'), isDivision)
@@ -121,7 +129,8 @@ function isSweeperRow(value: unknown): boolean {
     (group === 'casher' || group === 'other') &&
     isText(field(value, 'divisionName')) &&
     isNumber(field(value, 'bonusPins')) &&
-    isGameScores(field(value, 'scores'))
+    isGameScores(field(value, 'scores')) &&
+    isBoolean(field(value, 'dnf'))
   )
 }
 
@@ -129,6 +138,8 @@ function isSweeperResults(value: unknown): value is SweeperResults {
   const cutScore = field(value, 'cutScore')
   return (
     isSession(field(value, 'session'), 'sweeper') &&
+    isMode(field(value, 'mode')) &&
+    isCount(field(value, 'throughGame')) &&
     isNumber(field(value, 'cashRatio')) &&
     isNumber(field(value, 'entries')) &&
     isNumber(field(value, 'cashers')) &&
@@ -153,32 +164,46 @@ async function fetchResultsBody(
   kind: SessionKind,
   tournamentId: string,
   sessionId: string,
+  query: URLSearchParams,
 ): Promise<unknown> {
   const response = await apiFetch(
     apiUrl(
-      `/v1/tournaments/${encodeURIComponent(tournamentId)}/${kind}s/${encodeURIComponent(sessionId)}/results`,
+      `/v1/tournaments/${encodeURIComponent(tournamentId)}/${kind}s/${encodeURIComponent(sessionId)}/results?${query}`,
     ),
   )
   if (response.status === 404 || response.status === 400) throw new SessionNotFoundError(kind)
   return readResultsBody(response)
 }
 
-/** The results of one squad, by division (RES-31). */
+/**
+ * The results of one squad, by division (RES-31), ranked as `mode` says (RES-45). With a
+ * `divisionId` only that division comes back (RES-48): the TV asks for the one that changed.
+ */
 export async function fetchSquadResults(
   tournamentId: string,
   sessionId: string,
+  mode: RankMode,
+  divisionId?: string,
 ): Promise<SquadResults> {
-  const body = await fetchResultsBody('squad', tournamentId, sessionId)
+  const query = new URLSearchParams({ mode })
+  if (divisionId) query.set('division', divisionId)
+  const body = await fetchResultsBody('squad', tournamentId, sessionId, query)
   if (!isSquadResults(body)) throw new Error('Failed to load results (unexpected response)')
   return body
 }
 
-/** The results of one sweeper, one list (RES-31). */
+/** The results of one sweeper, one list (RES-31), ranked as `mode` says (RES-45). */
 export async function fetchSweeperResults(
   tournamentId: string,
   sessionId: string,
+  mode: RankMode,
 ): Promise<SweeperResults> {
-  const body = await fetchResultsBody('sweeper', tournamentId, sessionId)
+  const body = await fetchResultsBody(
+    'sweeper',
+    tournamentId,
+    sessionId,
+    new URLSearchParams({ mode }),
+  )
   if (!isSweeperResults(body)) throw new Error('Failed to load results (unexpected response)')
   return body
 }
@@ -268,7 +293,8 @@ function isSweeperColumn(value: unknown): boolean {
     isText(field(value, 'id')) &&
     isSessionDate(field(value, 'date')) &&
     isNumber(field(value, 'games')) &&
-    isBoolean(field(value, 'complete'))
+    isBoolean(field(value, 'complete')) &&
+    isCount(field(value, 'throughGame'))
   )
 }
 
@@ -284,13 +310,15 @@ function isSuperSweeperRow(value: unknown): boolean {
       (scores) => scores === null || isEvery(scores, isNumber),
     ) &&
     isEvery(field(value, 'sweeperPins'), isNumber) &&
-    isEvery(field(value, 'flags'), isFlag)
+    isEvery(field(value, 'flags'), isFlag) &&
+    isBoolean(field(value, 'dnf'))
   )
 }
 
 function isSuperSweeperResults(value: unknown): value is SuperSweeperResults {
   const cutScore = field(value, 'cutScore')
   return (
+    isMode(field(value, 'mode')) &&
     isBoolean(field(value, 'complete')) &&
     isNumber(field(value, 'cashRatio')) &&
     isNumber(field(value, 'entries')) &&
@@ -301,9 +329,13 @@ function isSuperSweeperResults(value: unknown): value is SuperSweeperResults {
   )
 }
 
-async function fetchFinalsBody(kind: FinalsKind, tournamentId: string): Promise<unknown> {
+async function fetchFinalsBody(
+  kind: FinalsKind,
+  tournamentId: string,
+  query = '',
+): Promise<unknown> {
   const response = await apiFetch(
-    apiUrl(`/v1/tournaments/${encodeURIComponent(tournamentId)}/${kind}`),
+    apiUrl(`/v1/tournaments/${encodeURIComponent(tournamentId)}/${kind}${query}`),
   )
   if (response.status === 404 || response.status === 400) throw new TournamentNotFoundError()
   return readResultsBody(response)
@@ -323,9 +355,42 @@ export async function fetchSeeding(tournamentId: string): Promise<SeedingResults
   return body
 }
 
-/** The super sweeper results (RES-37). */
-export async function fetchSuperSweeper(tournamentId: string): Promise<SuperSweeperResults> {
-  const body = await fetchFinalsBody('super-sweeper', tournamentId)
+/** The super sweeper results (RES-37), ranked as `mode` says (RES-45, D-252). */
+export async function fetchSuperSweeper(
+  tournamentId: string,
+  mode: RankMode,
+): Promise<SuperSweeperResults> {
+  const body = await fetchFinalsBody('super-sweeper', tournamentId, `?mode=${mode}`)
   if (!isSuperSweeperResults(body)) throw new Error('Failed to load results (unexpected response)')
+  return body
+}
+
+function isLiveSession(value: unknown): boolean {
+  const kind = field(value, 'kind')
+  const results = field(value, 'results')
+  if (kind === 'squad') return isSquadResults(results)
+  return kind === 'sweeper' && isSweeperResults(results)
+}
+
+function isLiveResults(value: unknown): value is LiveResults {
+  const superSweeper = field(value, 'superSweeper')
+  const tournament = field(value, 'tournament')
+  return (
+    isText(field(tournament, 'id')) &&
+    isText(field(tournament, 'name')) &&
+    isText(field(value, 'generatedAt')) &&
+    isEvery(field(value, 'sessions'), isLiveSession) &&
+    (superSweeper === null || isSuperSweeperResults(superSweeper))
+  )
+}
+
+/** What the TV page loads once: every session with scores, through the last full game (RES-47). */
+export async function fetchLiveResults(tournamentId: string): Promise<LiveResults> {
+  const response = await apiFetch(
+    apiUrl(`/v1/tournaments/${encodeURIComponent(tournamentId)}/live-results`),
+  )
+  if (response.status === 404 || response.status === 400) throw new TournamentNotFoundError()
+  const body = await readResultsBody(response)
+  if (!isLiveResults(body)) throw new Error('Failed to load results (unexpected response)')
   return body
 }

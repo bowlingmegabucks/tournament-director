@@ -5,6 +5,7 @@ import {
   createDivision,
   createDemoDivisions,
   createDemoLanePage,
+  createDemoLiveResults,
   createDemoRecapSheets,
   createDemoRegistrationList,
   createDemoSeeding,
@@ -27,6 +28,7 @@ import type { DivisionChanges, NewDivision } from '../features/divisions/types'
 import { formatPair } from '../features/lanes/format'
 import { applyMoves, planMove, type Move } from '../features/lanes/optimisticMove'
 import type { LaneBowler, LanePage } from '../features/lanes/types'
+import type { RankMode } from '../features/results/types'
 import type { SessionKind } from '../shared/session'
 import type { NewSquad, Squad, SquadChanges } from '../features/squads/types'
 import type { NewSweeper, Sweeper, SweeperChanges } from '../features/sweepers/types'
@@ -259,6 +261,11 @@ function laneMoveHandler(kind: SessionKind, sessions: { id: string; complete: bo
       return HttpResponse.json({ position: move.position })
     },
   )
+}
+
+/** The ranking mode a request asks for: steady unless it says `live` (RES-45). */
+function modeOf(query: URLSearchParams): RankMode {
+  return query.get('mode') === 'live' ? 'live' : 'full-game'
 }
 
 /**
@@ -748,19 +755,35 @@ export const handlers = [
         )
       : HttpResponse.json({ message: 'Sweeper not found' }, { status: 404 })
   }),
-  http.get('/v1/tournaments/:id/squads/:sessionId/results', ({ params }) => {
+  http.get('/v1/tournaments/:id/squads/:sessionId/results', ({ params, request }) => {
     if (!tournaments.some((candidate) => candidate.id === params.id)) return notFound()
     const squad = squads.find((candidate) => candidate.id === params.sessionId)
+    const query = new URL(request.url).searchParams
     return squad
-      ? HttpResponse.json(createDemoSquadResults(squad, divisions))
+      ? HttpResponse.json(
+          createDemoSquadResults(
+            squad,
+            divisions,
+            modeOf(query),
+            query.get('division') ?? undefined,
+          ),
+        )
       : HttpResponse.json({ message: 'Squad not found' }, { status: 404 })
   }),
-  http.get('/v1/tournaments/:id/sweepers/:sessionId/results', ({ params }) => {
+  http.get('/v1/tournaments/:id/sweepers/:sessionId/results', ({ params, request }) => {
     if (!tournaments.some((candidate) => candidate.id === params.id)) return notFound()
     const sweeper = sweepers.find((candidate) => candidate.id === params.sessionId)
     return sweeper
-      ? HttpResponse.json(createDemoSweeperResults(sweeper))
+      ? HttpResponse.json(
+          createDemoSweeperResults(sweeper, modeOf(new URL(request.url).searchParams)),
+        )
       : HttpResponse.json({ message: 'Sweeper not found' }, { status: 404 })
+  }),
+  http.get('/v1/tournaments/:id/live-results', ({ params }) => {
+    const tournament = tournaments.find((candidate) => candidate.id === params.id)
+    return tournament
+      ? HttpResponse.json(createDemoLiveResults(tournament, squads, sweepers, divisions))
+      : notFound()
   }),
   http.get('/v1/tournaments/:id/at-large', ({ params }) =>
     tournaments.some((candidate) => candidate.id === params.id)
@@ -772,9 +795,11 @@ export const handlers = [
       ? HttpResponse.json(createDemoSeeding())
       : notFound(),
   ),
-  http.get('/v1/tournaments/:id/super-sweeper', ({ params }) =>
+  http.get('/v1/tournaments/:id/super-sweeper', ({ params, request }) =>
     tournaments.some((candidate) => candidate.id === params.id)
-      ? HttpResponse.json(createDemoSuperSweeper(sweepers))
+      ? HttpResponse.json(
+          createDemoSuperSweeper(sweepers, modeOf(new URL(request.url).searchParams)),
+        )
       : notFound(),
   ),
   http.get('/v1/tournaments/:id/squads/:sessionId/recap-sheets', ({ params }) => {

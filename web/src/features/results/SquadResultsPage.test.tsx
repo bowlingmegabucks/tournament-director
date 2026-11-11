@@ -763,7 +763,7 @@ describe('SquadResultsPage states (D-77)', () => {
   })
 })
 
-describe('SquadResultsPage refresh (RES-34, D-79)', () => {
+describe('SquadResultsPage refresh while the stream is down (RES-44, D-241)', () => {
   it('asks again every 15 seconds and shows changed results', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const results = createSquadResults({ divisions: [openDivision()] })

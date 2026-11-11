@@ -20,8 +20,11 @@ import {
   formatSummary,
   formatSweeperColumn,
   formatSweeperTotal,
+  formatThroughLabel,
+  formatThroughNote,
   formatTie,
   ordinal,
+  pendingGame,
   seedingItems,
   squadItems,
   sum,
@@ -289,8 +292,8 @@ describe('at-large and seeding summaries (RES-12, RES-18)', () => {
 
 describe('super sweeper formats (D-90)', () => {
   const sweepers = [
-    { id: 's1', date: '2026-10-09T19:00:00', games: 3, complete: true },
-    { id: 's2', date: '2026-10-10T19:00:00', games: 1, complete: true },
+    { id: 's1', date: '2026-10-09T19:00:00', games: 3, complete: true, throughGame: 3 },
+    { id: 's2', date: '2026-10-10T19:00:00', games: 1, complete: true, throughGame: 1 },
   ]
 
   it('heads a column with the weekday and the day', () => {
@@ -367,5 +370,43 @@ describe('gameColumnCount', () => {
     expect(gameColumnCount(3, [[200, 200]])).toBe(3)
     expect(gameColumnCount(3, [[200, 200, 200, 200]])).toBe(4)
     expect(gameColumnCount(4, [])).toBe(4)
+  })
+})
+
+describe('games not counted yet (RES-46, D-239)', () => {
+  it('finds the first game after the counted ones and how many bowlers have it', () => {
+    const lists = [
+      [200, 200, 200, 300],
+      [200, 200, 200, null],
+      [200, 200, 200],
+    ]
+    expect(pendingGame(lists, 3)).toEqual({ game: 4, have: 1, of: 3 })
+  })
+
+  it('finds nothing in live mode, or when no one is ahead', () => {
+    expect(pendingGame([[200, 200, 200, 300]], null)).toBeUndefined()
+    expect(pendingGame([[200, 200], [200]], 2)).toBeUndefined()
+    expect(pendingGame([], 3)).toBeUndefined()
+  })
+
+  it('writes the note, with and without a game ahead', () => {
+    expect(formatThroughNote(3, { game: 4, have: 2, of: 8 })).toBe(
+      'Ranked through game 3. Game 4 has 2 of 8 scores.',
+    )
+    expect(formatThroughNote(3, { game: 4, have: 1, of: 1 })).toBe(
+      'Ranked through game 3. Game 4 has 1 of 1 score.',
+    )
+    expect(formatThroughNote(3, undefined)).toBe('Ranked through game 3.')
+  })
+
+  it('writes no note in live mode or before any game counts', () => {
+    expect(formatThroughNote(null, undefined)).toBe('')
+    expect(formatThroughNote(0, { game: 1, have: 1, of: 2 })).toBe('')
+  })
+
+  it('labels the steady choice with the game, or the words when there is none', () => {
+    expect(formatThroughLabel(3)).toBe('Through game 3')
+    expect(formatThroughLabel(0)).toBe('Through the last full game')
+    expect(formatThroughLabel(null)).toBe('Through the last full game')
   })
 })

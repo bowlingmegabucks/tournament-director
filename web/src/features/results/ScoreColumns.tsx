@@ -50,16 +50,31 @@ export function PlusMinusCell({ total, games }: Readonly<{ total: number; games:
 
 /**
  * The cells of G1 to Gn. A game the bowler has not bowled shows a dash; a screen reader says "No
- * game". `scores` is `null` for a sweeper that is still open with no score yet.
+ * game". `scores` is `null` for a sweeper that is still open with no score yet. A game from `counted`
+ * on is not full yet (RES-46, D-239): it shows, dimmed with a dagger, and the figures leave it out.
+ * `counted` is `null` when every game counts.
  */
 export function GameCells({
   scores,
   count,
-}: Readonly<{ scores: readonly (number | null)[] | null; count: number }>) {
+  counted = null,
+}: Readonly<{
+  scores: readonly (number | null)[] | null
+  count: number
+  counted?: number | null
+}>) {
   return Array.from({ length: count }, (_, index) => {
     const label = `G${index + 1}`
     const score = scores?.[index] ?? undefined
     if (score !== undefined) {
+      if (counted !== null && index >= counted) {
+        return (
+          <td key={label} className={`${styles.num} ${styles.pending}`} data-label={label}>
+            <span className={styles.hidden}>Not counted yet: </span>
+            {score}
+          </td>
+        )
+      }
       return (
         <td key={label} className={styles.num} data-label={label}>
           {score}
@@ -87,12 +102,15 @@ export function TotalCells({
   scores,
   total,
   handicap,
+  counted = null,
 }: Readonly<{
   scores: readonly (number | null)[] | null
   total: number | null
   handicap: boolean
+  /** Only the first `counted` games are in `total` (RES-46); `null` when every game is. */
+  counted?: number | null
 }>) {
-  const scratch = scores === null ? null : sum(scores)
+  const scratch = scores === null ? null : sum(counted === null ? scores : scores.slice(0, counted))
   // A sweeper still open with no score has no total yet: a dash that screen readers skip.
   const figure = (value: number | null) => value ?? <span aria-hidden="true">{'\u2013'}</span>
   if (!handicap) {

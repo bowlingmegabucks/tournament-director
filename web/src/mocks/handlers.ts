@@ -105,6 +105,8 @@ const laneMoves = new Map<string, Map<string, Move>>()
 const skips = new Map<string, 'staggered' | 'same'>()
 /** Scores saved through the mock `PUT`, by session and then registration. Lost when the page reloads. */
 const savedScores = new Map<string, Map<string, (number | null)[]>>()
+/** Registrations the keeper flagged "did not finish", by session (SCR-24). A saved score takes the flag off. */
+const dnfFlags = new Map<string, Set<string>>()
 /** What each open mock event stream can be told, by session (LAN-21). */
 const streams = new Map<string, Set<(message: string) => void>>()
 
@@ -167,8 +169,38 @@ function mockGames(tournamentId: string, sessionId: string, kind: SessionKind) {
       divisions,
       skips.get(sessionId) ?? 'staggered',
       savedScores.get(sessionId),
+      dnfFlags.get(sessionId),
     ),
   )
+}
+
+/** The mock twin of `PUT` and `DELETE .../scores/:registrationId/dnf` (SCR-24). */
+function flagMockDnf(
+  params: Readonly<Record<string, string | readonly string[] | undefined>>,
+  kind: SessionKind,
+  flagged: boolean,
+) {
+  const sessionId = String(params['sessionId'])
+  const registrationId = String(params['registrationId'])
+  const found = mockSession(String(params['id']), sessionId, kind)
+  if (found.missing) return found.missing
+  if (found.session.complete) {
+    return problem(`This ${kind} is complete. Did not finish cannot change.`, 409)
+  }
+  const page = createDemoScoresWithSaves(kind, found.session, divisions, savedScores.get(sessionId))
+  const bowler = [...page.pairs.flatMap((pair) => pair.bowlers), ...page.other].find(
+    (entry) => entry.registrationId === registrationId,
+  )
+  if (!bowler) return problem(`Bowler is not registered for this ${kind}`, 404)
+  if (flagged && bowler.scores.every((score) => score === null)) {
+    return problem('This bowler has no score yet, so there is nothing to finish.', 409)
+  }
+  const flags = dnfFlags.get(sessionId) ?? new Set<string>()
+  if (flagged) flags.add(registrationId)
+  else flags.delete(registrationId)
+  dnfFlags.set(sessionId, flags)
+  publishMock(sessionId, 'scores')
+  return new HttpResponse(null, { status: 204 })
 }
 
 /** The mock twin of `PUT` and `DELETE .../scores/:registrationId/:game` (SCR-19). `score` null clears. */
@@ -197,6 +229,8 @@ function saveMockScore(
   const bySession = savedScores.get(sessionId) ?? new Map<string, (number | null)[]>()
   bySession.set(registrationId, result.scores)
   savedScores.set(sessionId, bySession)
+  // D-250: a saved score counts the bowler again. A clear leaves the flag.
+  if (score !== null) dnfFlags.get(sessionId)?.delete(registrationId)
   publishMock(sessionId, 'scores')
   return HttpResponse.json({
     scores: result.scores,
@@ -719,6 +753,19 @@ export const handlers = [
   ),
   http.get('/v1/tournaments/:id/sweepers/:sessionId/scores/games', ({ params }) =>
     mockGames(String(params['id']), String(params['sessionId']), 'sweeper'),
+  ),
+  // The DNF routes come first: `dnf` would otherwise read as a game number.
+  http.put('/v1/tournaments/:id/squads/:sessionId/scores/:registrationId/dnf', ({ params }) =>
+    flagMockDnf(params, 'squad', true),
+  ),
+  http.put('/v1/tournaments/:id/sweepers/:sessionId/scores/:registrationId/dnf', ({ params }) =>
+    flagMockDnf(params, 'sweeper', true),
+  ),
+  http.delete('/v1/tournaments/:id/squads/:sessionId/scores/:registrationId/dnf', ({ params }) =>
+    flagMockDnf(params, 'squad', false),
+  ),
+  http.delete('/v1/tournaments/:id/sweepers/:sessionId/scores/:registrationId/dnf', ({ params }) =>
+    flagMockDnf(params, 'sweeper', false),
   ),
   http.put(
     '/v1/tournaments/:id/squads/:sessionId/scores/:registrationId/:game',

@@ -22,7 +22,8 @@ const isBowler = (value: unknown): value is GameBowler =>
   isText(field(value, 'lane')) &&
   isScore(field(value, 'score')) &&
   isEvery(field(value, 'scores'), isScore) &&
-  isNumber(field(value, 'total'))
+  isNumber(field(value, 'total')) &&
+  typeof field(value, 'dnf') === 'boolean'
 
 const isPair = (value: unknown): value is GamePair =>
   isNumber(field(value, 'firstLane')) &&
@@ -143,4 +144,34 @@ export async function saveScore(
     throw new ScoreSaveError('Could not save (unexpected response).', response.status)
   }
   return { scores: scores as (number | null)[], total: total as number }
+}
+
+/**
+ * Flags a bowler "did not finish", or takes the flag off (SCR-24, D-248, D-249). The full-game count
+ * then leaves the bowler out, or counts them again. `400`, `404`, and `409` keep the API's message
+ * (a complete session, a bowler with no score yet); a lost connection says so.
+ */
+export async function setDnf(
+  kind: SessionKind,
+  tournamentId: string,
+  sessionId: string,
+  registrationId: string,
+  flagged: boolean,
+): Promise<void> {
+  const url = apiUrl(
+    `/v1/tournaments/${encodeURIComponent(tournamentId)}/${kind}s/${encodeURIComponent(sessionId)}/scores/${encodeURIComponent(registrationId)}/dnf`,
+  )
+  const response = await apiFetch(url, { method: flagged ? 'PUT' : 'DELETE' }).catch(() => {
+    throw new ScoreSaveError('Could not save. Check the connection.')
+  })
+  if (response.status === 401 || response.status === 403) {
+    throw new ScoreSaveError('You are not allowed to enter scores.', response.status)
+  }
+  if ([400, 404, 409].includes(response.status)) {
+    throw new ScoreSaveError(
+      await messageOf(response, 'Could not change did not finish.'),
+      response.status,
+    )
+  }
+  if (!response.ok) throw new ScoreSaveError('Could not save. Try again.', response.status)
 }

@@ -112,6 +112,7 @@ export function applySaved(
   view: GamesView,
   registrationId: string,
   saved: ScoreSaveResult,
+  clearsDnf = false,
 ): GamesView {
   const games = view.games.map((game) => {
     const pairs = game.pairs.map((pair) => ({
@@ -123,6 +124,8 @@ export function applySaved(
               scores: saved.scores,
               total: saved.total,
               score: saved.scores[game.game - 1] ?? null,
+              // D-250: a saved score takes the flag off. A clear does not.
+              dnf: clearsDnf ? false : bowler.dnf,
             }
           : bowler,
       ),
@@ -131,4 +134,20 @@ export function applySaved(
     return { ...game, pairs, entered: everyone.filter((bowler) => bowler.score !== null).length }
   })
   return { ...view, games }
+}
+
+/** The view with one bowler flagged "did not finish", or not, in every game they appear in (SCR-24). */
+export function applyDnf(view: GamesView, registrationId: string, dnf: boolean): GamesView {
+  return {
+    ...view,
+    games: view.games.map((game) => ({
+      ...game,
+      pairs: game.pairs.map((pair) => ({
+        ...pair,
+        bowlers: pair.bowlers.map((bowler) =>
+          bowler.registrationId === registrationId ? { ...bowler, dnf } : bowler,
+        ),
+      })),
+    })),
+  }
 }

@@ -7,6 +7,7 @@ import type { Game, GameBowler, GamePair } from './gamesTypes'
 import styles from './PairSheet.module.css'
 import type { SessionKind } from './types'
 import { useSaveScore } from './useSaveScore'
+import { useSetDnf } from './useSetDnf'
 
 /** What a box says about its own save (SCR-15, D-228). */
 type Mark =
@@ -15,6 +16,8 @@ type Mark =
   | { type: 'cleared' }
   | { type: 'invalid'; message: string }
   | { type: 'failed'; message: string }
+  /** The "did not finish" change was refused. Not a failed score, so no Try again (SCR-24). */
+  | { type: 'refused'; message: string }
 
 interface PairSheetProps {
   kind: SessionKind
@@ -46,6 +49,7 @@ function markText(mark: Mark | undefined): string {
       return 'Cleared'
     case 'invalid':
     case 'failed':
+    case 'refused':
       return mark.message
     case undefined:
       return ''
@@ -72,6 +76,7 @@ export function PairSheet({
   readOnly,
 }: Readonly<PairSheetProps>) {
   const save = useSaveScore(kind, tournamentId, sessionId)
+  const flag = useSetDnf(kind, tournamentId, sessionId)
   const navigate = useNavigate()
   const [drafts, setDrafts] = useState<Readonly<Record<string, string>>>({})
   const [marks, setMarks] = useState<Readonly<Record<string, Mark>>>({})
@@ -113,6 +118,19 @@ export function PairSheet({
       const message = error instanceof Error ? error.message : 'Could not save.'
       setMark(id, { type: 'failed', message })
       return false
+    }
+  }
+
+  /** Flag a bowler "did not finish", or undo it (SCR-24, D-249). A refusal shows under the box. */
+  async function changeDnf(bowler: GameBowler, flagged: boolean) {
+    const id = bowler.registrationId
+    setMark(id, { type: 'saving' })
+    try {
+      await flag.mutateAsync({ registrationId: id, flagged })
+      setMark(id, undefined)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not save.'
+      setMark(id, { type: 'refused', message })
     }
   }
 
@@ -255,6 +273,8 @@ export function PairSheet({
           const prior = priorGames(bowler, game.game)
           const problemId = `${id}-problem`
           const invalid = mark?.type === 'invalid' || mark?.type === 'failed'
+          const problem = invalid || mark?.type === 'refused'
+          const hasScore = bowler.scores.some((score) => score !== null)
           const last = index === bowlers.length - 1
           return (
             <li key={id} className={styles.row}>
@@ -315,7 +335,7 @@ export function PairSheet({
               <p className={styles.prior}>{prior}</p>
               <p
                 id={problemId}
-                className={invalid ? styles.problem : styles.mark}
+                className={problem ? styles.problem : styles.mark}
                 aria-live="polite"
               >
                 {markText(mark)}
@@ -324,6 +344,37 @@ export function PairSheet({
                 <p className={styles.hint}>
                   No scores for {sayGames(fills)}. Saving game {game.game} saves them as 0 (missed).
                 </p>
+              )}
+              {!readOnly && (bowler.dnf || hasScore) && (
+                <div className={styles.dnf}>
+                  {bowler.dnf ? (
+                    <>
+                      <span className={styles.dnfState} role="status">
+                        Did not finish
+                      </span>
+                      <button
+                        type="button"
+                        className={styles.dnfButton}
+                        onClick={() => {
+                          void changeDnf(bowler, false)
+                        }}
+                      >
+                        Undo
+                        <span className={styles.hidden}>, did not finish for {bowler.name}</span>
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.dnfButton}
+                      onClick={() => {
+                        void changeDnf(bowler, true)
+                      }}
+                    >
+                      Did not finish<span className={styles.hidden}>, {bowler.name}</span>
+                    </button>
+                  )}
+                </div>
               )}
               {mark?.type === 'failed' && !readOnly && (
                 <button

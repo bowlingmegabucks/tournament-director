@@ -17,6 +17,7 @@ export function createGameBowler(overrides: Partial<GameBowler> = {}): GameBowle
     score: null,
     scores,
     total: scores.reduce<number>((sum, score) => sum + (score ?? 0), 0),
+    dnf: false,
     ...overrides,
   }
 }
@@ -125,6 +126,7 @@ export function createDemoGamesView(
   divisions: Division[],
   skip: SkipPattern,
   saved: SavedScores | undefined,
+  flagged: ReadonlySet<string> = new Set(),
 ): GamesView {
   const scorePage = createDemoScoresWithSaves(kind, session, divisions, saved)
   const recap = createDemoRecapSheets(kind, session, divisions)
@@ -160,6 +162,7 @@ export function createDemoGamesView(
                 score: bowler.scores[index] ?? null,
                 scores: bowler.scores,
                 total: bowler.total,
+                dnf: flagged.has(bowler.registrationId),
               }),
             ),
         ),

@@ -23,12 +23,13 @@ export function useSaveScore(kind: SessionKind, tournamentId: string, sessionId:
   return useMutation({
     mutationFn: ({ registrationId, game, score }: ScoreRequest) =>
       saveScore(kind, tournamentId, sessionId, registrationId, game, score),
-    onSuccess: async (saved, { registrationId }) => {
+    onSuccess: async (saved, { registrationId, score }) => {
       // A refetch that began before this write committed would land after it and show old scores.
       // Cancel it first; the stream's next message asks again.
       await queryClient.cancelQueries({ queryKey: key })
       const current = queryClient.getQueryData<GamesView>(key)
-      if (current) queryClient.setQueryData(key, applySaved(current, registrationId, saved))
+      if (current)
+        queryClient.setQueryData(key, applySaved(current, registrationId, saved, score !== null))
     },
   })
 }

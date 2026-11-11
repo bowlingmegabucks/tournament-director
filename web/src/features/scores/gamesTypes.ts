@@ -16,6 +16,8 @@ export interface GameBowler {
   score: number | null
   scores: (number | null)[]
   total: number
+  /** Flagged "did not finish" (D-248): the full-game count leaves the bowler out. */
+  dnf: boolean
 }
 
 /** A pair of lanes as bowled in one game. */

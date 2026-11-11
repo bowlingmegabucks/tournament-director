@@ -54,6 +54,7 @@
     'mark mark'
     'prior prior'
     'hint hint'
+    'dnf dnf'
     'retry retry';
   grid-template-columns: 1fr auto;
   padding: var(--space-3);
@@ -138,6 +139,29 @@
 .retry {
   grid-area: retry;
   justify-self: start;
+}
+
+/* "Did not finish" (SCR-24): the state in words, and the button that sets or undoes it. */
+.dnf {
+  grid-area: dnf;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.dnfState {
+  font-weight: 600;
+}
+
+.dnfButton {
+  min-block-size: var(--target-min);
+  padding: 0 var(--space-4);
+  background: transparent;
+  color: var(--color-accent);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius);
+  font: inherit;
 }
 
 .mark,

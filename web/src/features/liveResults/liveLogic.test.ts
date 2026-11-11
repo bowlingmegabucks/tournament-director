@@ -306,10 +306,31 @@ describe('announcementOf (D-255)', () => {
     expect(announcementOf(ev({ game: 9 }), undefined)?.variant).toBe('game')
   })
 
-  it('is nothing for a reopened, scored, or complete message, or one with no game', () => {
+  it('says the results are official when a squad completes, named by its time', () => {
+    const result = announcementOf(ev({ kind: 'complete', game: undefined }), feed)
+
+    expect(result).toEqual({
+      variant: 'official',
+      kicker: 'Results are official',
+      title: expect.stringMatching(/^Squad · .*9:00/i),
+    })
+    expect(result?.game).toBeUndefined()
+  })
+
+  it('says it for a sweeper too, and just "Squad" when the session is not in the feed', () => {
+    expect(
+      announcementOf(
+        ev({ kind: 'complete', sessionId: 'sw1', sessionKind: 'sweeper', game: undefined }),
+        feed,
+      )?.title,
+    ).toMatch(/^Sweeper · /)
+    expect(announcementOf(ev({ kind: 'complete', sessionId: 'new' }), feed)?.title).toBe('Squad')
+    expect(announcementOf(ev({ kind: 'complete' }), undefined)?.title).toBe('Squad')
+  })
+
+  it('is nothing for a reopened or scored message, or a game message with no game', () => {
     expect(announcementOf(ev({ kind: 'reopened' }), feed)).toBeUndefined()
     expect(announcementOf(ev({ kind: 'scored', game: undefined }), feed)).toBeUndefined()
-    expect(announcementOf(ev({ kind: 'complete' }), feed)).toBeUndefined()
     expect(announcementOf(ev({ game: undefined }), feed)).toBeUndefined()
   })
 })

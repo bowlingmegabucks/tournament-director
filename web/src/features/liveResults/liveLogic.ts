@@ -8,14 +8,15 @@ import type {
   SweeperResults,
 } from '../results/types'
 
-/** What the overlay draws for a message (D-255): a lower third, or the flash for a last game. */
+/** What the overlay draws for a message (D-255): a lower third, the flash for a last game, or the official mark. */
 export interface Announcement {
-  variant: 'game' | 'last'
-  /** "Game 2 complete" or "Final game complete". */
+  variant: 'game' | 'last' | 'official'
+  /** "Game 2 complete", "Final game complete", or "Results are official". */
   kicker: string
-  /** "Open Division" or "Sweeper". */
+  /** "Open Division", "Sweeper", or "Squad · Sat 9:00 am" for an official one. */
   title: string
-  game: number
+  /** The game that filled. An official announcement has none: it draws a check mark. */
+  game?: number
 }
 
 /** One screen of the TV page: a squad division, a sweeper, or the super sweeper (D-242). */
@@ -130,9 +131,26 @@ function divisionLabel(event: LiveEvent, feed: LiveResults | undefined): string 
   return name ? (/division$/i.test(name) ? name : `${name} Division`) : 'Division'
 }
 
+/** "Results are official" for a squad or sweeper that completed, named by its time from the feed. */
+function officialAnnouncement(
+  event: LiveEvent,
+  feed: LiveResults | undefined,
+): Announcement | undefined {
+  const { sessionId, sessionKind } = event.detail
+  const date = feed?.sessions.find((session) => session.results.session.id === sessionId)?.results
+    .session.date
+  const label = sessionKind === 'sweeper' ? 'Sweeper' : 'Squad'
+  return {
+    variant: 'official',
+    kicker: 'Results are official',
+    title: date ? `${label} · ${formatSessionDate(date)}` : label,
+  }
+}
+
 /**
  * What the overlay draws for a game that filled (D-255): a lower third, or the full-screen flash for
- * the last game of the squad or sweeper. `undefined` for any other message. The session's games come
+ * the last game of the squad or sweeper, and the official mark when a session completes. `undefined`
+ * for any other message. The session's games come
  * from the feed; a session the feed does not hold yet gets the lower third.
  */
 export function announcementOf(
@@ -140,6 +158,7 @@ export function announcementOf(
   feed: LiveResults | undefined,
 ): Announcement | undefined {
   const { sessionId, sessionKind, game } = event.detail
+  if (event.kind === 'complete') return officialAnnouncement(event, feed)
   if (event.kind !== 'game-full' || game === undefined) return undefined
   const games = feed?.sessions.find((session) => session.results.session.id === sessionId)?.results
     .session.games

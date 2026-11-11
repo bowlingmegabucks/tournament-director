@@ -78,6 +78,11 @@
   color: var(--color-text-muted);
 }
 
+.check {
+  inline-size: 5cqw;
+  block-size: 5cqw;
+}
+
 /* A phone: the width units come out tiny, so the lower third keeps a readable size. */
 @media (max-width: 48rem) {
   .card {
@@ -91,6 +96,11 @@
 
   .text {
     padding: var(--space-2) var(--space-4) var(--space-2) var(--space-3);
+  }
+
+  .check {
+    inline-size: 2rem;
+    block-size: 2rem;
   }
 
   .card .kicker {

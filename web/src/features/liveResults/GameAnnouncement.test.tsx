@@ -68,4 +68,18 @@ describe('GameAnnouncement (D-255)', () => {
       '5000ms',
     )
   })
+
+  it('draws a check mark in place of a number for an official announcement', () => {
+    const official: Announcement = {
+      variant: 'official',
+      kicker: 'Results are official',
+      title: 'Squad · Sat 9:00 am',
+    }
+    const { container } = render(<GameAnnouncement announcement={official} id={1} waiting={0} />)
+
+    expect(screen.getByText('Results are official')).toBeInTheDocument()
+    expect(screen.getByText('Squad · Sat 9:00 am')).toBeInTheDocument()
+    expect(container.querySelector('svg')).not.toBeNull()
+    expect(screen.queryByText(/^\d+$/)).not.toBeInTheDocument()
+  })
 })

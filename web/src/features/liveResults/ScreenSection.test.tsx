@@ -51,6 +51,23 @@ describe('ScreenSection (D-242, D-254)', () => {
     expect(within(section).getByRole('rowheader', { name: 'Ann Lee' })).toBeVisible()
   })
 
+  it('tags a complete session Official and an open one Unofficial', () => {
+    const complete: LiveScreen = {
+      ...squadScreen,
+      results: createSquadResults({
+        session: { ...createSquadResults().session, complete: true },
+        divisions: [division],
+      }),
+    }
+    const { rerender } = render(<ScreenSection screen={complete} highlighted={false} />)
+    const heading = within(screen.getByRole('region')).getByRole('heading', { level: 2 })
+    expect(heading).toHaveTextContent('Official')
+    expect(heading).not.toHaveTextContent('Unofficial')
+
+    rerender(<ScreenSection screen={squadScreen} highlighted={false} />)
+    expect(heading).toHaveTextContent('Unofficial')
+  })
+
   it('shows a sweeper with its counts and cash line', () => {
     render(<ScreenSection screen={sweeperScreen} highlighted={false} />)
 

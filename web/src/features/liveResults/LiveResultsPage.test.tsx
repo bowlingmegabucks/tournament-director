@@ -391,6 +391,20 @@ describe('LiveResultsPage follows the stream (RES-49, RES-50, D-243 to D-245)', 
     expect(screen.getByText('Game 1 complete').closest('[aria-hidden="true"]')).not.toBeNull()
   })
 
+  it('draws the official mark when the squad completes (D-255)', async () => {
+    await ready()
+
+    act(() => {
+      FakeEventSource.latest().message(
+        message('complete', { sessionId: squadId, sessionKind: 'squad' }),
+      )
+    })
+
+    expect(await screen.findByText('Results are official')).toBeInTheDocument()
+    // The words for a screen reader stay in a status line.
+    expect(screen.getByText('Session complete – results are official')).toBeInTheDocument()
+  })
+
   it('draws the flash for the last game of the squad, which has 3 games (D-255)', async () => {
     await ready()
 

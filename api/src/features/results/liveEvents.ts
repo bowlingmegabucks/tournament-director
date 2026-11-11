@@ -75,7 +75,7 @@ export function createLiveNotifier({
       kind === 'squad' ? (entry) => entry.divisionId : () => SWEEPER,
       flagged.get(sessionId) ?? new Set(),
     )
-    return through
+    return { through, names: new Map(all.map((division) => [division.id, division.name])) }
   }
 
   // Two keepers can save at once, so each snapshot may be older than the last write that landed.
@@ -93,7 +93,7 @@ export function createLiveNotifier({
         return undefined
       }
       try {
-        const counted = await read(tournamentId, kind, sessionId)
+        const { through: counted } = await read(tournamentId, kind, sessionId)
         // The first snapshot of a quiet session is what was last seen, however late the others come.
         if (!seen.has(sessionId)) seen.set(sessionId, counted)
         return { tournamentId, kind, sessionId, counted }
@@ -122,7 +122,7 @@ export function createLiveNotifier({
   async function compare(snapshot: LiveSnapshot): Promise<void> {
     const { tournamentId, kind, sessionId } = snapshot
     try {
-      const now = await read(tournamentId, kind, sessionId)
+      const { through: now, names } = await read(tournamentId, kind, sessionId)
       const counted = seen.get(sessionId) ?? snapshot.counted
       seen.set(sessionId, now)
       const groups = new Set([...counted.keys(), ...now.keys()])
@@ -141,6 +141,7 @@ export function createLiveNotifier({
           sessionId,
           sessionKind: kind,
           ...(group === SWEEPER ? {} : { divisionId: group }),
+          ...(names.has(group) ? { divisionName: names.get(group) } : {}),
           ...(up ? { game } : {}),
         })
       }

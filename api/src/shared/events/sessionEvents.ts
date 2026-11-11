@@ -13,6 +13,8 @@ export interface ChangeDetail {
   sessionKind: 'squad' | 'sweeper'
   /** The division of a squad. A sweeper has none. */
   divisionId?: string
+  /** The division's name, so a screen can say it before it has loaded that division. */
+  divisionName?: string
   /** The game that just filled (`game-full`). */
   game?: number
 }

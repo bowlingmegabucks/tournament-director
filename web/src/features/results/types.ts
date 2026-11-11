@@ -259,6 +259,8 @@ export interface LiveEvent {
     sessionId: string
     sessionKind: 'squad' | 'sweeper'
     divisionId?: string
+    /** The division's name from the API, so the strip names it before the page has the division. */
+    divisionName?: string
     game?: number
   }
 }

@@ -77,7 +77,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 export function parseLiveEvent(kind: string, detail: unknown): LiveEvent | undefined {
   if (kind !== 'game-full' && kind !== 'reopened' && kind !== 'complete') return undefined
   if (!isRecord(detail)) return undefined
-  const { sessionId, sessionKind, divisionId, game } = detail
+  const { sessionId, sessionKind, divisionId, divisionName, game } = detail
   if (typeof sessionId !== 'string') return undefined
   if (sessionKind !== 'squad' && sessionKind !== 'sweeper') return undefined
   return {
@@ -86,6 +86,7 @@ export function parseLiveEvent(kind: string, detail: unknown): LiveEvent | undef
       sessionId,
       sessionKind,
       ...(typeof divisionId === 'string' ? { divisionId } : {}),
+      ...(typeof divisionName === 'string' ? { divisionName } : {}),
       ...(typeof game === 'number' ? { game } : {}),
     },
   }
@@ -101,10 +102,14 @@ export function noticeText(event: LiveEvent, feed: LiveResults | undefined): str
   if (event.kind === 'complete') return 'Session complete – results are official'
   if (event.kind !== 'game-full' || game === undefined) return undefined
   if (sessionKind === 'sweeper') return `Sweeper – Game ${game} complete`
-  const division = feed?.sessions
+  // The API names the division; the feed is the fallback for a message from an older server.
+  const fromFeed = feed?.sessions
     .flatMap((session) => (session.kind === 'squad' ? session.results.divisions : []))
-    .find((candidate) => candidate.id === divisionId)
-  return `${division ? `${division.name} Division` : 'Division'} – Game ${game} complete`
+    .find((candidate) => candidate.id === divisionId)?.name
+  const name = event.detail.divisionName ?? fromFeed
+  // A division already called "... Division" does not get the word twice.
+  const label = name ? (/division$/i.test(name) ? name : `${name} Division`) : 'Division'
+  return `${label} – Game ${game} complete`
 }
 
 /**

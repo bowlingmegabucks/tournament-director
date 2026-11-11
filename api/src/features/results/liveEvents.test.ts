@@ -81,7 +81,13 @@ describe('live notifier (RES-49, D-243)', () => {
     expect(seen).toEqual([
       {
         kind: 'game-full',
-        detail: { sessionId, sessionKind: 'squad', divisionId: open.id, game: 2 },
+        detail: {
+          sessionId,
+          sessionKind: 'squad',
+          divisionId: open.id,
+          divisionName: 'Open',
+          game: 2,
+        },
         version: 1,
       },
     ])
@@ -121,7 +127,7 @@ describe('live notifier (RES-49, D-243)', () => {
     await live.after(before)
 
     expect(seen.map((event) => event.detail)).toEqual([
-      { sessionId, sessionKind: 'squad', divisionId: senior.id, game: 2 },
+      { sessionId, sessionKind: 'squad', divisionId: senior.id, divisionName: 'Senior', game: 2 },
     ])
   })
 
@@ -137,7 +143,7 @@ describe('live notifier (RES-49, D-243)', () => {
     expect(seen).toEqual([
       {
         kind: 'reopened',
-        detail: { sessionId, sessionKind: 'squad', divisionId: open.id },
+        detail: { sessionId, sessionKind: 'squad', divisionId: open.id, divisionName: 'Open' },
         version: 1,
       },
     ])

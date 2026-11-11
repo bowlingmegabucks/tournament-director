@@ -107,6 +107,22 @@ describe('parseLiveEvent (RES-49, D-243)', () => {
       kind: 'reopened',
       detail: { sessionId: 'sq1', sessionKind: 'squad', divisionId: 'd1' },
     })
+    expect(
+      parseLiveEvent('game-full', {
+        sessionId: 'sq1',
+        sessionKind: 'squad',
+        divisionId: 'd1',
+        divisionName: 'Scratch',
+        game: 1,
+      })?.detail.divisionName,
+    ).toBe('Scratch')
+    expect(
+      parseLiveEvent('game-full', {
+        sessionId: 'sq1',
+        sessionKind: 'squad',
+        divisionName: 7,
+      })?.detail,
+    ).not.toHaveProperty('divisionName')
     expect(parseLiveEvent('complete', { sessionId: 'sw1', sessionKind: 'sweeper' })?.kind).toBe(
       'complete',
     )
@@ -145,6 +161,24 @@ describe('noticeText (D-245)', () => {
     expect(noticeText(event({}), feed)).toBe('Open Division – Game 3 complete')
     expect(noticeText(event({ divisionId: 'd2', game: 2 }), feed)).toBe(
       'Senior Division – Game 2 complete',
+    )
+  })
+
+  it('uses the name the API sends, so a division not in the feed yet is still named', () => {
+    expect(noticeText(event({ divisionId: 'new', divisionName: 'Scratch', game: 1 }), feed)).toBe(
+      'Scratch Division – Game 1 complete',
+    )
+    expect(noticeText(event({ divisionName: 'Scratch' }), undefined)).toBe(
+      'Scratch Division – Game 3 complete',
+    )
+  })
+
+  it('does not say Division twice for a name that ends in it', () => {
+    expect(noticeText(event({ divisionName: 'Open Division' }), feed)).toBe(
+      'Open Division – Game 3 complete',
+    )
+    expect(noticeText(event({ divisionName: 'senior division' }), feed)).toBe(
+      'senior division – Game 3 complete',
     )
   })
 

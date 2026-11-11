@@ -25,8 +25,9 @@ export const bowlerNamed = (name: string): Bowler => {
  * Squad B Scratch (4 advance, 3 cash): 47 and 19 tie on total across the cash line, and 47 wins on
  * the second-best game. The formula gives 55 and 75 the same games (a tie inside the advancers),
  * so the page lists them in either order.
- * Squad B Handicap (28 entries, 3 advance, 3 cash): no designed lines; the handicap puts 77, whose
- * scratch total is the lowest of the three, third.
+ * Squad B Handicap (28 entries, 3 advance, 3 cash): the handicap puts 77, whose scratch total is
+ * the lowest of the three, third. Bowler 65 totals 1380 with handicap, the same as bowler 97 in A,
+ * with the higher game: the two tie for the one at-large spot, and 65 wins it.
  *
  * Sweeper one (50 entries, 7 cash, bonus pins 15 a game for Women or Seniors): 54 and 81 tie fully
  * across the cash line; 24 has 45 pins that lift a scratch total of 605 above bowler 12's 645.
@@ -46,6 +47,7 @@ export const designedScores: Record<string, readonly number[]> = {
   A24: [193, 207, 160, 174, 188, 202], // 1124, the same games in another order
   A97: [160, 150, 150, 145, 150, 145], // 900 scratch, 480 handicap: 1380
   C0: [215, 200, 205, 210, 198, 212], // 1240
+  B65: [200, 190, 185, 180, 170, 161], // 1086 scratch, 294 handicap: 1380, high game 200 + 49
   S1_54: [195, 242, 218], // 655
   S1_81: [242, 218, 195], // 655, the same games in another order
   S1_24: [210, 200, 195], // 605 scratch, 650 with 45 pins

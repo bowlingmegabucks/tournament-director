@@ -32,6 +32,8 @@ import {
   assignAllLanes,
   checkDivisionResults,
   checkEarlierAdvancer,
+  checkFinals,
+  checkFinalsOfficial,
   checkSuperSweeper,
   checkSweeperResults,
   completeSession,
@@ -40,7 +42,9 @@ import {
   openSquad,
 } from './support/session'
 import {
+  atLargeResults,
   earlierAdvancer,
+  seedingResults,
   expectedResults,
   superSweeperResults,
   sweeperOneResults,
@@ -480,6 +484,13 @@ for (const batch of deskBatches) {
     }
     if (earlierAdvancer.squad === letter) {
       await checkEarlierAdvancer(page, path, earlierAdvancer.division, earlierAdvancer.name)
+    }
+    // At-large and seeding say "Unofficial results" until the last squad completes (D-88).
+    const tournamentPath = path.replace(/\/squads\/.*$/, '')
+    await checkFinalsOfficial(page, tournamentPath, batch === 3)
+    if (batch === 3) {
+      for (const want of atLargeResults) await checkFinals(page, tournamentPath, 'at-large', want)
+      for (const want of seedingResults) await checkFinals(page, tournamentPath, 'seeding', want)
     }
   })
 }

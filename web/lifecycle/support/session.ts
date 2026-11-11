@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test'
-import type { ExpectedDivision, ExpectedList } from '../data/expectedResults'
+import type { ExpectedDivision, ExpectedFinals, ExpectedList } from '../data/expectedResults'
 import type { SquadData } from '../data/sessions'
 import { openTournamentPage } from './navigate'
 
@@ -141,6 +141,54 @@ export async function checkSuperSweeper(page: Page, sweeperPath: string, want: E
   const table = page.getByRole('table', { name: 'Super sweeper results' })
   await expect(table).toBeVisible()
   await expectTable(table, table.locator('tbody'), want)
+}
+
+/**
+ * At-large or seeding for one division: the summary line, the rows and tie notes, and which rows
+ * say "Cashed on a squad". `tournamentPath` is `/tournaments/{id}`.
+ */
+export async function checkFinals(
+  page: Page,
+  tournamentPath: string,
+  kind: 'at-large' | 'seeding',
+  want: ExpectedFinals,
+) {
+  await page.goto(`${tournamentPath}/${kind}`)
+  await chooseDivision(page, want.division)
+  await expect(page.getByText(want.summary)).toBeVisible()
+  if (want.empty) {
+    await expect(page.getByText(want.empty)).toBeVisible()
+    return
+  }
+  const caption =
+    kind === 'at-large'
+      ? `At-large results for the ${want.division} division`
+      : `Finals seeding for the ${want.division} division`
+  const table = page.getByRole('table', { name: caption })
+  await expect(table).toBeVisible()
+  await expectTable(table, table.locator('tbody tr'), {
+    order: want.order ?? [],
+    notes: want.notes ?? {},
+  })
+  for (const [who, date] of Object.entries(want.squadDates ?? {})) {
+    await expect(table.getByRole('row').filter({ hasText: who })).toContainText(date)
+  }
+  const marked = table.getByRole('row').filter({ hasText: 'Cashed on a squad' })
+  await expect(marked).toHaveCount(want.cashers?.length ?? 0)
+  for (const casher of want.cashers ?? []) {
+    await expect(table.getByRole('row').filter({ hasText: casher })).toContainText(
+      'Cashed on a squad',
+    )
+  }
+}
+
+/** Both finals pages say "Unofficial results" or do not, as the squads stand. */
+export async function checkFinalsOfficial(page: Page, tournamentPath: string, official: boolean) {
+  for (const kind of ['at-large', 'seeding']) {
+    await page.goto(`${tournamentPath}/${kind}`)
+    await expect(page.getByRole('combobox', { name: 'Division' })).toBeVisible()
+    await expect(page.getByText(/Unofficial results/)).toHaveCount(official ? 0 : 1)
+  }
 }
 
 /** Read each row's name or line label, then compare with the expected order and tie notes. */

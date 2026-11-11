@@ -7,6 +7,51 @@ export const SCROLL_PX_PER_SECOND = 40
 /** How long the list stays put after a viewer last touched it, in milliseconds. */
 export const IDLE_RESUME_MS = 10_000
 
+// Only the keys that scroll a list; Tab and the rest move focus and leave the scroll alone.
+const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '])
+
+/**
+ * Listens for a viewer taking over (touch, wheel, scroll key). `takeTouch` says whether one came
+ * since the last call, so the frame can note its time on the frame clock. A touch that never ends
+ * (the browser lost it) runs out like any other input, so the page cannot stay stopped for good.
+ */
+function watchViewerInput(element: HTMLElement | null) {
+  let touched = false
+  const touch = () => {
+    touched = true
+  }
+  const key = (event: Event) => {
+    if (event instanceof KeyboardEvent && SCROLL_KEYS.has(event.key)) touched = true
+  }
+  const listeners: [string, (event: Event) => void][] = [
+    ['touchstart', touch],
+    ['touchmove', touch],
+    ['touchend', touch],
+    ['touchcancel', touch],
+    ['wheel', touch],
+    ['keydown', key],
+  ]
+  for (const [type, handler] of listeners) {
+    element?.addEventListener(type, handler, { passive: true })
+  }
+  return {
+    takeTouch() {
+      const was = touched
+      touched = false
+      return was
+    },
+    stop() {
+      for (const [type, handler] of listeners) element?.removeEventListener(type, handler)
+    },
+  }
+}
+
+/** The next scroll position after `elapsedMs`; past the end of the first copy it starts over. */
+function nextOffset(offset: number, elapsedMs: number, speed: number, listHeight: number) {
+  const next = offset + (elapsedMs / 1000) * speed
+  return next >= listHeight ? next - listHeight : next
+}
+
 /**
  * The scrolling list of the TV page (RES-50, D-242). The content is drawn twice, the second copy
  * hidden from screen readers, and the view scrolls down one content height and starts over, so the
@@ -34,68 +79,36 @@ export function AutoScroll({
   const copy = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    const input = watchViewerInput(view.current)
     let frame = 0
     let last: number | undefined
     let offset = 0
-    // The viewer just acted: `stamp` asks the next frame to note its time on the frame clock. A
-    // touch that never ends (the browser lost it) runs out like any other input, so the page cannot
-    // stay stopped for good.
-    let stamp = false
     let touchedAt: number | undefined
-
-    const touch = () => {
-      stamp = true
-    }
-    // Only the keys that scroll a list; Tab and the rest move focus and leave the scroll alone.
-    const scrollKeys = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '])
-    const key = (event: Event) => {
-      if (event instanceof KeyboardEvent && scrollKeys.has(event.key)) stamp = true
-    }
-    const element = view.current
-    const listeners: [string, (event: Event) => void][] = [
-      ['touchstart', touch],
-      ['touchmove', touch],
-      ['touchend', touch],
-      ['touchcancel', touch],
-      ['wheel', touch],
-      ['keydown', key],
-    ]
-    for (const [type, handler] of listeners) {
-      element?.addEventListener(type, handler, { passive: true })
-    }
 
     const tick = (now: number) => {
       frame = requestAnimationFrame(tick)
-      if (stamp) {
-        touchedAt = now
-        stamp = false
-      }
-      const viewHeight = view.current?.clientHeight ?? 0
+      if (input.takeTouch()) touchedAt = now
+      const element = view.current
+      const viewHeight = element?.clientHeight ?? 0
       const listHeight = first.current?.offsetHeight ?? 0
+      const fits = listHeight <= viewHeight
       const paused = touchedAt !== undefined && now - touchedAt < IDLE_RESUME_MS
-      const moving = listHeight > viewHeight && !document.hidden && !paused
-      if (copy.current) copy.current.hidden = listHeight <= viewHeight
-      if (paused && listHeight > viewHeight && view.current) {
-        // The viewer moves it: follow their position and write nothing, so a drag or a fling is not
-        // interrupted. Once the pause ends, the loop wraps a position past the first copy.
-        offset = view.current.scrollTop
-      } else if (listHeight <= viewHeight) {
-        // It fits: sit at the top.
-        offset = 0
-        if (view.current) view.current.scrollTop = 0
-      } else if (moving) {
-        if (last !== undefined) offset += ((now - last) / 1000) * speed
-        // Past the end of the first copy, the second is in the same place: start over.
-        if (offset >= listHeight) offset -= listHeight
-        if (view.current) view.current.scrollTop = offset
-      }
+      const moving = !fits && !document.hidden && !paused
+      if (copy.current) copy.current.hidden = fits
+      if (fits) offset = 0
+      else if (paused)
+        offset = element?.scrollTop ?? offset // follow the viewer, write nothing
+      else if (moving)
+        offset = nextOffset(offset, last === undefined ? 0 : now - last, speed, listHeight)
+      // Write only when we drive the view: a fit list sits at the top, a moving one follows `offset`.
+      if (element && (fits || moving)) element.scrollTop = offset
       // A hidden tab ends the span, so the first frame back does not jump.
       last = moving ? now : undefined
     }
     frame = requestAnimationFrame(tick)
     return () => {
       cancelAnimationFrame(frame)
-      for (const [type, handler] of listeners) element?.removeEventListener(type, handler)
+      input.stop()
     }
   }, [speed])
 

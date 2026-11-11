@@ -1,6 +1,6 @@
 /**
  * The squads and sweepers of the run (stage 3). Dates sit inside the tournament (12 to 14 March 2025),
- * and the lane counts leave room for the entries of stage 4: 364 squad seats for 300 entries.
+ * and the lane counts leave room for the entries of stage 4: 380 squad seats for 285 to 300 entries.
  */
 export interface SquadData {
   /** `YYYY-MM-DDTHH:mm` for the date box. */
@@ -46,7 +46,7 @@ export const squadC: SquadData = {
   date: '2025-03-13T09:00',
   label: 'Thu 03/13/2025 9:00 AM',
   startingLane: 11,
-  lanes: 32,
+  lanes: 40,
   perPair: 4,
   cashRatio: '5',
 }
@@ -61,8 +61,8 @@ export const squadD: SquadData = {
 
 export const squads = [squadA, squadB, squadC, squadD]
 
-// Sweeper 1 has bonus pins (for the seniors); sweeper 2 has none. Sweeper 2 is made with a $25 fee
-// and edited to $30.
+// Sweeper 1 has bonus pins (for the seniors); sweeper 2 has none. Sweeper 2's fee below is its final
+// one, $30: stage 3 makes it at $25 (`sweeperTwoCreatedFee`) and edits it, before anyone registers.
 export const sweeperOne: SweeperData = {
   date: '2025-03-13T18:00',
   label: 'Thu 03/13/2025 6:00 PM',
@@ -72,7 +72,7 @@ export const sweeperOne: SweeperData = {
   entryFee: '35',
   games: '3',
   cashRatio: '6.5',
-  bonusPins: { 'Senior Women': '15' },
+  bonusPins: { 'Women or Seniors': '15' },
 }
 
 export const sweeperTwo: SweeperData = {
@@ -81,12 +81,13 @@ export const sweeperTwo: SweeperData = {
   startingLane: 1,
   lanes: 40,
   perPair: 4,
-  entryFee: '25',
+  entryFee: '30',
   games: '3',
   cashRatio: '5',
   bonusPins: {},
 }
-export const sweeperTwoEdited = { entryFee: '30', feeText: '$30.00' }
+export const sweeperTwoCreatedFee = '25'
+export const sweeperTwoEdited = { entryFee: sweeperTwo.entryFee, feeText: '$30.00' }
 
 export const sweepers = [sweeperOne, sweeperTwo]
 

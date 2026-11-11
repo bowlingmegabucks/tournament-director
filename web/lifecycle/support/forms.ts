@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test'
+import type { Bowler } from '../data/bowlers'
 import type { DivisionData } from '../data/divisions'
 import type { SquadData, SweeperData } from '../data/sessions'
 
@@ -86,4 +87,64 @@ export async function addTournament(page: Page, tournament: TournamentData) {
     .fill(tournament.superSweeperCashRatio)
   await page.getByRole('button', { name: 'Save tournament' }).click()
   await expect(page.getByRole('heading', { name: tournament.name, level: 1 })).toBeVisible()
+}
+
+/** A label made safe to put inside a regular expression. */
+function exactly(text: string): RegExp {
+  return new RegExp(
+    text
+      .split('')
+      .map((char) => (/[a-z0-9 :/]/i.test(char) ? char : `\\${char}`))
+      .join(''),
+  )
+}
+
+/**
+ * At the desk, add a new bowler (Registrations page, Add registration, New bowler, Registration,
+ * Review) and save. Checks the "what to collect" total before saving (ADD-01). The bowler record is
+ * typed in full; the desk picks the division and the squads and sweepers by their dates. Starts and
+ * ends on the Registrations page.
+ */
+export async function addDeskRegistration(
+  page: Page,
+  bowler: Bowler,
+  entry: {
+    division: string
+    squadLabels: string[]
+    sweeperLabels: string[]
+    superSweeper: boolean
+    total: number
+  },
+) {
+  await page.getByRole('link', { name: 'Add registration' }).click()
+  await expect(page.getByRole('form', { name: 'Find a bowler' })).toBeVisible()
+  await page.getByRole('button', { name: 'New bowler' }).click()
+
+  await page.getByLabel('First name (required)').fill(bowler.firstName)
+  await page.getByLabel('Last name (required)').fill(bowler.lastName)
+  await page.getByLabel('Street').fill(bowler.street)
+  await page.getByLabel('City').fill(bowler.city)
+  await page.getByLabel('State (2 letters)').fill(bowler.state)
+  await page.getByLabel('Zip').fill(bowler.zipCode)
+  await page.getByLabel('Email', { exact: true }).fill(bowler.email)
+  await page.getByLabel('Phone').fill(bowler.phoneNumber)
+  await page.getByLabel('USBC ID').fill(bowler.usbcId)
+  await page.getByLabel('Date of birth').fill(bowler.dateOfBirth)
+  await page.getByLabel('Gender').selectOption(bowler.gender === 'F' ? 'Female' : 'Male')
+  await page.getByRole('button', { name: 'Next: registration' }).click()
+
+  await page.getByLabel('Division (required)').selectOption(entry.division)
+  await page.getByLabel('Average').fill(String(bowler.average))
+  const squads = page.getByRole('group', { name: /Squads/ })
+  for (const label of entry.squadLabels) await squads.getByLabel(exactly(label)).check()
+  const sweepers = page.getByRole('group', { name: /Sweepers/ })
+  for (const label of entry.sweeperLabels) await sweepers.getByLabel(exactly(label)).check()
+  if (entry.superSweeper) await page.getByLabel('Super sweeper').check()
+  await page.getByRole('button', { name: 'Next: review' }).click()
+
+  await expect(page.getByRole('row', { name: `Total to collect $${entry.total}.00` })).toBeVisible()
+  await page.getByRole('button', { name: 'Add registration', exact: true }).click()
+  await expect(
+    page.getByText(`Registration added for ${bowler.firstName} ${bowler.lastName}`),
+  ).toBeVisible()
 }

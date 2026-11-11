@@ -10,19 +10,21 @@ The other suites check one screen or route at a time, on mocks or small data. Th
 
 ## Status
 
-Built so far (branch `results`, 1.0.0-rc.1): the harness, stages 0 to 3, and the registration site's part of stage 4, in `web/lifecycle/`. Run `npm run test:lifecycle` in `web/` (needs Docker and `python3`).
+Built so far (branch `results`, 1.0.0-rc.1): the harness, stages 0 to 3, and most of stage 4 (the site's 90 and the desk's 60), in `web/lifecycle/`. Run `npm run test:lifecycle` in `web/` (needs Docker and `python3`).
 
 - **Stack.** `web/lifecycle/docker-compose.yml` (its own MariaDB on 15406 and Mailpit on 15425, no volume), the API on 3100 (empty tables from `npm run db:tables` in `api/`), and the production web build (`dist-lifecycle`, sign-in on, `check:dist` run on it) on 4273. `globalTeardown` removes the containers; `LIFECYCLE_KEEP=1` keeps them.
 - **Stage 0 so far.** First admin from `users:create-admin` through a pseudo-terminal (`support/answerPrompts.py`, because the script refuses piped input), then director and score keeper through the add-user page, invites read from Mailpit, passwords set, sign-in with the real login page. **Not yet:** the earlier tournament and its 50 returning bowlers.
 - **Stage 1.** Create, edit the bowling center, check the overview and the list.
 - **Rule 9 gap.** "No live cache" needs a setting: `LIVE_CACHE_MS` is a constant in `ttlCache.ts`. Add an env var before stage 7.
-- **Stage 2.** Three divisions (scratch, 90% of 220 handicap, senior women 50+ with averages 100 to 180), the list and numbering, and the used-name 409.
-- **Stage 3.** Four squads (38 lanes edited to 40, 48 lanes with a $75 fee, 32 lanes with a 1 in 5 cash ratio, 40 lanes), two sweepers (one with bonus pins for the seniors, one edited from $25 to $30), a spare of each deleted, and the squad-outside-the-dates 409. The two scripted failures that need entries or lane saves wait for stages 4 and 5.
+- **Stage 2.** Three divisions (scratch, 90% of 220 handicap, Women or Seniors with averages 100 to 180), the list and numbering, and the used-name 409.
+- **Stage 3.** Four squads (38 lanes edited to 40, 48 lanes with a $75 fee, 40 lanes with a 1 in 5 cash ratio, 40 lanes), two sweepers (one with bonus pins for Women or Seniors, one edited from $25 to $30), a spare of each deleted, and the squad-outside-the-dates 409. The two scripted failures that need entries or lane saves wait for stages 4 and 5.
 - **Dates.** The tournaments sit in March 2025 and September 2024 (fixed, in the past) because bowlers need real birth dates; a 2099 tournament made 2079 births.
 - **Stage 0, earlier tournament.** "Autumn Warmup" (one division, one squad, $50) made in the UI; the 50 returning bowlers (numbers 0 to 49 of `data/bowlers.json`) registered through the vendor routes with the API key. The page shows 50 bowlers registered.
 - **Stage 4, site part.** Bowlers 0 to 89 (60% of 150, 50 of them returning) register in the main tournament through `POST /v1/registrations`: two squads each by number modulo 4 (45 in each squad), sweeper one for every third (30), sweeper two for every second (45), super sweeper for 0, 6, and 12, a Stripe payment of the hand-worked fee. The Registrations page summary must show 90 bowlers, 3 in the super sweeper, and those counts. Rules for who enters what are in `data/registrationPlan.ts`.
 - **Bowler data.** `data/bowlers.json` (150 bowlers) is made once by `node lifecycle/data/generateBowlers.ts` and committed; the run never calls faker (rule 4).
-- **Not built yet:** the desk's 60 new bowlers and the added squads and sweepers (about 40% of the work), the edits and deletes of the stage-4 list, the money checks, and the scripted failures that need entries. Stages 5 and up.
+- **Stage 4, desk part.** The desk's 60 new bowlers (numbers 90 to 149), typed in full through Add registration, in four batches of 15, one before each squad. Batch 0 enters A plus B, C, or D; batch 1 enters B plus C or D; batch 2 enters C and D; batch 3 enters D only. Sweepers by the same rules as the site (every third and every second bowler), super sweeper for bowlers 90 and 96. Each Review step is checked against the hand-worked "Total to collect". After all four: 150 bowlers, 5 in the super sweeper, squads A 60, B 65, C 73, D 87 (285 entries), sweeper one 50 and two 75. Squad C has 40 lanes so its 73 entries fit.
+- **Women or Seniors.** The division is the legacy "Women or Seniors" (female, minimum age 50): a woman of any age, or anyone 50 and up, who averages 100 to 180 may enter (REG-04e). My first version was named "Senior Women" and the scripted failure used a 57-year-old man, which is allowed; the failure now uses a man under 50.
+- **Not built yet:** the added squads and sweepers for site bowlers (15 squad and about 25 sweeper entries), the edits and deletes of the stage-4 list, the money checks beyond the Review totals, and the scripted failures that need entries. Stages 5 and up, and the loop between batches.
 
 ## Rules
 
@@ -45,15 +47,17 @@ Built so far (branch `results`, 1.0.0-rc.1): the harness, stages 0 to 3, and the
 | Divisions       | 3     | One scratch, one handicap with a percent, one limited by gender or age with averages. |
 | Squads          | 4     | Different sizes; one with its own fee, one with its own ratio.                        |
 | Sweepers        | 2     | One with bonus pins, one without. Three bowlers in the super sweeper.                 |
-| Squad entries   | 300   |                                                                                       |
+| Squad entries   | 300   | 285 from registrations (site 180, desk 105) plus 15 added at the desk by site bowlers. |
 | Sweeper entries | 150   |                                                                                       |
-| Bowlers         | ~150  | 50 returning, ~100 new. Last year: 260 bowlers, about 760 entries (2.9 each).         |
+| Bowlers         | 150   | 50 returning, 100 new (40 through the site, 60 at the desk). Last year: 260 bowlers, about 760 entries (2.9 each).         |
 
 The 50 returning bowlers come from an earlier, smaller tournament that the test registers first through the vendor routes, so they exist the way real ones do (D-05). Entries split between the desk (UI), the registration site (API key), and the returning bowlers.
 
 The score set is designed: ties for first and at the cash line (scratch and handicap), a handicap that changes the order, a no-show and a did-not-finish, a missed sweeper (D-90), bonus pins that move a result, a bowler in two squads (best single entry, RES-19), and a score edit after entry.
 
 ## Stages
+
+**The tournament runs in time order, not stage by stage (owner, 2026-11-11).** Desk registrations are spread across the squads as they are in life. Before a squad, walk-ins register for it (and for later sessions); then its lanes are assigned, its scores are entered, and it is completed; only then does the next batch of walk-ins register, some of them for squads still ahead. The chronological order is squad A (Wed 9:00), B (Wed 1:00), C (Thu 9:00), D (Thu 1:00), sweeper one (Thu 6:00), sweeper two (Fri 11:00). Stages 4 to 7 below are the steps of that loop, not four separate passes: the site registers first (before anything), then for each session in order: desk batch, lanes, scores, complete. A later batch cannot enter a complete squad (D-203), so each bowler's first squad is the next one to be bowled. Today the four desk batches run back to back because lanes, scores, and complete are not built into the test yet; each batch is its own test so those steps slot in between.
 
 0. **Setup.** Empty schema, the first admin from the app's own script, the other users made through the add-user page (the invite email lands in a local mail catcher, which also tests the set-password flow), then the earlier tournament and its 50 bowlers.
 1. **Tournament.** Create, edit a free field, check the overview.
@@ -79,9 +83,9 @@ Start with these; add one whenever a feature brings a new refusal.
 | Squads    | Create a squad dated outside the tournament                                      | 409 with the message                                     |
 | Squads    | Delete a squad that has entries (`SQD-14`, D-186)                                | 409 with `errors`, the squad stays                       |
 | Lanes     | Edit lanes so a saved pair no longer fits                                        | 409 with `errors` (after stage 5 saves lanes)            |
-| Register  | Put a bowler in a division that does not fit (D-107)                             | 400 from the route; a refusal in the UI                  |
-| Register  | Repeat a payment code (D-109, D-118)                                             | A retry, no second entry                                 |
-| Scores    | Delete an entry that has a score (`REG-19`, D-211)                               | 409 with `errors.scores`, the entry stays                |
+| Register  | Put a man under 50 in the Women or Seniors division (REG-04e, D-107)             | 400 "Bowler too young for selected division" from the route (done); a refusal in the UI (not yet) |
+| Register  | Repeat a payment code (D-109, D-118)                                             | A retry with the same id, no second entry (done)         |
+| Scores    | Delete an entry that has a score (`REG-19`, D-211)                               | 409 with `errors.scores`, the entry stays (waits for score entry) |
 | Register  | Delete a registration with a real payment from the site (D-210)                  | 409 with a warning and the total; deletes after the tick |
 | Scores    | Enter a score above 300                                                          | Refused                                                  |
 | Scores    | Enter or flag a score in a complete squad (D-228)                                | 409 with `errors`, nothing saved                         |

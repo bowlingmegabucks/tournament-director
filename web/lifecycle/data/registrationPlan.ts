@@ -3,12 +3,15 @@ import { squadA, squadB, squadC, squadD, sweeperOne, sweeperTwo } from './sessio
 
 /**
  * Who enters what in the main tournament, written as rules over the bowler's number so the counts
- * can be worked out by hand. Division: a woman of 50 or more averaging 100 to 180 is a Senior Woman;
- * every fourth bowler (number 1, 5, 9, ...) is Handicap; the rest are Scratch.
+ * can be worked out by hand. Division: the "Women or Seniors" division takes a woman of any age, or
+ * anyone 50 or more, who averages 100 to 180 (the legacy rule, REG-04e); every second such bowler
+ * (even number) goes there. Of the rest, every fourth bowler (number 1, 5, 9, ...) is Handicap and
+ * the others are Scratch.
  */
 export function divisionFor(bowler: Bowler): string {
-  if (bowler.gender === 'F' && bowler.age >= 50 && bowler.average >= 100 && bowler.average <= 180) {
-    return 'Senior Women'
+  const ageOrGender = bowler.gender === 'F' || bowler.age >= 50
+  if (ageOrGender && bowler.average >= 100 && bowler.average <= 180 && bowler.index % 2 === 0) {
+    return 'Women or Seniors'
   }
   return bowler.index % 4 === 1 ? 'Handicap' : 'Scratch'
 }
@@ -51,3 +54,64 @@ export const siteExpected = {
  */
 export const squadFee = (squad: { entryFee?: string }, tournamentFee: number) =>
   squad.entryFee === undefined ? tournamentFee : Number(squad.entryFee)
+/**
+ * The desk's 60 new bowlers (numbers 90 to 149) arrive in four batches of 15, one batch before each
+ * squad, as walk-ins do: batch 0 before squad A, batch 1 before B, and so on. A batch bowler enters
+ * the squad that is next and, except in the last batch, one later squad. Later stages (lanes,
+ * scores, complete) run between the batches, so a later batch registers after earlier squads are
+ * scored and complete (D-203: a complete squad takes no new entries).
+ */
+export const deskBatchSize = 15
+export const deskBatches = [0, 1, 2, 3] as const
+export type DeskBatch = (typeof deskBatches)[number]
+
+const batchSquads = [squadA, squadB, squadC, squadD]
+
+/** The bowlers of one desk batch, by number. */
+export const deskBatchOf = (desk: Bowler[], batch: DeskBatch) =>
+  desk.filter((bowler) => Math.floor((bowler.index - 90) / deskBatchSize) === batch)
+
+/**
+ * The squads a desk bowler enters. Place k is the bowler's place in the batch (0 to 14). Batch 0:
+ * A, plus B, C, or D by k modulo 3. Batch 1: B, plus C (even k) or D. Batch 2: C and D. Batch 3: D.
+ */
+export function deskSquadsFor(bowler: Bowler) {
+  const offset = bowler.index - 90
+  const batch = Math.floor(offset / deskBatchSize) as DeskBatch
+  const place = offset % deskBatchSize
+  const own = batchSquads[batch]
+  if (!own) return []
+  if (batch === 0) return [own, batchSquads[1 + (place % 3)]]
+  if (batch === 1) return [own, place % 2 === 0 ? squadC : squadD]
+  if (batch === 2) return [own, squadD]
+  return [own]
+}
+
+/** The desk's super sweeper: bowlers 90 and 96 (each is in both sweepers by the same rules). */
+export const deskSuperSweeperFor = (bowler: Bowler) => bowler.index === 90 || bowler.index === 96
+
+/**
+ * What the Registrations page summary must show once all four desk batches are in (by hand).
+ * Squad entries: site 45 each, plus the desk's A 15, B 20 (15 + 5), C 28 (15 + 5 + 8), D 42
+ * (15 + 5 + 7 + 15), which is 285 in all. The last 15 of the plan's 300 come from site bowlers who
+ * add a squad at the desk (a later slice).
+ */
+export const afterDeskExpected = {
+  registrations: 150,
+  superSweepers: 5,
+  squadEntries: { A: 60, B: 65, C: 73, D: 87 },
+  sweeperOneEntries: 50, // site 30 + desk 20
+  sweeperTwoEntries: 75, // site 45 + desk 30
+}
+
+/** The total the desk collects for these entries (whole dollars): the fee table (ADD-01). */
+export function totalToCollect(
+  squads: { entryFee?: string }[],
+  sweepers: { entryFee: string }[],
+  tournamentFee: number,
+): number {
+  return (
+    squads.reduce((sum, squad) => sum + squadFee(squad, tournamentFee), 0) +
+    sweepers.reduce((sum, sweeper) => sum + Number(sweeper.entryFee), 0)
+  )
+}

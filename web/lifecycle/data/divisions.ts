@@ -31,7 +31,7 @@ export const handicap: DivisionData = {
 }
 
 export const seniorWomen: DivisionData = {
-  name: 'Senior Women',
+  name: 'Women or Seniors',
   number: 3,
   gender: 'Female',
   ages: '50 and up',

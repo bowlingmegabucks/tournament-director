@@ -59,6 +59,12 @@ export class VendorApi {
     return ((await detail.json()) as { tournament: VendorTournament }).tournament
   }
 
+  /** `POST /v1/registrations` without a check on the answer, for a scripted failure. */
+  async registerRaw(registration: VendorRegistration) {
+    const response = await this.context.post('/v1/registrations', { data: { registration } })
+    return { status: response.status(), body: await response.text() }
+  }
+
   /** `POST /v1/registrations`: the registration id. The test fails on anything but a 201. */
   async register(registration: VendorRegistration): Promise<string> {
     const response = await this.context.post('/v1/registrations', { data: { registration } })

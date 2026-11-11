@@ -14,11 +14,13 @@ import {
   squads,
   sweeperOne,
   sweeperTwo,
+  sweeperTwoCreatedFee,
   sweeperTwoEdited,
   sweepers,
 } from './data/sessions'
 import { createFirstAdmin } from './support/createAdmin'
 import {
+  addDeskRegistration,
   addDivision,
   addSquad,
   addSweeper,
@@ -28,10 +30,16 @@ import {
 } from './support/forms'
 import { VendorApi } from './support/vendorApi'
 import { idByDate, idByName, vendorRegistration } from './support/vendorPayload'
-import { returning, siteBowlers } from './data/bowlers'
+import { deskBowlers, returning, siteBowlers } from './data/bowlers'
 import {
+  afterDeskExpected,
+  deskBatchOf,
+  deskBatches,
+  deskSquadsFor,
+  deskSuperSweeperFor,
   divisionFor,
   siteExpected,
+  totalToCollect,
   squadFee,
   squadsFor,
   superSweeperFor,
@@ -43,6 +51,9 @@ import { mainMenu, signIn } from './support/signIn'
 
 // docs/plans/lifecycle-e2e.md. Stages run in order (rule 8): a failed stage skips the rest.
 test.describe.configure({ mode: 'serial' })
+
+/** The registration id the site got for each bowler number, for the stages that follow. */
+const siteRegistrationIds = new Map<number, string>()
 
 test('stage 0: the first admin, then the other users through the add-user page', async ({
   page,
@@ -204,7 +215,7 @@ test('stage 3: four squads and two sweepers, an edit of each, and a spare of eac
   await expect(sessionCard(page, squadB.label)).toContainText('48 lanes')
   await expect(sessionCard(page, squadB.label)).toContainText('Up to 5')
   await expect(sessionCard(page, squadB.label)).toContainText('$75.00 (override)')
-  await expect(sessionCard(page, squadC.label)).toContainText('11 to 42 (32 lanes)')
+  await expect(sessionCard(page, squadC.label)).toContainText('11 to 50 (40 lanes)')
   await expect(sessionCard(page, squadC.label)).toContainText('1 in 5.0 (override)')
   await expect(sessionCard(page, squadD.label)).toContainText('1 to 40 (40 lanes)')
 
@@ -223,11 +234,14 @@ test('stage 3: four squads and two sweepers, an edit of each, and a spare of eac
   // Sweepers.
   await openTournamentPage(page, 'Sweepers')
   for (const sweeper of sweepers) {
-    await addSweeper(page, sweeper)
+    await addSweeper(
+      page,
+      sweeper === sweeperTwo ? { ...sweeper, entryFee: sweeperTwoCreatedFee } : sweeper,
+    )
     await expect(page.getByText('Sweeper created')).toBeVisible()
   }
   await expect(sessionCard(page, sweeperOne.label)).toContainText('$35.00')
-  await expect(sessionCard(page, sweeperOne.label)).toContainText('Senior Women: +15')
+  await expect(sessionCard(page, sweeperOne.label)).toContainText('Women or Seniors: +15')
   await expect(sessionCard(page, sweeperTwo.label)).toContainText('$25.00')
   await expect(sessionCard(page, sweeperTwo.label)).not.toContainText('+')
 
@@ -263,7 +277,7 @@ test('stage 4: the registration site registers 90 bowlers, 50 of them returning'
       const amount =
         squads.reduce((sum, squad) => sum + squadFee(squad, main.entryFee), 0) +
         sweepers.reduce((sum, sweeper) => sum + Number(sweeper.entryFee), 0)
-      await site.register(
+      const registrationId = await site.register(
         vendorRegistration(bowler, main, {
           divisionId: idByName(main.divisions, divisionFor(bowler)),
           squadIds: squads.map((squad) => idByDate(main.squads, squad.date)),
@@ -273,6 +287,7 @@ test('stage 4: the registration site registers 90 bowlers, 50 of them returning'
           codePrefix: 'ch_site',
         }),
       )
+      siteRegistrationIds.set(bowler.index, registrationId)
     }
   } finally {
     await site.close()
@@ -298,5 +313,119 @@ test('stage 4: the registration site registers 90 bowlers, 50 of them returning'
   )
   await expect(bySweeper.getByRole('listitem').filter({ hasText: sweeperTwo.label })).toContainText(
     String(siteExpected.sweeperTwoEntries),
+  )
+})
+
+test('stage 4: a division that does not fit, and a repeated payment code, change nothing (D-107, D-109)', async () => {
+  const site = await VendorApi.open()
+  try {
+    const main = await site.tournament(tournament.name)
+    // The division takes women, or anyone 50 and up (REG-04e). A man under 50 fits neither.
+    const man = deskBowlers.find(
+      (bowler) => bowler.gender === 'M' && bowler.age < 50 && bowler.average <= 180,
+    )
+    if (!man) throw new Error('Expected a desk bowler who is a man under 50')
+    const refused = await site.registerRaw(
+      vendorRegistration(man, main, {
+        divisionId: idByName(main.divisions, 'Women or Seniors'),
+        squadIds: [idByDate(main.squads, squadA.date)],
+        sweeperIds: [],
+        superSweeper: false,
+        amount: 60,
+        codePrefix: 'ch_refused',
+      }),
+    )
+    expect(refused.status, refused.body).toBe(400)
+    expect(refused.body).toContain('Bowler too young for selected division')
+
+    // Bowler 5 sends the same payment code again: a retry with the same id, no second entry.
+    const bowler = siteBowlers[5]
+    const stored = siteRegistrationIds.get(5)
+    if (!bowler || !stored) throw new Error('Bowler 5 should be registered')
+    const squads = squadsFor(bowler)
+    const sweepers = sweepersFor(bowler)
+    const retry = await site.registerRaw(
+      vendorRegistration(bowler, main, {
+        divisionId: idByName(main.divisions, divisionFor(bowler)),
+        squadIds: squads.map((squad) => idByDate(main.squads, squad.date)),
+        sweeperIds: sweepers.map((sweeper) => idByDate(main.sweepers, sweeper.date)),
+        superSweeper: superSweeperFor(bowler),
+        amount: totalToCollect(squads, sweepers, main.entryFee),
+        codePrefix: 'ch_site',
+      }),
+    )
+    expect(retry.status, retry.body).toBe(201)
+    expect((JSON.parse(retry.body) as { registrationId: string }).registrationId).toBe(stored)
+  } finally {
+    await site.close()
+  }
+})
+
+// Walk-ins arrive before the squad they want, so the desk registers in four batches. Lanes, scores,
+// and completing the squad run between the batches in later slices; until they exist the four
+// batches run one after another.
+for (const batch of deskBatches) {
+  const squad = squads[batch]
+  test(`stage 4: the desk registers batch ${batch + 1} of 15 new bowlers before squad ${'ABCD'[batch]}`, async ({
+    page,
+  }) => {
+    const site = await VendorApi.open()
+    const main = await site.tournament(tournament.name)
+    await site.close()
+    await signIn(page, director)
+    await openTournamentPage(page, 'Registrations')
+    const before = 90 + batch * 15
+    // The refused request and the retry above left the site's 90 as they were.
+    await expect(page.getByText('Bowlers registered').locator('+ dd')).toHaveText(String(before))
+
+    for (const bowler of deskBatchOf(deskBowlers, batch)) {
+      const entered = deskSquadsFor(bowler)
+      const sweepers = sweepersFor(bowler)
+      // The batch's own squad is always among the bowler's squads.
+      expect(entered).toContain(squad)
+      await addDeskRegistration(page, bowler, {
+        division: divisionFor(bowler),
+        squadLabels: entered.map((entry) => entry.label),
+        sweeperLabels: sweepers.map((sweeper) => sweeper.label),
+        superSweeper: deskSuperSweeperFor(bowler),
+        total: totalToCollect(entered, sweepers, main.entryFee),
+      })
+    }
+
+    await expect(page.getByText('Bowlers registered').locator('+ dd')).toHaveText(
+      String(before + 15),
+    )
+  })
+}
+
+test('stage 4: after the desk batches, the counts match the hand-worked table', async ({
+  page,
+}) => {
+  await signIn(page, director)
+  await openTournamentPage(page, 'Registrations')
+  await expect(page.getByText('Bowlers registered').locator('+ dd')).toHaveText(
+    String(afterDeskExpected.registrations),
+  )
+  await expect(page.getByText('Super sweeper', { exact: true }).locator('+ dd')).toHaveText(
+    String(afterDeskExpected.superSweepers),
+  )
+  const bySquad = page.getByRole('region', { name: 'By squad' })
+  const expected = afterDeskExpected.squadEntries
+  for (const [squad, count] of [
+    [squadA, expected.A],
+    [squadB, expected.B],
+    [squadC, expected.C],
+    [squadD, expected.D],
+  ] as const) {
+    await expect(bySquad.getByRole('listitem').filter({ hasText: squad.label })).toContainText(
+      String(count),
+    )
+  }
+  const bySweeper = page.getByRole('region', { name: 'By sweeper' })
+  await expect(bySweeper.getByRole('listitem').filter({ hasText: sweeperOne.label })).toContainText(
+    String(afterDeskExpected.sweeperOneEntries),
+  )
+  await expect(bySweeper.getByRole('listitem').filter({ hasText: sweeperTwo.label })).toContainText(
+    String(afterDeskExpected.sweeperTwoEntries),
   )
 })

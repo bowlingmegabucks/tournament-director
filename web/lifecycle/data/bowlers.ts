@@ -28,3 +28,10 @@ export const siteBowlers = bowlers.slice(0, 90)
 export const deskBowlers = bowlers.slice(90)
 
 export const fullName = (bowler: Bowler) => `${bowler.firstName} ${bowler.lastName}`
+
+/** A bowler by number. */
+export function bowlerAt(index: number): Bowler {
+  const found = bowlers[index]
+  if (!found) throw new Error(`No bowler ${index}`)
+  return found
+}

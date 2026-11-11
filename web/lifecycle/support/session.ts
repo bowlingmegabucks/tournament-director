@@ -54,7 +54,12 @@ export async function enterAllScores(
   page: Page,
   squadPath: string,
   games: number,
-  scoreOf: (name: string, game: number) => number,
+  scoreOf: (name: string, game: number) => number | null,
+  /** How this squad differs from "everyone bowls every game": wrong numbers, walk-offs. */
+  quirks: {
+    typo?: (name: string, game: number) => number | undefined
+    walksOff?: (name: string, game: number) => boolean
+  } = {},
 ) {
   for (let game = 1; game <= games; game++) {
     await page.goto(`${squadPath}/scores/entry/${game}`)
@@ -69,12 +74,36 @@ export async function enterAllScores(
       await expect(sheet).toBeVisible()
       const boxes = await sheet.getByRole('textbox').all()
       let typed = 0
+      // A keeper who types a wrong number, saves it, and fixes it: reload so the fix is a real edit.
+      for (const box of await sheet.getByRole('textbox').all()) {
+        const label = (await box.getAttribute('aria-label')) ?? ''
+        const name = /^Lane \w+, (.+), game \d+$/.exec(label)?.[1] ?? ''
+        const wrong = quirks.typo?.(name, game)
+        const right = scoreOf(name, game)
+        if (wrong === undefined || right === null) continue
+        await saveBox(box, String(wrong))
+        await page.reload()
+        await expect(sheet).toBeVisible()
+        await saveBox(box, String(right))
+        typed++
+      }
       for (const box of boxes) {
         const label = (await box.getAttribute('aria-label')) ?? ''
         const name = /^Lane \w+, (.+), game \d+$/.exec(label)?.[1]
         if (!name) throw new Error(`Unexpected score box: ${label}`)
         if ((await box.inputValue()) !== '') continue
-        await saveBox(box, String(scoreOf(name, game)))
+        const score = scoreOf(name, game)
+        if (score === null) {
+          // A bowler who walks off is flagged at the game they stop; the box stays empty.
+          if (quirks.walksOff?.(name, game)) {
+            await sheet
+              .getByRole('button', { name: new RegExp(`^Did not finish ?, ${escapeRegex(name)}$`) })
+              .click()
+            await expect(sheet.getByText('Did not finish', { exact: true })).toBeVisible()
+          }
+          continue
+        }
+        await saveBox(box, String(score))
         typed++
       }
       await expect(sheet.getByText('✓ Saved')).toHaveCount(typed)
@@ -83,13 +112,27 @@ export async function enterAllScores(
 }
 
 /** On a session page: complete it after reading the dialog. */
-export async function completeSession(page: Page, kind: 'squad' | 'sweeper', entered: number) {
+export async function completeSession(
+  page: Page,
+  kind: 'squad' | 'sweeper',
+  entered: number,
+  /** Bowlers with no scores (they get zeros) and with some games (they stay), and the games. */
+  gaps?: { noScore: number; partial: number; games: number },
+) {
   await page.getByRole('button', { name: `Complete ${kind}` }).click()
   const dialog = page.getByRole('dialog', { name: `Complete this ${kind}?` })
   await expect(dialog).toContainText(`${entered} bowlers are entered.`)
   // Every bowler has all their scores, so completing writes no zeros (D-190).
-  if (kind === 'squad')
+  if (kind === 'squad' && !gaps)
     await expect(dialog).toContainText('All have scores, so no zeros are saved.')
+  if (gaps) {
+    await expect(dialog).toContainText(
+      `${gaps.noScore} has no scores and will get 0 for each of ${gaps.games} games.`,
+    )
+    await expect(dialog).toContainText(
+      `${gaps.partial} has fewer than ${gaps.games} games and stays as entered.`,
+    )
+  }
   await dialog.getByRole('button', { name: `Complete ${kind}` }).click()
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Complete')
   await expect(page.getByRole('button', { name: `Complete ${kind}` })).toHaveCount(0)
@@ -234,3 +277,32 @@ async function chooseDivision(page: Page, division: string) {
   const option = chooser.getByRole('option', { name: new RegExp(`^${division} \\(`) })
   await chooser.selectOption(await option.getAttribute('value'))
 }
+
+/**
+ * On a complete squad's results: a division lists a bowler under "No show" or "Did not finish"
+ * (RES-30), and does not place them.
+ */
+export async function checkGapSection(
+  page: Page,
+  squadPath: string,
+  division: string,
+  section: 'No show' | 'Did not finish',
+  name: string,
+) {
+  await page.goto(`${squadPath}/results`)
+  await chooseDivision(page, division)
+  await expect(page.getByRole('heading', { level: 3, name: section })).toBeVisible()
+  const list =
+    section === 'No show'
+      ? page.getByRole('listitem').filter({ hasText: name })
+      : page
+          .getByRole('table', { name: `${division} division, did not finish` })
+          .getByRole('row')
+          .filter({ hasText: name })
+  await expect(list).toHaveCount(1)
+  // The bowler has no place in the main table.
+  const placed = page.getByRole('table', { name: `Results for the ${division} division` })
+  await expect(placed.getByRole('row').filter({ hasText: name })).toHaveCount(0)
+}
+
+const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

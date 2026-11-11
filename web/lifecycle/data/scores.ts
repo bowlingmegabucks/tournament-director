@@ -75,3 +75,47 @@ export function scoreOf(bowler: Bowler, game: number, squad: string): number {
 
 export const scoreFor = (name: string, game: number, squad: string) =>
   scoreOf(bowlerNamed(name), game, squad)
+
+/**
+ * Scores the keeper never enters, by session key and bowler number: the first game the bowler does
+ * not bowl. A no-show misses game 1 (squad D, bowler 149: Complete saves their zeros). A walk-off
+ * bowls three games and is flagged "did not finish" at game 4 (squad D, bowler 147: Complete saves
+ * nothing for them). Bowler 90 misses all of sweeper one: a sweeper saves no zeros, so the super
+ * sweeper tags them "Missed a sweeper" (D-90). All three are placed outside every checked list.
+ */
+export const missedFrom: Record<string, number> = {
+  D149: 1,
+  D147: 4,
+  S1_90: 1,
+}
+
+/** Squad D, bowler 147: flagged at the game they stop. */
+export const walkOffs: Record<string, number> = { D147: 4 }
+
+/**
+ * A score the keeper types wrong first and corrects, by session key, bowler number, and game: the
+ * wrong number. Bowler 34's fourth game in squad A is 200; the keeper first types 20.
+ */
+export const typos: Record<string, { game: number; wrong: number }> = {
+  A34: { game: 4, wrong: 20 },
+}
+
+const keyOf = (squad: string, bowler: Bowler) =>
+  `${squad}${squad.startsWith('S') ? '_' : ''}${bowler.index}`
+
+/** The score the keeper enters, or null when the bowler does not bowl that game. */
+export function enteredScore(name: string, game: number, squad: string): number | null {
+  const bowler = bowlerNamed(name)
+  const from = missedFrom[keyOf(squad, bowler)]
+  return from !== undefined && game >= from ? null : scoreOf(bowler, game, squad)
+}
+
+/** The wrong number the keeper types first for this box, if any. */
+export function typoFor(name: string, game: number, squad: string): number | undefined {
+  const typo = typos[keyOf(squad, bowlerNamed(name))]
+  return typo?.game === game ? typo.wrong : undefined
+}
+
+/** True when this box is the game where the bowler walks off. */
+export const walksOff = (name: string, game: number, squad: string) =>
+  walkOffs[keyOf(squad, bowlerNamed(name))] === game

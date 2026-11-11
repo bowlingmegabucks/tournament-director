@@ -33,6 +33,7 @@ import {
   checkDivisionResults,
   checkEarlierAdvancer,
   checkFinals,
+  checkGapSection,
   checkFinalsOfficial,
   checkSuperSweeper,
   checkSweeperResults,
@@ -50,10 +51,10 @@ import {
   sweeperOneResults,
   sweeperTwoResults,
 } from './data/expectedResults'
-import { scoreFor, scoreOf } from './data/scores'
+import { enteredScore, scoreOf, typoFor, walksOff } from './data/scores'
 import { VendorApi } from './support/vendorApi'
 import { idByDate, idByName, vendorRegistration } from './support/vendorPayload'
-import { deskBowlers, fullName, returning, siteBowlers } from './data/bowlers'
+import { bowlerAt, deskBowlers, fullName, returning, siteBowlers } from './data/bowlers'
 import {
   afterDeskExpected,
   deskBatchOf,
@@ -465,8 +466,15 @@ for (const batch of deskBatches) {
     const path = await openSquad(page, squad)
     await assignAllLanes(page, squad, entered)
     const letter = 'ABCD'[batch] ?? ''
-    await enterAllScores(page, path, Number(tournament.games), (name, game) =>
-      scoreFor(name, game, letter),
+    await enterAllScores(
+      page,
+      path,
+      Number(tournament.games),
+      (name, game) => enteredScore(name, game, letter),
+      {
+        typo: (name, game) => typoFor(name, game, letter),
+        walksOff: (name, game) => walksOff(name, game, letter),
+      },
     )
     // The public Scores tab shows what the keeper typed: one site bowler's six games.
     const bowler = siteBowlers.find((candidate) => squadsFor(candidate).includes(squad))
@@ -477,7 +485,17 @@ for (const batch of deskBatches) {
       await expect(row).toContainText(String(scoreOf(bowler, game, letter)))
     }
     await page.goto(path)
-    await completeSession(page, 'squad', entered)
+    // Squad D has a no-show (zeros saved) and a walk-off (stays as entered).
+    await completeSession(
+      page,
+      'squad',
+      entered,
+      letter === 'D' ? { noScore: 1, partial: 1, games: Number(tournament.games) } : undefined,
+    )
+    if (letter === 'D') {
+      await checkGapSection(page, path, 'Handicap', 'No show', fullName(bowlerAt(149)))
+      await checkGapSection(page, path, 'Scratch', 'Did not finish', fullName(bowlerAt(147)))
+    }
     // The squad's results against the designed scores: places, lines, and tie notes.
     for (const want of expectedResults.filter((candidate) => candidate.squad === letter)) {
       await checkDivisionResults(page, path, want)
@@ -509,7 +527,7 @@ for (const [number, sweeper, entered] of [
     const path = await openSession(page, sweeper, 'sweeper')
     await assignAllLanes(page, sweeper, entered)
     await enterAllScores(page, path, Number(sweeper.games), (name, game) =>
-      scoreFor(name, game, key),
+      enteredScore(name, game, key),
     )
     // The public Scores tab shows what the keeper typed: one site bowler's three games.
     const bowler = siteBowlers.find((candidate) => sweepersFor(candidate).includes(sweeper))
@@ -523,6 +541,13 @@ for (const [number, sweeper, entered] of [
     await completeSession(page, 'sweeper', entered)
     await checkSweeperResults(page, path, number === 1 ? sweeperOneResults : sweeperTwoResults)
     // Both sweepers are complete after the second: the super sweeper is official.
-    if (number === 2) await checkSuperSweeper(page, path, superSweeperResults)
+    if (number === 2) {
+      await checkSuperSweeper(page, path, superSweeperResults)
+      // Bowler 90 never bowled sweeper one: the row says so and scores 0 there (D-90).
+      await expect(page.getByText('Missed a sweeper', { exact: true })).toHaveCount(1)
+      await expect(page.getByText(/^Missed the .* sweeper\. Scored 0 for 3 games\.$/)).toHaveCount(
+        1,
+      )
+    }
   })
 }

@@ -11,7 +11,11 @@ export const sessionCard = (page: Page, label: string) =>
   page.getByRole('listitem').filter({ hasText: label })
 
 /** On the Divisions page: open New division, fill it, and save. Leaves the page where the save lands. */
-export async function addDivision(page: Page, division: DivisionData, gender?: string) {
+export async function addDivision(
+  page: Page,
+  division: Pick<DivisionData, 'name' | 'fields'>,
+  gender?: string,
+) {
   await page.getByRole('link', { name: 'New division' }).click()
   await page.getByLabel('Name (required)', { exact: true }).fill(division.name)
   if (gender) await page.getByLabel('Gender').selectOption(gender)
@@ -50,4 +54,36 @@ export async function addSweeper(page: Page, sweeper: SweeperData) {
     await page.getByLabel(division, { exact: true }).fill(pins)
   }
   await page.getByRole('button', { name: 'Add sweeper' }).click()
+}
+
+interface TournamentData {
+  name: string
+  start: string
+  end: string
+  bowlingCenter: string
+  entryFee: string
+  games: string
+  finalsRatio: string
+  cashRatio: string
+  superSweeperCashRatio: string
+}
+
+/** On the Tournaments page: open New tournament, fill it, and save. Lands on the overview. */
+export async function addTournament(page: Page, tournament: TournamentData) {
+  await page.getByRole('link', { name: 'New tournament' }).click()
+  await page.getByLabel('Name (required)', { exact: true }).fill(tournament.name)
+  await page.getByLabel('Start date (required)', { exact: true }).fill(tournament.start)
+  await page.getByLabel('End date (required)', { exact: true }).fill(tournament.end)
+  await page.getByLabel('Bowling center (required)', { exact: true }).fill(tournament.bowlingCenter)
+  await page
+    .getByLabel('Entry fee in dollars (required)', { exact: true })
+    .fill(tournament.entryFee)
+  await page.getByLabel('Games per squad (required)', { exact: true }).fill(tournament.games)
+  await page.getByLabel('Finals ratio (required)', { exact: true }).fill(tournament.finalsRatio)
+  await page.getByLabel('Cash ratio (required)', { exact: true }).fill(tournament.cashRatio)
+  await page
+    .getByLabel('Super sweeper cash ratio (required)', { exact: true })
+    .fill(tournament.superSweeperCashRatio)
+  await page.getByRole('button', { name: 'Save tournament' }).click()
+  await expect(page.getByRole('heading', { name: tournament.name, level: 1 })).toBeVisible()
 }

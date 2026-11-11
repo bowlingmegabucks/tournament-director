@@ -10,7 +10,7 @@ The other suites check one screen or route at a time, on mocks or small data. Th
 
 ## Status
 
-Built so far (branch `results`, 1.0.0-rc.1): the harness and stages 0 to 3, in `web/lifecycle/`. Run `npm run test:lifecycle` in `web/` (needs Docker and `python3`).
+Built so far (branch `results`, 1.0.0-rc.1): the harness, stages 0 to 3, and the registration site's part of stage 4, in `web/lifecycle/`. Run `npm run test:lifecycle` in `web/` (needs Docker and `python3`).
 
 - **Stack.** `web/lifecycle/docker-compose.yml` (its own MariaDB on 15406 and Mailpit on 15425, no volume), the API on 3100 (empty tables from `npm run db:tables` in `api/`), and the production web build (`dist-lifecycle`, sign-in on, `check:dist` run on it) on 4273. `globalTeardown` removes the containers; `LIFECYCLE_KEEP=1` keeps them.
 - **Stage 0 so far.** First admin from `users:create-admin` through a pseudo-terminal (`support/answerPrompts.py`, because the script refuses piped input), then director and score keeper through the add-user page, invites read from Mailpit, passwords set, sign-in with the real login page. **Not yet:** the earlier tournament and its 50 returning bowlers.
@@ -18,7 +18,11 @@ Built so far (branch `results`, 1.0.0-rc.1): the harness and stages 0 to 3, in `
 - **Rule 9 gap.** "No live cache" needs a setting: `LIVE_CACHE_MS` is a constant in `ttlCache.ts`. Add an env var before stage 7.
 - **Stage 2.** Three divisions (scratch, 90% of 220 handicap, senior women 50+ with averages 100 to 180), the list and numbering, and the used-name 409.
 - **Stage 3.** Four squads (38 lanes edited to 40, 48 lanes with a $75 fee, 32 lanes with a 1 in 5 cash ratio, 40 lanes), two sweepers (one with bonus pins for the seniors, one edited from $25 to $30), a spare of each deleted, and the squad-outside-the-dates 409. The two scripted failures that need entries or lane saves wait for stages 4 and 5.
-- Stages 4 and up: not built.
+- **Dates.** The tournaments sit in March 2025 and September 2024 (fixed, in the past) because bowlers need real birth dates; a 2099 tournament made 2079 births.
+- **Stage 0, earlier tournament.** "Autumn Warmup" (one division, one squad, $50) made in the UI; the 50 returning bowlers (numbers 0 to 49 of `data/bowlers.json`) registered through the vendor routes with the API key. The page shows 50 bowlers registered.
+- **Stage 4, site part.** Bowlers 0 to 89 (60% of 150, 50 of them returning) register in the main tournament through `POST /v1/registrations`: two squads each by number modulo 4 (45 in each squad), sweeper one for every third (30), sweeper two for every second (45), super sweeper for 0, 6, and 12, a Stripe payment of the hand-worked fee. The Registrations page summary must show 90 bowlers, 3 in the super sweeper, and those counts. Rules for who enters what are in `data/registrationPlan.ts`.
+- **Bowler data.** `data/bowlers.json` (150 bowlers) is made once by `node lifecycle/data/generateBowlers.ts` and committed; the run never calls faker (rule 4).
+- **Not built yet:** the desk's 60 new bowlers and the added squads and sweepers (about 40% of the work), the edits and deletes of the stage-4 list, the money checks, and the scripted failures that need entries. Stages 5 and up.
 
 ## Rules
 

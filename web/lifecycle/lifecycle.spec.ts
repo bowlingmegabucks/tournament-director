@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { admin, director, scoreKeeper } from './data/people'
-import { editedBowlingCenter, tournament } from './data/tournament'
+import { earlier, editedBowlingCenter, tournament } from './data/tournament'
 import { divisions, scratch } from './data/divisions'
 import {
   outsideDate,
@@ -18,7 +18,25 @@ import {
   sweepers,
 } from './data/sessions'
 import { createFirstAdmin } from './support/createAdmin'
-import { addDivision, addSquad, addSweeper, divisionRow, sessionCard } from './support/forms'
+import {
+  addDivision,
+  addSquad,
+  addSweeper,
+  addTournament,
+  divisionRow,
+  sessionCard,
+} from './support/forms'
+import { VendorApi } from './support/vendorApi'
+import { idByDate, idByName, vendorRegistration } from './support/vendorPayload'
+import { returning, siteBowlers } from './data/bowlers'
+import {
+  divisionFor,
+  siteExpected,
+  squadFee,
+  squadsFor,
+  superSweeperFor,
+  sweepersFor,
+} from './data/registrationPlan'
 import { openTournamentPage } from './support/navigate'
 import { inviteLinkIn, waitForMail } from './support/mail'
 import { mainMenu, signIn } from './support/signIn'
@@ -55,28 +73,59 @@ test('stage 0: the first admin, then the other users through the add-user page',
   await signIn(page, director)
 })
 
+test('stage 0: the earlier tournament, and its 50 bowlers register through the site', async ({
+  page,
+}) => {
+  await signIn(page, director)
+  await mainMenu(page).getByRole('link', { name: 'Tournaments' }).click()
+  await addTournament(page, earlier)
+  await page
+    .getByRole('navigation', { name: earlier.name })
+    .getByRole('link', { name: 'Divisions' })
+    .click()
+  await addDivision(page, { name: earlier.division.name, fields: {} })
+  await expect(page.getByText('Division created')).toBeVisible()
+  await page
+    .getByRole('navigation', { name: earlier.name })
+    .getByRole('link', { name: 'Squads' })
+    .click()
+  await addSquad(page, { ...earlier.squad, date: earlier.squad.date, label: '' })
+  await expect(page.getByText('Squad created')).toBeVisible()
+
+  const site = await VendorApi.open()
+  try {
+    const earlierTournament = await site.tournament(earlier.name)
+    const divisionId = idByName(earlierTournament.divisions, earlier.division.name)
+    const squadId = idByDate(earlierTournament.squads, earlier.squad.date)
+    for (const bowler of returning) {
+      await site.register(
+        vendorRegistration(bowler, earlierTournament, {
+          divisionId,
+          squadIds: [squadId],
+          sweeperIds: [],
+          superSweeper: false,
+          amount: Number(earlier.entryFee),
+          codePrefix: 'ch_earlier',
+        }),
+      )
+    }
+  } finally {
+    await site.close()
+  }
+
+  await page
+    .getByRole('navigation', { name: earlier.name })
+    .getByRole('link', { name: 'Registrations' })
+    .click()
+  await expect(page.getByText('Bowlers registered').locator('+ dd')).toHaveText('50')
+})
+
 test('stage 1: the director creates the tournament, edits a free field, and checks the overview', async ({
   page,
 }) => {
   await signIn(page, director)
   await mainMenu(page).getByRole('link', { name: 'Tournaments' }).click()
-  await page.getByRole('link', { name: 'New tournament' }).click()
-
-  await page.getByLabel('Name (required)', { exact: true }).fill(tournament.name)
-  await page.getByLabel('Start date (required)', { exact: true }).fill(tournament.start)
-  await page.getByLabel('End date (required)', { exact: true }).fill(tournament.end)
-  await page.getByLabel('Bowling center (required)', { exact: true }).fill(tournament.bowlingCenter)
-  await page
-    .getByLabel('Entry fee in dollars (required)', { exact: true })
-    .fill(tournament.entryFee)
-  await page.getByLabel('Games per squad (required)', { exact: true }).fill(tournament.games)
-  await page.getByLabel('Finals ratio (required)', { exact: true }).fill(tournament.finalsRatio)
-  await page.getByLabel('Cash ratio (required)', { exact: true }).fill(tournament.cashRatio)
-  await page
-    .getByLabel('Super sweeper cash ratio (required)', { exact: true })
-    .fill(tournament.superSweeperCashRatio)
-  await page.getByRole('button', { name: 'Save tournament' }).click()
-
+  await addTournament(page, tournament)
   await expect(page.getByRole('heading', { name: tournament.name, level: 1 })).toBeVisible()
   await expect(page.getByText('Games per squad').locator('+ dd')).toHaveText(tournament.games)
   await expect(page.getByText('Finals ratio').locator('+ dd')).toHaveText('1 in 7.5')
@@ -89,9 +138,10 @@ test('stage 1: the director creates the tournament, edits a free field, and chec
   await expect(page.getByText('Tournament saved')).toBeVisible()
   await expect(page.getByText('Bowling center').locator('+ dd')).toHaveText(editedBowlingCenter)
 
-  // Exactly one tournament now exists: the list shows it once.
+  // The list shows the tournament once, beside the earlier one.
   await mainMenu(page).getByRole('link', { name: 'Tournaments' }).click()
-  await expect(page.getByRole('article')).toHaveCount(1)
+  await expect(page.getByRole('article').filter({ hasText: tournament.name })).toHaveCount(1)
+  await expect(page.getByRole('article')).toHaveCount(2)
 })
 
 test('stage 2: the director makes three divisions and the list numbers them', async ({ page }) => {
@@ -199,4 +249,54 @@ test('stage 3: four squads and two sweepers, an edit of each, and a spare of eac
   await expect(page.getByText('Sweeper deleted')).toBeVisible()
   await expect(sessionCard(page, spareSweeper.label)).toHaveCount(0)
   for (const sweeper of sweepers) await expect(sessionCard(page, sweeper.label)).toHaveCount(1)
+})
+
+test('stage 4: the registration site registers 90 bowlers, 50 of them returning', async ({
+  page,
+}) => {
+  const site = await VendorApi.open()
+  const main = await site.tournament(tournament.name)
+  try {
+    for (const bowler of siteBowlers) {
+      const squads = squadsFor(bowler)
+      const sweepers = sweepersFor(bowler)
+      const amount =
+        squads.reduce((sum, squad) => sum + squadFee(squad, main.entryFee), 0) +
+        sweepers.reduce((sum, sweeper) => sum + Number(sweeper.entryFee), 0)
+      await site.register(
+        vendorRegistration(bowler, main, {
+          divisionId: idByName(main.divisions, divisionFor(bowler)),
+          squadIds: squads.map((squad) => idByDate(main.squads, squad.date)),
+          sweeperIds: sweepers.map((sweeper) => idByDate(main.sweepers, sweeper.date)),
+          superSweeper: superSweeperFor(bowler),
+          amount,
+          codePrefix: 'ch_site',
+        }),
+      )
+    }
+  } finally {
+    await site.close()
+  }
+  // The Registrations page counts what the site sent.
+  await signIn(page, director)
+  await openTournamentPage(page, 'Registrations')
+  await expect(page.getByText('Bowlers registered').locator('+ dd')).toHaveText(
+    String(siteExpected.registrations),
+  )
+  await expect(page.getByText('Super sweeper', { exact: true }).locator('+ dd')).toHaveText(
+    String(siteExpected.superSweepers),
+  )
+  const bySquad = page.getByRole('region', { name: 'By squad' })
+  for (const squad of squads) {
+    await expect(bySquad.getByRole('listitem').filter({ hasText: squad.label })).toContainText(
+      String(siteExpected.squadEntries),
+    )
+  }
+  const bySweeper = page.getByRole('region', { name: 'By sweeper' })
+  await expect(bySweeper.getByRole('listitem').filter({ hasText: sweeperOne.label })).toContainText(
+    String(siteExpected.sweeperOneEntries),
+  )
+  await expect(bySweeper.getByRole('listitem').filter({ hasText: sweeperTwo.label })).toContainText(
+    String(siteExpected.sweeperTwoEntries),
+  )
 })

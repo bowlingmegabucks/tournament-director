@@ -157,6 +157,9 @@ export async function loadSweeperResults(
       : undefined
   const outcome = workOutSweeper(limited?.entries ?? built.entries, sweeper.cashRatio)
   const marks = markCashLine(outcome.cashers, outcome.others)
+  let throughGame: number | null = null
+  if (limited) throughGame = limited.through.get('sweeper') ?? 0
+  else if (mode === 'full-game') throughGame = sweeper.games
   const toRow = (entry: ResultEntry, index: number, group: 'casher' | 'other') => ({
     registrationId: entry.registrationId,
     name: entry.name,
@@ -180,11 +183,7 @@ export async function loadSweeperResults(
       games: sweeper.games,
     },
     mode,
-    throughGame: limited
-      ? (limited.through.get('sweeper') ?? 0)
-      : mode === 'full-game'
-        ? sweeper.games
-        : null,
+    throughGame,
     cashRatio: sweeper.cashRatio,
     entries: outcome.entryCount,
     cashers: outcome.cashCount,

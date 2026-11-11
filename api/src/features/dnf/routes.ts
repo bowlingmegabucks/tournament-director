@@ -42,6 +42,19 @@ export function createDnfRouter(
   const router = Router({ mergeParams: true })
   const label = kind === 'squad' ? 'Squad' : 'Sweeper'
 
+  function refuse(
+    log: { info: (fields: object, message: string) => void },
+    ids: object,
+    reason: 'complete' | 'no-score',
+  ): never {
+    if (reason === 'complete') {
+      log.info(ids, `DNF change refused: ${kind} or tournament complete`)
+      throw new HttpError(409, `This ${kind} is complete. Did not finish cannot change.`)
+    }
+    log.info(ids, 'DNF change refused: no score')
+    throw new HttpError(409, 'This bowler has no score yet, so there is nothing to finish.')
+  }
+
   async function change(
     req: { params: unknown },
     res: Parameters<typeof requestLogger>[0],
@@ -60,10 +73,7 @@ export function createDnfRouter(
       registrationId,
     }
     const log = requestLogger(res, logger)
-    if (tournament.completed || session.complete) {
-      log.info(ids, `DNF change refused: ${kind} or tournament complete`)
-      throw new HttpError(409, `This ${kind} is complete. Did not finish cannot change.`)
-    }
+    if (tournament.completed || session.complete) refuse(log, ids, 'complete')
     const entry = (await lanes.listEntries(sessionId)).find(
       (candidate) => candidate.registrationId === registrationId,
     )
@@ -71,10 +81,7 @@ export function createDnfRouter(
 
     if (flag) {
       const stored = await scores.listScores(sessionId)
-      if (!stored.some((row) => row.bowlerId === entry.bowlerId)) {
-        log.info(ids, 'DNF change refused: no score')
-        throw new HttpError(409, 'This bowler has no score yet, so there is nothing to finish.')
-      }
+      if (!stored.some((row) => row.bowlerId === entry.bowlerId)) refuse(log, ids, 'no-score')
     }
     const before = await live.before(id, kind, sessionId, registrationId)
     let changed: boolean
@@ -82,14 +89,7 @@ export function createDnfRouter(
       // The reads above give the messages; this write checks again inside one transaction, so a
       // Complete or a cleared score that landed since cannot leave a flag behind (D-249).
       const outcome = await store.setIfOpen({ tournamentId: id, kind, sessionId, registrationId })
-      if (outcome === 'complete') {
-        log.info(ids, `DNF change refused: ${kind} or tournament complete`)
-        throw new HttpError(409, `This ${kind} is complete. Did not finish cannot change.`)
-      }
-      if (outcome === 'no-score') {
-        log.info(ids, 'DNF change refused: no score')
-        throw new HttpError(409, 'This bowler has no score yet, so there is nothing to finish.')
-      }
+      if (outcome === 'complete' || outcome === 'no-score') refuse(log, ids, outcome)
       changed = outcome === 'set'
     } else {
       changed = await store.clear(sessionId, registrationId)

@@ -102,11 +102,11 @@ export function AutoScroll({
   return (
     // Focusable so the arrow keys scroll it (WCAG 2.1.1); a key press then pauses the scroll.
     // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrollable region must take focus
-    <div ref={view} className={styles.view} role="region" aria-label="Live results" tabIndex={0}>
+    <section ref={view} className={styles.view} aria-label="Live results" tabIndex={0}>
       <div ref={first}>{children}</div>
       <div ref={copy} aria-hidden="true" hidden>
         {children}
       </div>
-    </div>
+    </section>
   )
 }

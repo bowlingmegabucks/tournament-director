@@ -110,7 +110,8 @@ export function TotalCells({
   /** Only the first `counted` games are in `total` (RES-46); `null` when every game is. */
   counted?: number | null
 }>) {
-  const scratch = scores === null ? null : sum(counted === null ? scores : scores.slice(0, counted))
+  const countedScores = counted === null || scores === null ? scores : scores.slice(0, counted)
+  const scratch = countedScores === null ? null : sum(countedScores)
   // A sweeper still open with no score has no total yet: a dash that screen readers skip.
   const figure = (value: number | null) => value ?? <span aria-hidden="true">{'\u2013'}</span>
   if (!handicap) {

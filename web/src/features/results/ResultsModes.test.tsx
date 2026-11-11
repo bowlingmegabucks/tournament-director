@@ -179,9 +179,9 @@ describe('Results tab games not counted yet (RES-46, D-239)', () => {
     ).toBeVisible()
     expect(screen.getByText('Ranked through game 3. Game 4 has 1 of 2 scores.')).toBeVisible()
     // Mike has no fourth game: a plain dash, not a dimmed score.
-    expect(within(table.getByRole('row', { name: /Mike Orsini/ })).queryByText(/Not counted/)).toBe(
-      null,
-    )
+    expect(
+      within(table.getByRole('row', { name: /Mike Orsini/ })).queryByText(/Not counted/),
+    ).toBeNull()
   })
 
   it('dims nothing and has no legend in live mode (RES-46)', async () => {
@@ -309,7 +309,7 @@ describe('Results tab DNF tag (RES-56, D-251)', () => {
     )
 
     expect(within(table.getByRole('row', { name: /Walt Pruitt/ })).getByText('DNF')).toBeVisible()
-    expect(within(table.getByRole('row', { name: /Dana Whitcomb/ })).queryByText('DNF')).toBe(null)
+    expect(within(table.getByRole('row', { name: /Dana Whitcomb/ })).queryByText('DNF')).toBeNull()
   })
 })
 

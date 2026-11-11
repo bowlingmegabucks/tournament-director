@@ -177,8 +177,8 @@ describe('AutoScroll (RES-50, D-242)', () => {
   })
 
   describe('a viewer takes over (touch, wheel, scroll keys)', () => {
-    // The first div inside Testing Library's container is the scrolling view.
-    const viewOf = () => document.body.querySelector<HTMLElement>('div > div') as HTMLElement
+    // The labelled section inside Testing Library's container is the scrolling view.
+    const viewOf = () => document.body.querySelector<HTMLElement>('section') as HTMLElement
 
     function start() {
       size(1000, 400)

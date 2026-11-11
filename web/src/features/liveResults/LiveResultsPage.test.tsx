@@ -697,7 +697,7 @@ describe('LiveResultsPage offline and keeping alive (RES-52, D-246)', () => {
     expect(await screen.findByText('Out of date')).toBeVisible()
     expect(screen.getByRole('table', { name: 'Results for the Open division' })).toBeVisible()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    expect(screen.getByText('Out of date').closest('p')).toHaveTextContent(
+    expect(screen.getByText('Out of date').closest('output')).toHaveTextContent(
       /since \d{1,2}:\d{2} (am|pm)/,
     )
   })

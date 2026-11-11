@@ -90,6 +90,10 @@ interface SweeperScores {
   games: Map<string, number[]>
 }
 
+function flagFor(sweeperId: string, gamesBowled: number): SweeperFlag {
+  return { kind: gamesBowled === 0 ? 'missed' : 'unfinished', sweeperId, gamesBowled }
+}
+
 /** One bowler's combined entry, or `null` with no game in any sweeper. */
 function buildEntry(
   registrant: LaneEntry,
@@ -119,13 +123,7 @@ function buildEntry(
     const scratch = bowled.reduce((sum, score) => sum + score, 0)
     const sweeperTotal = scratch + pinsPerGame * bowled.length
     const missing = sweeper.complete ? Math.max(sweeper.games - bowled.length, 0) : 0
-    if (missing > 0) {
-      flags.push({
-        kind: bowled.length === 0 ? 'missed' : 'unfinished',
-        sweeperId: sweeper.id,
-        gamesBowled: bowled.length,
-      })
-    }
+    if (missing > 0) flags.push(flagFor(sweeper.id, bowled.length))
     const filled = [...bowled, ...Array.from({ length: missing }, () => 0)]
     sweeperScores.push(filled)
     sweeperPinsList.push(pinsPerGame)

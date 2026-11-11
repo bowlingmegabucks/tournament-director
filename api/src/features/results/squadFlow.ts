@@ -52,14 +52,14 @@ function workOutSquad(
   for (const entry of limited?.entries ?? built.entries) {
     byDivision.set(entry.divisionId, [...(byDivision.get(entry.divisionId) ?? []), entry])
   }
+  const throughGameOf = (divisionId: string): number | null => {
+    if (limited) return limited.through.get(divisionId) ?? 0
+    return mode === 'full-game' ? squad.games : null
+  }
   const outcomes = [...byDivision.entries()].map(([divisionId, list]) => ({
     divisionId,
     /** The games counted in this division: `null` in live mode, all the squad's games once it is complete. */
-    throughGame: limited
-      ? (limited.through.get(divisionId) ?? 0)
-      : mode === 'full-game'
-        ? squad.games
-        : null,
+    throughGame: throughGameOf(divisionId),
     outcome: workOutDivision({
       entries: list,
       advancedBefore,

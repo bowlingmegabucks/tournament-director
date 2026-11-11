@@ -184,23 +184,19 @@ export function createLiveNotifier({
       if (changes.length === 0 && !alone) return
       // The feed holds the old boards: drop it before the message that tells the TV to ask again.
       cache.dropTournament(tournamentId)
+      const where = (group: string) => ({
+        sessionId,
+        sessionKind: kind,
+        ...(group === SWEEPER ? {} : { divisionId: group }),
+        ...(names.has(group) ? { divisionName: names.get(group) } : {}),
+      })
       for (const { group, game, up } of changes) {
         events.publish(liveKey(tournamentId), up ? 'game-full' : 'reopened', {
-          sessionId,
-          sessionKind: kind,
-          ...(group === SWEEPER ? {} : { divisionId: group }),
-          ...(names.has(group) ? { divisionName: names.get(group) } : {}),
+          ...where(group),
           ...(up ? { game } : {}),
         })
       }
-      if (alone) {
-        events.publish(liveKey(tournamentId), 'scored', {
-          sessionId,
-          sessionKind: kind,
-          ...(own === SWEEPER ? {} : { divisionId: own }),
-          ...(names.has(own) ? { divisionName: names.get(own) } : {}),
-        })
-      }
+      if (alone) events.publish(liveKey(tournamentId), 'scored', where(own))
     } catch (err) {
       logger.warn({ err, tournamentId, sessionId }, 'Could not tell the live results of a change')
     }

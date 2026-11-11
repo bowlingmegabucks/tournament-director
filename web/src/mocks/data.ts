@@ -876,6 +876,16 @@ export function createDemoSquadResults(
     : results
 }
 
+function throughGameFor(
+  mode: RankMode,
+  results: SquadResults,
+  division: SquadResults['divisions'][number],
+): number | null {
+  if (mode === 'live') return null
+  if (results.session.complete) return results.session.games
+  return Math.min(...division.rows.map((row) => row.games))
+}
+
 /**
  * Rank a demo squad as `mode` says (D-239): live counts everything and has no counted games; the
  * steady mode counts all of a complete squad and the fewest games of an open division.
@@ -886,12 +896,7 @@ function applyMode(results: SquadResults, mode: RankMode): SquadResults {
     mode,
     divisions: results.divisions.map((division) => ({
       ...division,
-      throughGame:
-        mode === 'live'
-          ? null
-          : results.session.complete
-            ? results.session.games
-            : Math.min(...division.rows.map((row) => row.games)),
+      throughGame: throughGameFor(mode, results, division),
     })),
   }
 }

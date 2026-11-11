@@ -16,8 +16,18 @@ const wcagAA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
  * come from one moment and not from a page that moved between the reads.
  */
 async function holdStill(page: Page) {
-  await page.locator('main > div').first().dispatchEvent('wheel')
-  await page.waitForTimeout(100)
+  await page.locator('main > section').first().dispatchEvent('wheel')
+  // The scroll loop reads the touch on its next frame: wait for two frames to pass.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            resolve()
+          })
+        })
+      }),
+  )
 }
 
 async function openTournament(page: Page) {
@@ -57,7 +67,7 @@ test('the TV page scrolls on its own, and the heading stays pinned at the top (R
   await menuLink(page, 'Live results')
   const heading = page.getByRole('heading', { level: 2 }).first()
   await expect(heading).toBeVisible()
-  const view = page.locator('main > div').first()
+  const view = page.locator('main > section').first()
   const scrolled = () => view.evaluate((node) => node.scrollTop)
 
   // 40 pixels a second: it moves within a few seconds.

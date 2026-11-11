@@ -43,7 +43,7 @@ export function LiveResultsPage() {
   } else if (screens.length === 0) {
     body = (
       <div className={styles.center}>
-        No scores entered yet.
+        <span>No scores entered yet.</span>
         <small>This page fills in as scores come in. It updates on its own.</small>
       </div>
     )
@@ -76,14 +76,10 @@ export function LiveResultsPage() {
       <title>{`Live results · ${data?.tournament.name ?? ''} · Tournament Director`}</title>
       <header className={styles.bar}>
         <h1>Live results{data ? ` · ${data.tournament.name}` : ''}</h1>
-        <p className={styles.updated} role="status">
-          {idle}
-        </p>
+        <output className={styles.updated}>{idle}</output>
       </header>
       {/* The overlay is for the eye; this says the same for a screen reader, with nothing on screen. */}
-      <p className={styles.hidden} role="status">
-        {feed.notice}
-      </p>
+      <output className={styles.hidden}>{feed.notice}</output>
       <main className={styles.body}>{body}</main>
       {feed.announcement && (
         <GameAnnouncement
@@ -93,9 +89,9 @@ export function LiveResultsPage() {
         />
       )}
       {feed.stale && (
-        <p className={styles.offline} role="status">
+        <output className={styles.offline}>
           <strong>Out of date</strong> since {formatClock(new Date(feed.loadedAt).toISOString())}
-        </p>
+        </output>
       )}
     </div>
   )

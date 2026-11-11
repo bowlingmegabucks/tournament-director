@@ -128,7 +128,8 @@ function divisionLabel(event: LiveEvent, feed: LiveResults | undefined): string 
     .find((candidate) => candidate.id === divisionId)?.name
   const name = event.detail.divisionName ?? fromFeed
   // A division already called "... Division" does not get the word twice.
-  return name ? (/division$/i.test(name) ? name : `${name} Division`) : 'Division'
+  if (!name) return 'Division'
+  return /division$/i.test(name) ? name : `${name} Division`
 }
 
 /** "Results are official" for a squad or sweeper that completed, named by its time from the feed. */

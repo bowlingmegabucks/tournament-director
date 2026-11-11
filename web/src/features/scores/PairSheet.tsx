@@ -349,9 +349,7 @@ export function PairSheet({
                 <div className={styles.dnf}>
                   {bowler.dnf ? (
                     <>
-                      <span className={styles.dnfState} role="status">
-                        Did not finish
-                      </span>
+                      <output className={styles.dnfState}>Did not finish</output>
                       <button
                         type="button"
                         className={styles.dnfButton}
@@ -359,7 +357,7 @@ export function PairSheet({
                           void changeDnf(bowler, false)
                         }}
                       >
-                        Undo
+                        <span>Undo</span>
                         <span className={styles.hidden}>, did not finish for {bowler.name}</span>
                       </button>
                     </>

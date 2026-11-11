@@ -15,7 +15,7 @@ const pinsFor = (division: { id: string; name: string }, bonusPinsPerGame: numbe
 })
 
 const registrant = (over: Partial<LaneEntry> = {}) =>
-  createLaneEntry({ superSweeper: true, divisionId: open.id, ...over })
+  createLaneEntry({ superSweeper: true, divisionId: open.id, position: '1A', ...over })
 
 /** A sweeper with the given entries, each bowling `scores`. */
 function sweeperOf(
@@ -191,6 +191,19 @@ describe('buildSuperSweeperEntries', () => {
     const { through } = buildSuperSweeperEntries([running], [open], { mode: 'full-game' })
 
     expect(through.get(running.sweeper.id)).toBe(0)
+  })
+
+  it('does not wait for a bowler with no lane in an open sweeper (RES-42)', () => {
+    const bowler = registrant()
+    const noShow = registrant({ position: '' })
+    const running = sweeperOf({ complete: false, games: 3 }, [
+      { entry: bowler, scores: [200, 200] },
+      { entry: noShow, scores: [] },
+    ])
+
+    const { through } = buildSuperSweeperEntries([running], [open], { mode: 'full-game' })
+
+    expect(through.get(running.sweeper.id)).toBe(2)
   })
 
   it('leaves out a bowler with no game at all while every sweeper is open', () => {

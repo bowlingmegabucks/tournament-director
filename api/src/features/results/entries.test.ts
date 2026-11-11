@@ -87,10 +87,10 @@ describe('buildResultEntries', () => {
     })
   })
 
-  it('lists an entered bowler with no score as waiting, in the division they are in', () => {
-    const bowler = createLaneEntry({ divisionId: open.id })
-    const quiet = createLaneEntry({ divisionId: open.id })
-    const lost = createLaneEntry()
+  it('lists an entered bowler with a lane and no score as waiting, in the division they are in', () => {
+    const bowler = createLaneEntry({ divisionId: open.id, position: '1A' })
+    const quiet = createLaneEntry({ divisionId: open.id, position: '1B' })
+    const lost = createLaneEntry({ position: '2A' })
 
     const { entries, waiting, skipped } = buildResultEntries(
       [bowler, quiet, lost],
@@ -103,6 +103,20 @@ describe('buildResultEntries', () => {
     // `lost` is in a division the tournament does not have: neither an entry nor a bowler to wait for.
     expect(waiting).toEqual([{ registrationId: quiet.registrationId, divisionId: open.id }])
     expect(skipped).toEqual([])
+  })
+
+  it('does not wait for a bowler with no lane, such as one taken off the lane assignment', () => {
+    const bowler = createLaneEntry({ divisionId: open.id, position: '1A' })
+    const noShow = createLaneEntry({ divisionId: open.id, position: '' })
+
+    const { waiting } = buildResultEntries(
+      [bowler, noShow],
+      [{ bowlerId: bowler.bowlerId, game: 1, score: 200 }],
+      [open],
+      () => 0,
+    )
+
+    expect(waiting).toEqual([])
   })
 
   it('keeps a game with no saved score as null by game number, so the page can show a dash', () => {

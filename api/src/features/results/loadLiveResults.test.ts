@@ -83,7 +83,7 @@ function setup(options: {
 const squadAt = (date: string, over: Partial<Squad> = {}) =>
   createSquad({ date, finalsRatio: 4, cashRatio: 2, games: 3, ...over })
 const bowler = (over: Partial<LaneEntry> = {}) =>
-  createLaneEntry({ divisionId: open.id, average: null, ...over })
+  createLaneEntry({ divisionId: open.id, average: null, position: '1A', ...over })
 
 describe('loadLiveResults (RES-47, D-242, D-244)', () => {
   it('lists the squads in date order, then the sweepers, and matches the schema', async () => {

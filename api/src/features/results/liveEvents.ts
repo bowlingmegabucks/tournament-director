@@ -19,6 +19,8 @@ export interface LiveSnapshot {
   counted: ReadonlyMap<string, number>
   /** The registration the change is for, so its division is told even when no game filled. */
   registrationId?: string
+  /** That bowler's row before the change, to tell whether the change moved it. */
+  signature?: string
 }
 
 /**
@@ -80,12 +82,24 @@ export function createLiveNotifier({
       built.waiting,
       kind === 'squad' ? (waiter) => waiter.divisionId : () => SWEEPER,
     )
-    const groupOf = (entry: { divisionId: string }) =>
-      kind === 'squad' ? entry.divisionId : SWEEPER
+    const flaggedHere = flagged.get(sessionId) ?? new Set<string>()
     return {
       through,
-      names: new Map(all.map((division) => [division.id, division.name])),
-      groups: new Map(entries.map((entry) => [entry.registrationId, groupOf(entry)])),
+      /** What one bowler's row shows: their games and the flag. A change here changes the table. */
+      signatureOf: (registrationId: string) => {
+        const row = built.entries.find((entry) => entry.registrationId === registrationId)
+        return JSON.stringify([row?.gameScores ?? null, flaggedHere.has(registrationId)])
+      },
+      /** The division names and each bowler's group, for the message. Built only when one is sent. */
+      describe: () => ({
+        names: new Map(all.map((division) => [division.id, division.name])),
+        groups: new Map(
+          entries.map((entry) => [
+            entry.registrationId,
+            kind === 'squad' ? entry.divisionId : SWEEPER,
+          ]),
+        ),
+      }),
     }
   }
 
@@ -104,10 +118,17 @@ export function createLiveNotifier({
         return undefined
       }
       try {
-        const { through: counted } = await read(tournamentId, kind, sessionId)
+        const { through: counted, signatureOf } = await read(tournamentId, kind, sessionId)
         // The first snapshot of a quiet session is what was last seen, however late the others come.
         if (!seen.has(sessionId)) seen.set(sessionId, counted)
-        return { tournamentId, kind, sessionId, counted, registrationId }
+        return {
+          tournamentId,
+          kind,
+          sessionId,
+          counted,
+          registrationId,
+          signature: registrationId ? signatureOf(registrationId) : undefined,
+        }
       } catch (err) {
         logger.warn({ err, tournamentId, sessionId }, 'Could not read the counted games')
         return undefined
@@ -133,11 +154,7 @@ export function createLiveNotifier({
   async function compare(snapshot: LiveSnapshot): Promise<void> {
     const { tournamentId, kind, sessionId } = snapshot
     try {
-      const {
-        through: now,
-        names,
-        groups: groupOfRegistration,
-      } = await read(tournamentId, kind, sessionId)
+      const { through: now, signatureOf, describe } = await read(tournamentId, kind, sessionId)
       const counted = seen.get(sessionId) ?? snapshot.counted
       seen.set(sessionId, now)
       const groups = new Set([...counted.keys(), ...now.keys()])
@@ -150,12 +167,18 @@ export function createLiveNotifier({
       })
       // A score that fills no game still changes its division's table: tell the division, so the TV
       // shows the new score (dimmed, not counted yet) at once.
+      const { names, groups: groupOfRegistration } = describe()
       const own = snapshot.registrationId
         ? groupOfRegistration.get(snapshot.registrationId)
         : undefined
-      // Nothing shows for a group with no counted game yet, so there is nothing to refresh.
+      // Nothing shows for a group with no counted game yet, so there is nothing to refresh; and a
+      // save that left the bowler's row as it was (the same value again) changes no table.
+      const moved =
+        snapshot.registrationId !== undefined &&
+        signatureOf(snapshot.registrationId) !== snapshot.signature
       const alone =
         own !== undefined &&
+        moved &&
         (now.get(own) ?? 0) > 0 &&
         !changes.some((change) => change.group === own)
       if (changes.length === 0 && !alone) return

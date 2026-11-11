@@ -60,7 +60,7 @@ export function sweeperPins(bonusPins: readonly BonusPins[]) {
   return (_entry: LaneEntry, division: Division): number => byDivision.get(division.id) ?? 0
 }
 
-/** An entered bowler with no score yet: not a result entry, but a game is not full until they bowl it. */
+/** An entered bowler with a lane and no score yet: not a result entry, but a game is not full until they bowl it. */
 export interface WaitingEntry {
   registrationId: string
   divisionId: string
@@ -101,7 +101,10 @@ export function buildResultEntries(
     const division = divisionById.get(entry.divisionId)
     if (!stored) {
       // No score yet: left out of the results, but a game cannot be full without them (RES-40).
-      if (division) waiting.push({ registrationId: entry.registrationId, divisionId: division.id })
+      // A bowler with no lane (taken off the lane assignment, as a no-show is) cannot bowl, so no one waits.
+      if (division && entry.position !== '') {
+        waiting.push({ registrationId: entry.registrationId, divisionId: division.id })
+      }
       continue
     }
     if (!division) {

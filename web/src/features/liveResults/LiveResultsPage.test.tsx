@@ -591,6 +591,36 @@ describe('LiveResultsPage follows the stream (RES-49, RES-50, D-243 to D-245)', 
     expect(screen.queryByText(/complete/)).not.toBeInTheDocument()
   })
 
+  it('takes a division off the screen when a cleared score leaves it with no counted game', async () => {
+    await ready()
+    server.use(
+      http.get('/v1/tournaments/:id/squads/:sessionId/results', () =>
+        HttpResponse.json(
+          createSquadResults({
+            session: { ...createSquadResults().session, id: squadId },
+            divisions: [openDivision({ throughGame: 0 })],
+          }),
+        ),
+      ),
+    )
+
+    act(() => {
+      FakeEventSource.latest().message(
+        message('reopened', { sessionId: squadId, sessionKind: 'squad', divisionId: openId }),
+      )
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('table', { name: 'Results for the Open division' }),
+      ).not.toBeInTheDocument()
+    })
+    // The other division stays, and the page did not fall back to loading everything.
+    expect(
+      screen.getByRole('table', { name: 'Results for the Senior division' }),
+    ).toBeInTheDocument()
+  })
+
   it('loads everything when the division is not in the feed yet (D-244)', async () => {
     const { calls } = await ready()
 

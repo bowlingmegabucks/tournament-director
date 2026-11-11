@@ -62,7 +62,8 @@ function setup(initial: Scores = {}, entries: LaneEntry[] = []) {
   return { notifier, hub, seen, state, dnf, dropped, captured, watching }
 }
 
-const bowler = (divisionId = open.id) => createLaneEntry({ divisionId, average: null })
+const bowler = (divisionId = open.id) =>
+  createLaneEntry({ divisionId, average: null, position: '1A' })
 
 describe('live notifier (RES-49, D-243)', () => {
   it('sends game-full with the division and the new game when a game fills', async () => {
@@ -329,6 +330,32 @@ describe('live notifier (RES-49, D-243)', () => {
       await live.after(before)
 
       expect(seen).toEqual([])
+    })
+
+    it('says nothing when the save left the bowler as they were (the same score again)', async () => {
+      const a = bowler()
+      const b = bowler()
+      const { notifier, seen, dropped } = setup(started(a, b), [a, b])
+      const live = notifier()
+
+      const before = await live.before(tournamentId, 'squad', sessionId, a.registrationId)
+      await live.after(before)
+
+      expect(seen).toEqual([])
+      expect(dropped).not.toHaveBeenCalled()
+    })
+
+    it('tells the division when a flag changes a row that no game count moved for', async () => {
+      const a = bowler()
+      const b = bowler()
+      const { notifier, seen, dnf } = setup(started(a, b), [a, b])
+      const live = notifier()
+
+      const before = await live.before(tournamentId, 'squad', sessionId, a.registrationId)
+      await dnf.store.set(sessionId, a.registrationId)
+      await live.after(before)
+
+      expect(seen.map((event) => event.kind)).toEqual(['scored'])
     })
 
     it('names no division for a sweeper', async () => {

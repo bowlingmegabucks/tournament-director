@@ -181,10 +181,13 @@ export function buildSuperSweeperEntries(
     let limit: number | null = null
     if (mode === 'full-game' && !sweeper.complete) {
       // A bowler entered in the sweeper with no score has bowled no game, so no game is full yet.
-      const bowlers = entries.map((entry) => ({
-        registrationId: entry.registrationId,
-        games: runs.get(entry.bowlerId) ?? 0,
-      }))
+      // A bowler with no lane (taken off the lane assignment) cannot bowl, so no one waits for them.
+      const bowlers = entries
+        .filter((entry) => runs.has(entry.bowlerId) || entry.position !== '')
+        .map((entry) => ({
+          registrationId: entry.registrationId,
+          games: runs.get(entry.bowlerId) ?? 0,
+        }))
       limit = fewestGames(bowlers, flagged?.get(sweeper.id) ?? noFlags) ?? 0
     }
     through.set(sweeper.id, limit ?? (mode === 'full-game' ? sweeper.games : null))

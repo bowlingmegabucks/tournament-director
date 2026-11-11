@@ -88,7 +88,8 @@ function setup(options: {
   return { deps, reporting, tournament, asked, captured }
 }
 
-const bowler = (divisionId = open.id) => createLaneEntry({ divisionId, average: null })
+const bowler = (divisionId = open.id) =>
+  createLaneEntry({ divisionId, average: null, position: '1A' })
 
 /** Four bowlers, each in every squad given, with these games. */
 function field(sessions: string[], games: number[][], divisionId = open.id) {
@@ -826,6 +827,31 @@ describe('DNF flags in the results (RES-55, RES-56, D-248, D-251)', () => {
 
     expect(await run([])).toBe(0)
     expect(await run([190])).toBe(1)
+  })
+
+  it('does not wait for a bowler taken off the lane assignment, as a no-show is (RES-40)', async () => {
+    const squad = squadAt(morning, { complete: false })
+    const world = setup({
+      squads: [squad],
+      seats: [
+        { sessionId: squad.id, entry: bowler(open.id), games: [200] },
+        {
+          sessionId: squad.id,
+          entry: createLaneEntry({ divisionId: open.id, average: null, position: '' }),
+          games: [],
+        },
+      ],
+    })
+
+    const result = await loadSquadResults(
+      world.deps,
+      world.reporting,
+      world.tournament.id,
+      squad.id,
+      { mode: 'full-game' },
+    )
+
+    expect(result.divisions[0]?.throughGame).toBe(1)
   })
 
   it('does not wait for a bowler with no score once the squad is complete (RES-43)', async () => {

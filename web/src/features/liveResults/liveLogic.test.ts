@@ -242,6 +242,29 @@ describe('replaceDivision (D-244)', () => {
     expect(second?.kind === 'squad' && second.results.divisions[0]?.entries).toBe(0)
   })
 
+  it('takes a division with no counted game out, as a full load would leave it out', () => {
+    const next = replaceDivision(feed, 'sq1', createDivisionResult({ id: 'd2', throughGame: 0 }))
+
+    const ids = next?.sessions.flatMap((session) =>
+      session.kind === 'squad'
+        ? session.results.divisions.map((d) => [session.results.session.id, d.id])
+        : [],
+    )
+    expect(ids).toEqual([
+      ['sq1', 'd1'],
+      ['sq2', 'd1'],
+    ])
+  })
+
+  it('takes the squad out when its last division goes, and leaves the feed as it is for one not shown', () => {
+    const only = replaceDivision(feed, 'sq2', createDivisionResult({ id: 'd1', throughGame: 0 }))
+    expect(only?.sessions.map((session) => session.results.session.id)).toEqual(['sq1', 'sw1'])
+
+    expect(
+      replaceDivision(feed, 'sq1', createDivisionResult({ id: 'never-shown', throughGame: 0 })),
+    ).toBe(feed)
+  })
+
   it('gives nothing for a squad or division that is not in the feed, so the caller loads all', () => {
     expect(replaceDivision(feed, 'nope', createDivisionResult({ id: 'd1' }))).toBeUndefined()
     expect(replaceDivision(feed, 'sq1', createDivisionResult({ id: 'new' }))).toBeUndefined()

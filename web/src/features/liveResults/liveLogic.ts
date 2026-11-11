@@ -173,23 +173,29 @@ export function announcementOf(
 
 /**
  * The feed with one division of one squad swapped for a newer one (D-244), or `undefined` when the
- * squad or the division is not in the feed, so the caller loads the whole feed instead.
+ * squad or the division is not in the feed, so the caller loads the whole feed instead. A division
+ * with no counted game is taken out instead, as a full load would leave it out.
  */
 export function replaceDivision(
   feed: LiveResults,
   sessionId: string,
   replacement: DivisionResult,
 ): LiveResults | undefined {
+  // A division with no counted game does not show (the full feed leaves it out), so it leaves the
+  // screen here too, and a squad left with no division leaves with it.
+  const hidden = replacement.throughGame === 0
   let found = false
-  const sessions = feed.sessions.map((session) => {
-    if (session.kind !== 'squad' || session.results.session.id !== sessionId) return session
-    const divisions = session.results.divisions.map((division) => {
-      if (division.id !== replacement.id) return division
+  const sessions = feed.sessions.flatMap((session) => {
+    if (session.kind !== 'squad' || session.results.session.id !== sessionId) return [session]
+    const divisions = session.results.divisions.flatMap((division) => {
+      if (division.id !== replacement.id) return [division]
       found = true
-      return replacement
+      return hidden ? [] : [replacement]
     })
-    return { ...session, results: { ...session.results, divisions } }
+    if (hidden && divisions.length === 0) return []
+    return [{ ...session, results: { ...session.results, divisions } }]
   })
+  if (hidden) return found ? { ...feed, sessions } : feed
   return found ? { ...feed, sessions } : undefined
 }
 

@@ -348,6 +348,27 @@ describe('LiveResultsPage follows the stream (RES-49, RES-50, D-243 to D-245)', 
     )
   })
 
+  it('has no banner under the bar: the update time sits in the bar, the notice is for a screen reader (D-255)', async () => {
+    await ready()
+    act(() => {
+      FakeEventSource.latest().message(
+        message('game-full', {
+          sessionId: squadId,
+          sessionKind: 'squad',
+          divisionId: openId,
+          game: 1,
+        }),
+      )
+    })
+
+    expect(await screen.findByText('Open Division – Game 1 complete')).toBeInTheDocument()
+    // The words are in a status with nothing on screen; the bar holds the time.
+    expect(screen.getByText('Open Division – Game 1 complete').className).toMatch(/hidden/)
+    expect(
+      within(screen.getByRole('banner')).getByText(/^Updated \d{1,2}:\d{2} (am|pm)$/),
+    ).toBeVisible()
+  })
+
   it('draws a lower third for a game before the last, and the flash for the last (D-255)', async () => {
     await ready()
     const send = (game: number) => {

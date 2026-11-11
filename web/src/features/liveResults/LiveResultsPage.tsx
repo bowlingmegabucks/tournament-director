@@ -13,9 +13,9 @@ import { useWakeLock } from './useWakeLock'
 /**
  * The TV page (RES-50 to RES-54, D-242 to D-246): every squad division, each sweeper, and the super
  * sweeper, scrolling on their own and updating as games fill. It has no controls and needs no
- * sign-in. A strip at the top posts each game that fills and says when the board last updated; a
- * corner line says when it went out of date; the screen is kept awake. With "reduce motion" on it
- * flips one screen at a time instead of scrolling.
+ * sign-in. An overlay announces each game that fills (D-255); the bar says when the board last
+ * updated, and a corner line says when it went out of date. The screen is kept awake. With "reduce
+ * motion" on it flips one screen at a time instead of scrolling.
  */
 export function LiveResultsPage() {
   // Stryker disable next-line StringLiteral: the route always has an :id; this only satisfies the type.
@@ -76,10 +76,14 @@ export function LiveResultsPage() {
       <title>{`Live results · ${data?.tournament.name ?? ''} · Tournament Director`}</title>
       <header className={styles.bar}>
         <h1>Live results{data ? ` · ${data.tournament.name}` : ''}</h1>
+        <p className={styles.updated} role="status">
+          {idle}
+        </p>
       </header>
-      <div className={feed.notice ? styles.strip : `${styles.strip} ${styles.idle}`} role="status">
-        {feed.notice ?? idle}
-      </div>
+      {/* The overlay is for the eye; this says the same for a screen reader, with nothing on screen. */}
+      <p className={styles.hidden} role="status">
+        {feed.notice}
+      </p>
       <main className={styles.body}>{body}</main>
       {feed.announcement && (
         <GameAnnouncement

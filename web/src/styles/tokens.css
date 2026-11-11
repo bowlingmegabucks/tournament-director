@@ -22,6 +22,7 @@
   --color-focus: #f3efe3;
   --color-backdrop: rgb(0 0 0 / 0.7); /* the dim layer behind a modal dialog */
   --color-brand-bg: #000000; /* the logo is designed for black, in both themes */
+  --color-brand-text: #c9ae6a; /* gold text on the brand black, in both themes (contrast 9:1) */
   --color-paper: #ffffff; /* a printed sheet is black on white in both themes (D-63) */
   --color-ink: #000000;
 

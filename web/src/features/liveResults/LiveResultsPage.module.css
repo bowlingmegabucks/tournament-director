@@ -9,7 +9,7 @@
   container-type: inline-size;
   position: relative;
   display: grid;
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto 1fr;
   block-size: 100dvh;
   overflow: hidden;
   background: var(--color-bg);
@@ -18,9 +18,14 @@
 }
 
 .bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  column-gap: var(--space-6);
   padding: var(--space-3) var(--space-6);
   background: var(--color-brand-bg);
-  color: var(--color-accent);
+  color: var(--color-brand-text);
 }
 
 .bar h1 {
@@ -28,20 +33,11 @@
   font-size: var(--font-size-tv-head);
 }
 
-.strip {
-  display: flex;
-  align-items: center;
-  min-block-size: var(--target-min);
-  padding-inline: var(--space-6);
-  background: var(--color-accent);
-  color: var(--color-accent-text);
-  font-weight: 700;
-}
-
-.idle {
-  background: var(--color-surface);
-  color: var(--color-text-muted);
-  font-weight: 400;
+/* When the board last updated, at the right of the bar. */
+.updated {
+  margin: 0;
+  color: inherit;
+  font-size: var(--font-size-tv-small);
 }
 
 .body {
@@ -255,7 +251,6 @@
 /* A phone: the type is smaller (tokens.css), so the gutters tighten too, to leave room for rows. */
 @media (max-width: 48rem) {
   .bar,
-  .strip,
   .heading,
   .lead {
     padding-inline: var(--space-3);

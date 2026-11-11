@@ -74,6 +74,8 @@ export function createLiveNotifier({
       built.entries,
       kind === 'squad' ? (entry) => entry.divisionId : () => SWEEPER,
       flagged.get(sessionId) ?? new Set(),
+      built.waiting,
+      kind === 'squad' ? (waiter) => waiter.divisionId : () => SWEEPER,
     )
     return { through, names: new Map(all.map((division) => [division.id, division.name])) }
   }

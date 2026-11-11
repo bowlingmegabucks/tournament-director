@@ -150,3 +150,59 @@ describe('limitToCountedGames (RES-40)', () => {
     expect(entries.map((e) => e.registrationId)).toEqual([b.registrationId, a.registrationId])
   })
 })
+
+describe('waiting bowlers: entered, no score yet (RES-40)', () => {
+  const waiter = (id: string, divisionId = 'open') => ({ registrationId: id, divisionId })
+
+  it('hold a group at 0 until they bowl, without being in the answer', () => {
+    const scored = [entry([200]), entry([190])]
+
+    const { entries, through } = limitToCountedGames(scored, (item) => item.divisionId, none, [
+      waiter('late'),
+    ])
+
+    expect(through.get('open')).toBe(0)
+    expect(entries).toHaveLength(2)
+    expect(entries.map((item) => item.total)).toEqual([0, 0])
+  })
+
+  it('hold only their own group', () => {
+    const open = entry([200])
+    const senior = entry([200], { divisionId: 'senior', divisionName: 'Senior' })
+
+    const { through } = limitToCountedGames([open, senior], (item) => item.divisionId, none, [
+      waiter('late', 'senior'),
+    ])
+
+    expect(through.get('open')).toBe(1)
+    expect(through.get('senior')).toBe(0)
+  })
+
+  it('do not hold a group back once flagged DNF', () => {
+    const { through } = limitToCountedGames(
+      [entry([200])],
+      (item) => item.divisionId,
+      new Set(['late']),
+      [waiter('late')],
+    )
+
+    expect(through.get('open')).toBe(1)
+  })
+
+  it('count as bowlers who have bowled nothing in countedGames', () => {
+    expect(countedGames([entry([200, 200])], none, [{ registrationId: 'late' }])).toBe(0)
+    expect(countedGames([entry([200, 200])], none, [])).toBe(2)
+  })
+
+  it('can name their group their own way (a sweeper is one group)', () => {
+    const { through } = limitToCountedGames(
+      [entry([200])],
+      () => 'sweeper',
+      none,
+      [waiter('late', 'anything')],
+      () => 'sweeper',
+    )
+
+    expect(through.get('sweeper')).toBe(0)
+  })
+})

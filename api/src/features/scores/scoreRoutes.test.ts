@@ -374,10 +374,12 @@ describe('a save tells the TV page when a game fills (RES-49, D-243)', () => {
     const app = createSignedInTestApp(overrides)
     const kinds = () => live.map((event) => [event.kind, event.detail?.game])
 
+    // Ann scores alone: Cal has not bowled game 1, so the game is not full (RES-40).
     await request(app).put(url(ann.registrationId, 1)).send({ score: 200 })
-    expect(kinds()).toEqual([['game-full', 1]])
+    expect(kinds()).toEqual([])
 
     await request(app).put(url(cal.registrationId, 1)).send({ score: 190 })
+    expect(kinds()).toEqual([['game-full', 1]])
     await request(app).put(url(ann.registrationId, 2)).send({ score: 210 })
     expect(kinds()).toEqual([['game-full', 1]])
 
@@ -503,7 +505,8 @@ describe('DELETE .../scores/:registrationId/:game (SCR-19)', () => {
 
     await request(app).put(url(ann.registrationId, 1)).send({ score: 212 })
 
-    expect(await firstTotal('full-game')).toBe(212)
+    // Cal has not bowled, so the steady ranking counts no game yet; the live one counts Ann's.
+    expect(await firstTotal('full-game')).toBe(0)
     expect(await firstTotal('live')).toBe(212)
 
     await request(app).delete(url(ann.registrationId, 1))

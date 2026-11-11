@@ -87,8 +87,9 @@ describe('finals results on a real database', () => {
     expect(byName['Dana Abbott'].flags).toEqual([])
     expect(byName['Maria Chen'].flags).toMatchObject([{ kind: 'unfinished', gamesBowled: 2 }])
     expect(byName['Tom Delgado'].flags).toMatchObject([{ kind: 'missed', gamesBowled: 0 }])
-    // Open sweeper 1: Dana has two games in, the others none yet.
-    expect(byName['Dana Abbott'].sweeperTotals[0]).toBeGreaterThan(0)
+    // Open sweeper 1: Dana has two games in, the others none yet, so no game is full and no
+    // total shows (RES-41).
+    expect(byName['Dana Abbott'].sweeperTotals[0]).toBeNull()
     expect(byName['Maria Chen'].sweeperTotals[0]).toBeNull()
   })
 

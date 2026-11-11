@@ -180,10 +180,11 @@ export function buildSuperSweeperEntries(
     // RES-42: an open sweeper counts the games every bowler in it has; a complete one counts them all.
     let limit: number | null = null
     if (mode === 'full-game' && !sweeper.complete) {
-      const bowlers = entries.flatMap((entry) => {
-        const run = runs.get(entry.bowlerId)
-        return run === undefined ? [] : [{ registrationId: entry.registrationId, games: run }]
-      })
+      // A bowler entered in the sweeper with no score has bowled no game, so no game is full yet.
+      const bowlers = entries.map((entry) => ({
+        registrationId: entry.registrationId,
+        games: runs.get(entry.bowlerId) ?? 0,
+      }))
       limit = fewestGames(bowlers, flagged?.get(sweeper.id) ?? noFlags) ?? 0
     }
     through.set(sweeper.id, limit ?? (mode === 'full-game' ? sweeper.games : null))

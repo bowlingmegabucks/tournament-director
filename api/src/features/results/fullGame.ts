@@ -20,9 +20,14 @@ function run(entry: ResultEntry): number {
 export function countedGames(
   entries: readonly ResultEntry[],
   flagged: ReadonlySet<string>,
+  waiting: readonly { registrationId: string }[] = [],
 ): number | undefined {
   return fewestGames(
-    entries.map((entry) => ({ registrationId: entry.registrationId, games: run(entry) })),
+    [
+      ...entries.map((entry) => ({ registrationId: entry.registrationId, games: run(entry) })),
+      // An entered bowler with no score has bowled no game, so no game is full yet.
+      ...waiting.map(({ registrationId }) => ({ registrationId, games: 0 })),
+    ],
     flagged,
   )
 }
@@ -48,21 +53,31 @@ export interface Limited {
  * RES-40 to RES-42: cut every entry to the counted games of its group, so the total, high game, and
  * tie-breakers use only those games. `gameScores` keeps every saved game, so the page can show
  * a game that is not counted yet. A sweeper is one group, a squad has one group for each division.
+ * `waiting` are entered bowlers with no score: they hold their group back (a game is not full
+ * until they bowl it), and are not in the answer. `waitingGroupOf` gives their group.
  */
 export function limitToCountedGames(
   entries: readonly ResultEntry[],
   groupOf: (entry: ResultEntry) => string,
   flagged: ReadonlySet<string>,
+  waiting: readonly { registrationId: string; divisionId: string }[] = [],
+  waitingGroupOf: (waiter: { registrationId: string; divisionId: string }) => string = (waiter) =>
+    waiter.divisionId,
 ): Limited {
   const groups = new Map<string, ResultEntry[]>()
   for (const entry of entries) {
     const key = groupOf(entry)
     groups.set(key, [...(groups.get(key) ?? []), entry])
   }
+  const waitingIn = new Map<string, { registrationId: string }[]>()
+  for (const waiter of waiting) {
+    const key = waitingGroupOf(waiter)
+    waitingIn.set(key, [...(waitingIn.get(key) ?? []), waiter])
+  }
   const through = new Map<string, number>()
   const limited = new Map<ResultEntry, ResultEntry>()
   for (const [key, members] of groups) {
-    const counted = countedGames(members, flagged) ?? 0
+    const counted = countedGames(members, flagged, waitingIn.get(key)) ?? 0
     through.set(key, counted)
     for (const entry of members) {
       const games = entry.gameScores

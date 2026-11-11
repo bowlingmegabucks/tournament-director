@@ -45,6 +45,7 @@ function workOutSquad(
         built.entries,
         (entry) => entry.divisionId,
         flagged?.get(squad.id) ?? noFlags,
+        built.waiting,
       )
     : undefined
   const byDivision = new Map<string, ResultEntry[]>()

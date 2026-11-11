@@ -774,6 +774,103 @@ describe('DNF flags in the results (RES-55, RES-56, D-248, D-251)', () => {
     expect(result.divisions[0]?.throughGame).toBe(squad.games)
   })
 
+  it('waits for an entered bowler with no score: no game is counted, and the scored bowlers still show (RES-40)', async () => {
+    const squad = squadAt(morning, { complete: false })
+    const ann = bowler(open.id)
+    const waiting = bowler(open.id)
+    const otherDivision = bowler(seniors.id)
+    const world = setup({
+      squads: [squad],
+      divisions: [open, seniors],
+      seats: [
+        { sessionId: squad.id, entry: ann, games: [200] },
+        { sessionId: squad.id, entry: waiting, games: [] },
+        { sessionId: squad.id, entry: otherDivision, games: [180] },
+      ],
+    })
+
+    const result = await loadSquadResults(
+      world.deps,
+      world.reporting,
+      world.tournament.id,
+      squad.id,
+      { mode: 'full-game' },
+    )
+
+    const byName = (name: string) => result.divisions.find((division) => division.name === name)
+    // Open waits for its second bowler; Women/Senior has only the one entered bowler, so game 1 is full.
+    expect(byName('Open')?.throughGame).toBe(0)
+    expect(byName('Open')?.rows.map((row) => row.registrationId)).toEqual([ann.registrationId])
+    expect(byName('Women/Senior')?.throughGame).toBe(1)
+  })
+
+  it('counts the game once the waiting bowler has bowled it, and not before (RES-40)', async () => {
+    const squad = squadAt(morning, { complete: false })
+    const run = async (waitingGames: number[]) => {
+      const world = setup({
+        squads: [squad],
+        seats: [
+          { sessionId: squad.id, entry: bowler(open.id), games: [200] },
+          { sessionId: squad.id, entry: bowler(open.id), games: waitingGames },
+        ],
+      })
+      const result = await loadSquadResults(
+        world.deps,
+        world.reporting,
+        world.tournament.id,
+        squad.id,
+        { mode: 'full-game' },
+      )
+      return result.divisions[0]?.throughGame
+    }
+
+    expect(await run([])).toBe(0)
+    expect(await run([190])).toBe(1)
+  })
+
+  it('does not wait for a bowler with no score once the squad is complete (RES-43)', async () => {
+    const squad = squadAt(morning, { complete: true })
+    const world = setup({
+      squads: [squad],
+      seats: [
+        { sessionId: squad.id, entry: bowler(open.id), games: [200, 200, 200] },
+        { sessionId: squad.id, entry: bowler(open.id), games: [] },
+      ],
+    })
+
+    const result = await loadSquadResults(
+      world.deps,
+      world.reporting,
+      world.tournament.id,
+      squad.id,
+      { mode: 'full-game' },
+    )
+
+    expect(result.divisions[0]?.throughGame).toBe(squad.games)
+  })
+
+  it('waits for an entered sweeper bowler with no score (RES-41)', async () => {
+    const sweeper = createSweeper({ cashRatio: 2, games: 3, complete: false })
+    const world = setup({
+      sweepers: [sweeper],
+      seats: [
+        { sessionId: sweeper.id, entry: bowler(open.id), games: [200, 200] },
+        { sessionId: sweeper.id, entry: bowler(open.id), games: [] },
+      ],
+    })
+
+    const result = await loadSweeperResults(
+      world.deps,
+      world.reporting,
+      world.tournament.id,
+      sweeper.id,
+      { mode: 'full-game' },
+    )
+
+    expect(result.throughGame).toBe(0)
+    expect(result.rows).toHaveLength(1)
+  })
+
   it('tags a flagged bowler on an open sweeper and leaves them out of the count (RES-55, RES-56)', async () => {
     const sweeper = createSweeper({ cashRatio: 2, games: 3, complete: false })
     const walt = bowler(open.id)

@@ -60,8 +60,16 @@ export function sweeperPins(bonusPins: readonly BonusPins[]) {
   return (_entry: LaneEntry, division: Division): number => byDivision.get(division.id) ?? 0
 }
 
+/** An entered bowler with no score yet: not a result entry, but a game is not full until they bowl it. */
+export interface WaitingEntry {
+  registrationId: string
+  divisionId: string
+}
+
 export interface BuiltEntries {
   entries: ResultEntry[]
+  /** Entered bowlers with no stored score. They hold back the counted games of an open session. */
+  waiting: WaitingEntry[]
   /** Entries with a score whose division is not one of the tournament's (D-51). Left out. */
   skipped: string[]
 }
@@ -86,11 +94,16 @@ export function buildResultEntries(
   const divisionById = new Map(divisions.map((division) => [division.id, division]))
 
   const entries: ResultEntry[] = []
+  const waiting: WaitingEntry[] = []
   const skipped: string[] = []
   for (const entry of laneEntries) {
     const stored = gamesOf.get(entry.bowlerId)
-    if (!stored) continue
     const division = divisionById.get(entry.divisionId)
+    if (!stored) {
+      // No score yet: left out of the results, but a game cannot be full without them (RES-40).
+      if (division) waiting.push({ registrationId: entry.registrationId, divisionId: division.id })
+      continue
+    }
     if (!division) {
       skipped.push(entry.registrationId)
       continue
@@ -113,5 +126,5 @@ export function buildResultEntries(
       }),
     )
   }
-  return { entries, skipped }
+  return { entries, waiting, skipped }
 }

@@ -180,6 +180,19 @@ describe('buildSuperSweeperEntries', () => {
     expect(through.get(running.sweeper.id)).toBe(1)
   })
 
+  it('waits for a bowler entered in an open sweeper who has not bowled (RES-42)', () => {
+    const bowler = registrant()
+    const waiting = registrant()
+    const running = sweeperOf({ complete: false, games: 3 }, [
+      { entry: bowler, scores: [200, 200] },
+      { entry: waiting, scores: [] },
+    ])
+
+    const { through } = buildSuperSweeperEntries([running], [open], { mode: 'full-game' })
+
+    expect(through.get(running.sweeper.id)).toBe(0)
+  })
+
   it('leaves out a bowler with no game at all while every sweeper is open', () => {
     const bowler = registrant()
     const running = sweeperOf({ complete: false }, [{ entry: bowler, scores: [] }])

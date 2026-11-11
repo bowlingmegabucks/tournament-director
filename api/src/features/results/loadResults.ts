@@ -147,7 +147,13 @@ export async function loadSweeperResults(
   const mode: RankMode = options.mode ?? 'live'
   const limited =
     mode === 'full-game' && !sweeper.complete
-      ? limitToCountedGames(built.entries, () => 'sweeper', flagged)
+      ? limitToCountedGames(
+          built.entries,
+          () => 'sweeper',
+          flagged,
+          built.waiting,
+          () => 'sweeper',
+        )
       : undefined
   const outcome = workOutSweeper(limited?.entries ?? built.entries, sweeper.cashRatio)
   const marks = markCashLine(outcome.cashers, outcome.others)

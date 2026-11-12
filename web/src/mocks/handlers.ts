@@ -521,6 +521,36 @@ export const handlers = [
     tournaments.splice(index, 1)
     return new HttpResponse(null, { status: 204 })
   }),
+  // TRN-38 complete: the flag, and demo counts. The API tests cover the zero-fill (D-190, D-258). A
+  // repeat is a 409, as the API answers (D-257).
+  http.post('/v1/tournaments/:id/complete', ({ params }) => {
+    const id = String(params['id'])
+    if (!tournaments.some((candidate) => candidate.id === id)) return notFound()
+    if (completedIds.has(id)) {
+      const message = 'This tournament is already complete'
+      return HttpResponse.json({ message, errors: { tournament: message } }, { status: 409 })
+    }
+    completedIds.add(id)
+    return HttpResponse.json({
+      completed: true,
+      squadsCompleted: 2,
+      sweepersCompleted: 1,
+      noShowCount: 3,
+    })
+  }),
+  http.get('/v1/tournaments/:id/complete-info', ({ params }) =>
+    tournaments.some((candidate) => candidate.id === params['id'])
+      ? HttpResponse.json({
+          completeInfo: {
+            squadCount: 3,
+            openSquadCount: 2,
+            openSweeperCount: 1,
+            noScoreCount: 3,
+            partialCount: 1,
+          },
+        })
+      : notFound(),
+  ),
   http.get('/v1/tournaments/:id/edit-info', ({ params }) =>
     tournaments.some((candidate) => candidate.id === params.id)
       ? HttpResponse.json({

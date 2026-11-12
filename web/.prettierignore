@@ -4,3 +4,6 @@ reports
 .stryker-tmp
 public/mockServiceWorker.js
 package-lock.json
+dist-lifecycle
+lifecycle-report
+lifecycle-results

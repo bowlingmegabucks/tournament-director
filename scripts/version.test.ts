@@ -9,7 +9,22 @@ describe('parseVersion', () => {
     assert.deepEqual(parseVersion('0.2.10'), [0, 2, 10])
   })
 
-  for (const text of ['', '1.2', '1.2.3.4', 'v1.2.3', '1.2.3-beta.1', '01.2.x', ' 1.2.3']) {
+  it('reads a release candidate', () => {
+    assert.deepEqual(parseVersion('1.0.0-rc.12'), [1, 0, 0, 12])
+  })
+
+  for (const text of [
+    '',
+    '1.2',
+    '1.2.3.4',
+    'v1.2.3',
+    '1.2.3-beta.1',
+    '1.2.3-rc',
+    '1.2.3-rc.',
+    '1.2.3-rc.1.2',
+    '01.2.x',
+    ' 1.2.3',
+  ]) {
     it(`rejects "${text}"`, () => {
       assert.equal(parseVersion(text), undefined)
     })
@@ -27,6 +42,15 @@ describe('compareVersions', () => {
 
   it('formats back to text', () => {
     assert.equal(formatVersion([0, 2, 0]), '0.2.0')
+    assert.equal(formatVersion([1, 0, 0, 3]), '1.0.0-rc.3')
+  })
+
+  it('sorts candidates by number, below the final release', () => {
+    assert.ok(compareVersions([1, 0, 0, 10], [1, 0, 0, 9]) > 0)
+    assert.ok(compareVersions([1, 0, 0, 1], [1, 0, 0]) < 0)
+    assert.ok(compareVersions([1, 0, 0], [1, 0, 0, 99]) > 0)
+    assert.ok(compareVersions([1, 0, 0, 1], [0, 10, 0]) > 0)
+    assert.equal(compareVersions([1, 0, 0, 2], [1, 0, 0, 2]), 0)
   })
 })
 
@@ -135,8 +159,8 @@ describe('checkVersion', () => {
     const result = checkVersion({ api: '0.2', web: 'next' })
 
     assert.deepEqual(result.errors, [
-      'api/package.json version "0.2" must look like 1.2.3.',
-      'web/package.json version "next" must look like 1.2.3.',
+      'api/package.json version "0.2" must look like 1.2.3 or 1.2.3-rc.1.',
+      'web/package.json version "next" must look like 1.2.3 or 1.2.3-rc.1.',
     ])
   })
 
@@ -169,5 +193,82 @@ describe('checkVersion', () => {
     })
 
     assert.equal(result.errors.length, 1)
+  })
+
+  describe('release candidates', () => {
+    it('passes the next candidate above main and the newest candidate tag', () => {
+      assert.deepEqual(
+        checkVersion({
+          api: '1.0.0-rc.2',
+          web: '1.0.0-rc.2',
+          base: '1.0.0-rc.1',
+          latestTag: 'v1.0.0-rc.1',
+        }),
+        ok,
+      )
+    })
+
+    it('passes the first candidate after the last 0.x release', () => {
+      assert.deepEqual(
+        checkVersion({
+          api: '1.0.0-rc.1',
+          web: '1.0.0-rc.1',
+          base: '0.10.0',
+          latestTag: 'v0.9.0',
+        }),
+        ok,
+      )
+    })
+
+    it('fails on the same candidate as main and suggests the next one', () => {
+      const result = checkVersion({
+        api: '1.0.0-rc.1',
+        web: '1.0.0-rc.1',
+        base: '1.0.0-rc.1',
+      })
+
+      assert.equal(result.errors.length, 1)
+      assert.match(result.errors[0] ?? '', /Consider bumping to 1\.0\.0-rc\.2/)
+    })
+
+    it('fails on a tagged candidate and suggests the next one', () => {
+      const result = checkVersion({
+        api: '1.0.0-rc.1',
+        web: '1.0.0-rc.1',
+        latestTag: 'v1.0.0-rc.1',
+      })
+
+      assert.match(result.errors[0] ?? '', /such as 1\.0\.0-rc\.2\./)
+    })
+
+    it('fails on a candidate below main', () => {
+      const result = checkVersion({ api: '1.0.0-rc.1', web: '1.0.0-rc.1', base: '1.0.0-rc.2' })
+
+      assert.deepEqual(result.errors, [
+        'Version 1.0.0-rc.1 is lower than the version on main (1.0.0-rc.2).',
+      ])
+    })
+
+    it('fails on a candidate once the final release is tagged', () => {
+      const result = checkVersion({
+        api: '1.0.0-rc.5',
+        web: '1.0.0-rc.5',
+        latestTag: 'v1.0.0',
+      })
+
+      assert.match(result.errors[0] ?? '', /already released \(v1\.0\.0\).*1\.0\.1/)
+    })
+
+    it('passes the final release after its candidates', () => {
+      assert.deepEqual(
+        checkVersion({
+          api: '1.0.0',
+          web: '1.0.0',
+          base: '1.0.0-rc.4',
+          latestTag: 'v1.0.0-rc.4',
+        }),
+        ok,
+      )
+    })
   })
 })

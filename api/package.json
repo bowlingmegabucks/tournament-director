@@ -1,7 +1,7 @@
 {
   "name": "api",
   "private": true,
-  "version": "0.10.1",
+  "version": "1.0.0-rc.1",
   "type": "module",
   "engines": {
     "node": ">=24.11.1"
@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "node --watch --env-file-if-exists=.env --import ./src/instrumentation.ts src/server.ts",
     "db:generate": "prisma generate",
+    "db:tables": "node --env-file-if-exists=.env src/test/createTables.ts",
     "db:seed": "node --env-file-if-exists=.env src/db/seed.ts",
     "users:create-admin": "node --env-file-if-exists=.env src/db/createAdmin.ts",
     "build": "rm -rf dist && tsc -p tsconfig.build.json",

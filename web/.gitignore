@@ -29,3 +29,7 @@ reports
 .stryker-tmp
 test-results
 playwright-report
+
+dist-lifecycle
+lifecycle-report
+lifecycle-results

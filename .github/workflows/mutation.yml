@@ -40,7 +40,10 @@ jobs:
     # variable MUTATION_RUNNER to the name of a larger runner (Settings > Actions > Runners). With no
     # variable the job uses the standard runner.
     runs-on: ${{ vars.MUTATION_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 120
+    # A run is killed at the limit and saves no incremental result, so the next run starts over. A
+    # change that makes many mutants stale (the api once had 2,950 to rerun and passed 2 hours) must finish once.
+    # 360 minutes is the most GitHub allows.
+    timeout-minutes: 360
     defaults:
       run:
         working-directory: ${{ inputs.folder }}

@@ -11,7 +11,7 @@ import { idByDate } from './vendorPayload'
  * as the signed-in user, and checks the refusal and that nothing changed. `registrationIds` maps a
  * site bowler's number to their registration id.
  */
-async function ids() {
+export async function ids() {
   const site = await VendorApi.open()
   try {
     const main = await site.tournament(tournament.name)

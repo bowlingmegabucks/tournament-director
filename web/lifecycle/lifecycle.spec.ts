@@ -65,6 +65,7 @@ import {
   refusalsWithEntries,
   refusalsWithLanes,
 } from './support/scriptedFailures'
+import { checkApiAccess, checkPagesShown, personas, type Persona } from './support/access'
 import { VendorApi } from './support/vendorApi'
 import { idByDate, idByName, vendorRegistration } from './support/vendorPayload'
 import { bowlerAt, deskBowlers, fullName, returning, siteBowlers } from './data/bowlers'
@@ -711,3 +712,18 @@ test('stage 8: the admin cannot delete a tournament that has scores, even with t
   await signIn(page, admin)
   await refusalDeleteTournamentWithScores(page)
 })
+
+// Stage 9: the same pages and routes for a signed-out visitor, the score keeper, the director, and
+// the admin: what shows, and what the API refuses.
+const people = { scoreKeeper, director, admin }
+for (const persona of personas) {
+  test(`stage 9: access as ${persona}: the pages show what the role may use, and the API refuses the rest`, async ({
+    page,
+  }) => {
+    const who: Persona = persona
+    if (who === 'signedOut') await page.context().clearCookies()
+    else await signIn(page, people[who])
+    await checkPagesShown(page, who)
+    await checkApiAccess(page, who, siteRegistrationIds)
+  })
+}

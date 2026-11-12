@@ -42,6 +42,7 @@ import {
   checkSweeperResults,
   completeSession,
   enterAllScores,
+  escapeRegex,
   openSession,
   openSquad,
 } from './support/session'
@@ -648,7 +649,7 @@ function deskEditsTest() {
       await expect(page.getByRole('heading', { name: 'Edit registration', level: 1 })).toBeVisible()
       await page
         .getByRole('group', { name: /Sweepers/ })
-        .getByLabel(new RegExp(sweeperTwo.label.replace(/[/]/g, '\\/')))
+        .getByLabel(new RegExp(escapeRegex(sweeperTwo.label)))
         .check()
       await page.getByRole('button', { name: 'Next: review' }).click()
       await site.update(registrationOf(siteRegistrationIds, stale.index), {
@@ -666,7 +667,7 @@ function deskEditsTest() {
       await expect(
         page
           .getByRole('group', { name: /Sweepers/ })
-          .getByLabel(new RegExp(sweeperTwo.label.replace(/[/]/g, '\\/'))),
+          .getByLabel(new RegExp(escapeRegex(sweeperTwo.label))),
       ).toBeChecked()
     } finally {
       await site.close()

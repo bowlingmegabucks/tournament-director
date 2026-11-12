@@ -317,7 +317,7 @@ export async function checkGapSection(
   await expect(placed.getByRole('row').filter({ hasText: name })).toHaveCount(0)
 }
 
-const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+export const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 /**
  * While a squad is part way through a game: the default ranking counts only the games every bowler

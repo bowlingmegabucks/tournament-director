@@ -87,6 +87,39 @@ describe('completeTournament (TRN-38, D-256)', () => {
     })
   })
 
+  it('reads the reasons of errors.session alone, and drops blank lines (D-257)', async () => {
+    server.use(
+      http.post(path, () =>
+        HttpResponse.json(
+          { message: 'Message', errors: { session: 'A squad is bad\n\nStill bad\n' } },
+          { status: 409 },
+        ),
+      ),
+    )
+
+    await expect(completeTournament(id)).rejects.toMatchObject({
+      reasons: ['A squad is bad', 'Still bad'],
+    })
+  })
+
+  it('says a default message when a 409 holds none', async () => {
+    server.use(http.post(path, () => HttpResponse.json({}, { status: 409 })))
+
+    await expect(completeTournament(id)).rejects.toMatchObject({
+      message: 'The tournament cannot be completed.',
+      reasons: ['The tournament cannot be completed.'],
+    })
+  })
+
+  it.each([
+    ['a refusal', 409, 'Failed to complete the tournament (response is not JSON)'],
+    ['a success', 200, 'Failed to complete the tournament (response is not JSON)'],
+  ])('names the failure when %s is not JSON', async (_name, status, message) => {
+    server.use(http.post(path, () => new HttpResponse('nope', { status })))
+
+    await expect(completeTournament(id)).rejects.toThrow(message)
+  })
+
   it('falls back to the message when a 409 has no errors', async () => {
     server.use(http.post(path, () => HttpResponse.json({ message: 'Nope' }, { status: 409 })))
 
@@ -136,6 +169,27 @@ describe('fetchCompleteInfo (TRN-41, D-259)', () => {
 
     expect(error).toBeInstanceOf(type)
     expect(error).toHaveProperty('message', message)
+  })
+
+  it.each(['squadCount', 'openSquadCount', 'openSweeperCount', 'noScoreCount', 'partialCount'])(
+    'throws when %s is missing',
+    async (missing) => {
+      const body: Record<string, number> = { ...info() }
+      delete body[missing]
+      server.use(http.get(infoPath, () => HttpResponse.json({ completeInfo: body })))
+
+      await expect(fetchCompleteInfo(id)).rejects.toThrow(
+        'Failed to load what completing does (unexpected response)',
+      )
+    },
+  )
+
+  it('names the failure when the body is not JSON', async () => {
+    server.use(http.get(infoPath, () => new HttpResponse('nope')))
+
+    await expect(fetchCompleteInfo(id)).rejects.toThrow(
+      'Failed to load what completing does (response is not JSON)',
+    )
   })
 
   it('throws for a body of the wrong shape', async () => {

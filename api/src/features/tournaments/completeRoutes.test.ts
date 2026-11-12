@@ -12,7 +12,11 @@ import {
   type TournamentWriter,
 } from './writer.ts'
 
-const tournament = { id: crypto.randomUUID(), ...createNewTournament({ name: 'Spring Classic' }) }
+// A fixed id: the test names carry it, and Stryker matches tests across processes by name.
+const tournament = {
+  id: '11111111-1111-4111-8111-111111111111',
+  ...createNewTournament({ name: 'Spring Classic' }),
+}
 const missingId = '66666666-6666-4666-8666-666666666666'
 const url = `/v1/tournaments/${tournament.id}/complete`
 const infoUrl = `/v1/tournaments/${tournament.id}/complete-info`

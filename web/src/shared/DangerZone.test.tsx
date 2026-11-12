@@ -32,5 +32,7 @@ describe('DangerZone (D-215)', () => {
     expect(screen.getByRole('button', { name: 'Complete thing' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Delete thing' })).toBeVisible()
     expect(screen.getAllByRole('heading', { name: 'Danger zone' })).toHaveLength(1)
+    // One sentence for each item and no empty one for the zone itself.
+    expect(screen.getAllByRole('paragraph')).toHaveLength(2)
   })
 })

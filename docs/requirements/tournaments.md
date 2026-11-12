@@ -1,6 +1,6 @@
 # Tournaments
 
-Built on branches `landingPage`, `tournamentList`, `createTournament`, `editTournament`, `deleteTournament`, and `completeTournament`. Migration source: [docs/migration/tournaments.md](../migration/tournaments.md).
+Built on branches `landingPage`, `tournamentList`, `createTournament`, `editTournament`, `deleteTournament`, and `completeTournament`. The legacy rules file (`docs/migration/tournaments.md`) was deleted once every rule was done or dropped.
 
 The API reads and creates rows in the legacy `Tournaments` table in the MariaDB database through Prisma (D-26, D-30). Reading is public (0.2.0). Creating and editing need sign-in and `tournaments.write` (director and admin, D-97). Deleting needs `tournaments.delete`, which only the admin holds (D-132). Completing needs `tournaments.write` (D-256).
 

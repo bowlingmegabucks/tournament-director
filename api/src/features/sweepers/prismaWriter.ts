@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import type { Logger } from '../../shared/logger.ts'
-import { createSessionCompleter } from '../../shared/sessionCompleteStore.ts'
+import { createSessionCompleter, type ReadCompleted } from '../../shared/sessionCompleteStore.ts'
 import { createSessionDeleter } from '../../shared/sessionDeleteStore.ts'
 import { withRetry } from '../../shared/serializableRetry.ts'
 import { toSessionEditInfo, type SessionNotFound } from '../../shared/sessionEdit.ts'
@@ -47,6 +47,35 @@ function columnsFor(changes: UpdateSweeper) {
     ...(changes.games !== undefined && { games: changes.games }),
     ...(changes.cashRatio !== undefined && { cashRatio: changes.cashRatio }),
   }
+}
+
+/** A sweeper as the list shows it, or `undefined` when its row breaks the read shape (D-192). */
+export const readCompletedSweeper: ReadCompleted<Sweeper> = async (reader, row, tournamentId) => {
+  // The list shows the pins of this tournament's divisions, in division order.
+  const divisions = await reader.division.findMany({
+    where: { tournamentId },
+    select: { id: true, name: true },
+    orderBy: { number: 'asc' },
+  })
+  const pins = await reader.sweeperDivision.findMany({
+    where: { sweeperId: row.id, division: { tournamentId } },
+  })
+  const readable = toSweeper(
+    row,
+    divisions.flatMap((division) => {
+      const pin = pins.find((candidate) => candidate.divisionId === division.id)
+      return pin
+        ? [
+            {
+              divisionId: division.id,
+              divisionName: division.name,
+              bonusPinsPerGame: pin.bonusPinsPerGame,
+            },
+          ]
+        : []
+    }),
+  )
+  return readable.success ? readable.data : undefined
 }
 
 /**
@@ -246,33 +275,7 @@ export function createPrismaSweeperWriter(client: PrismaClient, logger: Logger):
       client,
       logger,
       'sweeper',
-      async (reader, row, tournamentId) => {
-        // The list shows the pins of this tournament's divisions, in division order.
-        const divisions = await reader.division.findMany({
-          where: { tournamentId },
-          select: { id: true, name: true },
-          orderBy: { number: 'asc' },
-        })
-        const pins = await reader.sweeperDivision.findMany({
-          where: { sweeperId: row.id, division: { tournamentId } },
-        })
-        const readable = toSweeper(
-          row,
-          divisions.flatMap((division) => {
-            const pin = pins.find((candidate) => candidate.divisionId === division.id)
-            return pin
-              ? [
-                  {
-                    divisionId: division.id,
-                    divisionName: division.name,
-                    bonusPinsPerGame: pin.bonusPinsPerGame,
-                  },
-                ]
-              : []
-          }),
-        )
-        return readable.success ? readable.data : undefined
-      },
+      readCompletedSweeper,
     ),
     create: (tournamentId, input) =>
       withDatabaseErrors(logger, () => createOrRefuse(tournamentId, input)),

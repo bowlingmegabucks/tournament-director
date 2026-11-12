@@ -47,3 +47,8 @@
   gap: var(--space-4);
   align-items: center;
 }
+
+.reasons {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}

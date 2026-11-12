@@ -81,20 +81,24 @@ describe('who sees Delete (TRN-37, D-132, D-136, D-19)', () => {
 
     const zone = await screen.findByRole('region', { name: 'Danger zone' })
     expect(within(zone).getByRole('button', { name: 'Delete tournament' })).toBeVisible()
-    expect(within(zone).getByText(/cannot be undone/)).toBeVisible()
+    expect(within(zone).getByText(/Delete this tournament and everything under it/)).toBeVisible()
   })
 
   it.each([
     ['the overview', `/tournaments/${id}`],
     ['the edit page', `/tournaments/${id}/edit`],
-  ])('shows no empty Danger zone to a director on %s', async (_page, route) => {
+  ])('shows no Delete button or empty Danger zone to a director on %s', async (_page, route) => {
     setMockUser(createSignedInUser({ roles: ['director'] }))
     serve()
 
     renderApp(route)
 
     await screen.findByRole('heading', { level: 1 })
-    expect(screen.queryByRole('region', { name: 'Danger zone' })).not.toBeInTheDocument()
+    expect(deleteButton()).not.toBeInTheDocument()
+    // The overview's zone holds Complete for a director (D-260); the edit page has no zone for one.
+    if (route.endsWith('/edit')) {
+      expect(screen.queryByRole('region', { name: 'Danger zone' })).not.toBeInTheDocument()
+    }
   })
 
   it.each([

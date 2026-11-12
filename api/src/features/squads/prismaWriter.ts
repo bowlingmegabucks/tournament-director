@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import type { Logger } from '../../shared/logger.ts'
-import { createSessionCompleter } from '../../shared/sessionCompleteStore.ts'
+import { createSessionCompleter, type ReadCompleted } from '../../shared/sessionCompleteStore.ts'
 import { createSessionDeleter } from '../../shared/sessionDeleteStore.ts'
 import { withRetry } from '../../shared/serializableRetry.ts'
 import { toSessionEditInfo, type SessionNotFound } from '../../shared/sessionEdit.ts'
@@ -41,6 +41,12 @@ function columnsFor(changes: UpdateSquad) {
     ...(changes.finalsRatio !== undefined && { finalsRatio: changes.finalsRatio }),
     ...(changes.cashRatio !== undefined && { cashRatio: changes.cashRatio }),
   }
+}
+
+/** A squad as the list shows it, or `undefined` when its row breaks the read shape (D-192). */
+export const readCompletedSquad: ReadCompleted<Squad> = (_client, row, _tournamentId, defaults) => {
+  const readable = toSquad(row, defaults)
+  return Promise.resolve(readable.success ? readable.data : undefined)
 }
 
 /**
@@ -186,10 +192,7 @@ export function createPrismaSquadWriter(client: PrismaClient, logger: Logger): S
       client,
       logger,
       'squad',
-      (_client, row, _tournamentId, defaults) => {
-        const readable = toSquad(row, defaults)
-        return Promise.resolve(readable.success ? readable.data : undefined)
-      },
+      readCompletedSquad,
     ),
     create: (tournamentId, input) =>
       withDatabaseErrors(logger, () => createOnce(tournamentId, input)),

@@ -1,10 +1,14 @@
+import { useState } from 'react'
 import { Link, useLocation, useNavigate, useOutletContext } from 'react-router'
 import { Can } from '../auth/Can'
+import { useCan } from '../auth/useCan'
 import { field } from '../../shared/field'
-import { DangerZone } from '../../shared/DangerZone'
+import { DangerItem, DangerZone } from '../../shared/DangerZone'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { Toast } from '../../shared/Toast'
+import { completedMessage } from './completeApi'
+import { CompleteTournamentButton } from './CompleteTournamentButton'
 import { DeleteTournamentButton } from './DeleteTournamentButton'
 import { formatDateRange, formatFee, formatRatio } from './format'
 import styles from './TournamentOverview.module.css'
@@ -24,6 +28,11 @@ export function TournamentOverview() {
   const justSaved = field(location.state, 'saved') === true
   const settings = useTournamentSettings(tournament.id)
   const completed = settings.data?.completed === true
+  const canComplete = useCan('tournaments.write')
+  const canDelete = useCan('tournaments.delete')
+  // The result of a complete (D-260). The Danger zone goes away once the tournament is complete, so
+  // the toast lives here and not in the button.
+  const [notice, setNotice] = useState<{ kind: 'success' | 'error'; lines: string[] } | undefined>()
 
   return (
     <>
@@ -50,12 +59,46 @@ export function TournamentOverview() {
         <dd>{formatFee(tournament.entryFee)}</dd>
       </dl>
       <Format id={tournament.id} />
-      {settings.data && !completed && (
-        <Can permission="tournaments.delete">
-          <DangerZone description="Delete this tournament and everything under it. This cannot be undone.">
-            <DeleteTournamentButton tournament={tournament} />
-          </DangerZone>
-        </Can>
+      {settings.data && !completed && (canComplete || canDelete) && (
+        <DangerZone>
+          {canComplete && (
+            <DangerItem description="Complete this tournament. This closes every open squad and sweeper, then locks everything. It cannot be undone.">
+              <CompleteTournamentButton
+                tournament={tournament}
+                onCompleted={(result) => {
+                  setNotice({ kind: 'success', lines: [completedMessage(result)] })
+                }}
+                onRefused={(reasons) => {
+                  setNotice({ kind: 'error', lines: reasons })
+                }}
+              />
+            </DangerItem>
+          )}
+          {canDelete && (
+            <DangerItem description="Delete this tournament and everything under it. This cannot be undone.">
+              <DeleteTournamentButton tournament={tournament} />
+            </DangerItem>
+          )}
+        </DangerZone>
+      )}
+      {notice && (
+        <Toast
+          kind={notice.kind}
+          autoDismissMs={notice.kind === 'success' ? TOAST_MS : undefined}
+          onDismiss={() => {
+            setNotice(undefined)
+          }}
+        >
+          {notice.lines.length === 1 ? (
+            notice.lines[0]
+          ) : (
+            <ul className={styles.reasons}>
+              {notice.lines.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          )}
+        </Toast>
       )}
       {(justCreated || justSaved) && (
         <Toast

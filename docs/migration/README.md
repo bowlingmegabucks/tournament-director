@@ -30,7 +30,6 @@ The legacy code lives in the `tournament-manager` repo under `legacy/source/`. E
 
 | File                                             | Covers                                                            |
 | ------------------------------------------------ | ----------------------------------------------------------------- |
-| [tournaments.md](tournaments.md)                 | Create and list tournaments; ratios and fees                      |
 | [divisions.md](divisions.md)                     | Divisions, handicap settings, eligibility limits                  |
 | [bowlers.md](bowlers.md)                         | Bowler records, validation, search, name format, age              |
 | [registrations.md](registrations.md)             | Entering a bowler: create, append, update, delete, super sweeper  |

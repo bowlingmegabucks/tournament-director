@@ -4,6 +4,7 @@ import type { Logger } from '../../shared/logger.ts'
 import { withRetry } from '../../shared/serializableRetry.ts'
 import type { NewTournament } from './createRequest.ts'
 import type { DeleteCounts } from './deletePlan.ts'
+import { createTournamentCompleter } from './prismaComplete.ts'
 import { loadDeleteFacts } from './prismaDeleteFacts.ts'
 import { loadEditFacts } from './prismaEditFacts.ts'
 import type { UpdateTournament } from './updateRequest.ts'
@@ -174,5 +175,7 @@ export function createPrismaTournamentWriter(
     update: (id, input) => withDatabaseErrors(logger, () => withRetry(() => updateOnce(id, input))),
     remove: (id, { confirmWarnings, seen }) =>
       withDatabaseErrors(logger, () => withRetry(() => removeOnce(id, confirmWarnings, seen))),
+    // Complete and complete-info (TRN-38 to TRN-41, D-256 to D-259).
+    ...createTournamentCompleter(client, logger),
   }
 }

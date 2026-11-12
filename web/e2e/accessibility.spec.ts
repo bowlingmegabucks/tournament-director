@@ -478,6 +478,26 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('complete tournament dialog has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await page.getByRole('button', { name: 'Complete tournament' }).click()
+      const dialog = page.getByRole('dialog', { name: 'Complete this tournament?' })
+      await expect(dialog).toContainText('Complete 2 open squads and 1 open sweeper.')
+
+      await expectNoViolations(page)
+    })
+
+    test('tournament overview with the Danger zone has no WCAG 2.2 AA violations', async ({
+      page,
+    }) => {
+      await openTournamentsAsAdmin(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await expect(page.getByRole('region', { name: 'Danger zone' })).toBeVisible()
+
+      await expectNoViolations(page)
+    })
+
     test('tournament overview has no WCAG 2.2 AA violations', async ({ page }) => {
       await page.goto('/tournaments')
       await page.getByRole('article').first().getByRole('link').click()

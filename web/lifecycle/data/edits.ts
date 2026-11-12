@@ -9,6 +9,8 @@
  *   change each, so squad D keeps 38 Scratch and 32 Handicap entries.
  * - 148 (Scratch, D only) has their average changed from 164 to 154: no fee, no effect on scratch.
  * - 138 (D only, in both sweepers) joins the super sweeper, then leaves it.
+ * - 35 (site, Scratch, average 135) is open on the desk's Edit page to add sweeper two when the
+ *   registration site adds it first: the desk's save is a 409 `changed` and a reload shows it (D-199).
  * - 21 adds sweeper two: collect $30. 15 switches from sweeper one to sweeper two: refund $35,
  *   collect $30, net refund $5.
  */
@@ -21,12 +23,13 @@ export const edits = {
   superSweeper: 138,
   addSweeper: 21,
   switchSweeper: 15,
+  staleConflict: 35,
 }
 
-/** The counts after the edits: squad D is as before (one in, one out); sweeper one lost one, two gained two. */
+/** The counts after the edits: squad D is as before (one in, one out); sweeper one lost one, two gained three. */
 export const afterEditsExpected = {
   squadEntries: { A: 60, B: 65, C: 73, D: 87 },
   sweeperOneEntries: 49,
-  sweeperTwoEntries: 77,
+  sweeperTwoEntries: 78,
   superSweepers: 5,
 }

@@ -65,6 +65,21 @@ export class VendorApi {
     return { status: response.status(), body: await response.text() }
   }
 
+  /** `PATCH /v1/registrations/{id}` (API-07): the fields sent replace the stored ones. Expects 204. */
+  async update(
+    registrationId: string,
+    changes: {
+      squadIds?: string[]
+      sweeperIds?: string[]
+      payment?: VendorRegistration['payment']
+    },
+  ): Promise<void> {
+    const response = await this.context.patch(`/v1/registrations/${registrationId}`, {
+      data: { registration: { registrationId, ...changes } },
+    })
+    expect(response.status(), await response.text()).toBe(204)
+  }
+
   /** `POST /v1/registrations`: the registration id. The test fails on anything but a 201. */
   async register(registration: VendorRegistration): Promise<string> {
     const response = await this.context.post('/v1/registrations', { data: { registration } })

@@ -6,6 +6,8 @@ const name = (index: number) => {
   return fullName(bowler)
 }
 
+const either = (a: number, b: number) => [name(a), name(b)]
+
 /** A line between groups, a bowler's name, or the names one of which fills a row (a full tie). */
 export type ExpectedItem = 'Cut Line' | 'Cash Line' | 'No Advancers' | string | string[]
 
@@ -91,6 +93,16 @@ export const expectedResults: ExpectedDivision[] = [
     },
   },
   {
+    // N = 38: 5 advance. Bowlers 110, 124, 6, 34, 131, and 130 advanced in A, B, or C, so they are
+    // earlier advancers here and rank among the cashers. The five advancers are the best of the rest,
+    // shown before the Cut Line: 138, then 62 and 82 (the formula gives both the same games, so
+    // they list in either order), 144, and 26.
+    squad: 'D',
+    division: 'Scratch',
+    order: [name(138), either(62, 82), either(62, 82), name(144), name(26), 'Cut Line'],
+    notes: {},
+  },
+  {
     // N = 28: 3 advance, 3 cash. Bowler 77 averages 141 and has the lowest scratch of the top
     // three, but the handicap puts them third. Bowler 65 (1380) takes the third cash place.
     squad: 'B',
@@ -103,7 +115,8 @@ export const expectedResults: ExpectedDivision[] = [
 /** Bowler 0 advanced in A, so squad C's Women or Seniors table tags them (RES-06, D-81). */
 export const earlierAdvancer = { squad: 'C', division: 'Women or Seniors', name: name(0) } as const
 
-const either = (a: number, b: number) => [name(a), name(b)]
+/** Bowlers 6 and 34 advanced in A, so squad D's Scratch table tags both. */
+export const earlierAdvancersInD = { division: 'Scratch', names: [name(6), name(34)] } as const
 
 /**
  * Sweeper one: N = 50, 7 cash. The formula gives some bowlers the same games, so those pairs list

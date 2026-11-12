@@ -46,6 +46,7 @@ import {
 import {
   atLargeResults,
   earlierAdvancer,
+  earlierAdvancersInD,
   seedingResults,
   expectedResults,
   superSweeperResults,
@@ -518,6 +519,11 @@ for (const batch of deskBatches) {
     if (earlierAdvancer.squad === letter) {
       await checkEarlierAdvancer(page, path, earlierAdvancer.division, earlierAdvancer.name)
     }
+    if (letter === 'D') {
+      for (const name of earlierAdvancersInD.names) {
+        await checkEarlierAdvancer(page, path, earlierAdvancersInD.division, name)
+      }
+    }
     // At-large and seeding say "Unofficial results" until the last squad completes (D-88).
     const tournamentPath = path.replace(/\/squads\/.*$/, '')
     await checkFinalsOfficial(page, tournamentPath, batch === 3)
@@ -568,6 +574,12 @@ for (const [number, sweeper, entered] of [
 }
 
 /** The desk edits of `data/edits.ts`, before squad D is bowled. */
+const registrationOf = (ids: Map<number, string>, bowler: number) => {
+  const found = ids.get(bowler)
+  if (!found) throw new Error(`No registration id for bowler ${bowler}`)
+  return found
+}
+
 function deskEditsTest() {
   test('stage 4: desk edits add, drop, and switch sessions, change a division and an average, and toggle the super sweeper (REG-15 to REG-21, D-197 to D-207)', async ({
     page,
@@ -611,6 +623,42 @@ function deskEditsTest() {
       addSweepers: [sweeperTwo.label],
       net: `Net: refund $${Number(sweeperOne.entryFee) - Number(sweeperTwo.entryFee)}.00.`,
     })
+
+    // D-199: the desk opens bowler 35's Edit page to add sweeper two; meanwhile the registration
+    // site adds the same sweeper. The desk's save is a 409 "changed", and a reload shows the site's.
+    const site = await VendorApi.open()
+    try {
+      const main = await site.tournament(tournament.name)
+      const stale = bowlerAt(edits.staleConflict)
+      const staleName = fullName(stale)
+      await registrations()
+      await page.getByRole('link', { name: `Edit ${staleName}`, exact: true }).click()
+      await expect(page.getByRole('heading', { name: 'Edit registration', level: 1 })).toBeVisible()
+      await page
+        .getByRole('group', { name: /Sweepers/ })
+        .getByLabel(new RegExp(sweeperTwo.label.replace(/[/]/g, '\\/')))
+        .check()
+      await page.getByRole('button', { name: 'Next: review' }).click()
+      await site.update(registrationOf(siteRegistrationIds, stale.index), {
+        sweeperIds: [idByDate(main.sweepers, sweeperTwo.date)],
+        payment: {
+          processingSystem: 'Stripe',
+          confirmationCode: `ch_site_${stale.index}_sweeper`,
+          amount: Number(sweeperTwo.entryFee),
+        },
+      })
+      await page.getByRole('button', { name: 'Save changes' }).click()
+      await expect(page.getByText('This registration changed.')).toBeVisible()
+      await expect(page.getByText(/^Now entered: .*Sweeper Fri/)).toBeVisible()
+      await page.getByRole('button', { name: 'Reload registration' }).click()
+      await expect(
+        page
+          .getByRole('group', { name: /Sweepers/ })
+          .getByLabel(new RegExp(sweeperTwo.label.replace(/[/]/g, '\\/'))),
+      ).toBeChecked()
+    } finally {
+      await site.close()
+    }
 
     // Entries exist and the sweepers are open: the super sweeper guard, and a delete with entries.
     await refusalsWithEntries(page, siteRegistrationIds)

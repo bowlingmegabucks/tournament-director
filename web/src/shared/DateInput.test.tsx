@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { DateInput } from './DateInput'
@@ -60,6 +60,19 @@ describe('DateInput', () => {
     expect(box).toHaveValue('03')
     await user.keyboard('{Backspace}')
     expect(box).toHaveValue('0')
+  })
+
+  it('puts the slash back when a digit is replaced and the text stays as long', async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+    const box = screen.getByLabelText('Day')
+    await user.type(box, '03/')
+    await user.keyboard('{Backspace}')
+    expect(box).toHaveValue('03')
+
+    fireEvent.change(box, { target: { value: '04' } })
+
+    expect(box).toHaveValue('04/')
   })
 
   it('keeps the text typed so far as the value until the date is complete', async () => {

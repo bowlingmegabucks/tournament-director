@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, Link, RouterProvider, useNavigate } from 'react-router'
@@ -6,7 +6,12 @@ import { describe, expect, it } from 'vitest'
 import { LeaveDialog } from './LeaveDialog'
 import { useLeaveGuard } from './useLeaveGuard'
 
-function Form({ saveFails = false }: Readonly<{ saveFails?: boolean }>) {
+/** `hold` keeps the save running until Finish is pressed, so a test can act mid-save. */
+function Form({
+  saveFails = false,
+  hold = false,
+}: Readonly<{ saveFails?: boolean; hold?: boolean }>) {
+  const finish = useRef<() => void>(undefined)
   const [text, setText] = useState('')
   const guard = useLeaveGuard(text !== '')
   const navigate = useNavigate()
@@ -20,6 +25,10 @@ function Form({ saveFails = false }: Readonly<{ saveFails?: boolean }>) {
           void guard
             .whileSaving(async () => {
               if (saveFails) throw new Error('refused')
+              await new Promise<void>((resolve) => {
+                finish.current = resolve
+                if (!hold) resolve()
+              })
               await navigate('/done')
             })
             .catch(() => undefined)
@@ -27,16 +36,24 @@ function Form({ saveFails = false }: Readonly<{ saveFails?: boolean }>) {
       >
         Save
       </button>
+      <button
+        type="button"
+        onClick={() => {
+          finish.current?.()
+        }}
+      >
+        Finish
+      </button>
       <Link to="/other">Other</Link>
       <LeaveDialog blocker={guard.blocker} />
     </>
   )
 }
 
-function renderForm(saveFails = false) {
+function renderForm({ saveFails = false, hold = false } = {}) {
   const router = createMemoryRouter(
     [
-      { path: '/', element: <Form saveFails={saveFails} /> },
+      { path: '/', element: <Form saveFails={saveFails} hold={hold} /> },
       { path: '/other', element: <h1>Other page</h1> },
       { path: '/done', element: <h1>Done page</h1> },
     ],
@@ -113,7 +130,7 @@ describe('useLeaveGuard and LeaveDialog', () => {
   })
 
   it('asks again after a save that failed', async () => {
-    const user = renderForm(true)
+    const user = renderForm({ saveFails: true })
     await user.type(screen.getByLabelText('Text'), 'abc')
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
@@ -136,5 +153,21 @@ describe('useLeaveGuard and LeaveDialog', () => {
 
     await user.clear(screen.getByLabelText('Text'))
     expect(closing()).toBe(false)
+  })
+
+  it('does not ask the browser while a save is under way', async () => {
+    const user = renderForm({ hold: true })
+    await user.type(screen.getByLabelText('Text'), 'abc')
+    const closing = () => {
+      const event = new Event('beforeunload', { cancelable: true })
+      window.dispatchEvent(event)
+      return event.defaultPrevented
+    }
+
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(closing()).toBe(false)
+
+    await user.click(screen.getByRole('button', { name: 'Finish' }))
+    expect(await screen.findByRole('heading', { name: 'Done page' })).toBeVisible()
   })
 })

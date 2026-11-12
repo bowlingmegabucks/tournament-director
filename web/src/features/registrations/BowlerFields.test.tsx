@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BowlerFields } from './BowlerFields'
 import { emptyBowler } from './deskForm'
@@ -70,5 +70,55 @@ describe('BowlerFields (BWL-01 to BWL-10, D-162)', () => {
     const gender = screen.getByLabelText('Gender')
     expect(gender).toBeInvalid()
     expect(gender).toHaveAccessibleDescription('Pick one.')
+  })
+
+  it('types the date of birth as mm/dd/yyyy and reports ISO once it is whole', () => {
+    const { onChange } = show()
+    const box = screen.getByLabelText('Date of birth')
+
+    fireEvent.change(box, { target: { value: '4/' } })
+    expect(onChange).toHaveBeenLastCalledWith('dateOfBirth', '04/')
+    fireEvent.change(box, { target: { value: '4/1/1975' } })
+    expect(onChange).toHaveBeenLastCalledWith('dateOfBirth', '1975-04-01')
+    expect(box).toHaveAttribute('placeholder', 'mm/dd/yyyy')
+  })
+
+  it('shows a stored date of birth as mm/dd/yyyy', () => {
+    show({ dateOfBirth: '1975-04-01' })
+
+    expect(screen.getByLabelText('Date of birth')).toHaveValue('04/01/1975')
+  })
+
+  it('links an error to the date of birth box and marks it invalid', () => {
+    show({ dateOfBirth: '04/0' }, { 'bowler.dateOfBirth': 'Enter the date of birth as mm/dd/yyyy' })
+
+    const box = screen.getByLabelText('Date of birth')
+    expect(box).toBeInvalid()
+    expect(box).toHaveAccessibleDescription('Enter the date of birth as mm/dd/yyyy')
+  })
+
+  it('describes a box with nothing only when it has an error or a hint', () => {
+    show()
+
+    expect(screen.getByLabelText('Date of birth')).not.toHaveAttribute('aria-describedby')
+    expect(screen.getByLabelText('Date of birth')).not.toBeInvalid()
+    expect(screen.getByLabelText('City')).not.toHaveAttribute('aria-describedby')
+    expect(screen.getByLabelText('USBC ID')).toHaveAttribute('aria-describedby')
+  })
+
+  it('turns browser autofill off, and gives the Zip box its short label', () => {
+    show()
+
+    for (const label of ['Street', 'City', 'Zip', 'Date of birth']) {
+      expect(screen.getByLabelText(label)).toHaveAttribute('autocomplete', 'off')
+    }
+  })
+
+  it('lists an error before the hint in the description', () => {
+    show({}, { 'bowler.usbcId': 'USBC ID is wrong.' })
+
+    expect(screen.getByLabelText('USBC ID')).toHaveAccessibleDescription(
+      /^USBC ID is wrong\. Like 1234-56789/,
+    )
   })
 })

@@ -7,8 +7,8 @@ import { DateTimeInput } from './DateTimeInput'
 function Harness({
   start = '',
   onBlur = () => undefined,
-  readOnly = false,
-  invalid = false,
+  readOnly,
+  invalid,
 }: Readonly<{ start?: string; onBlur?: () => void; readOnly?: boolean; invalid?: boolean }>) {
   const [value, setValue] = useState(start)
   return (
@@ -89,5 +89,14 @@ describe('DateTimeInput', () => {
 
     expect(screen.getByLabelText('When')).not.toHaveAttribute('readonly')
     expect(screen.getByLabelText('When')).not.toHaveAttribute('aria-invalid')
+    expect(screen.getByLabelText('Time')).not.toHaveAttribute('readonly')
+    expect(screen.getByLabelText('Time')).not.toHaveAttribute('aria-invalid')
+  })
+
+  it('names the boxes so a form post could tell them apart', () => {
+    render(<Harness />)
+
+    expect(screen.getByLabelText('When')).toHaveAttribute('name', 'when')
+    expect(screen.getByLabelText('Time')).toHaveAttribute('name', 'whenTime')
   })
 })

@@ -15,17 +15,19 @@ export function displayDate(value: string): string {
 }
 
 /** `mm/dd/yyyy` to `YYYY-MM-DD`, or `undefined` while the text is not a full date. */
-function isoOfDisplay(text: string): string | undefined {
+export function isoOfDisplay(text: string): string | undefined {
   const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text)
   return match ? `${match[3]}-${match[1]}-${match[2]}` : undefined
 }
 
-/** Whether the part at `index` (month, day, year) takes no more digits. */
-function isFull(parts: readonly string[], index: number): boolean {
-  const part = parts[index] ?? ''
+/**
+ * Whether `part`, one to four digits of the month, day, or year (`index` 0 to 2), takes no more.
+ * A month or day holds one or two digits; a single digit that cannot start a two-digit month
+ * (2 to 9) or day (4 to 9) ends the part.
+ */
+function isFull(part: string, index: number): boolean {
   if (index === 2) return part.length === 4
-  // A first digit that cannot start a two-digit month (2 to 9) or day (4 to 9) ends the part.
-  return part.length === 2 || (part.length === 1 && Number(part) > (index === 0 ? 1 : 3))
+  return part.length === 2 || Number(part) > (index === 0 ? 1 : 3)
 }
 
 /**
@@ -45,14 +47,15 @@ export function formatTypedDate(text: string, deleting = false): string {
         parts.push('')
       }
       parts[parts.length - 1] += char
-      closed = isFull(parts, parts.length - 1)
+      // Stryker disable next-line StringLiteral: `parts` always holds the part just added, so the fallback never runs.
+      closed = isFull(parts[parts.length - 1] ?? '', parts.length - 1)
     } else if (SEPARATOR.test(char) && parts.length < 3 && parts[parts.length - 1] !== '') {
       closed = true
     }
   }
   const last = parts.length - 1
-  const text2 = parts.map((part, index) => (closed || index < last ? part.padStart(2, '0') : part))
-  const body = text2.join('/')
+  const padded = parts.map((part, index) => (closed || index < last ? part.padStart(2, '0') : part))
+  const body = padded.join('/')
   return closed && last < 2 && !deleting ? `${body}/` : body
 }
 

@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { displayDate, formatTypedDate, valueOfText } from './dateText'
+import { displayDate, formatTypedDate, isoOfDisplay, valueOfText } from './dateText'
 
 describe('displayDate', () => {
   it('shows a full ISO date as mm/dd/yyyy', () => {
     expect(displayDate('2027-03-12')).toBe('03/12/2027')
   })
 
-  it.each(['', '03/1', '2027-03', '2027-03-12T09:00', 'abc'])('leaves "%s" as it is', (text) => {
-    expect(displayDate(text)).toBe(text)
-  })
+  it.each(['', '03/1', '2027-03', '2027-03-12T09:00', 'x2027-03-12', '12027-03-12', 'abc'])(
+    'leaves "%s" as it is',
+    (text) => {
+      expect(displayDate(text)).toBe(text)
+    },
+  )
 })
 
 describe('formatTypedDate', () => {
@@ -17,6 +20,7 @@ describe('formatTypedDate', () => {
     ['03', '03/'],
     ['03/', '03/'],
     ['03/1', '03/1'],
+    ['3/1', '03/1'],
     ['03/12', '03/12/'],
     ['03/12/2', '03/12/2'],
     ['03/12/2027', '03/12/2027'],
@@ -43,6 +47,8 @@ describe('formatTypedDate', () => {
     ['1', '1'],
     ['03/3', '03/3'],
     ['4', '04/'],
+    ['2', '02/'],
+    ['03/4', '03/04/'],
   ])(
     'ends a part at once when the digit cannot start a longer one: "%s" is "%s"',
     (typed, shown) => {
@@ -63,6 +69,11 @@ describe('formatTypedDate', () => {
   it('keeps a trailing slash off while deleting, so Backspace works', () => {
     expect(formatTypedDate('03', true)).toBe('03')
     expect(formatTypedDate('03/12', true)).toBe('03/12')
+  })
+
+  it('reads only a whole ISO date as one', () => {
+    expect(formatTypedDate('x2027-03-12')).toBe('02/02/7031')
+    expect(formatTypedDate('12027-03-12')).toBe('12/02/7031')
   })
 
   it('reads a typed or pasted ISO date as it is', () => {
@@ -89,4 +100,22 @@ describe('valueOfText', () => {
   it('passes ISO through', () => {
     expect(valueOfText('2027-03-12')).toBe('2027-03-12')
   })
+
+  it('keeps the trailing slash off when deleting', () => {
+    expect(valueOfText('03', true)).toBe('03')
+    expect(valueOfText('03')).toBe('03/')
+  })
+})
+
+describe('isoOfDisplay', () => {
+  it('turns a whole mm/dd/yyyy into ISO', () => {
+    expect(isoOfDisplay('03/12/2027')).toBe('2027-03-12')
+  })
+
+  it.each(['', '03/12', '03/12/27', '3/12/2027', 'x03/12/2027', '03/12/2027x', '03/12/20277'])(
+    'gives nothing for "%s"',
+    (text) => {
+      expect(isoOfDisplay(text)).toBeUndefined()
+    },
+  )
 })

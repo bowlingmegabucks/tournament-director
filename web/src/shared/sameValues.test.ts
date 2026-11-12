@@ -30,6 +30,7 @@ describe('sameValues', () => {
     expect(sameValues({ pins: { o: '10' } }, { pins: { o: '11' } })).toBe(false)
     expect(sameValues(['a', 'b'], ['a', 'b'])).toBe(true)
     expect(sameValues(['a', 'b'], ['b', 'a'])).toBe(false)
+    expect(sameValues(['a', 'b'], ['a', 'c'])).toBe(false)
     expect(sameValues(['a'], ['a', 'b'])).toBe(false)
   })
 

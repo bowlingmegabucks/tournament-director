@@ -294,3 +294,26 @@ export const seedingResults: ExpectedFinals[] = [
     cashers: [name(114)],
   },
 ]
+
+/**
+ * Squad B Scratch through game 3, while game 4 has only some scores (RES-40): totals of games 1 to 3
+ * are 83: 729; 47: 675 (high game 240); 55 and 75: 675 (239); 19: 673; 110: 651; 96 and 116: 624.
+ * N = 33, so 4 advance and 3 cash. 96 and 116 tie fully across the cash line.
+ */
+export const squadBThroughGame3: ExpectedDivision = {
+  squad: 'B',
+  division: 'Scratch',
+  order: [
+    name(83),
+    name(47),
+    either(55, 75),
+    either(55, 75),
+    'Cut Line',
+    name(19),
+    name(110),
+    either(96, 116),
+    'Cash Line',
+    either(96, 116),
+  ],
+  notes: {},
+}

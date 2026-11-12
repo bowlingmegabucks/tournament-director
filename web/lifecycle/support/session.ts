@@ -59,6 +59,8 @@ export async function enterAllScores(
   quirks: {
     typo?: (name: string, game: number) => number | undefined
     walksOff?: (name: string, game: number) => boolean
+    /** Called after each pair sheet is done: game number and the pair's place in the game (from 0). */
+    afterPair?: (game: number, pair: number) => Promise<void>
   } = {},
 ) {
   for (let game = 1; game <= games; game++) {
@@ -68,7 +70,7 @@ export async function enterAllScores(
     const hrefs = await tiles
       .getByRole('link')
       .evaluateAll((links) => links.map((link) => link.getAttribute('href') ?? ''))
-    for (const href of hrefs) {
+    for (const [pair, href] of hrefs.entries()) {
       await page.goto(href)
       const sheet = page.getByRole('region', { name: new RegExp(`^Game ${game} · Lanes`) })
       await expect(sheet).toBeVisible()
@@ -107,6 +109,7 @@ export async function enterAllScores(
         typed++
       }
       await expect(sheet.getByText('✓ Saved')).toHaveCount(typed)
+      await quirks.afterPair?.(game, pair)
     }
   }
 }
@@ -306,3 +309,37 @@ export async function checkGapSection(
 }
 
 const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/**
+ * While a squad is part way through a game: the default ranking counts only the games every bowler
+ * has (RES-40), says the next game is not complete yet (RES-46), and the Live choice keeps its
+ * place in the address (RES-45). `want` is the hand-written order through `throughGame`.
+ */
+export async function checkRankingModes(
+  page: Page,
+  squadPath: string,
+  want: ExpectedDivision,
+  throughGame: number,
+) {
+  await page.goto(`${squadPath}/results`)
+  await chooseDivision(page, want.division)
+  await expect(page.getByRole('radio', { name: `Through game ${throughGame}` })).toBeChecked()
+  await expect(
+    page.getByText(new RegExp(`Game ${throughGame + 1} is not complete yet`)),
+  ).toBeVisible()
+  const table = page.getByRole('table', { name: `Results for the ${want.division} division` })
+  await expect(table).toBeVisible()
+  await expectTable(table, table.locator('tbody tr'), want)
+
+  await page.getByRole('radio', { name: 'Live' }).click()
+  await expect(page).toHaveURL(/mode=live/)
+  await expect(page.getByRole('radio', { name: 'Live' })).toBeChecked()
+  await expect(table).toBeVisible()
+}
+
+/** The public TV page lists the tournament's divisions in sections while a squad is open (RES-47). */
+export async function checkTvPage(page: Page, tournamentPath: string, tournamentName: string) {
+  await page.goto(`${tournamentPath}/liveResults`)
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(tournamentName)
+  await expect(page.getByRole('heading', { level: 2 }).first()).toBeVisible()
+}

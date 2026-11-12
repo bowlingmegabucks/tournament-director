@@ -36,7 +36,9 @@ import {
   checkFinals,
   checkGapSection,
   checkFinalsOfficial,
+  checkRankingModes,
   checkSuperSweeper,
+  checkTvPage,
   checkSweeperResults,
   completeSession,
   enterAllScores,
@@ -48,6 +50,7 @@ import {
   earlierAdvancer,
   earlierAdvancersInD,
   seedingResults,
+  squadBThroughGame3,
   expectedResults,
   superSweeperResults,
   sweeperOneResults,
@@ -489,6 +492,12 @@ for (const batch of deskBatches) {
       {
         typo: (name, game) => typoFor(name, game, letter),
         walksOff: (name, game) => walksOff(name, game, letter),
+        // Squad B, after the first pair of game 4: the ranking is through game 3, and the TV page is up.
+        afterPair: async (game, pair) => {
+          if (letter !== 'B' || game !== 4 || pair !== 0) return
+          await checkRankingModes(page, path, squadBThroughGame3, 3)
+          await checkTvPage(page, path.replace(/\/squads\/.*$/, ''), tournament.name)
+        },
       },
     )
     // The public Scores tab shows what the keeper typed: one site bowler's six games.

@@ -54,7 +54,7 @@ export async function enterAllScores(
   page: Page,
   squadPath: string,
   games: number,
-  scoreOf: (name: string, game: number) => number | null,
+  scoreOf: ScoreOf,
   /** How this squad differs from "everyone bowls every game": wrong numbers, walk-offs. */
   quirks: {
     typo?: (name: string, game: number) => number | undefined
@@ -64,54 +64,90 @@ export async function enterAllScores(
   } = {},
 ) {
   for (let game = 1; game <= games; game++) {
-    await page.goto(`${squadPath}/scores/entry/${game}`)
-    const tiles = page.getByRole('list', { name: `Pairs for game ${game}` })
-    await expect(tiles).toBeVisible()
-    const hrefs = await tiles
-      .getByRole('link')
-      .evaluateAll((links) => links.map((link) => link.getAttribute('href') ?? ''))
+    const hrefs = await pairLinks(page, `${squadPath}/scores/entry/${game}`, game)
     for (const [pair, href] of hrefs.entries()) {
       await page.goto(href)
       const sheet = page.getByRole('region', { name: new RegExp(`^Game ${game} · Lanes`) })
       await expect(sheet).toBeVisible()
       const boxes = await sheet.getByRole('textbox').all()
-      let typed = 0
-      // A keeper who types a wrong number, saves it, and fixes it: reload so the fix is a real edit.
-      for (const box of await sheet.getByRole('textbox').all()) {
-        const label = (await box.getAttribute('aria-label')) ?? ''
-        const name = /^Lane \w+, (.+), game \d+$/.exec(label)?.[1] ?? ''
-        const wrong = quirks.typo?.(name, game)
-        const right = scoreOf(name, game)
-        if (wrong === undefined || right === null) continue
-        await saveBox(box, String(wrong))
-        await page.reload()
-        await expect(sheet).toBeVisible()
-        await saveBox(box, String(right))
-        typed++
-      }
+      let typed = await correctTypos(page, sheet, game, scoreOf, quirks.typo)
       for (const box of boxes) {
-        const label = (await box.getAttribute('aria-label')) ?? ''
-        const name = /^Lane \w+, (.+), game \d+$/.exec(label)?.[1]
-        if (!name) throw new Error(`Unexpected score box: ${label}`)
-        if ((await box.inputValue()) !== '') continue
-        const score = scoreOf(name, game)
-        if (score === null) {
-          // A bowler who walks off is flagged at the game they stop; the box stays empty.
-          if (quirks.walksOff?.(name, game)) {
-            await sheet
-              .getByRole('button', { name: new RegExp(`^Did not finish ?, ${escapeRegex(name)}$`) })
-              .click()
-            await expect(sheet.getByText('Did not finish', { exact: true })).toBeVisible()
-          }
-          continue
-        }
-        await saveBox(box, String(score))
-        typed++
+        typed += await enterBox(sheet, box, game, scoreOf, quirks.walksOff)
       }
       await expect(sheet.getByText('✓ Saved')).toHaveCount(typed)
       await quirks.afterPair?.(game, pair)
     }
   }
+}
+
+type ScoreOf = (name: string, game: number) => number | null
+
+/** The links to a game's pair sheets, in the order the game board lists them. */
+async function pairLinks(page: Page, boardPath: string, game: number): Promise<string[]> {
+  await page.goto(boardPath)
+  const tiles = page.getByRole('list', { name: `Pairs for game ${game}` })
+  await expect(tiles).toBeVisible()
+  return tiles
+    .getByRole('link')
+    .evaluateAll((links) => links.map((link) => link.getAttribute('href') ?? ''))
+}
+
+/** The bowler's name in a score box's label ("Lane 3A, Ann Lee, game 2"), or '' when it has none. */
+async function boxBowler(box: Locator): Promise<string> {
+  const label = (await box.getAttribute('aria-label')) ?? ''
+  return /^Lane \w+, (.+), game \d+$/.exec(label)?.[1] ?? ''
+}
+
+/**
+ * A keeper who types a wrong number, saves it, and fixes it: reload so the fix is a real edit.
+ * Returns how many boxes this saved (each typo and its fix count once).
+ */
+async function correctTypos(
+  page: Page,
+  sheet: Locator,
+  game: number,
+  scoreOf: ScoreOf,
+  typo: ((name: string, game: number) => number | undefined) | undefined,
+): Promise<number> {
+  let typed = 0
+  for (const box of await sheet.getByRole('textbox').all()) {
+    const name = await boxBowler(box)
+    const wrong = typo?.(name, game)
+    const right = scoreOf(name, game)
+    if (wrong === undefined || right === null) continue
+    await saveBox(box, String(wrong))
+    await page.reload()
+    await expect(sheet).toBeVisible()
+    await saveBox(box, String(right))
+    typed++
+  }
+  return typed
+}
+
+/** Fill one empty box with its score, or flag a walk-off. Returns 1 when it saved a score. */
+async function enterBox(
+  sheet: Locator,
+  box: Locator,
+  game: number,
+  scoreOf: ScoreOf,
+  walksOff: ((name: string, game: number) => boolean) | undefined,
+): Promise<number> {
+  const name = await boxBowler(box)
+  if (!name) throw new Error(`Unexpected score box: ${await box.getAttribute('aria-label')}`)
+  if ((await box.inputValue()) !== '') return 0
+  const score = scoreOf(name, game)
+  if (score !== null) {
+    await saveBox(box, String(score))
+    return 1
+  }
+  // A bowler who walks off is flagged at the game they stop; the box stays empty.
+  if (walksOff?.(name, game)) {
+    await sheet
+      .getByRole('button', { name: new RegExp(`^Did not finish ?, ${escapeRegex(name)}$`) })
+      .click()
+    await expect(sheet.getByText('Did not finish', { exact: true })).toBeVisible()
+  }
+  return 0
 }
 
 /** On a session page: complete it after reading the dialog. */

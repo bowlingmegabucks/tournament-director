@@ -117,9 +117,18 @@ export function filledFields(values: BowlerValues): Partial<BowlerValues> {
   return changedFields(emptyBowler, values)
 }
 
-/** Step 1 needs the names (D-162); the server checks the rest. */
+const isRealDay = (value: string) => {
+  const parsed = new Date(`${value}T00:00:00.000Z`)
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && parsed.toISOString().startsWith(value)
+}
+
+/** Step 1 needs the names (D-162) and a date of birth that is a whole date when given; the server checks the rest. */
 export function checkBowlerStep(values: BowlerValues): DeskFieldErrors {
   const errors: DeskFieldErrors = {}
+  const born = values.dateOfBirth.trim()
+  if (born !== '' && !isRealDay(born)) {
+    errors['bowler.dateOfBirth'] = 'Enter the date of birth as mm/dd/yyyy'
+  }
   if (values.firstName.trim() === '') errors['bowler.firstName'] = 'First Name is Required'
   if (values.lastName.trim() === '') errors['bowler.lastName'] = 'Last Name is Required'
   return errors

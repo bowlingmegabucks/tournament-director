@@ -20,6 +20,9 @@ const filled: Record<string, string> = {
   'Super sweeper cash ratio (required)': '4',
 }
 
+/** `2027-03-12` as typed into a date box: `03/12/2027`. Other text stays. */
+const usDate = (value: string) => value.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$2/$3/$1')
+
 async function fillIn(
   user: ReturnType<typeof userEvent.setup>,
   overrides: Record<string, string> = {},
@@ -27,7 +30,7 @@ async function fillIn(
   for (const [label, value] of Object.entries({ ...filled, ...overrides })) {
     const input = screen.getByLabelText(label)
     await user.clear(input)
-    if (value !== '') await user.type(input, value)
+    if (value !== '') await user.type(input, usDate(value))
   }
 }
 
@@ -101,7 +104,7 @@ describe('NewTournamentPage', () => {
 
     const input = screen.getByLabelText(label)
     await user.clear(input)
-    await user.type(input, value)
+    await user.type(input, usDate(value))
     await user.tab()
 
     expect(input).toHaveAccessibleDescription(
@@ -269,8 +272,14 @@ describe('NewTournamentPage', () => {
     renderApp('/tournaments/new')
     await screen.findByRole('heading', { name: 'New tournament' })
 
-    expect(screen.getByLabelText('Start date (required)')).toHaveAttribute('type', 'date')
-    expect(screen.getByLabelText('End date (required)')).toHaveAttribute('type', 'date')
+    expect(screen.getByLabelText('Start date (required)')).toHaveAttribute(
+      'placeholder',
+      'mm/dd/yyyy',
+    )
+    expect(screen.getByLabelText('End date (required)')).toHaveAttribute(
+      'placeholder',
+      'mm/dd/yyyy',
+    )
     expect(screen.getByLabelText('Name (required)')).toHaveAttribute('type', 'text')
     expect(screen.getByLabelText('Name (required)')).not.toHaveAttribute('inputmode')
     expect(screen.getByLabelText('Name (required)')).not.toHaveAccessibleDescription()
@@ -433,7 +442,7 @@ describe('NewTournamentPage', () => {
     expect(screen.getByLabelText('End date (required)')).toBeInvalid()
 
     await user.clear(screen.getByLabelText('Start date (required)'))
-    await user.type(screen.getByLabelText('Start date (required)'), '2027-03-10')
+    await user.type(screen.getByLabelText('Start date (required)'), '03/10/2027')
 
     expect(screen.getByLabelText('End date (required)')).toBeValid()
   })
@@ -450,7 +459,7 @@ describe('NewTournamentPage', () => {
     await user.tab()
 
     await user.clear(screen.getByLabelText('Start date (required)'))
-    await user.type(screen.getByLabelText('Start date (required)'), '2027-03-13')
+    await user.type(screen.getByLabelText('Start date (required)'), '03/13/2027')
 
     expect(screen.getByLabelText('End date (required)')).toHaveAccessibleDescription(
       'End date must be on or after start date',

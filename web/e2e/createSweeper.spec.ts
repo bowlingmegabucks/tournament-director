@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { menuLink, openTournamentsSignedIn } from './menu'
+import { fillDateTime, firstDayAt } from './dateFields'
 
 /** Open the first tournament's Sweepers page, then the New sweeper form. */
 async function openForm(page: Page) {
@@ -11,13 +12,6 @@ async function openForm(page: Page) {
   await expect(page.getByLabel('Date and time (required)')).toBeVisible()
 }
 
-/** A time on the tournament's first day, read from the date box's limit, since the demo dates move. */
-async function firstDayAt(page: Page, time: string): Promise<string> {
-  const min = await page.getByLabel('Date and time (required)').getAttribute('min')
-  if (!min) throw new Error('The date box has no minimum')
-  return `${min.slice(0, 10)}T${time}`
-}
-
 // SQD-10 to SQD-13: the director opens the form from the Sweepers page, fixes the errors, adds the
 // sweeper with bonus pins, and lands on the list with a toast and a new card.
 test('a director adds a sweeper with bonus pins and sees it in the list', async ({ page }) => {
@@ -27,7 +21,7 @@ test('a director adds a sweeper with bonus pins and sees it in the list', async 
   await expect(page.getByRole('alert')).toContainText('Fix')
   await expect(page.getByLabel('Date and time (required)')).toBeFocused()
 
-  await page.getByLabel('Date and time (required)').fill(await firstDayAt(page, '21:30'))
+  await fillDateTime(page, await firstDayAt(page, '21:30'))
   await page.getByLabel('Starting lane (required)').fill('3')
   await page.getByLabel('Number of lanes (required)').fill('10')
   await page.getByLabel('Bowlers per pair (required)').fill('5')
@@ -49,7 +43,7 @@ test('a director adds a sweeper with bonus pins and sees it in the list', async 
 test('a rule the browser checks shows under its box', async ({ page }) => {
   await openForm(page)
 
-  await page.getByLabel('Date and time (required)').fill(await firstDayAt(page, '18:00'))
+  await fillDateTime(page, await firstDayAt(page, '18:00'))
   await page.getByLabel('Starting lane (required)').fill('1')
   await page.getByLabel('Number of lanes (required)').fill('10')
   await page.getByLabel('Bowlers per pair (required)').fill('4')

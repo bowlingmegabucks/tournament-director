@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { menuLink, openTournamentsSignedIn } from './menu'
+import { fillDateTime, firstDayAt } from './dateFields'
 
 async function openSweepers(page: Page, signedIn = true) {
   if (signedIn) {
@@ -17,9 +18,7 @@ async function openSweepers(page: Page, signedIn = true) {
  */
 async function addEmptySweeper(page: Page) {
   await page.getByRole('link', { name: 'New sweeper' }).click()
-  const min = await page.getByLabel('Date and time (required)').getAttribute('min')
-  if (!min) throw new Error('The date box has no minimum')
-  await page.getByLabel('Date and time (required)').fill(`${min.slice(0, 10)}T21:30`)
+  await fillDateTime(page, await firstDayAt(page, '21:30'))
   await page.getByLabel('Starting lane (required)').fill('3')
   await page.getByLabel('Number of lanes (required)').fill('10')
   await page.getByLabel('Bowlers per pair (required)').fill('5')

@@ -102,7 +102,8 @@ describe('EditSweeperPage (SQD-27, SQD-29)', () => {
 
     await openForm()
 
-    expect(box('Date and time (required)')).toHaveValue('2026-10-23T19:00')
+    expect(box('Date and time (required)')).toHaveValue('10/23/2026')
+    expect(screen.getByLabelText('Time')).toHaveValue('19:00')
     expect(box('Starting lane (required)')).toHaveValue('11')
     expect(box('Number of lanes (required)')).toHaveValue('10')
     expect(box('Bowlers per pair (required)')).toHaveValue('3')
@@ -244,7 +245,7 @@ describe('EditSweeperPage (SQD-27, SQD-29)', () => {
       const sent = serve()
       await openForm()
 
-      fireEvent.change(box('Date and time (required)'), { target: { value: '2026-10-23T20:30' } })
+      fireEvent.change(screen.getByLabelText('Time'), { target: { value: '20:30' } })
       await userEvent.setup().click(save())
 
       await waitFor(() => {

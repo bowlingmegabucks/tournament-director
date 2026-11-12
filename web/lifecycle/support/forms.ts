@@ -26,8 +26,16 @@ export async function addDivision(
   await page.getByRole('button', { name: 'Add division' }).click()
 }
 
+/** Type `YYYY-MM-DD` into a date box as the director does: `mm/dd/yyyy`. */
+async function usDay(page: Page, label: string, day: string) {
+  const [year, month, date] = day.split('-')
+  await page.getByLabel(label, { exact: true }).fill(`${month}/${date}/${year}`)
+}
+
 async function fillSession(page: Page, session: SquadData) {
-  await page.getByLabel('Date and time (required)').fill(session.date)
+  const [day = '', time = ''] = session.date.split('T')
+  await usDay(page, 'Date and time (required)', day)
+  await page.getByLabel('Time', { exact: true }).fill(time)
   await page.getByLabel('Starting lane (required)').fill(String(session.startingLane))
   await page.getByLabel('Number of lanes (required)').fill(String(session.lanes))
   await page.getByLabel('Bowlers per pair (required)').fill(String(session.perPair))
@@ -73,8 +81,8 @@ interface TournamentData {
 export async function addTournament(page: Page, tournament: TournamentData) {
   await page.getByRole('link', { name: 'New tournament' }).click()
   await page.getByLabel('Name (required)', { exact: true }).fill(tournament.name)
-  await page.getByLabel('Start date (required)', { exact: true }).fill(tournament.start)
-  await page.getByLabel('End date (required)', { exact: true }).fill(tournament.end)
+  await usDay(page, 'Start date (required)', tournament.start)
+  await usDay(page, 'End date (required)', tournament.end)
   await page.getByLabel('Bowling center (required)', { exact: true }).fill(tournament.bowlingCenter)
   await page
     .getByLabel('Entry fee in dollars (required)', { exact: true })

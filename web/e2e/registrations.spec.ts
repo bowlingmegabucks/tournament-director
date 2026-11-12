@@ -114,7 +114,7 @@ test('a new bowler with every field, a sweeper, and the super sweeper (REG-06, R
   await page.getByLabel('Email', { exact: true }).fill('bea@example.com')
   await page.getByLabel('Phone').fill('978-555-0100')
   await page.getByLabel('USBC ID').fill('5555-66666')
-  await page.getByLabel('Date of birth').fill('1975-04-01')
+  await page.getByLabel('Date of birth').fill('04/01/1975')
   await page.getByLabel('Gender').selectOption('Female')
   await nextTo(page, 'registration')
   await page.getByLabel('Division (required)').selectOption('Open')

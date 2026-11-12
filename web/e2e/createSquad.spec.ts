@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { menuLink, openTournamentsSignedIn } from './menu'
+import { fillDateTime, firstDayAt } from './dateFields'
 
 /** Open the first tournament's Squads page, then the New squad form. */
 async function openForm(page: Page) {
@@ -8,13 +9,6 @@ async function openForm(page: Page) {
   await menuLink(page, 'Squads')
   await page.getByRole('link', { name: 'New squad' }).click()
   await expect(page.getByRole('heading', { name: 'New squad', level: 1 })).toBeVisible()
-}
-
-/** A time on the tournament's first day, read from the date box's limit, since the demo dates move. */
-async function firstDayAt(page: Page, time: string): Promise<string> {
-  const min = await page.getByLabel('Date and time (required)').getAttribute('min')
-  if (!min) throw new Error('The date box has no minimum')
-  return `${min.slice(0, 10)}T${time}`
 }
 
 // SQD-01 to SQD-08: the director opens the form from the Squads page, fixes the errors, adds the
@@ -26,7 +20,7 @@ test('a director adds a squad and sees it in the list', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText('Fix')
   await expect(page.getByLabel('Date and time (required)')).toBeFocused()
 
-  await page.getByLabel('Date and time (required)').fill(await firstDayAt(page, '21:30'))
+  await fillDateTime(page, await firstDayAt(page, '21:30'))
   await page.getByLabel('Starting lane (required)').fill('3')
   await page.getByLabel('Number of lanes (required)').fill('10')
   await page.getByLabel('Bowlers per pair (required)').fill('5')
@@ -44,7 +38,7 @@ test('a director adds a squad and sees it in the list', async ({ page }) => {
 test('a rule the browser checks shows under its box', async ({ page }) => {
   await openForm(page)
 
-  await page.getByLabel('Date and time (required)').fill(await firstDayAt(page, '09:00'))
+  await fillDateTime(page, await firstDayAt(page, '09:00'))
   await page.getByLabel('Starting lane (required)').fill('2')
   await page.getByLabel('Number of lanes (required)').fill('10')
   await page.getByLabel('Bowlers per pair (required)').fill('4')

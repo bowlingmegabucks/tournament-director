@@ -87,7 +87,9 @@ const openForm = async (at = url) => {
   await screen.findByLabelText('Date and time (required)', {}, { timeout: 3000 })
 }
 const pickDate = (value: string) => {
-  fireEvent.change(box('Date and time (required)'), { target: { value } })
+  const [day, time = ''] = value.split('T')
+  fireEvent.change(box('Date and time (required)'), { target: { value: day } })
+  fireEvent.change(screen.getByLabelText('Time'), { target: { value: time } })
 }
 const retype = async (user: ReturnType<typeof userEvent.setup>, label: string, text: string) => {
   await user.clear(box(label))
@@ -101,7 +103,8 @@ describe('EditSquadPage (SQD-27)', () => {
 
     await openForm()
 
-    expect(box('Date and time (required)')).toHaveValue('2026-10-24T09:00')
+    expect(box('Date and time (required)')).toHaveValue('10/24/2026')
+    expect(screen.getByLabelText('Time')).toHaveValue('09:00')
     expect(box('Starting lane (required)')).toHaveValue('1')
     expect(box('Number of lanes (required)')).toHaveValue('20')
     expect(box('Bowlers per pair (required)')).toHaveValue('4')

@@ -22,6 +22,7 @@ import { createFirstAdmin } from './support/createAdmin'
 import {
   addDeskRegistration,
   addDivision,
+  editDeskRegistration,
   addSquad,
   addSweeper,
   addTournament,
@@ -51,6 +52,7 @@ import {
   sweeperOneResults,
   sweeperTwoResults,
 } from './data/expectedResults'
+import { afterEditsExpected, edits } from './data/edits'
 import { enteredScore, scoreOf, typoFor, walksOff } from './data/scores'
 import { VendorApi } from './support/vendorApi'
 import { idByDate, idByName, vendorRegistration } from './support/vendorPayload'
@@ -455,7 +457,10 @@ for (const batch of deskBatches) {
   })
 
   // After the last batch, every squad's entries are final: check them against the hand-worked table.
-  if (batch === 3) registrationCountsTest()
+  if (batch === 3) {
+    registrationCountsTest()
+    deskEditsTest()
+  }
 
   // Then the squad is bowled: lanes, scores, and complete, before the next batch arrives.
   test(`stage 5 to 7: squad ${'ABCD'[batch]} gets lanes and scores, then completes`, async ({
@@ -516,8 +521,8 @@ for (const batch of deskBatches) {
 // The sweepers follow the squads, in time order: one on Thursday evening, two on Friday morning.
 // Every entry is in by now (the site's and the desk's), so each gets lanes, three games, and complete.
 for (const [number, sweeper, entered] of [
-  [1, sweeperOne, afterDeskExpected.sweeperOneEntries],
-  [2, sweeperTwo, afterDeskExpected.sweeperTwoEntries],
+  [1, sweeperOne, afterEditsExpected.sweeperOneEntries],
+  [2, sweeperTwo, afterEditsExpected.sweeperTwoEntries],
 ] as const) {
   test(`stage 5 to 7: sweeper ${number === 1 ? 'one' : 'two'} gets lanes and scores, then completes`, async ({
     page,
@@ -549,5 +554,75 @@ for (const [number, sweeper, entered] of [
         1,
       )
     }
+  })
+}
+
+/** The desk edits of `data/edits.ts`, before squad D is bowled. */
+function deskEditsTest() {
+  test('stage 4: desk edits add, drop, and switch sessions, change a division and an average, and toggle the super sweeper (REG-15 to REG-21, D-197 to D-207)', async ({
+    page,
+  }) => {
+    const fee = (session: { entryFee?: string }) => squadFee(session, Number(tournament.entryFee))
+    await signIn(page, director)
+    const registrations = () => openTournamentPage(page, 'Registrations')
+    const superSweepers = () => page.getByText('Super sweeper', { exact: true }).locator('+ dd')
+
+    await registrations()
+    await editDeskRegistration(page, bowlerAt(edits.addSquad), {
+      addSquads: [squadD.label],
+      net: `Net: collect $${fee(squadD)}.00.`,
+    })
+    await registrations()
+    await editDeskRegistration(page, bowlerAt(edits.dropSquad), {
+      removeSquads: [squadD.label],
+      net: `Net: refund $${fee(squadD)}.00.`,
+    })
+    await registrations()
+    await editDeskRegistration(page, bowlerAt(edits.toHandicap), { division: 'Handicap' })
+    await registrations()
+    await editDeskRegistration(page, bowlerAt(edits.toScratch), { division: 'Scratch' })
+    await registrations()
+    await editDeskRegistration(page, bowlerAt(edits.averageChange.bowler), {
+      average: edits.averageChange.average,
+    })
+    await registrations()
+    await editDeskRegistration(page, bowlerAt(edits.superSweeper), { superSweeper: true })
+    await registrations()
+    await expect(superSweepers()).toHaveText(String(afterEditsExpected.superSweepers + 1))
+    await editDeskRegistration(page, bowlerAt(edits.superSweeper), { superSweeper: false })
+    await registrations()
+    await editDeskRegistration(page, bowlerAt(edits.addSweeper), {
+      addSweepers: [sweeperTwo.label],
+      net: `Net: collect $${sweeperTwo.entryFee}.00.`,
+    })
+    await registrations()
+    await editDeskRegistration(page, bowlerAt(edits.switchSweeper), {
+      removeSweepers: [sweeperOne.label],
+      addSweepers: [sweeperTwo.label],
+      net: `Net: refund $${Number(sweeperOne.entryFee) - Number(sweeperTwo.entryFee)}.00.`,
+    })
+
+    // The summary after the edits: squad D unchanged, sweeper one one fewer, two two more.
+    await registrations()
+    await expect(page.getByText('Bowlers registered').locator('+ dd')).toHaveText('150')
+    await expect(superSweepers()).toHaveText(String(afterEditsExpected.superSweepers))
+    const bySquad = page.getByRole('region', { name: 'By squad' })
+    for (const [squad, count] of [
+      [squadA, afterEditsExpected.squadEntries.A],
+      [squadB, afterEditsExpected.squadEntries.B],
+      [squadC, afterEditsExpected.squadEntries.C],
+      [squadD, afterEditsExpected.squadEntries.D],
+    ] as const) {
+      await expect(bySquad.getByRole('listitem').filter({ hasText: squad.label })).toContainText(
+        String(count),
+      )
+    }
+    const bySweeper = page.getByRole('region', { name: 'By sweeper' })
+    await expect(
+      bySweeper.getByRole('listitem').filter({ hasText: sweeperOne.label }),
+    ).toContainText(String(afterEditsExpected.sweeperOneEntries))
+    await expect(
+      bySweeper.getByRole('listitem').filter({ hasText: sweeperTwo.label }),
+    ).toContainText(String(afterEditsExpected.sweeperTwoEntries))
   })
 }

@@ -148,3 +148,49 @@ export async function addDeskRegistration(
     page.getByText(`Registration added for ${bowler.firstName} ${bowler.lastName}`),
   ).toBeVisible()
 }
+
+/** What one desk edit changes. Every field is optional; the page starts on the Registration step. */
+export interface DeskEdit {
+  division?: string
+  average?: number
+  addSquads?: string[]
+  removeSquads?: string[]
+  addSweepers?: string[]
+  removeSweepers?: string[]
+  superSweeper?: boolean
+  /** The net line the Review step must show, e.g. `Net: refund $5.00.`. Left out when no fee moves. */
+  net?: string
+}
+
+/**
+ * From the Registrations page, open one bowler's Edit page, make the changes, read the Review
+ * step, and save. A removal needs the tick (D-207). Ends on the Registrations page with the toast.
+ */
+export async function editDeskRegistration(page: Page, bowler: Bowler, change: DeskEdit) {
+  const name = `${bowler.firstName} ${bowler.lastName}`
+  await page.getByRole('link', { name: `Edit ${name}`, exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Edit registration', level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Registration', level: 2 })).toBeVisible()
+
+  if (change.division) await page.getByLabel('Division (required)').selectOption(change.division)
+  if (change.average !== undefined) await page.getByLabel('Average').fill(String(change.average))
+  const squads = page.getByRole('group', { name: /Squads/ })
+  for (const label of change.addSquads ?? []) await squads.getByLabel(exactly(label)).check()
+  for (const label of change.removeSquads ?? []) await squads.getByLabel(exactly(label)).uncheck()
+  const sweepers = page.getByRole('group', { name: /Sweepers/ })
+  for (const label of change.addSweepers ?? []) await sweepers.getByLabel(exactly(label)).check()
+  for (const label of change.removeSweepers ?? []) {
+    await sweepers.getByLabel(exactly(label)).uncheck()
+  }
+  if (change.superSweeper !== undefined) {
+    await page.getByLabel('Super sweeper').setChecked(change.superSweeper)
+  }
+  await page.getByRole('button', { name: 'Next: review' }).click()
+
+  if (change.net) await expect(page.getByText(change.net, { exact: true })).toBeVisible()
+  const removes = (change.removeSquads?.length ?? 0) + (change.removeSweepers?.length ?? 0)
+  if (removes > 0) await page.getByRole('checkbox', { name: /I understand/ }).check()
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  await expect(page.getByRole('heading', { name: 'Registrations', level: 1 })).toBeVisible()
+  await expect(page.getByText(`${name}: Registration updated.`)).toBeVisible()
+}

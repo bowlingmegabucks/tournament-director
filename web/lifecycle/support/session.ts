@@ -39,7 +39,7 @@ export async function assignAllLanes(page: Page, squad: SquadData, entered: numb
     const first = squad.startingLane + 2 * (placed % pairs)
     await page
       .getByRole('dialog', { name: /^Assign .* to lanes$/ })
-      .getByRole('button', { name: new RegExp(`^Lanes ${first}-${first + 1}(?!\\d)`) })
+      .getByRole('button', { name: new RegExp(String.raw`^Lanes ${first}-${first + 1}(?!\d)`) })
       .click()
     await expect(unassigned.getByRole('listitem')).toHaveCount(entered - placed - 1)
   }
@@ -286,7 +286,7 @@ export async function checkEarlierAdvancer(
 /** Pick a division by its name in the chooser, whose options read "Name (N entries)". */
 async function chooseDivision(page: Page, division: string) {
   const chooser = page.getByRole('combobox', { name: 'Division' })
-  const option = chooser.getByRole('option', { name: new RegExp(`^${division} \\(`) })
+  const option = chooser.getByRole('option', { name: new RegExp(String.raw`^${division} \(`) })
   await chooser.selectOption(await option.getAttribute('value'))
 }
 
@@ -317,7 +317,7 @@ export async function checkGapSection(
   await expect(placed.getByRole('row').filter({ hasText: name })).toHaveCount(0)
 }
 
-export const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+export const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
 
 /**
  * While a squad is part way through a game: the default ranking counts only the games every bowler

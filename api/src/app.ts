@@ -84,6 +84,10 @@ import {
   createSweeperUpdateRouter,
 } from './features/sweepers/updateRoutes.ts'
 import type { SweeperWriter } from './features/sweepers/writer.ts'
+import {
+  createTournamentCompleteInfoRouter,
+  createTournamentCompleteRouter,
+} from './features/tournaments/completeRoutes.ts'
 import { createTournamentDeleteRouter } from './features/tournaments/deleteRoutes.ts'
 import { createEditInfoRouter } from './features/tournaments/editInfoRoutes.ts'
 import { createTournamentCreateRouter } from './features/tournaments/createRoutes.ts'
@@ -717,6 +721,17 @@ export function createApp({
         access: { permission: 'tournaments.delete' }, // TRN-32, D-132: admin only; the key cannot reach it
         methods: ['DELETE'],
         router: createTournamentDeleteRouter(tournamentWriter, logger),
+      },
+      {
+        path: '/v1/tournaments/:id/complete',
+        access: { permission: 'tournaments.write' }, // TRN-38, D-256: the API key cannot reach it
+        methods: ['POST'],
+        router: createTournamentCompleteRouter(tournamentWriter, logger, events, liveNotifier),
+      },
+      {
+        path: '/v1/tournaments/:id/complete-info',
+        access: { permission: 'tournaments.write' }, // TRN-41, D-259: the API key cannot reach it
+        router: createTournamentCompleteInfoRouter(tournamentWriter),
       },
       {
         path: '/v1/tournaments/:id/edit-info',

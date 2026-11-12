@@ -49,8 +49,35 @@ const unreadable = (kind: SessionKind) => ({
   session: `This ${kind} holds values the app cannot read, so it cannot be completed here.`,
 })
 
+/** What the writes of a complete need. A transaction fits. */
+type WriteClient = Pick<PrismaClient, 'squad' | 'squadScore'>
+
+/**
+ * The writes of one session's complete (D-190): a zero for each game of every no-show, then the
+ * flag. The session route and the tournament route both call it, so the zero-fill is written once
+ * (D-130, D-196). The caller has planned and chosen the no-shows.
+ */
+export async function writeSessionComplete(
+  tx: WriteClient,
+  sessionId: string,
+  games: number,
+  noShows: readonly string[],
+): Promise<void> {
+  if (noShows.length > 0) {
+    await tx.squadScore.createMany({
+      data: zeroScores(noShows, games).map(({ bowlerId, game }) => ({
+        bowlerId,
+        squadId: sessionId,
+        game,
+        score: 0,
+      })),
+    })
+  }
+  await tx.squad.update({ where: { id: sessionId }, data: { complete: true } })
+}
+
 /** Each entered bowler with the games saved in this session. Entries link to a registration; scores link to the bowler. */
-async function entriesOf(
+export async function entriesOf(
   client: ReadClient,
   sessionId: string,
   games: number,
@@ -134,19 +161,9 @@ export function createSessionCompleter<
           return { refused: unreadable(kind) }
         }
         const entries = kind === 'squad' ? await entriesOf(tx, sessionId, tournament.games) : []
-        const result = await applySessionComplete(facts, kind, entries, async (noShows) => {
-          if (noShows.length > 0) {
-            await tx.squadScore.createMany({
-              data: zeroScores(noShows, tournament.games).map(({ bowlerId, game }) => ({
-                bowlerId,
-                squadId: sessionId,
-                game,
-                score: 0,
-              })),
-            })
-          }
-          await tx.squad.update({ where: { id: sessionId }, data: { complete: true } })
-        })
+        const result = await applySessionComplete(facts, kind, entries, (noShows) =>
+          writeSessionComplete(tx, sessionId, tournament.games, noShows),
+        )
         if ('refused' in result) return result
         return { completed, noShowCount: result.noShowCount }
       },

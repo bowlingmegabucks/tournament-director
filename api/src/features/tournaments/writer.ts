@@ -8,6 +8,8 @@ import {
   type DeleteWarning,
 } from './deletePlan.ts'
 import { planEdit, type EditState, type EditWarning, type StoredTournament } from './editPlan.ts'
+import { planComplete } from './completePlan.ts'
+import type { SessionKind } from '../../shared/sessionDelete.ts'
 import type { CreatedTournament } from './types.ts'
 import type { UpdateTournament } from './updateRequest.ts'
 
@@ -39,6 +41,38 @@ export type DeleteTournamentOutcome =
   /** What was removed, for the log line. */
   | { deleted: DeleteFacts }
 
+/** The sessions a complete closed, so the route can tell the pages that show them (D-219). */
+export interface ClosedSession {
+  kind: SessionKind
+  id: string
+}
+
+/** How a complete ended (TRN-38 to TRN-40). Only `completed` changed anything. */
+export type CompleteTournamentOutcome =
+  | { notFound: true }
+  /** A fact forbids it: `errors.tournament`, or `errors.session` for a row the app cannot read (D-257). */
+  | { refused: FieldErrors }
+  /** Counts cover only the sessions this call closed (D-256). */
+  | {
+      completed: {
+        squadsCompleted: number
+        sweepersCompleted: number
+        noShowCount: number
+        closed: ClosedSession[]
+      }
+    }
+
+/** What the dialog shows before the director presses Complete (TRN-41, D-259). */
+export interface TournamentCompleteInfo {
+  squadCount: number
+  openSquadCount: number
+  openSweeperCount: number
+  /** Entries in open squads with no scores: each gets a zero for every game. */
+  noScoreCount: number
+  /** Entries in open squads with some games but fewer than all: left as entered (D-75). */
+  partialCount: number
+}
+
 /** What the create, edit, and delete routes need from storage. The Prisma version writes to the legacy table. */
 export interface TournamentWriter {
   create(input: NewTournament): Promise<CreateTournamentOutcome>
@@ -52,6 +86,13 @@ export interface TournamentWriter {
     id: string,
     options: { confirmWarnings: boolean; seen?: DeleteCounts },
   ): Promise<DeleteTournamentOutcome>
+  /**
+   * Complete every open squad and sweeper, then the tournament, in one transaction (D-130, D-256,
+   * D-258). Final: nothing reopens it.
+   */
+  complete(id: string): Promise<CompleteTournamentOutcome>
+  /** What a complete would do now (D-259). */
+  getCompleteInfo(id: string): Promise<TournamentCompleteInfo | { notFound: true }>
 }
 
 /**
@@ -74,6 +115,19 @@ export async function applyDelete(
       await persist()
       return { deleted: facts }
   }
+}
+
+/**
+ * Plan a complete and, when it goes ahead, call `persist`. Both versions of the writer use this,
+ * so the rules live in one place (`planComplete`) and storage only reads and writes.
+ */
+export async function applyComplete(
+  facts: { completed: boolean; squadCount: number },
+  persist: () => Promise<CompleteTournamentOutcome>,
+): Promise<CompleteTournamentOutcome> {
+  const plan = planComplete(facts)
+  if (plan.kind === 'refused') return { refused: plan.errors }
+  return persist()
 }
 
 /**
@@ -116,6 +170,53 @@ export const sameTournament = (
   stored.startDate === input.startDate &&
   stored.name.trim().toLowerCase() === input.name.trim().toLowerCase()
 
+/** The in-memory complete and complete-info: the plan is the real one, the counts come from the test. */
+function completer(
+  completedIds: Set<string>,
+  infoOf: (id: string) => TournamentCompleteInfo,
+  unreadable: string[],
+  stored: CreatedTournament[],
+): Pick<TournamentWriter, 'complete' | 'getCompleteInfo'> {
+  return {
+    complete: async (id) => {
+      if (!stored.some((existing) => existing.id === id)) return { notFound: true }
+      const info = infoOf(id)
+      if (unreadable.includes(id)) {
+        return {
+          refused: {
+            session: 'This squad holds values the app cannot read, so it cannot be completed here.',
+          },
+        }
+      }
+      return applyComplete({ completed: completedIds.has(id), squadCount: info.squadCount }, () => {
+        completedIds.add(id)
+        const closed = [
+          ...Array.from({ length: info.openSquadCount }, () => ({
+            kind: 'squad' as const,
+            id: randomUUID(),
+          })),
+          ...Array.from({ length: info.openSweeperCount }, () => ({
+            kind: 'sweeper' as const,
+            id: randomUUID(),
+          })),
+        ]
+        return Promise.resolve({
+          completed: {
+            squadsCompleted: info.openSquadCount,
+            sweepersCompleted: info.openSweeperCount,
+            noShowCount: info.noScoreCount,
+            closed,
+          },
+        })
+      })
+    },
+    getCompleteInfo: (id) =>
+      Promise.resolve(
+        stored.some((existing) => existing.id === id) ? infoOf(id) : { notFound: true as const },
+      ),
+  }
+}
+
 /** For route tests. Keeps what it was given in `stored`. */
 export function createInMemoryTournamentWriter(
   seed: CreatedTournament[] = [],
@@ -125,11 +226,15 @@ export function createInMemoryTournamentWriter(
     completed?: string[]
     /** Per tournament id: what a delete looks at (D-133), when a test needs more than nothing. */
     deleteFacts?: Record<string, Partial<DeleteFacts>>
+    /** Per tournament id: the sessions a complete looks at (D-257, D-259). Default: one open squad, no entries. */
+    completeFacts?: Record<string, Partial<TournamentCompleteInfo>>
+    /** Per tournament id: a stored session the app cannot read, so a complete refuses (D-257). */
+    unreadable?: string[]
   } = {},
 ) {
   const stored = [...seed]
   const deleted: string[] = []
-  const writer: TournamentWriter = {
+  const writer: Omit<TournamentWriter, 'complete' | 'getCompleteInfo'> = {
     create: (input) => {
       if (stored.some((existing) => sameTournament(existing, input))) {
         return Promise.resolve({ duplicate: true })
@@ -195,5 +300,19 @@ export function createInMemoryTournamentWriter(
       )
     },
   }
-  return { writer, stored, deleted }
+  const completedIds = new Set(options.completed ?? [])
+  const infoOf = (id: string): TournamentCompleteInfo => ({
+    squadCount: 1,
+    openSquadCount: 1,
+    openSweeperCount: 0,
+    noScoreCount: 0,
+    partialCount: 0,
+    ...options.completeFacts?.[id],
+  })
+  return {
+    writer: { ...writer, ...completer(completedIds, infoOf, options.unreadable ?? [], stored) },
+    stored,
+    deleted,
+    completedIds,
+  }
 }

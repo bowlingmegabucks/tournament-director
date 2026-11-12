@@ -181,14 +181,16 @@ function completer(
     complete: async (id) => {
       if (!stored.some((existing) => existing.id === id)) return { notFound: true }
       const info = infoOf(id)
-      if (unreadable.includes(id)) {
-        return {
-          refused: {
-            session: 'This squad holds values the app cannot read, so it cannot be completed here.',
-          },
-        }
-      }
+      // The plan comes first, as in the Prisma completer; an unreadable session refuses after it.
       return applyComplete({ completed: completedIds.has(id), squadCount: info.squadCount }, () => {
+        if (unreadable.includes(id)) {
+          return Promise.resolve({
+            refused: {
+              session:
+                'This squad holds values the app cannot read, so it cannot be completed here.',
+            },
+          })
+        }
         completedIds.add(id)
         const closed = [
           ...Array.from({ length: info.openSquadCount }, () => ({

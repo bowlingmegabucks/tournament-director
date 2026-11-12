@@ -253,6 +253,7 @@ describe('the Complete dialog (TRN-43, D-130, D-259)', () => {
 
     await user.click(within(dialog).getByRole('button', { name: 'Try again' }))
 
+    expect(within(dialog).getByText('Loading what this will do…')).toBeVisible()
     expect(
       await within(dialog).findByLabelText('Type the tournament name to confirm'),
     ).toBeVisible()

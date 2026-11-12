@@ -26,7 +26,7 @@ function OpenDialog({
     <CompleteTournamentDialog
       tournamentName={tournament.name}
       info={info.data}
-      loading={info.isPending}
+      loading={info.isFetching}
       loadFailure={info.error?.message}
       pending={pending}
       failure={failure}

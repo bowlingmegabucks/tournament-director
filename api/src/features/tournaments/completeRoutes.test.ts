@@ -163,6 +163,29 @@ describe(`POST ${url}`, () => {
     expect(records().find((record) => record['msg'] === 'Tournament completed')).toBeUndefined()
   })
 
+  it('counts every reason in the refusal log, not every key (TRN-39)', async () => {
+    const { logger, records } = createCapturedLogger()
+    const { writer } = setup({ completed: true, facts: { squadCount: 0 } })
+    const app = createSignedInTestApp({ tournamentWriter: writer, logger })
+
+    await request(app).post(url)
+
+    const line = records().find((record) => record['msg'] === 'Tournament complete refused')
+    expect(line).toMatchObject({ reasons: 2 })
+  })
+
+  it('names the tournament refusal before an unreadable session (TRN-39, D-257)', async () => {
+    const { app } = setup({ completed: true, unreadable: true })
+
+    const response = await request(app).post(url)
+
+    expect(response.status).toBe(409)
+    expect(response.body).toMatchObject({
+      errors: { tournament: expect.any(String) as string },
+    })
+    expect((response.body as { errors: object }).errors).not.toHaveProperty('session')
+  })
+
   it('passes a storage outage on as 503', async () => {
     const response = await request(createSignedInTestApp({ tournamentWriter: brokenWriter })).post(
       url,

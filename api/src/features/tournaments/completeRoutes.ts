@@ -31,7 +31,11 @@ export function createTournamentCompleteRouter(
     const actorId = callerOf(res).user?.id
     if ('refused' in outcome) {
       requestLogger(res, logger).warn(
-        { actorId, tournamentId: id, reasons: Object.keys(outcome.refused).length },
+        {
+          actorId,
+          tournamentId: id,
+          reasons: Object.values(outcome.refused).flatMap((text) => text.split('\n')).length,
+        },
         'Tournament complete refused',
       )
       // The first line is the message; `errors` holds them all.

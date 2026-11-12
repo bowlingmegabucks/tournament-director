@@ -25,6 +25,12 @@ const unreadable = (kind: SessionKind) => ({
   session: `A ${kind} holds values the app cannot read, so the tournament cannot be completed here.`,
 })
 
+/** The reader for each kind of session, as its list shows it. */
+const readers: Record<SessionKind, ReadCompleted<unknown>> = {
+  squad: readCompletedSquad,
+  sweeper: readCompletedSweeper,
+}
+
 /**
  * The Prisma side of complete and complete-info for a tournament (TRN-38 to TRN-41, D-256 to
  * D-259). One serializable transaction reads the tournament and every session, applies the rules,
@@ -33,11 +39,6 @@ const unreadable = (kind: SessionKind) => ({
  * counted, and a failure leaves nothing half closed. Every open session is read before any write,
  * so a row the lists cannot read refuses the whole call with nothing saved (D-257).
  */
-const readers: Record<SessionKind, ReadCompleted<unknown>> = {
-  squad: readCompletedSquad,
-  sweeper: readCompletedSweeper,
-}
-
 export function createTournamentCompleter(
   client: PrismaClient,
   logger: Logger,
@@ -107,37 +108,43 @@ export function createTournamentCompleter(
   return {
     complete: (id) => withDatabaseErrors(logger, () => withRetry(() => completeOnce(id))),
     getCompleteInfo: (id) =>
-      withDatabaseErrors(logger, async (): Promise<TournamentCompleteInfo | { notFound: true }> => {
-        const tournament = await client.tournament.findUnique({
-          where: { id },
-          select: { games: true },
-        })
-        if (!tournament) return { notFound: true }
-        const rows = await client.squad.findMany({
-          where: { tournamentId: id },
-          select: { id: true, squadType: true, complete: true },
-        })
-        const squads = rows.filter((row) => kindOf(row.squadType) === 'squad')
-        const openSquads = squads.filter((row) => !row.complete)
-        let noScoreCount = 0
-        let partialCount = 0
-        for (const squad of openSquads) {
-          const info = squadCompleteInfo(
-            await entriesOf(client, squad.id, tournament.games),
-            tournament.games,
-          )
-          noScoreCount += info.noScoreCount
-          partialCount += info.partialCount
-        }
-        return {
-          squadCount: squads.length,
-          openSquadCount: openSquads.length,
-          openSweeperCount: rows.filter(
-            (row) => kindOf(row.squadType) === 'sweeper' && !row.complete,
-          ).length,
-          noScoreCount,
-          partialCount,
-        }
-      }),
+      withDatabaseErrors(logger, () =>
+        // One transaction, so every count comes from the same moment.
+        client.$transaction(
+          async (tx): Promise<TournamentCompleteInfo | { notFound: true }> => {
+            const tournament = await tx.tournament.findUnique({
+              where: { id },
+              select: { games: true },
+            })
+            if (!tournament) return { notFound: true }
+            const rows = await tx.squad.findMany({
+              where: { tournamentId: id },
+              select: { id: true, squadType: true, complete: true },
+            })
+            const squads = rows.filter((row) => kindOf(row.squadType) === 'squad')
+            const openSquads = squads.filter((row) => !row.complete)
+            let noScoreCount = 0
+            let partialCount = 0
+            for (const squad of openSquads) {
+              const info = squadCompleteInfo(
+                await entriesOf(tx, squad.id, tournament.games),
+                tournament.games,
+              )
+              noScoreCount += info.noScoreCount
+              partialCount += info.partialCount
+            }
+            return {
+              squadCount: squads.length,
+              openSquadCount: openSquads.length,
+              openSweeperCount: rows.filter(
+                (row) => kindOf(row.squadType) === 'sweeper' && !row.complete,
+              ).length,
+              noScoreCount,
+              partialCount,
+            }
+          },
+          { isolationLevel: 'RepeatableRead' },
+        ),
+      ),
   }
 }

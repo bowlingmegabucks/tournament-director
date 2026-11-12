@@ -166,7 +166,8 @@ describe('the Complete dialog (TRN-43, D-130, D-259)', () => {
 
     const dialog = await openDialog(user)
 
-    expect(within(dialog).getByText('Loading what this will do…')).toBeVisible()
+    expect(await within(dialog).findByText('Loading what this will do…')).toBeVisible()
+    release()
     expect(within(dialog).getByRole('button', { name: 'Complete tournament' })).toBeDisabled()
     release()
     await within(dialog).findByLabelText('Type the tournament name to confirm')
@@ -232,12 +233,16 @@ describe('the Complete dialog (TRN-43, D-130, D-259)', () => {
     setMockUser(createSignedInUser({ roles: ['director'] }))
     serve()
     let calls = 0
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
     server.use(
-      http.get(`/v1/tournaments/${id}/complete-info`, () => {
+      http.get(`/v1/tournaments/${id}/complete-info`, async () => {
         calls += 1
-        return calls === 1
-          ? new HttpResponse(null, { status: 500 })
-          : HttpResponse.json({ completeInfo: info() })
+        if (calls === 1) return new HttpResponse(null, { status: 500 })
+        await gate
+        return HttpResponse.json({ completeInfo: info() })
       }),
     )
     const user = userEvent.setup()
@@ -253,7 +258,8 @@ describe('the Complete dialog (TRN-43, D-130, D-259)', () => {
 
     await user.click(within(dialog).getByRole('button', { name: 'Try again' }))
 
-    expect(within(dialog).getByText('Loading what this will do…')).toBeVisible()
+    expect(await within(dialog).findByText('Loading what this will do…')).toBeVisible()
+    release()
     expect(
       await within(dialog).findByLabelText('Type the tournament name to confirm'),
     ).toBeVisible()

@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import type { ExpectedDivision, ExpectedFinals, ExpectedList } from '../data/expectedResults'
 import type { SquadData } from '../data/sessions'
 import { openTournamentPage } from './navigate'
@@ -142,9 +142,10 @@ export async function completeSession(
 }
 
 /**
- * Type a score into a box and press Enter, then wait for that bowler's row to say Saved. A live
- * update can redraw the sheet between the typing and the save and drop the entry, so a box whose row
- * does not say Saved is typed again.
+ * Type a score into a box and press Enter, then wait for that bowler's row to say Saved. An earlier
+ * run lost an entry once and the cause was never found (three later runs lost none), so a box whose
+ * row does not say Saved is typed again, and each retry is added to the report as a "lost box entry"
+ * annotation. A passing run with that annotation means the pair sheet dropped an entry.
  */
 async function saveBox(box: Locator, score: string) {
   const row = box.locator('xpath=ancestor::li[1]')
@@ -155,6 +156,14 @@ async function saveBox(box: Locator, score: string) {
       await expect(row.getByText('✓ Saved')).toBeVisible({ timeout: 3_000 })
       return
     } catch (error) {
+      // A retry means the box lost its entry. Say so in the report instead of hiding it.
+      const label = (await box.getAttribute('aria-label').catch(() => null)) ?? '?'
+      const value = await box.inputValue().catch(() => '?')
+      const rowText = (await row.innerText().catch(() => '?')).replace(/\n/g, ' | ')
+      test.info().annotations.push({
+        type: 'lost box entry',
+        description: `attempt ${attempt}, typed ${score}, ${label}, box now "${value}", row: ${rowText}`,
+      })
       if (attempt === 3) throw error
     }
   }

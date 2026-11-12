@@ -18,6 +18,12 @@ import sys
 answers = json.loads(os.environ["LIFECYCLE_ANSWERS"])
 command = sys.argv[sys.argv.index("--") + 1 :]
 
+# The test runs one command: npm, to start the app's own script. Refuse anything else, so a stray
+# argument cannot make this driver start another program.
+if command[:1] != ["npm"]:
+    print("Only npm may run here.", file=sys.stderr)
+    sys.exit(2)
+
 pid, fd = pty.fork()
 if pid == 0:
     os.execvp(command[0], command)

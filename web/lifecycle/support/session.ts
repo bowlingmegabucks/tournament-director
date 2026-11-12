@@ -159,7 +159,7 @@ async function saveBox(box: Locator, score: string) {
       // A retry means the box lost its entry. Say so in the report instead of hiding it.
       const label = (await box.getAttribute('aria-label').catch(() => null)) ?? '?'
       const value = await box.inputValue().catch(() => '?')
-      const rowText = (await row.innerText().catch(() => '?')).replace(/\n/g, ' | ')
+      const rowText = (await row.innerText().catch(() => '?')).replaceAll('\n', ' | ')
       test.info().annotations.push({
         type: 'lost box entry',
         description: `attempt ${attempt}, typed ${score}, ${label}, box now "${value}", row: ${rowText}`,

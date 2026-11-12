@@ -8,8 +8,8 @@ const name = (index: number) => {
 
 const either = (a: number, b: number) => [name(a), name(b)]
 
-/** A line between groups, a bowler's name, or the names one of which fills a row (a full tie). */
-export type ExpectedItem = 'Cut Line' | 'Cash Line' | 'No Advancers' | string | string[]
+/** A line between groups ("Cut Line", "Cash Line", "No Advancers"), a bowler's name, or the names one of which fills a row (a full tie). */
+export type ExpectedItem = string | string[]
 
 export interface ExpectedList {
   order: ExpectedItem[]

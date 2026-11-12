@@ -29,7 +29,7 @@ Version numbers follow content, not a countdown. 0.10.0 is fine.
 - [ ] Tournament commands (D-12, D-15, D-130; [tournaments.md](requirements/tournaments.md)):
   - [x] Create a tournament (`createTournament`, `TRN-19` to `TRN-22`).
   - [x] Edit a tournament, with free, confirmed, and refused fields by what depends on them (`editTournament`, `TRN-24` to `TRN-31`, D-127 to D-131).
-  - [ ] Complete a tournament: final, completes open squads and sweepers, freezes everything (D-130). Its own slice, after Complete squad and Complete sweeper (D-196).
+  - [x] Complete a tournament: final, completes open squads and sweepers, freezes everything, typed-name dialog with the counts (`completeTournament`, `TRN-10`, `TRN-38` to `TRN-43`, D-130, D-256 to D-260).
   - [x] Delete a tournament: admin only, refused with scores or a real payment, confirmed with the typed name (`deleteTournament`, `TRN-32` to `TRN-37`, D-132 to D-137).
 - [x] Division commands (D-12, D-15; [divisions.md](requirements/divisions.md)), 0.6.0:
   - [x] Create a division: the server numbers it, a name is unique in the tournament, a complete tournament refuses, a percent over 100 confirms (`createDivision`, `DIV-01` to `DIV-11`, `DIV-15`, D-138 to D-145).

@@ -80,16 +80,18 @@ export function createTournamentCompleter(
               return { refused: unreadable(kind) }
             }
           }
-          const closed: ClosedSession[] = []
-          let noShowCount = 0
-          for (const row of open) {
-            const kind = kindOf(row.squadType)
-            const noShows =
-              kind === 'squad' ? noShowBowlers(await entriesOf(tx, row.id, tournament.games)) : []
-            await writeSessionComplete(tx, row.id, tournament.games, noShows)
-            noShowCount += noShows.length
-            closed.push({ kind, id: row.id })
-          }
+          // One transaction runs on one connection, so these queue in order.
+          const results = await Promise.all(
+            open.map(async (row) => {
+              const kind = kindOf(row.squadType)
+              const noShows =
+                kind === 'squad' ? noShowBowlers(await entriesOf(tx, row.id, tournament.games)) : []
+              await writeSessionComplete(tx, row.id, tournament.games, noShows)
+              return { session: { kind, id: row.id } as ClosedSession, noShows: noShows.length }
+            }),
+          )
+          const closed: ClosedSession[] = results.map((result) => result.session)
+          const noShowCount = results.reduce((sum, result) => sum + result.noShows, 0)
           await tx.tournament.update({ where: { id }, data: { completed: true } })
           return {
             completed: {
@@ -123,16 +125,16 @@ export function createTournamentCompleter(
             })
             const squads = rows.filter((row) => kindOf(row.squadType) === 'squad')
             const openSquads = squads.filter((row) => !row.complete)
-            let noScoreCount = 0
-            let partialCount = 0
-            for (const squad of openSquads) {
-              const info = squadCompleteInfo(
-                await entriesOf(tx, squad.id, tournament.games),
-                tournament.games,
-              )
-              noScoreCount += info.noScoreCount
-              partialCount += info.partialCount
-            }
+            const infos = await Promise.all(
+              openSquads.map(async (squad) =>
+                squadCompleteInfo(
+                  await entriesOf(tx, squad.id, tournament.games),
+                  tournament.games,
+                ),
+              ),
+            )
+            const noScoreCount = infos.reduce((sum, info) => sum + info.noScoreCount, 0)
+            const partialCount = infos.reduce((sum, info) => sum + info.partialCount, 0)
             return {
               squadCount: squads.length,
               openSquadCount: openSquads.length,

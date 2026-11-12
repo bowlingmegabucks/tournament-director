@@ -108,8 +108,7 @@ export async function fetchCompleteInfo(id: string): Promise<TournamentCompleteI
 }
 
 /** "1 squad" / "3 squads". */
-const squads = (count: number) => (count === 1 ? '1 squad' : `${count} squads`)
-const sweepers = (count: number) => (count === 1 ? '1 sweeper' : `${count} sweepers`)
+const count = (n: number, noun: string) => (n === 1 ? `1 ${noun}` : `${n} ${noun}s`)
 
 /**
  * The success toast (TRN-43, D-260): "Tournament completed. 3 squads and 1 sweeper closed, 7
@@ -117,13 +116,11 @@ const sweepers = (count: number) => (count === 1 ? '1 sweeper' : `${count} sweep
  */
 export function completedMessage(result: TournamentCompleteResult): string {
   const closed = [
-    result.squadsCompleted > 0 ? squads(result.squadsCompleted) : undefined,
-    result.sweepersCompleted > 0 ? sweepers(result.sweepersCompleted) : undefined,
+    result.squadsCompleted > 0 ? count(result.squadsCompleted, 'squad') : undefined,
+    result.sweepersCompleted > 0 ? count(result.sweepersCompleted, 'sweeper') : undefined,
   ].filter((part): part is string => part !== undefined)
   const zeros =
-    result.noShowCount > 0
-      ? `${result.noShowCount === 1 ? '1 bowler' : `${result.noShowCount} bowlers`} got zeros`
-      : undefined
+    result.noShowCount > 0 ? `${count(result.noShowCount, 'bowler')} got zeros` : undefined
   const parts = [closed.length > 0 ? `${closed.join(' and ')} closed` : undefined, zeros].filter(
     (part): part is string => part !== undefined,
   )
@@ -133,14 +130,10 @@ export function completedMessage(result: TournamentCompleteResult): string {
 /** The dialog's lines about what will happen, in order (TRN-43, D-259). Zero counts drop their line. */
 export function completeLines(info: TournamentCompleteInfo): string[] {
   const open = [
-    info.openSquadCount > 0
-      ? `${info.openSquadCount === 1 ? '1 open squad' : `${info.openSquadCount} open squads`}`
-      : undefined,
-    info.openSweeperCount > 0
-      ? `${info.openSweeperCount === 1 ? '1 open sweeper' : `${info.openSweeperCount} open sweepers`}`
-      : undefined,
+    info.openSquadCount > 0 ? count(info.openSquadCount, 'open squad') : undefined,
+    info.openSweeperCount > 0 ? count(info.openSweeperCount, 'open sweeper') : undefined,
   ].filter((part): part is string => part !== undefined)
-  const bowlers = (count: number) => (count === 1 ? '1 bowler' : `${count} bowlers`)
+  const bowlers = (n: number) => count(n, 'bowler')
   return [
     open.length > 0 ? `Complete ${open.join(' and ')}.` : undefined,
     info.noScoreCount > 0

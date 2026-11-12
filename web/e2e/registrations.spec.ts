@@ -508,6 +508,7 @@ test('No at the already-registered dialog saves nothing and stays on Review (D-1
   await expect(dialog).toHaveCount(0)
   await expect(stepHeading(page, 'Review')).toBeVisible()
   await page.getByRole('link', { name: 'Cancel' }).click()
+  await page.getByRole('button', { name: 'Leave page' }).click()
   // The other desk's registration is there with its one squad, and nothing was added to it.
   await expect(
     (await rowOf(page, 'Race Runner')).getByRole('button', { name: '1 squad, show list' }),
@@ -607,6 +608,7 @@ test('Back and the progress list keep everything typed, and Cancel leaves withou
   await expect(page.getByRole('button', { name: '3. Review' })).toHaveCount(0)
 
   await page.getByRole('link', { name: 'Cancel' }).click()
+  await page.getByRole('button', { name: 'Leave page' }).click()
   await expect(page.getByRole('heading', { name: 'Registrations', level: 1 })).toBeVisible()
   await expect(page.getByRole('rowheader', { name: 'Ann Lee' })).toHaveCount(0)
 })

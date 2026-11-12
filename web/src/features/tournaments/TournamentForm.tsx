@@ -2,6 +2,9 @@ import { useId, useState } from 'react'
 import type { MouseEvent, ReactNode, SubmitEvent } from 'react'
 import { Link } from 'react-router'
 import { ConfirmChangesDialog } from '../../shared/ConfirmChangesDialog'
+import { LeaveDialog } from '../../shared/LeaveDialog'
+import { sameValues } from '../../shared/sameValues'
+import { useLeaveGuard } from '../../shared/useLeaveGuard'
 import { DateInput } from '../../shared/DateInput'
 import { describeChange } from './describeChange'
 import styles from './TournamentForm.module.css'
@@ -207,6 +210,8 @@ export function TournamentForm({
 }: Readonly<TournamentFormProps>) {
   const base = useId()
   const [values, setValues] = useState<TournamentFormValues>(initialValues)
+  // Leaving with the boxes changed from where they started asks first.
+  const guard = useLeaveGuard(!sameValues(values, initialValues))
   const [errors, setErrors] = useState<FieldErrors>({})
   // The summary appears after a failed save and stays until the next one.
   const [summary, setSummary] = useState(false)
@@ -281,7 +286,7 @@ export function TournamentForm({
   }
 
   async function send(confirmWarnings: boolean) {
-    const result = await onSubmit(values, confirmWarnings)
+    const result = await guard.whileSaving(() => onSubmit(values, confirmWarnings))
     if (result === undefined) return
     if ('errors' in result) {
       // The dialog goes first, so the focus that `show` sets lands on the form.
@@ -380,6 +385,7 @@ export function TournamentForm({
           }}
         />
       )}
+      <LeaveDialog blocker={guard.blocker} />
     </form>
   )
 }

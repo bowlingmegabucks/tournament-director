@@ -1,12 +1,18 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter } from 'react-router'
+import { createBrowserRouter, RouterProvider } from 'react-router'
 import './index.css'
 import App from './App.tsx'
 
 // One retry keeps a failed request from showing "Loading…" for several seconds.
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1 } } })
+
+// A data router, not <BrowserRouter>: only it can hold a move away from a form with unsaved changes
+// (useBlocker). `App` keeps its own <Routes>, under one catch-all route.
+const router = createBrowserRouter([{ path: '*', element: <App /> }], {
+  basename: import.meta.env.BASE_URL,
+})
 
 // VITE_USE_MOCKS=true serves random data from the browser instead of calling the API.
 async function enableMocking() {
@@ -25,9 +31,7 @@ function render() {
   createRoot(root).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter basename={import.meta.env.BASE_URL}>
-          <App />
-        </BrowserRouter>
+        <RouterProvider router={router} />
       </QueryClientProvider>
     </StrictMode>,
   )

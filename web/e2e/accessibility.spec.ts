@@ -866,6 +866,7 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
       await page.getByRole('button', { name: 'No, change the USBC ID' }).click()
       await page.getByRole('link', { name: 'Cancel' }).click()
+      await page.getByRole('button', { name: 'Leave page' }).click()
 
       // Already registered, found at save.
       await page.getByRole('link', { name: 'Add registration' }).click()

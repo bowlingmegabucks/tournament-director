@@ -40,6 +40,9 @@ import {
 } from './DeskSteps'
 import { focusOnMount, stepNames, type Step } from './stepInfo'
 import { AlreadyRegisteredDialog, UsbcIdOnFileDialog } from './RegistrationDialogs'
+import { LeaveDialog } from '../../shared/LeaveDialog'
+import { sameValues } from '../../shared/sameValues'
+import { useLeaveGuard } from '../../shared/useLeaveGuard'
 import type { BowlerResponse, BowlerValues, DeskFieldErrors, ExistingRegistration } from './types'
 import { useCreateRegistration } from './useCreateRegistration'
 import styles from './AddRegistration.module.css'
@@ -261,6 +264,12 @@ function Steps({
   const [typedRegistration, setTypedRegistration] = useState(() =>
     initialRegistration(detail, carry, presetSquadId, presetSweeperId),
   )
+  // Where the boxes started, so leaving with anything changed asks first.
+  const [startBowler] = useState(bowler)
+  const [startRegistration] = useState(typedRegistration)
+  const guard = useLeaveGuard(
+    !sameValues(bowler, startBowler) || !sameValues(typedRegistration, startRegistration),
+  )
   const [errors, setErrors] = useState<DeskFieldErrors>({})
   const [attempt, setAttempt] = useState(0)
   const [conflict, setConflict] = useState<Conflict>()
@@ -317,8 +326,10 @@ function Steps({
       confirmAppend,
     })
     try {
-      await create.mutateAsync(request)
-      await navigate(listUrl, { state: { added: name } })
+      await guard.whileSaving(async () => {
+        await create.mutateAsync(request)
+        await navigate(listUrl, { state: { added: name } })
+      })
     } catch (error) {
       applyOutcome(outcomeOf(error, confirmAppend), {
         setConflict,
@@ -429,6 +440,7 @@ function Steps({
           }}
         />
       )}
+      <LeaveDialog blocker={guard.blocker} />
       {failure && (
         <Toast
           kind="error"

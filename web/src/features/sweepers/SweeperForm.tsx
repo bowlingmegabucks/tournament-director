@@ -2,6 +2,9 @@ import { useId, useState } from 'react'
 import type { ChangeEvent, MouseEvent, SubmitEvent } from 'react'
 import { Link } from 'react-router'
 import { ConfirmChangesDialog } from '../../shared/ConfirmChangesDialog'
+import { LeaveDialog } from '../../shared/LeaveDialog'
+import { sameValues } from '../../shared/sameValues'
+import { useLeaveGuard } from '../../shared/useLeaveGuard'
 import { DateTimeInput } from '../../shared/DateTimeInput'
 import { FieldNoteLines } from '../../shared/FieldNoteLines'
 import { noteIds, type FieldNote, type SessionWarning } from '../../shared/sessionEdit'
@@ -103,6 +106,8 @@ export function SweeperForm({
 }: Readonly<SweeperFormProps>) {
   const base = useId()
   const [values, setValues] = useState<SweeperFormValues>(initialValues)
+  // Leaving with the boxes changed from where they started asks first.
+  const guard = useLeaveGuard(!sameValues(values, initialValues))
   const [errors, setErrors] = useState<SweeperFieldErrors>({})
   const [summary, setSummary] = useState(false)
   // A field the director has typed in. Leaving one they never touched says nothing.
@@ -182,7 +187,7 @@ export function SweeperForm({
   }
 
   async function send(confirmWarnings: boolean) {
-    const result = await onSubmit(values, confirmWarnings)
+    const result = await guard.whileSaving(() => onSubmit(values, confirmWarnings))
     if (result === undefined) return
     if ('errors' in result) {
       // The dialog goes first, so the focus that `show` sets lands on the form.
@@ -397,6 +402,7 @@ export function SweeperForm({
           }}
         />
       )}
+      <LeaveDialog blocker={guard.blocker} />
     </form>
   )
 }

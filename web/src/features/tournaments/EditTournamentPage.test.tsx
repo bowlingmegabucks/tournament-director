@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
@@ -679,5 +679,38 @@ describe('EditTournamentPage (TRN-29)', () => {
         expect(within(dialog).getByRole('button', { name: 'Save anyway' })).toBeVisible()
       })
     })
+  })
+})
+
+describe('EditTournamentPage leaving with changes', () => {
+  it('lets an unchanged form go, and asks once a stored value changed', async () => {
+    signInAs()
+    serve()
+    const user = userEvent.setup()
+    await openForm()
+    await user.type(label('Name'), 'X')
+    await user.click(screen.getByRole('link', { name: 'Cancel' }))
+    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Stay on this page' }))
+
+    await user.type(label('Name'), '{Backspace}')
+    await user.click(screen.getByRole('link', { name: 'Cancel' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).not.toBeInTheDocument()
+  })
+
+  it('goes to the overview after a save without asking', async () => {
+    signInAs()
+    serve()
+    const user = userEvent.setup()
+    await openForm()
+    await user.type(label('Name'), ' Two')
+
+    await user.click(save())
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument()
+    })
+    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).not.toBeInTheDocument()
   })
 })

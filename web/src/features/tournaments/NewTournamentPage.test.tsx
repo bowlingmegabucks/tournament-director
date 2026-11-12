@@ -487,3 +487,33 @@ describe('NewTournamentPage', () => {
     )
   })
 })
+
+describe('NewTournamentPage leaving with changes', () => {
+  it('asks before Cancel once a box has text, and lets an untouched form go', async () => {
+    signInAs('director')
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).not.toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('Name (required)'), 'Spring')
+    await user.click(screen.getByRole('link', { name: 'Cancel' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Stay on this page' }))
+    expect(screen.getByLabelText('Name (required)')).toHaveValue('Spring')
+  })
+
+  it('asks when a date was typed, and lets Leave go to the list', async () => {
+    signInAs('director')
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    await user.type(screen.getByLabelText('Start date (required)'), '03/12/2027')
+
+    await user.click(screen.getByRole('link', { name: 'Cancel' }))
+    await user.click(screen.getByRole('button', { name: 'Leave page' }))
+
+    expect(await screen.findByRole('heading', { name: 'Tournaments', level: 1 })).toBeVisible()
+  })
+})

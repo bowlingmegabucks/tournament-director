@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router'
+import { DataRouter } from '../../test/DataRouter'
 import { DivisionForm, type DivisionSubmitResult } from './DivisionForm'
 
 type Submit = (values: unknown, confirm: boolean) => Promise<DivisionSubmitResult>
@@ -11,7 +11,7 @@ function setup(options: { number?: number; onSubmit?: Submit; pending?: boolean 
   const onFailure = vi.fn<(message: string) => void>()
   const onAttempt = vi.fn<() => void>()
   render(
-    <MemoryRouter>
+    <DataRouter>
       <DivisionForm
         number={options.number}
         pending={options.pending ?? false}
@@ -20,7 +20,7 @@ function setup(options: { number?: number; onSubmit?: Submit; pending?: boolean 
         onAttempt={onAttempt}
         cancelTo="/back"
       />
-    </MemoryRouter>,
+    </DataRouter>,
   )
   return { onSubmit, onFailure, onAttempt, user: userEvent.setup() }
 }
@@ -361,6 +361,42 @@ describe('DivisionForm', () => {
 
       expect(await within(dialog).findByRole('alert')).toHaveTextContent('Database down')
       expect(onFailure).not.toHaveBeenCalled()
+    })
+  })
+})
+
+describe('DivisionForm leaving with changes', () => {
+  it('asks before Cancel when a box changed, and not when the form is as it started', async () => {
+    const { user } = setup()
+    await user.click(screen.getByRole('link', { name: 'Cancel' }))
+    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).not.toBeInTheDocument()
+
+    await user.type(box('Name (required)'), 'Juniors')
+    await user.click(screen.getByRole('link', { name: 'Cancel' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Stay on this page' }))
+    expect(box('Name (required)')).toHaveValue('Juniors')
+  })
+
+  it('does not ask once the changes are typed away again', async () => {
+    const { user } = setup()
+    await user.type(box('Name (required)'), 'J')
+    await user.clear(box('Name (required)'))
+
+    await user.click(screen.getByRole('link', { name: 'Cancel' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).not.toBeInTheDocument()
+  })
+
+  it('lets a saved form move on without asking', async () => {
+    const { user, onSubmit } = setup()
+    await user.type(box('Name (required)'), 'Juniors')
+
+    await user.click(add())
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalled()
     })
   })
 })

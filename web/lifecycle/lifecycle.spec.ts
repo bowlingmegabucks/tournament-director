@@ -86,7 +86,7 @@ import {
   superSweeperFor,
   sweepersFor,
 } from './data/registrationPlan'
-import { openTournamentPage } from './support/navigate'
+import { leaveForm, openTournamentPage } from './support/navigate'
 import { inviteLinkIn, waitForMail } from './support/mail'
 import { mainMenu, signIn } from './support/signIn'
 
@@ -219,6 +219,7 @@ test('stage 2: the director makes three divisions and the list numbers them', as
   await expect(page.getByLabel('Name (required)', { exact: true })).toHaveAccessibleDescription(
     /already/i,
   )
+  await leaveForm(page)
   await openTournamentPage(page, 'Divisions')
   await expect(page.getByRole('rowheader')).toHaveCount(divisions.length)
 })
@@ -240,6 +241,7 @@ test('stage 3: four squads and two sweepers, an edit of each, and a spare of eac
   await expect(page.getByLabel('Date and time (required)')).toHaveAccessibleDescription(
     /tournament/i,
   )
+  await leaveForm(page)
   await openTournamentPage(page, 'Squads')
 
   // Edit one squad: A gains two lanes.

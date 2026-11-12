@@ -939,3 +939,29 @@ describe('errors on the steps (D-197)', () => {
     ).not.toBeInTheDocument()
   })
 })
+
+describe('leaving the edit page with changes', () => {
+  it('lets an unchanged form go', async () => {
+    signIn()
+    serve()
+    const user = userEvent.setup()
+    await open()
+
+    await user.click(screen.getByRole('link', { name: 'Cancel' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).not.toBeInTheDocument()
+  })
+
+  it('asks once something changed', async () => {
+    signIn()
+    serve()
+    const user = userEvent.setup()
+    await open()
+
+    await user.clear(screen.getByLabelText('Average'))
+    await user.type(screen.getByLabelText('Average'), '190')
+    await user.click(screen.getByRole('link', { name: 'Cancel' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
+  })
+})

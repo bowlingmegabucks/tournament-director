@@ -54,6 +54,13 @@ import {
 } from './data/expectedResults'
 import { afterEditsExpected, edits } from './data/edits'
 import { enteredScore, scoreOf, typoFor, walksOff } from './data/scores'
+import {
+  refusalDeleteTournamentWithScores,
+  refusalsAfterComplete,
+  refusalsAtTheEnd,
+  refusalsWithEntries,
+  refusalsWithLanes,
+} from './support/scriptedFailures'
 import { VendorApi } from './support/vendorApi'
 import { idByDate, idByName, vendorRegistration } from './support/vendorPayload'
 import { bowlerAt, deskBowlers, fullName, returning, siteBowlers } from './data/bowlers'
@@ -471,6 +478,8 @@ for (const batch of deskBatches) {
     const path = await openSquad(page, squad)
     await assignAllLanes(page, squad, entered)
     const letter = 'ABCD'[batch] ?? ''
+    // Squad D has saved lanes and no scores yet: the refusals that need them.
+    if (letter === 'D') await refusalsWithLanes(page, siteRegistrationIds)
     await enterAllScores(
       page,
       path,
@@ -498,6 +507,7 @@ for (const batch of deskBatches) {
       letter === 'D' ? { noScore: 1, partial: 1, games: Number(tournament.games) } : undefined,
     )
     if (letter === 'D') {
+      await refusalsAfterComplete(page, siteRegistrationIds)
       await checkGapSection(page, path, 'Handicap', 'No show', fullName(bowlerAt(149)))
       await checkGapSection(page, path, 'Scratch', 'Did not finish', fullName(bowlerAt(147)))
     }
@@ -602,6 +612,9 @@ function deskEditsTest() {
       net: `Net: refund $${Number(sweeperOne.entryFee) - Number(sweeperTwo.entryFee)}.00.`,
     })
 
+    // Entries exist and the sweepers are open: the super sweeper guard, and a delete with entries.
+    await refusalsWithEntries(page, siteRegistrationIds)
+
     // The summary after the edits: squad D unchanged, sweeper one one fewer, two two more.
     await registrations()
     await expect(page.getByText('Bowlers registered').locator('+ dd')).toHaveText('150')
@@ -626,3 +639,18 @@ function deskEditsTest() {
     ).toContainText(String(afterEditsExpected.sweeperTwoEntries))
   })
 }
+
+// Everything is complete: the refusals that need scores and complete sessions.
+test('stage 8: the director cannot move a bowler out of or into a complete squad, or delete one with scores', async ({
+  page,
+}) => {
+  await signIn(page, director)
+  await refusalsAtTheEnd(page, siteRegistrationIds)
+})
+
+test('stage 8: the admin cannot delete a tournament that has scores, even with the confirm flag (D-133)', async ({
+  page,
+}) => {
+  await signIn(page, admin)
+  await refusalDeleteTournamentWithScores(page)
+})

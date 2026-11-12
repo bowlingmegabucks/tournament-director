@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="../../../web/src/styles/tokens.css" />
+<link rel="stylesheet" href="../../../web/src/styles/base.css" />
+<link rel="stylesheet" href="mock.css" />
+<title>Complete tournament: dialog</title>
+</head>
+<body>
+<main>
+<p><a href="index.html">All mockups</a></p>
+<h1>The confirm dialog (D-259)</h1>
+<p class="note">Cancel has focus first, like the delete dialog. The red Complete button stays off until the typed name matches (D-136).</p>
+
+<h2 class="state">1. Loading the counts</h2>
+<div class="frame"><div class="dialog" role="dialog" aria-labelledby="t1"><div class="content">
+  <h2 class="title" id="t1">Complete this tournament?</h2>
+  <p class="text dots">Loading what this will do…</p>
+  <div class="actions"><button type="button" class="secondary">Cancel</button><button type="button" class="destructive" disabled>Complete tournament</button></div>
+</div></div></div>
+
+<h2 class="state">2. Open sessions, name not typed</h2>
+<div class="frame"><div class="dialog" role="dialog" aria-labelledby="t2"><form class="content">
+  <h2 class="title" id="t2">Complete this tournament?</h2>
+  <p class="text">This will:</p>
+  <ul class="list">
+    <li>Complete 2 open squads and 1 open sweeper.</li>
+    <li>Save a zero for each game of 4 bowlers with no scores.</li>
+    <li>Leave 2 bowlers with fewer than 6 games as entered.</li>
+  </ul>
+  <p class="text">This cannot be undone. The tournament and everything in it will be locked.</p>
+  <div class="field">
+    <label class="label" for="n2">Type the tournament name to confirm</label>
+    <input class="input" id="n2" autocomplete="off" />
+    <p class="hint">Northeast MegaBuck$ Open 2026</p>
+  </div>
+  <div class="actions"><button type="button" class="secondary">Cancel</button><button type="submit" class="destructive" disabled>Complete tournament</button></div>
+</form></div></div>
+
+<h2 class="state">3. Name typed, ready</h2>
+<div class="frame"><div class="dialog" role="dialog" aria-labelledby="t3"><form class="content">
+  <h2 class="title" id="t3">Complete this tournament?</h2>
+  <p class="text">This will:</p>
+  <ul class="list"><li>Complete 2 open squads and 1 open sweeper.</li><li>Save a zero for each game of 4 bowlers with no scores.</li></ul>
+  <p class="text">This cannot be undone. The tournament and everything in it will be locked.</p>
+  <div class="field">
+    <label class="label" for="n3">Type the tournament name to confirm</label>
+    <input class="input" id="n3" value="Northeast MegaBuck$ Open 2026" autocomplete="off" />
+    <p class="hint">Northeast MegaBuck$ Open 2026</p>
+  </div>
+  <div class="actions"><button type="button" class="secondary">Cancel</button><button type="submit" class="destructive">Complete tournament</button></div>
+</form></div></div>
+
+<h2 class="state">4. Nothing open (every session already complete)</h2>
+<div class="frame"><div class="dialog" role="dialog" aria-labelledby="t4"><form class="content">
+  <h2 class="title" id="t4">Complete this tournament?</h2>
+  <p class="text">Every squad and sweeper is already complete, so no scores will be saved.</p>
+  <p class="text">This cannot be undone. The tournament and everything in it will be locked.</p>
+  <div class="field">
+    <label class="label" for="n4">Type the tournament name to confirm</label>
+    <input class="input" id="n4" autocomplete="off" />
+    <p class="hint">Northeast MegaBuck$ Open 2026</p>
+  </div>
+  <div class="actions"><button type="button" class="secondary">Cancel</button><button type="submit" class="destructive" disabled>Complete tournament</button></div>
+</form></div></div>
+
+<h2 class="state">5. Saving</h2>
+<div class="frame"><div class="dialog" role="dialog" aria-labelledby="t5"><form class="content">
+  <h2 class="title" id="t5">Complete this tournament?</h2>
+  <p class="text">Completing…</p>
+  <div class="actions"><button type="button" class="secondary" disabled>Cancel</button><button type="submit" class="destructive" disabled>Completing…</button></div>
+</form></div></div>
+
+<h2 class="state">6. Counts did not load (error)</h2>
+<div class="frame"><div class="dialog" role="dialog" aria-labelledby="t6"><div class="content">
+  <h2 class="title" id="t6">Complete this tournament?</h2>
+  <p class="error" role="alert">Could not load what this will do. Try again.</p>
+  <div class="actions"><button type="button" class="secondary">Cancel</button><button type="button" class="secondary">Try again</button></div>
+</div></div></div>
+<p class="note">No Complete button until the counts load: the director never confirms blind.</p>
+
+<h2 class="state">7. Save failed (network or server)</h2>
+<div class="frame"><div class="dialog" role="dialog" aria-labelledby="t7"><form class="content">
+  <h2 class="title" id="t7">Complete this tournament?</h2>
+  <p class="text">Complete 2 open squads and 1 open sweeper.</p>
+  <p class="error" role="alert">Failed to complete the tournament</p>
+  <div class="field">
+    <label class="label" for="n7">Type the tournament name to confirm</label>
+    <input class="input" id="n7" value="Northeast MegaBuck$ Open 2026" autocomplete="off" />
+    <p class="hint">Northeast MegaBuck$ Open 2026</p>
+  </div>
+  <div class="actions"><button type="button" class="secondary">Cancel</button><button type="submit" class="destructive">Complete tournament</button></div>
+</form></div></div>
+<p class="note">A refusal (already complete, no squad) closes the dialog and shows the error toast from the overview mockup, state 5.</p>
+</main>
+</body>
+</html>

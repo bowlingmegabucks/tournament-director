@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="../../../web/src/styles/tokens.css" />
+<link rel="stylesheet" href="../../../web/src/styles/base.css" />
+<link rel="stylesheet" href="mock.css" />
+<title>Complete tournament: overview</title>
+</head>
+<body>
+<main>
+<p><a href="index.html">All mockups</a></p>
+<h1>Overview: where the button sits</h1>
+<p class="note">The overview keeps Edit tournament in the top row. A single Danger zone at the bottom holds the one-way actions, each with a sentence. The director sees Complete; the admin sees Complete and Delete (D-260, D-215).</p>
+
+<h2 class="state">1. Director, tournament open</h2>
+<div class="frame">
+  <h1 class="heading">Northeast MegaBuck$ Open 2026</h1>
+  <div><a class="edit" href="#">Edit tournament</a></div>
+  <dl class="fields">
+    <dt>Dates</dt><dd>Nov 13 to Nov 15, 2026</dd>
+    <dt>Bowling center</dt><dd>Sparetime Lanes, Worcester</dd>
+    <dt>Entry fee</dt><dd>$65.00</dd>
+  </dl>
+  <h2>Format</h2>
+  <dl class="fields">
+    <dt>Games per squad</dt><dd>6</dd>
+    <dt>Finals ratio</dt><dd>1 in 8</dd>
+    <dt>Cash ratio</dt><dd>1 in 4</dd>
+    <dt>Super sweeper cash ratio</dt><dd>1 in 3</dd>
+  </dl>
+  <section class="zone" aria-labelledby="z1">
+    <h2 id="z1">Danger zone</h2>
+    <div class="item">
+      <p>Complete this tournament. This closes every open squad and sweeper, then locks everything. It cannot be undone.</p>
+      <div><button type="button" class="trigger">Complete tournament</button></div>
+    </div>
+  </section>
+</div>
+
+<h2 class="state">2. Admin, tournament open</h2>
+<div class="frame">
+  <section class="zone" aria-labelledby="z2">
+    <h2 id="z2">Danger zone</h2>
+    <div class="item">
+      <p>Complete this tournament. This closes every open squad and sweeper, then locks everything. It cannot be undone.</p>
+      <div><button type="button" class="trigger">Complete tournament</button></div>
+    </div>
+    <div class="item">
+      <p>Delete this tournament and everything under it. This cannot be undone.</p>
+      <div><button type="button" class="trigger">Delete tournament</button></div>
+    </div>
+  </section>
+</div>
+
+<h2 class="state">3. Tournament complete (any role)</h2>
+<div class="frame">
+  <h1 class="heading">Northeast MegaBuck$ Open 2026 <span class="badge">Completed</span></h1>
+  <p class="note">No Edit link, no Danger zone: both hide once complete (TRN-31, D-260).</p>
+</div>
+
+<h2 class="state">4. After the save: success toast</h2>
+<div class="frame">
+  <div class="toast success" role="status"><p>Tournament completed. 3 squads and 1 sweeper closed, 7 bowlers got zeros.</p></div>
+  <p class="note">Lines with a zero count drop: "Tournament completed. 3 squads closed." or "Tournament completed." when nothing was open.</p>
+</div>
+
+<h2 class="state">5. Refused: toast (error, stays until dismissed)</h2>
+<div class="frame">
+  <div class="toast error" role="alert"><p>Add a squad before you complete this tournament</p></div>
+  <br />
+  <div class="toast error" role="alert"><p>This tournament is already complete</p></div>
+  <p class="note">The second shows when a second desk completed it first. The page then refetches and shows state 3.</p>
+</div>
+</main>
+</body>
+</html>

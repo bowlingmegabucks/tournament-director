@@ -120,8 +120,9 @@ export async function checkPagesShown(page: Page, persona: Persona) {
   const signedIn = persona !== 'signedOut'
   const can = {
     registrations: signedIn,
-    edit: persona === 'director' || persona === 'admin',
-    delete: persona === 'admin',
+    // The tournament is complete by stage 9: no one may edit or delete it, and its links are gone (TRN-42).
+    edit: false,
+    delete: false,
     users: persona === 'admin',
   }
 

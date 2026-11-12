@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test'
-import { squadA, squadB, squadD, sweeperOne } from '../data/sessions'
+import { spareSquad, squadA, squadB, squadD, sweeperOne } from '../data/sessions'
 import { tournament } from '../data/tournament'
 import { call, expectRefused } from './refusals'
 import { VendorApi } from './vendorApi'
@@ -129,4 +129,69 @@ export async function refusalDeleteTournamentWithScores(page: Page) {
     `/v1/tournaments/${known.main.id}?confirmWarnings=true&registrations=150&divisions=3&squads=4&sweepers=2`,
   )
   expectRefused(forced, 409)
+}
+
+/**
+ * The tournament is complete: it is frozen (D-130), so every write answers 409 and nothing changes.
+ * Calls the UI hides, as the signed-in user. A second complete and a delete are refused too.
+ */
+export async function refusalsWhenFrozen(page: Page, registrationIds: Map<number, string>) {
+  const known = await ids()
+  const frozen = async (what: string, answer: Promise<Awaited<ReturnType<typeof call>>>) => {
+    const result = await answer
+    expect(result.status, `${what}: ${JSON.stringify(result.body)}`).toBe(409)
+  }
+  await frozen(
+    'edit the tournament',
+    call(page, 'PATCH', known.base, { bowlingCenter: 'Elsewhere' }),
+  )
+  await frozen('complete it again', call(page, 'POST', `${known.base}/complete`))
+  await frozen('add a division', call(page, 'POST', `${known.base}/divisions`, { name: 'Late' }))
+  await frozen(
+    'edit a division',
+    call(page, 'PATCH', `${known.base}/divisions/${known.main.divisions[0]?.id}`, {
+      name: 'Renamed',
+    }),
+  )
+  await frozen(
+    'add a squad',
+    call(page, 'POST', `${known.base}/squads`, {
+      date: spareSquad.date,
+      startingLane: spareSquad.startingLane,
+      numberOfLanes: spareSquad.lanes,
+      maxPerPair: spareSquad.perPair,
+    }),
+  )
+  await frozen(
+    'edit a squad',
+    call(page, 'PATCH', `${known.base}/squads/${known.squadA}`, { numberOfLanes: 12 }),
+  )
+  await frozen(
+    'edit a registration',
+    call(page, 'PATCH', `${known.base}/registrations/${registrationOf(registrationIds, 1)}`, {
+      average: 150,
+    }),
+  )
+  await frozen(
+    'delete a registration',
+    call(page, 'DELETE', `${known.base}/registrations/${registrationOf(registrationIds, 1)}`),
+  )
+  await frozen(
+    'move a bowler',
+    call(
+      page,
+      'PUT',
+      `${known.base}/squads/${known.squadD}/lanes/${registrationOf(registrationIds, 1)}`,
+      {
+        lane: 1,
+      },
+    ),
+  )
+}
+
+/** The admin tries to delete a complete tournament: refused (D-133, D-130). */
+export async function refusalDeleteCompleteTournament(page: Page) {
+  const known = await ids()
+  const answer = await call(page, 'DELETE', known.base)
+  expectRefused(answer, 409)
 }

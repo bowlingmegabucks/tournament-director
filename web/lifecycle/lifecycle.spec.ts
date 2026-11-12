@@ -63,6 +63,8 @@ import {
   refusalsAfterComplete,
   refusalsAtTheEnd,
   refusalsWithEntries,
+  refusalDeleteCompleteTournament,
+  refusalsWhenFrozen,
   refusalsWithLanes,
 } from './support/scriptedFailures'
 import { checkApiAccess, checkPagesShown, personas, type Persona } from './support/access'
@@ -711,6 +713,39 @@ test('stage 8: the admin cannot delete a tournament that has scores, even with t
 }) => {
   await signIn(page, admin)
   await refusalDeleteTournamentWithScores(page)
+})
+
+// Stage 8b: the director completes the tournament. Every squad and sweeper is complete already, so
+// the dialog says so and the save sets the flag only (TRN-39, TRN-43, D-130, D-258).
+test('stage 8: the director completes the tournament, and it is frozen (TRN-38 to TRN-43, D-130)', async ({
+  page,
+}) => {
+  await signIn(page, director)
+  await openTournamentPage(page)
+  const zone = page.getByRole('region', { name: 'Danger zone' })
+  await zone.getByRole('button', { name: 'Complete tournament' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Complete this tournament?' })
+  await expect(dialog).toContainText('every squad and sweeper is already complete', {
+    ignoreCase: true,
+  })
+  await expect(dialog.getByRole('button', { name: 'Complete tournament' })).toBeDisabled()
+  await dialog.getByLabel('Type the tournament name to confirm').fill(tournament.name)
+  await dialog.getByRole('button', { name: 'Complete tournament' }).click()
+  await expect(page.getByText(/^Tournament completed\./)).toBeVisible()
+  await expect(page.getByText('Completed', { exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Danger zone' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Edit tournament' })).toHaveCount(0)
+  // The finals pages are official, as before, and the registration desk's links are gone.
+  await checkFinalsOfficial(page, page.url(), true)
+  await refusalsWhenFrozen(page, siteRegistrationIds)
+})
+
+test('stage 8: the admin sees no Danger zone on a complete tournament', async ({ page }) => {
+  await signIn(page, admin)
+  await openTournamentPage(page)
+  await expect(page.getByText('Completed', { exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Danger zone' })).toHaveCount(0)
+  await refusalDeleteCompleteTournament(page)
 })
 
 // Stage 9: the same pages and routes for a signed-out visitor, the score keeper, the director, and

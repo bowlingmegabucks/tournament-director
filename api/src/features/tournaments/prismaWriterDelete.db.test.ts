@@ -54,6 +54,28 @@ describe('Prisma tournament writer: delete (TRN-32 to TRN-35, D-132 to D-135)', 
     expect(await count('Squads')).toBe(0)
   })
 
+  it("removes the tournament's payouts and no one else's (PAY-18, D-280)", async () => {
+    const id = await rows.tournament()
+    const other = await rows.tournament()
+    const insert = (tournamentId: string) =>
+      client.$executeRawUnsafe(
+        `INSERT INTO Payouts (Id, TournamentId, Source, EventId, RegistrationId, Amount, Paid, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy)
+         VALUES (?, ?, 'squad', ?, ?, 100, 0, NOW(3), 'u', NOW(3), 'u')`,
+        crypto.randomUUID(),
+        tournamentId,
+        crypto.randomUUID(),
+        crypto.randomUUID(),
+      )
+    await insert(id)
+    await insert(id)
+    await insert(other)
+
+    expect(await remove(id)).toMatchObject({ deleted: expect.any(Object) })
+
+    expect(await count('Payouts')).toBe(1)
+    expect(await count('Tournaments')).toBe(1)
+  })
+
   it('refuses a complete tournament and deletes nothing (TRN-33, D-130)', async () => {
     const id = await rows.tournament({ completed: true })
 

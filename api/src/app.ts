@@ -52,6 +52,8 @@ import { createDnfRouter } from './features/dnf/routes.ts'
 import { createLiveNotifier } from './features/results/liveEvents.ts'
 import { createTournamentEventsRouter } from './shared/events/sseRoute.ts'
 import type { DnfStore } from './features/dnf/store.ts'
+import { createTtlCache, LIVE_CACHE_MS } from './shared/ttlCache.ts'
+import { createPayoutReadRouter, createPayoutWriteRouter } from './features/payouts/routes.ts'
 import type { PayoutStore } from './features/payouts/store.ts'
 import { createSquadRouter } from './features/squads/routes.ts'
 import type { SquadRepository } from './features/squads/repository.ts'
@@ -235,6 +237,8 @@ export function createApp({
     events,
     logger,
   })
+  // The three finals pages share one cache, so a payout save can drop them (PAY-21).
+  const finalsCache = createTtlCache<unknown>(LIVE_CACHE_MS)
   // The five results routes (squad, sweeper, at-large, seeding, super sweeper) read the same data.
   const resultsDeps = {
     tournaments,
@@ -246,6 +250,31 @@ export function createApp({
     dnf: dnfStore,
     payouts: payoutStore,
     logger,
+  }
+
+  // The payout routes read the results and the whole payout store (PAY-02 to PAY-06).
+  const payoutDeps = { ...resultsDeps, payouts: payoutStore, registrations, logger }
+  // A save drops the cached public pages, then tells the screens (PAY-21, D-285). The session
+  // stream's `publish` already drops that session's pages; the finals pages and the TV feed are
+  // dropped here, before the message that tells a screen to ask again.
+  const payoutHooks = {
+    saved: ({
+      tournamentId,
+      source,
+      eventId,
+    }: {
+      tournamentId: string
+      source: string
+      eventId: string
+    }) => {
+      finalsCache.dropWhere((key) => key.includes(tournamentId.toLowerCase()))
+      if (source === 'squad' || source === 'sweeper') {
+        events.publish(eventId, 'payouts')
+        liveNotifier.payoutsSaved(tournamentId, { kind: source, id: eventId })
+      } else {
+        liveNotifier.payoutsSaved(tournamentId)
+      }
+    },
   }
 
   // One router serves every method; the two groups below give each its own access.
@@ -636,17 +665,17 @@ export function createApp({
       {
         path: '/v1/tournaments/:id/at-large',
         access: 'public', // D-85: public for good, so bowlers check the finals field
-        router: createFinalsRouter('at-large', resultsDeps),
+        router: createFinalsRouter('at-large', resultsDeps, LIVE_CACHE_MS, finalsCache),
       },
       {
         path: '/v1/tournaments/:id/seeding',
         access: 'public', // D-85: public for good, so bowlers check the finals field
-        router: createFinalsRouter('seeding', resultsDeps),
+        router: createFinalsRouter('seeding', resultsDeps, LIVE_CACHE_MS, finalsCache),
       },
       {
         path: '/v1/tournaments/:id/super-sweeper',
         access: 'public', // D-85: public for good, so bowlers check the finals field
-        router: createFinalsRouter('super-sweeper', resultsDeps),
+        router: createFinalsRouter('super-sweeper', resultsDeps, LIVE_CACHE_MS, finalsCache),
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/recap-sheets',
@@ -691,6 +720,18 @@ export function createApp({
         access: { permission: 'registrations.write' }, // D-209: the API key cannot reach it
         methods: ['GET', 'DELETE'],
         router: deskDeleteRegistrations,
+      },
+      {
+        path: '/v1/tournaments/:id/payouts',
+        access: { permission: 'payouts.read' }, // PAY-16, D-275: director and admin; no API key
+        methods: ['GET'],
+        router: createPayoutReadRouter(payoutDeps),
+      },
+      {
+        path: '/v1/tournaments/:id/payouts',
+        access: { permission: 'payouts.write' }, // PAY-16, D-275: director and admin; no API key
+        methods: ['PUT', 'PATCH'],
+        router: createPayoutWriteRouter(payoutDeps, payoutHooks),
       },
       {
         path: '/v1/bowlers',

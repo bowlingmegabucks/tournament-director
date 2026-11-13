@@ -86,7 +86,15 @@ export type SheetStatus = 'open' | 'notReady' | 'locked'
 
 /** The entry sheet of one event (PAY-02 to PAY-06). */
 export interface PayoutSheet {
-  event: { source: PayoutSource; eventId: string; label: string; divisionName: string | null }
+  event: {
+    source: PayoutSource
+    eventId: string
+    /** "Squad", "Sweeper", "Super sweeper", or "Finals: Open". */
+    label: string
+    /** A squad's or a sweeper's date, `YYYY-MM-DDTHH:mm:ss`; `null` for the super sweeper and finals. */
+    date: string | null
+    divisionName: string | null
+  }
   status: SheetStatus
   /** Why the sheet is not open: the gate (D-272) or the lock (D-273). `null` when open. */
   reason: string | null
@@ -100,16 +108,16 @@ export interface PayoutRow {
   id: string
   source: PayoutSource
   eventId: string
-  /** "Sat 9:00 AM squad" and so on: what the page groups and filters by. */
+  /** "Squad", "Sweeper", "Super sweeper", or "Finals: Open": what the page groups and filters by. */
   eventLabel: string
+  /** A squad's or a sweeper's date, `null` for the super sweeper and finals. */
+  eventDate: string | null
   registrationId: string
   name: string
   divisionName: string
   amount: string
   note: string | null
   paid: boolean
-  /** False when a director added the bowler by hand (D-269). */
-  inferred: boolean
 }
 
 export interface PayoutSummary {

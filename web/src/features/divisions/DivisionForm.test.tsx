@@ -374,7 +374,7 @@ describe('DivisionForm leaving with changes', () => {
     await user.type(box('Name (required)'), 'Juniors')
     await user.click(screen.getByRole('link', { name: 'Cancel' }))
 
-    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Stay on this page' }))
     expect(box('Name (required)')).toHaveValue('Juniors')
   })

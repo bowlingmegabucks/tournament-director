@@ -499,7 +499,7 @@ describe('NewTournamentPage leaving with changes', () => {
     await user.type(screen.getByLabelText('Name (required)'), 'Spring')
     await user.click(screen.getByRole('link', { name: 'Cancel' }))
 
-    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Stay on this page' }))
     expect(screen.getByLabelText('Name (required)')).toHaveValue('Spring')
   })

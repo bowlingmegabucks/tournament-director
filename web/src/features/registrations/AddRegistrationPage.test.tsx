@@ -1584,7 +1584,7 @@ describe('leaving the add page with changes', () => {
 
     await user.click(screen.getByRole('link', { name: 'Cancel' }))
 
-    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
   })
 
   it('asks after the stored email of a picked bowler is cleared', async () => {
@@ -1597,6 +1597,6 @@ describe('leaving the add page with changes', () => {
 
     await user.click(screen.getByRole('link', { name: 'Cancel' }))
 
-    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
   })
 })

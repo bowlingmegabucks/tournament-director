@@ -55,8 +55,8 @@ export function formatTypedDate(text: string, deleting = false): string {
       }
       parts[parts.length - 1] += char
       // Stryker disable next-line StringLiteral: `parts` always holds the part just added, so the fallback never runs.
-      closed = isFull(parts[parts.length - 1] ?? '', parts.length - 1)
-    } else if (SEPARATOR.test(char) && parts.length < 3 && parts[parts.length - 1] !== '') {
+      closed = isFull(parts.at(-1) ?? '', parts.length - 1)
+    } else if (SEPARATOR.test(char) && parts.length < 3 && parts.at(-1) !== '') {
       closed = true
     }
   }

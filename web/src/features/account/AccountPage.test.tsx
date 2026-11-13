@@ -386,7 +386,7 @@ describe('AccountPage leaving with changes', () => {
 
     await userEvent.click(home())
 
-    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Stay on this page' }))
     await userEvent.type(name, '{Backspace}')
     await userEvent.click(home())

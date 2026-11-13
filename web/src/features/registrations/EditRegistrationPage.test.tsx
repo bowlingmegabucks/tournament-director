@@ -962,6 +962,6 @@ describe('leaving the edit page with changes', () => {
     await user.type(screen.getByLabelText('Average'), '190')
     await user.click(screen.getByRole('link', { name: 'Cancel' }))
 
-    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
   })
 })

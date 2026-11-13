@@ -254,12 +254,12 @@ describe('NewUserPage leaving with changes', () => {
 
     await userEvent.click(home())
 
-    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Stay on this page' }))
     await userEvent.clear(screen.getByLabelText('Name'))
     await userEvent.click(screen.getByRole('checkbox', { name: 'Admin' }))
     await userEvent.click(home())
-    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Leave page' }))
 
     expect(await screen.findByRole('heading', { name: 'Tournament Management' })).toBeVisible()
@@ -269,7 +269,7 @@ describe('NewUserPage leaving with changes', () => {
     await openPage()
     await userEvent.type(screen.getByLabelText('Email'), 'a@b.co')
     await userEvent.click(home())
-    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Stay on this page' }))
     await userEvent.clear(screen.getByLabelText('Email'))
 

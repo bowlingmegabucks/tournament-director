@@ -55,7 +55,7 @@ describe('SquadForm leaving with changes', () => {
     await user.type(screen.getByLabelText('Entry fee'), '5')
     await user.click(screen.getByRole('link', { name: 'Cancel' }))
 
-    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
   })
 
   it('asks after only the time changed', async () => {
@@ -65,6 +65,6 @@ describe('SquadForm leaving with changes', () => {
 
     await user.click(screen.getByRole('link', { name: 'Cancel' }))
 
-    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
   })
 })

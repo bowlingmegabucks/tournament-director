@@ -23,6 +23,7 @@ import {
 import { createDemoGamesView, createDemoScoresWithSaves, mockScoreChange } from './gamesData'
 import { authHandlers } from './authHandlers'
 import { userHandlers } from './userHandlers'
+import { createPayoutHandlers } from './payoutHandlers'
 import { createRegistrationHandlers } from './registrationHandlers'
 import type { DivisionChanges, NewDivision } from '../features/divisions/types'
 import { formatPair } from '../features/lanes/format'
@@ -463,6 +464,7 @@ export const handlers = [
   ...authHandlers,
   ...userHandlers,
   ...createRegistrationHandlers({ tournaments, divisions, squads, sweepers, registrations }),
+  ...createPayoutHandlers(),
   http.get('/v1/tournaments', () => HttpResponse.json({ tournaments })),
   // TRN-19: the browser has checked the rules; the mock only refuses a duplicate, as the API does.
   http.post('/v1/tournaments', async ({ request }) => {

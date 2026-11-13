@@ -51,14 +51,14 @@ test('every page fits a phone with no sideways scroll, signed in as a director (
   await expect(sidebar(page)).toBeVisible()
   await fits(page, 'overview')
 
-  for (const link of ['Divisions', 'Registrations', 'At-large', 'Seeding']) {
+  for (const link of ['Divisions', 'Registrations', 'At-large', 'Seeding', 'Payouts']) {
     await menuLink(page, link)
     await fits(page, link)
   }
 
   for (const [list, tabs] of [
-    ['Squads', ['Lane assignments', 'Scores', 'Results']],
-    ['Sweepers', ['Lane assignments', 'Scores', 'Results']],
+    ['Squads', ['Lane assignments', 'Scores', 'Results', 'Payouts']],
+    ['Sweepers', ['Lane assignments', 'Scores', 'Results', 'Payouts']],
   ] as const) {
     await menuLink(page, list)
     await fits(page, list)
@@ -80,7 +80,10 @@ test('every page fits a phone with no sideways scroll, signed in as a director (
       await sessions.nth(index).click()
       await fits(page, `${list} ${index}`)
       for (const tab of tabs) {
-        await page.getByRole('link', { name: tab }).click()
+        await page
+          .getByRole('navigation', { name: /^(Squad|Sweeper) pages$/ })
+          .getByRole('link', { name: tab })
+          .click()
         await fits(page, `${list} ${index} ${tab}`)
       }
     }
@@ -89,4 +92,12 @@ test('every page fits a phone with no sideways scroll, signed in as a director (
   await menuLink(page, 'Sweepers')
   await page.getByRole('link', { name: 'Super sweeper results' }).click()
   await fits(page, 'super sweeper')
+  await menuLink(page, 'Sweepers')
+  await page.getByRole('link', { name: 'Super sweeper payouts' }).click()
+  await fits(page, 'super sweeper payouts')
+
+  // The finals payouts of the first division, from the Seeding page (PAY-05).
+  await menuLink(page, 'Seeding')
+  await page.getByRole('link', { name: 'Pay finals' }).click()
+  await fits(page, 'finals payouts')
 })

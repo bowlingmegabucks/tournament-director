@@ -212,6 +212,23 @@ describe('SweepersPage', () => {
     )
   })
 
+  it('links to the super sweeper payouts for a user who may read payouts, and to no one else (PAY-04, PAY-16)', async () => {
+    serve([createSweeper()])
+    setMockUser(createSignedInUser({ roles: ['director'] }))
+
+    const view = open()
+
+    expect(await screen.findByRole('link', { name: 'Super sweeper payouts' })).toHaveAttribute(
+      'href',
+      `/tournaments/${tournament.id}/super-sweeper/payouts`,
+    )
+    view.unmount()
+    setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+    open()
+    await titles()
+    expect(screen.queryByRole('link', { name: 'Super sweeper payouts' })).not.toBeInTheDocument()
+  })
+
   it('hides the super sweeper link when there are no sweepers (D-87)', async () => {
     serve([])
 

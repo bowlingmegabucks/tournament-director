@@ -15,6 +15,8 @@ export const permissions = [
   'squads.write',
   'bowlers.read',
   'bowlers.ssn',
+  'payouts.read',
+  'payouts.write',
   'users.manage',
 ] as const
 

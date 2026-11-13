@@ -52,6 +52,7 @@ import { createDnfRouter } from './features/dnf/routes.ts'
 import { createLiveNotifier } from './features/results/liveEvents.ts'
 import { createTournamentEventsRouter } from './shared/events/sseRoute.ts'
 import type { DnfStore } from './features/dnf/store.ts'
+import type { PayoutStore } from './features/payouts/store.ts'
 import { createSquadRouter } from './features/squads/routes.ts'
 import type { SquadRepository } from './features/squads/repository.ts'
 import { createSquadCreateRouter } from './features/squads/createRoutes.ts'
@@ -137,6 +138,8 @@ export interface AppDependencies {
   /** The stored skip of each squad and sweeper (SCR-23, D-235). */
   skipStore: SkipStore
   dnfStore: DnfStore
+  /** The payouts (PAY-01): the entry routes write them, the results read the amounts (PAY-20). */
+  payoutStore: PayoutStore
   squads: SquadRepository
   /** Adds squads (SQD-01 to SQD-08, D-167). */
   squadWriter: SquadWriter
@@ -169,6 +172,7 @@ export function createApp({
   scoreWriter,
   skipStore,
   dnfStore,
+  payoutStore,
   squads,
   squadWriter,
   sweepers,
@@ -240,6 +244,7 @@ export function createApp({
     lanes,
     scores,
     dnf: dnfStore,
+    payouts: payoutStore,
     logger,
   }
 

@@ -60,6 +60,13 @@ import {
 import { afterEditsExpected, edits } from './data/edits'
 import { enteredScore, scoreOf, typoFor, walksOff } from './data/scores'
 import {
+  finalsPayout,
+  payoutTotals,
+  squadPayout,
+  superSweeperPayout,
+  sweeperPayout,
+} from './data/payouts'
+import {
   refusalDeleteTournamentWithScores,
   refusalsAfterComplete,
   refusalsAtTheEnd,
@@ -72,6 +79,9 @@ import { checkApiAccess, checkPagesShown, personas, type Persona } from './suppo
 import { VendorApi } from './support/vendorApi'
 import { idByDate, idByName, vendorRegistration } from './support/vendorPayload'
 import { bowlerAt, deskBowlers, fullName, returning, siteBowlers } from './data/bowlers'
+
+/** A bowler's name by the run's number. */
+const fullNameOf = (index: number) => fullName(bowlerAt(index))
 import {
   afterDeskExpected,
   deskBatchOf,
@@ -718,6 +728,185 @@ test('stage 8: the admin cannot delete a tournament that has scores, even with t
   await refusalDeleteTournamentWithScores(page)
 })
 
+// Stage 8a: payouts (PAY-01 to PAY-21, D-267 to D-285). Every session is complete, so each event is
+// open. The numbers are worked out by hand in `data/payouts.ts`.
+test('stage 8: the director enters payouts for squad A, a sweeper, the super sweeper, and the finals', async ({
+  page,
+}) => {
+  await signIn(page, director)
+  await openTournamentPage(page, 'Payouts')
+  await expect(page.getByText(/No payouts are recorded yet/)).toBeVisible()
+  const tournamentPath = new URL(page.url()).pathname.replace(/\/payouts$/, '')
+
+  // Squad A: the same amount for the six inferred cashers, and one advancer paid by hand with a note.
+  await openTournamentPage(page, 'Squads')
+  await page.getByRole('link', { name: squadA.label, exact: true }).click()
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Complete')
+  await page
+    .getByRole('navigation', { name: 'Squad pages' })
+    .getByRole('link', { name: 'Payouts' })
+    .click()
+  await page.getByRole('button', { name: 'Enter payouts' }).click()
+  let sheet = page.getByRole('dialog', { name: 'Payouts: Squad' })
+  await expect(sheet.getByText('Payouts are for this event only.')).toBeVisible()
+  for (const who of squadPayout.advancers) {
+    await expect(sheet.getByLabel(`Amount for ${who}`, { exact: true })).toHaveCount(0)
+  }
+  await sheet.getByRole('button', { name: 'Same amount for all' }).click()
+  const same = page.getByRole('dialog', { name: 'Same amount for all' })
+  await expect(same).toContainText(`These ${squadPayout.inferredCount} bowlers are inferred`)
+  for (const who of squadPayout.named)
+    await expect(same.getByText(who, { exact: true })).toBeVisible()
+  await same.getByLabel('Amount for each ($)').fill(squadPayout.same)
+  await same.getByRole('button', { name: `Fill ${squadPayout.inferredCount} boxes` }).click()
+  await sheet.getByRole('button', { name: 'Add another bowler' }).click()
+  const add = page.getByRole('dialog', { name: 'Add another bowler' })
+  await add.getByLabel('Search by name').fill(squadPayout.byHand.name)
+  await add.getByRole('button', { name: `Add ${squadPayout.byHand.name}` }).click()
+  await add.getByRole('button', { name: 'Close' }).click()
+  await sheet
+    .getByLabel(`Amount for ${squadPayout.byHand.name}`, { exact: true })
+    .fill(squadPayout.byHand.amount)
+  await sheet.getByRole('button', { name: 'Save payouts' }).click()
+  await expect(sheet.getByText('Say why this bowler is paid')).toBeVisible()
+  await sheet
+    .getByLabel(`Note (required) for ${squadPayout.byHand.name}`)
+    .fill(squadPayout.byHand.note)
+  await sheet.getByRole('button', { name: 'Save payouts' }).click()
+  await expect(page.getByText('Payouts saved.')).toBeVisible()
+  const saved = page.getByRole('table', { name: 'Payouts' })
+  await expect(saved.getByRole('row').filter({ hasText: squadPayout.byHand.name })).toContainText(
+    'added by hand',
+  )
+  await expect(saved.getByRole('row')).toHaveCount(1 + squadPayout.inferredCount + 1)
+
+  // The squad's Results tab shows the amount on each casher and on no advancer, hand-added or not (D-284).
+  const squadPath = new URL(page.url()).pathname.replace(/\/payouts$/, '')
+  await page.goto(`${squadPath}/results`)
+  const chooser = page.getByRole('combobox', { name: 'Division' })
+  await chooser.selectOption(
+    await chooser.getByRole('option', { name: /^Scratch \(/ }).getAttribute('value'),
+  )
+  const scratch = page.getByRole('table', { name: 'Results for the Scratch division' })
+  for (const who of [fullNameOf(48), fullNameOf(62)]) {
+    await expect(scratch.getByRole('row').filter({ hasText: who })).toContainText('Payout $100.00')
+  }
+  await expect(
+    scratch.getByRole('row').filter({ hasText: squadPayout.byHand.name }),
+  ).not.toContainText('Payout')
+  await expect(scratch.getByText(/^Payout /)).toHaveCount(3)
+
+  // Sweeper one: every inferred casher the same amount.
+  await openTournamentPage(page, 'Sweepers')
+  await page.getByRole('link', { name: sweeperOne.label, exact: true }).click()
+  await page
+    .getByRole('navigation', { name: 'Sweeper pages' })
+    .getByRole('link', { name: 'Payouts' })
+    .click()
+  await page.getByRole('button', { name: 'Enter payouts' }).click()
+  sheet = page.getByRole('dialog', { name: 'Payouts: Sweeper' })
+  await sheet.getByRole('button', { name: 'Same amount for all' }).click()
+  const sameSweeper = page.getByRole('dialog', { name: 'Same amount for all' })
+  await expect(sameSweeper).toContainText(
+    `These ${sweeperPayout.inferredCount} bowlers are inferred`,
+  )
+  for (const who of sweeperPayout.named) {
+    await expect(sameSweeper.getByText(who, { exact: true })).toBeVisible()
+  }
+  await sameSweeper.getByLabel('Amount for each ($)').fill(sweeperPayout.same)
+  await sameSweeper
+    .getByRole('button', { name: `Fill ${sweeperPayout.inferredCount} boxes` })
+    .click()
+  await sheet.getByRole('button', { name: 'Save payouts' }).click()
+  await expect(page.getByText('Payouts saved.')).toBeVisible()
+
+  // The super sweeper's one casher.
+  await openTournamentPage(page, 'Sweepers')
+  await page.getByRole('link', { name: 'Super sweeper payouts' }).click()
+  await page.getByRole('button', { name: 'Enter payouts' }).click()
+  sheet = page.getByRole('dialog', { name: 'Payouts: Super sweeper' })
+  await sheet.getByRole('button', { name: 'Same amount for all' }).click()
+  const sameSuper = page.getByRole('dialog', { name: 'Same amount for all' })
+  await expect(sameSuper).toContainText(`This bowler is inferred`)
+  await expect(sameSuper.getByText(superSweeperPayout.casher, { exact: true })).toBeVisible()
+  await sameSuper.getByLabel('Amount for each ($)').fill(superSweeperPayout.same)
+  await sameSuper.getByRole('button', { name: 'Fill 1 box' }).click()
+  await sheet.getByRole('button', { name: 'Save payouts' }).click()
+  await expect(page.getByText('Payouts saved.')).toBeVisible()
+
+  // Finals, Scratch: the winner by hand, and the two who tie for fifth through the ticks.
+  await page.goto(`${tournamentPath}/seeding`)
+  const divisionChooser = page.getByRole('combobox', { name: 'Division' })
+  await divisionChooser.selectOption(
+    await divisionChooser.getByRole('option', { name: /^Scratch \(/ }).getAttribute('value'),
+  )
+  await page.getByRole('link', { name: 'Pay finals' }).click()
+  await expect(
+    page.getByRole('heading', { name: 'Finals payouts: Scratch', level: 1 }),
+  ).toBeVisible()
+  await page.getByRole('button', { name: 'Enter payouts' }).click()
+  sheet = page.getByRole('dialog', { name: 'Payouts: Finals: Scratch' })
+  await sheet
+    .getByLabel(`Amount for ${finalsPayout.winner.name}`, { exact: true })
+    .fill(finalsPayout.winner.amount)
+  await sheet
+    .getByLabel(`Note (optional) for ${finalsPayout.winner.name}`, { exact: true })
+    .fill(finalsPayout.winner.note)
+  for (const who of finalsPayout.tied.names) {
+    await sheet.getByLabel(`Include ${who} in Same amount`).check()
+  }
+  await sheet.getByRole('button', { name: 'Same amount for ticked' }).click()
+  const sameFinals = page.getByRole('dialog', { name: 'Same amount for ticked rows' })
+  await expect(sameFinals).toContainText('These 2 bowlers are ticked')
+  await sameFinals.getByLabel('Amount for each ($)').fill(finalsPayout.tied.amount)
+  await sameFinals.getByRole('button', { name: 'Fill 2 boxes' }).click()
+  await sheet.getByRole('button', { name: 'Save payouts' }).click()
+  await expect(page.getByText('Payouts saved.')).toBeVisible()
+
+  // The Seeding page shows what each finalist won (D-284).
+  await page.goto(`${tournamentPath}/seeding`)
+  await divisionChooser.selectOption(
+    await divisionChooser.getByRole('option', { name: /^Scratch \(/ }).getAttribute('value'),
+  )
+  const seeds = page.getByRole('table', { name: 'Finals seeding for the Scratch division' })
+  await expect(seeds.getByRole('row').filter({ hasText: finalsPayout.winner.name })).toContainText(
+    'Payout $1,500.00',
+  )
+  await expect(seeds.getByText(/^Payout /)).toHaveCount(3)
+
+  // The full list: the hand-worked count and total, then each bowler's total and the minimum box.
+  await openTournamentPage(page, 'Payouts')
+  await expect(page.getByText('Payouts', { exact: true }).locator('+ dd')).toHaveText(
+    String(payoutTotals.count),
+  )
+  await expect(page.getByText('Total', { exact: true }).locator('+ dd')).toHaveText(
+    payoutTotals.total,
+  )
+  await page.getByRole('link', { name: 'By bowler' }).click()
+  const totals = page.getByRole('table', { name: 'Payouts by bowler' })
+  for (const who of [payoutTotals.topBowler, payoutTotals.second, payoutTotals.byHand]) {
+    const row = totals.getByRole('row').filter({ hasText: who.name })
+    await expect(row).toContainText(who.total)
+    await expect(row.getByRole('cell').nth(1)).toHaveText(String(who.payouts))
+  }
+  await page.getByLabel('Earned at least ($)').fill('1000')
+  await expect(totals.getByRole('row')).toHaveCount(1 + payoutTotals.atLeast1000.length)
+  await expect(totals).toContainText(payoutTotals.atLeast1000[0] ?? '')
+
+  // Paid: one tick on the list, and the Complete dialog counts what is left unpaid (PAY-15, D-279).
+  await page.getByRole('link', { name: 'By payout' }).click()
+  await page.getByLabel(`Paid for ${squadPayout.byHand.name}`).first().click()
+  await expect(page.getByLabel(`Paid for ${squadPayout.byHand.name}`).first()).toBeChecked()
+  await openTournamentPage(page)
+  await page
+    .getByRole('region', { name: 'Danger zone' })
+    .getByRole('button', { name: 'Complete tournament' })
+    .click()
+  const dialog = page.getByRole('dialog', { name: 'Complete this tournament?' })
+  await expect(dialog).toContainText(`${payoutTotals.count - 1} payouts are not marked paid`)
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+})
+
 // Stage 8b: the director completes the tournament. Every squad and sweeper is complete already, so
 // the dialog says so and the save sets the flag only (TRN-39, TRN-43, D-130, D-258).
 test('stage 8: the director completes the tournament, and it is frozen (TRN-38 to TRN-43, D-130)', async ({
@@ -740,6 +929,10 @@ test('stage 8: the director completes the tournament, and it is frozen (TRN-38 t
   await expect(page.getByRole('link', { name: 'Edit tournament' })).toHaveCount(0)
   // The finals pages are official, as before, and the registration desk's links are gone.
   await checkFinalsOfficial(page, page.url(), true)
+  // PAY-11, D-273: the payouts are locked, so the list has no Paid box left to tick.
+  await openTournamentPage(page, 'Payouts')
+  await expect(page.getByText('This tournament is complete. Payouts are locked.')).toBeVisible()
+  await expect(page.getByRole('checkbox')).toHaveCount(0)
   await refusalsWhenFrozen(page, siteRegistrationIds)
 })
 

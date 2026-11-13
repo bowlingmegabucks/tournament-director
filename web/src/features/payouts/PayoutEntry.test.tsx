@@ -630,8 +630,8 @@ describe('the finals sheet (PAY-05, PAY-08, D-270, D-277)', () => {
     await user.click(await screen.findByRole('button', { name: 'Enter payouts' }))
     const dialog = await screen.findByRole('dialog', { name: 'Payouts: Finals: Open' })
 
-    await user.click(within(dialog).getByLabelText('Same amount for Marcus Lee'))
-    await user.click(within(dialog).getByLabelText('Same amount for Lois Park'))
+    await user.click(within(dialog).getByLabelText('Include Marcus Lee in Same amount'))
+    await user.click(within(dialog).getByLabelText('Include Lois Park in Same amount'))
     await user.click(within(dialog).getByRole('button', { name: 'Same amount for ticked' }))
     const same = await screen.findByRole('dialog', { name: 'Same amount for ticked rows' })
     expect(within(same).getByText('These 2 bowlers are ticked to get the amount:')).toBeVisible()

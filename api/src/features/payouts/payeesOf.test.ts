@@ -63,13 +63,23 @@ describe('sweeperPayees and superSweeperPayees (PAY-03, PAY-04)', () => {
   it('lists the cashers of a sweeper', () => {
     const payees = sweeperPayees({ rows } as unknown as SweeperResults)
     expect(payees.map((payee) => payee.registrationId)).toEqual(['c1'])
-    expect(payees[0]).toMatchObject({ divisionName: 'Open', detail: 'cashed, place 1' })
+    expect(payees[0]).toMatchObject({
+      divisionName: 'Open',
+      detail: 'cashed, place 1',
+      previousCasher: false,
+      seed: null,
+    })
   })
 
   it('lists the cashers of the super sweeper', () => {
     const payees = superSweeperPayees({ rows } as unknown as SuperSweeperResults)
     expect(payees.map((payee) => payee.registrationId)).toEqual(['c1'])
-    expect(payees[0]).toMatchObject({ divisionName: 'Open', detail: 'cashed, place 1' })
+    expect(payees[0]).toMatchObject({
+      divisionName: 'Open',
+      detail: 'cashed, place 1',
+      previousCasher: false,
+      seed: null,
+    })
   })
 })
 

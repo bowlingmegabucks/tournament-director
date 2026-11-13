@@ -46,6 +46,7 @@ export async function workOutEvent(
   tournamentId: string,
   eventId: string,
 ): Promise<WorkedEvent> {
+  // Stryker disable next-line ObjectLiteral: a complete session ranks every game in either mode, and the gate lets only complete ones through.
   const mode = { mode: 'full-game' as const }
   // The results loaders only read the amounts, which the store's narrow port gives them.
   const resultsDeps: ResultsDeps = deps

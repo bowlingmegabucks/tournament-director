@@ -90,6 +90,7 @@ export function createPayoutReadRouter(deps: PayoutRouterDeps): Router {
   // A bad stored row stays bad on every request. Say so once per process (D-51).
   const reported = new Set<string>()
 
+  // Stryker disable next-line StringLiteral: '' and '/' match the same path.
   router.get('/', async (req, res) => {
     const { id } = tournamentParams.parse(req.params)
     const settings = await deps.tournaments.getSettings(id)
@@ -191,6 +192,7 @@ export function createPayoutWriteRouter(deps: PayoutRouterDeps, hooks: PayoutHoo
         eventId,
         rows: body.payouts,
         confirmPaid: body.confirmPaid === true,
+        // Stryker disable next-line StringLiteral: the route needs a signed-in user, so the fallback never shows.
         actorId: callerOf(res).user?.id ?? 'unknown',
         inferred: new Set(worked.payees.map((payee) => payee.registrationId)),
         entered: namesOf(worked.entered),
@@ -232,12 +234,9 @@ export function createPayoutWriteRouter(deps: PayoutRouterDeps, hooks: PayoutHoo
     const { id, payoutId } = payoutParams.parse(req.params)
     const { paid } = paidBodySchema.parse(req.body)
     const logger = requestLogger(res, deps.logger)
-    const outcome = await deps.payouts.setPaid(
-      id,
-      payoutId,
-      paid,
-      callerOf(res).user?.id ?? 'unknown',
-    )
+    // Stryker disable next-line StringLiteral: the route needs a signed-in user, so the fallback never shows.
+    const actorId = callerOf(res).user?.id ?? 'unknown'
+    const outcome = await deps.payouts.setPaid(id, payoutId, paid, actorId)
     if ('notFound' in outcome) throw new HttpError(404, 'Payout not found')
     if ('refused' in outcome) {
       logger.warn({ actorId: callerOf(res).user?.id, tournamentId: id }, 'Payout paid flag refused')

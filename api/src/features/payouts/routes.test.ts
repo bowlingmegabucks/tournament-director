@@ -21,6 +21,7 @@ import { createInMemoryScoreRepository } from '../scores/repository.ts'
 import { createInMemorySquadRepository } from '../squads/repository.ts'
 import { createInMemorySweeperRepository } from '../sweepers/repository.ts'
 import { createInMemoryTournamentRepository } from '../tournaments/repository.ts'
+import type { Gate } from './savePlan.ts'
 import { createInMemoryPayoutStore, type EventFacts, type PayoutStore } from './store.ts'
 import type { PayoutRecord } from './types.ts'
 
@@ -132,7 +133,7 @@ const record = (over: Partial<PayoutRecord> = {}): PayoutRecord => ({
   ...over,
 })
 
-describe(`GET ${squadUrl} (PAY-02, PAY-06, PAY-10, PAY-11)`, () => {
+describe('GET payouts/squad/:sessionId (PAY-02, PAY-06, PAY-10, PAY-11)', () => {
   it('lists the casher as the payee and the rest as others, never the advancer (PAY-02, D-07)', async () => {
     const { app } = setup()
 
@@ -287,7 +288,7 @@ describe('GET the sheets of the other events (PAY-03 to PAY-05)', () => {
   })
 })
 
-describe(`PUT ${squadUrl} (PAY-06, PAY-07, PAY-10 to PAY-12, PAY-21)`, () => {
+describe('PUT payouts/squad/:sessionId (PAY-06, PAY-07, PAY-10 to PAY-12, PAY-21)', () => {
   it('saves the casher with no note, answers the fresh sheet, and publishes payouts (PAY-12, PAY-21)', async () => {
     const { app, records, published, captured } = setup()
 
@@ -455,7 +456,7 @@ describe(`PUT ${squadUrl} (PAY-06, PAY-07, PAY-10 to PAY-12, PAY-21)`, () => {
   })
 })
 
-describe(`PATCH ${base}/:payoutId (PAY-13, D-274)`, () => {
+describe('PATCH payouts/:payoutId (PAY-13, D-274)', () => {
   it('sets and clears the paid flag and answers the payout', async () => {
     const stored = record()
     const { app, records, captured, published } = setup({ seed: [stored] })
@@ -496,7 +497,7 @@ describe(`PATCH ${base}/:payoutId (PAY-13, D-274)`, () => {
   })
 })
 
-describe(`GET ${base} (PAY-19)`, () => {
+describe('GET payouts and payouts/totals (PAY-19)', () => {
   const seed = [
     record({ amountCents: 10000, paid: true }),
     record({ source: 'sweeper', eventId: sweeper.id, amountCents: 25000 }),
@@ -586,6 +587,252 @@ describe(`GET ${base} (PAY-19)`, () => {
       message: 'Enter dollars and cents, like 100.00',
       errors: { min: 'Enter dollars and cents, like 100.00' },
     })
+  })
+})
+
+describe('the sheet of each event when it is not ready (PAY-10, D-272)', () => {
+  const closed = (gate: Gate) => ({ tournamentComplete: false, gate }) satisfies EventFacts
+
+  it('names the squad and its date without working out any results', async () => {
+    const { app } = setup({ facts: closed({ kind: 'squad', complete: false }) })
+
+    const { sheet } = (await request(app).get(squadUrl)).body
+
+    expect(sheet.event).toEqual({
+      source: 'squad',
+      eventId: squad.id,
+      label: 'Squad',
+      date: squad.date,
+      divisionName: null,
+    })
+  })
+
+  it('names the sweeper and its date', async () => {
+    const { app } = setup({ facts: closed({ kind: 'sweeper', complete: false }) })
+
+    const { sheet } = (await request(app).get(`${base}/sweeper/${sweeper.id}`)).body
+
+    expect(sheet.event).toEqual({
+      source: 'sweeper',
+      eventId: sweeper.id,
+      label: 'Sweeper',
+      date: sweeper.date,
+      divisionName: null,
+    })
+    expect(sheet).toMatchObject({ status: 'notReady', payees: [], others: [] })
+  })
+
+  it('names the division of the finals', async () => {
+    const { app } = setup({ facts: closed({ kind: 'finals', squads: 4, open: 2 }) })
+
+    const { sheet } = (await request(app).get(`${base}/finals/${open.id}`)).body
+
+    expect(sheet.event).toEqual({
+      source: 'finals',
+      eventId: open.id,
+      label: 'Finals: Open',
+      date: null,
+      divisionName: 'Open',
+    })
+    expect(sheet.reason).toBe(
+      '2 of 4 squads are not complete. Complete them before you enter finals payouts.',
+    )
+  })
+
+  it('names the super sweeper', async () => {
+    const { app } = setup({ facts: closed({ kind: 'superSweeper', sweepers: 2, open: 1 }) })
+
+    const { sheet } = (await request(app).get(`${base}/super-sweeper`)).body
+
+    expect(sheet.event).toEqual({
+      source: 'superSweeper',
+      eventId: tournament.id,
+      label: 'Super sweeper',
+      date: null,
+      divisionName: null,
+    })
+  })
+})
+
+describe('the sheet of an open event (PAY-04, PAY-05, D-269)', () => {
+  it('shows only the payouts of this event, not the same bowler paid in another one (PAY-01)', async () => {
+    const { app } = setup({
+      seed: [
+        record({ source: 'sweeper', eventId: sweeper.id, amountCents: 5000 }),
+        record({ source: 'squad', eventId: crypto.randomUUID(), amountCents: 7000 }),
+        record({ source: 'finals', eventId: open.id, amountCents: 9000 }),
+      ],
+    })
+
+    const { sheet } = (await request(app).get(squadUrl)).body
+
+    expect(sheet.payees.map((payee: { payout: unknown }) => payee.payout)).toEqual([null])
+  })
+
+  it('opens the super sweeper sheet with no one inferred when no bowler entered it', async () => {
+    const { app } = setup({
+      facts: { tournamentComplete: false, gate: { kind: 'superSweeper', sweepers: 1, open: 0 } },
+    })
+
+    const { sheet } = (await request(app).get(`${base}/super-sweeper`)).body
+
+    expect(sheet).toMatchObject({
+      status: 'open',
+      reason: null,
+      payees: [],
+      others: [],
+      event: { label: 'Super sweeper', date: null },
+    })
+  })
+
+  it('answers 404 for a division the results do not have', async () => {
+    const { app } = setup({
+      facts: { tournamentComplete: false, gate: { kind: 'finals', squads: 1, open: 0 } },
+    })
+
+    const response = await request(app).get(`${base}/finals/${crypto.randomUUID()}`)
+
+    expect(response.status).toBe(404)
+    expect(response.body).toEqual({ message: 'Division not found' })
+  })
+
+  it('keeps a hand-added bowler on the sheet as not a previous casher, with the added-by-hand detail', async () => {
+    const { app } = setup({
+      seed: [record({ registrationId: other.registrationId, amountCents: 2500, note: 'why' })],
+    })
+
+    const { sheet } = (await request(app).get(squadUrl)).body
+
+    expect(sheet.payees[1]).toMatchObject({
+      inferred: false,
+      previousCasher: false,
+      seed: null,
+      detail: 'added by hand',
+      divisionName: 'Open',
+    })
+  })
+
+  it('answers the not-found message of each kind of event', async () => {
+    const gone = (path: string) =>
+      request(setup({ facts: { notFound: 'event' } }).app).get(`${base}/${path}`)
+
+    expect((await gone(`sweeper/${sweeper.id}`)).body).toEqual({ message: 'Sweeper not found' })
+    expect((await gone('super-sweeper')).body).toEqual({ message: 'Tournament not found' })
+    expect((await gone(`finals/${open.id}`)).body).toEqual({ message: 'Division not found' })
+  })
+})
+
+describe('saves and toggles: what is logged and said (PAY-12, PAY-13, PAY-16)', () => {
+  const put = (app: ReturnType<typeof setup>['app'], rows: unknown[], extra = {}) =>
+    request(app)
+      .put(squadUrl)
+      .send({ payouts: rows, ...extra })
+
+  it('logs a refused save with who, what, and where, and never a name or a note', async () => {
+    const { app, captured } = setup({
+      facts: { tournamentComplete: false, gate: { kind: 'squad', complete: false } },
+    })
+
+    await put(app, [{ registrationId: casher.registrationId, amount: '100', note: 'secret' }])
+
+    const line = captured.records().find((entry) => entry.msg === 'Payouts save refused')
+    expect(line).toMatchObject({ tournamentId: tournament.id, source: 'squad', eventId: squad.id })
+    expect(line).toHaveProperty('actorId')
+    expect(JSON.stringify(captured.records())).not.toContain('secret')
+  })
+
+  it('logs a save with a bad row as refused, with how many rows were marked', async () => {
+    const { app, captured } = setup()
+
+    await put(app, [
+      { registrationId: casher.registrationId, amount: '-1' },
+      { registrationId: other.registrationId, amount: '1', note: '' },
+    ])
+
+    const line = captured.records().find((entry) => entry.msg === 'Payouts save refused')
+    expect(line).toMatchObject({ rows: 2, source: 'squad', eventId: squad.id })
+  })
+
+  it('says "2 of these payouts are marked paid" when two paid payouts would change', async () => {
+    const { app } = setup({
+      seed: [
+        record({ paid: true }),
+        record({ registrationId: advancer.registrationId, paid: true, amountCents: 5000 }),
+      ],
+    })
+
+    const response = await put(app, [
+      { registrationId: casher.registrationId, amount: '90' },
+      { registrationId: advancer.registrationId, amount: '40', note: 'why' },
+    ])
+
+    expect(response.status).toBe(409)
+    expect(response.body.warnings).toEqual([
+      { field: 'paid', message: '2 of these payouts are marked paid.' },
+    ])
+    expect(response.body.paidChanges).toHaveLength(2)
+  })
+
+  it('answers 404 with the payout message, and logs nothing, for an unknown payout', async () => {
+    const { app, captured } = setup()
+
+    const response = await request(app).patch(`${base}/${crypto.randomUUID()}`).send({ paid: true })
+
+    expect(response.status).toBe(404)
+    expect(response.body).toEqual({ message: 'Payout not found' })
+    expect(captured.records().some((entry) => entry.msg === 'Payout paid flag set')).toBe(false)
+  })
+
+  it('logs a refused paid toggle, and logs a set only when the flag moved', async () => {
+    const stored = record()
+    const { app, captured } = setup({ seed: [stored] })
+
+    await request(app).patch(`${base}/${stored.id}`).send({ paid: true })
+    await request(app).patch(`${base}/${stored.id}`).send({ paid: true })
+
+    const sets = captured.records().filter((entry) => entry.msg === 'Payout paid flag set')
+    expect(sets).toHaveLength(1)
+    expect(sets[0]).toMatchObject({ tournamentId: tournament.id, payoutId: stored.id, paid: true })
+
+    const locked = setup({
+      seed: [stored],
+      facts: { tournamentComplete: true, gate: { kind: 'squad', complete: true } },
+    })
+    await request(locked.app).patch(`${base}/${stored.id}`).send({ paid: false })
+    const refused = locked.captured
+      .records()
+      .find((entry) => entry.msg === 'Payout paid flag refused')
+    expect(refused).toMatchObject({ tournamentId: tournament.id })
+    expect(refused).toHaveProperty('actorId')
+  })
+
+  it('refuses a save of a locked tournament with the lock message in errors.event and the log (PAY-11)', async () => {
+    const { app } = setup({
+      facts: { tournamentComplete: true, gate: { kind: 'squad', complete: true } },
+    })
+
+    const response = await put(app, [])
+
+    expect(response.body.errors).toEqual({
+      event: 'This tournament is complete. Payouts are locked.',
+    })
+  })
+
+  it('answers 404 for the totals of an unknown tournament', async () => {
+    const { app } = setup()
+
+    const response = await request(app).get(`/v1/tournaments/${crypto.randomUUID()}/payouts/totals`)
+
+    expect(response.status).toBe(404)
+    expect(response.body).toEqual({ message: 'Tournament not found' })
+  })
+
+  it('answers 404 for the list of an unknown tournament with the tournament message', async () => {
+    const { app } = setup()
+
+    const response = await request(app).get(`/v1/tournaments/${crypto.randomUUID()}/payouts`)
+
+    expect(response.body).toEqual({ message: 'Tournament not found' })
   })
 })
 

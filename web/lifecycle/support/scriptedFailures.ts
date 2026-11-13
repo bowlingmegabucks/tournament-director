@@ -146,6 +146,11 @@ export async function refusalsWhenFrozen(page: Page, registrationIds: Map<number
     call(page, 'PATCH', known.base, { bowlingCenter: 'Elsewhere' }),
   )
   await frozen('complete it again', call(page, 'POST', `${known.base}/complete`))
+  // PAY-11, D-273: a complete tournament locks every payout.
+  await frozen(
+    'save a payout',
+    call(page, 'PUT', `${known.base}/payouts/squad/${known.squadA}`, { payouts: [] }),
+  )
   await frozen('add a division', call(page, 'POST', `${known.base}/divisions`, { name: 'Late' }))
   await frozen(
     'edit a division',

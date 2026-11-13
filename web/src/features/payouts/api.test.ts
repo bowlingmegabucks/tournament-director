@@ -288,3 +288,257 @@ describe('setPaid (PAY-13, D-274)', () => {
     await expect(setPaid(tournamentId, eventId, true)).rejects.toThrow('unexpected response')
   })
 })
+
+/** A copy of `value` with the field at `path` replaced (or removed when `to` is `undefined`). */
+function withField<T>(value: T, path: (string | number)[], to: unknown): T {
+  const copy: T = structuredClone(value)
+  let at: unknown = copy
+  for (const key of path.slice(0, -1)) at = Reflect.get(at as object, key)
+  const last = path.at(-1) as string | number
+  if (to === undefined) Reflect.deleteProperty(at as object, last)
+  else Reflect.set(at as object, last, to)
+  return copy
+}
+
+describe('every response is checked field by field', () => {
+  const payee = createPayee({ payout: { id: 'p1', amount: '100.00', note: null, paid: false } })
+  const sheet = createSheet({
+    payees: [payee],
+    others: [{ registrationId: 'x', name: 'Tom', divisionName: 'Open' }],
+  })
+  const sheetBody = { sheet }
+
+  const sheetBreaks: [string, (string | number)[]][] = [
+    ['event.source', ['sheet', 'event', 'source']],
+    ['event.eventId', ['sheet', 'event', 'eventId']],
+    ['event.label', ['sheet', 'event', 'label']],
+    ['event.date', ['sheet', 'event', 'date']],
+    ['event.divisionName', ['sheet', 'event', 'divisionName']],
+    ['status', ['sheet', 'status']],
+    ['reason', ['sheet', 'reason']],
+    ['payees', ['sheet', 'payees']],
+    ['others', ['sheet', 'others']],
+    ['tournamentComplete', ['sheet', 'tournamentComplete']],
+    ['payee.registrationId', ['sheet', 'payees', 0, 'registrationId']],
+    ['payee.name', ['sheet', 'payees', 0, 'name']],
+    ['payee.divisionName', ['sheet', 'payees', 0, 'divisionName']],
+    ['payee.detail', ['sheet', 'payees', 0, 'detail']],
+    ['payee.seed', ['sheet', 'payees', 0, 'seed']],
+    ['payee.previousCasher', ['sheet', 'payees', 0, 'previousCasher']],
+    ['payee.inferred', ['sheet', 'payees', 0, 'inferred']],
+    ['payee.payout', ['sheet', 'payees', 0, 'payout']],
+    ['payout.id', ['sheet', 'payees', 0, 'payout', 'id']],
+    ['payout.amount', ['sheet', 'payees', 0, 'payout', 'amount']],
+    ['payout.note', ['sheet', 'payees', 0, 'payout', 'note']],
+    ['payout.paid', ['sheet', 'payees', 0, 'payout', 'paid']],
+    ['other.registrationId', ['sheet', 'others', 0, 'registrationId']],
+    ['other.name', ['sheet', 'others', 0, 'name']],
+    ['other.divisionName', ['sheet', 'others', 0, 'divisionName']],
+  ]
+
+  it('accepts the sheet as it is', async () => {
+    server.use(http.get(`${base}/squad/${eventId}`, () => HttpResponse.json(sheetBody)))
+
+    await expect(fetchSheet('squad', tournamentId, eventId)).resolves.toEqual(sheet)
+  })
+
+  it.each(sheetBreaks)('rejects a sheet with %s missing or wrong', async (_name, path) => {
+    for (const to of [undefined, {}]) {
+      server.use(
+        http.get(`${base}/squad/${eventId}`, () =>
+          HttpResponse.json(withField(sheetBody, path, to)),
+        ),
+      )
+
+      await expect(fetchSheet('squad', tournamentId, eventId)).rejects.toThrow(
+        'unexpected response',
+      )
+    }
+  })
+
+  it('rejects a source that is not one of the four', async () => {
+    server.use(
+      http.get(`${base}/squad/${eventId}`, () =>
+        HttpResponse.json(withField(sheetBody, ['sheet', 'event', 'source'], 'tournament')),
+      ),
+    )
+
+    await expect(fetchSheet('squad', tournamentId, eventId)).rejects.toThrow('unexpected response')
+  })
+
+  const listBody = {
+    payouts: [createPayoutRow()],
+    summary: createSummary(),
+    tournamentComplete: false,
+  }
+  const listBreaks: [string, (string | number)[]][] = [
+    ['payouts', ['payouts']],
+    ['summary', ['summary']],
+    ['tournamentComplete', ['tournamentComplete']],
+    ['row.id', ['payouts', 0, 'id']],
+    ['row.source', ['payouts', 0, 'source']],
+    ['row.eventId', ['payouts', 0, 'eventId']],
+    ['row.eventLabel', ['payouts', 0, 'eventLabel']],
+    ['row.eventDate', ['payouts', 0, 'eventDate']],
+    ['row.registrationId', ['payouts', 0, 'registrationId']],
+    ['row.name', ['payouts', 0, 'name']],
+    ['row.divisionName', ['payouts', 0, 'divisionName']],
+    ['row.amount', ['payouts', 0, 'amount']],
+    ['row.note', ['payouts', 0, 'note']],
+    ['row.paid', ['payouts', 0, 'paid']],
+    ['summary.count', ['summary', 'count']],
+    ['summary.total', ['summary', 'total']],
+    ['summary.paidCount', ['summary', 'paidCount']],
+    ['summary.unpaidCount', ['summary', 'unpaidCount']],
+    ['summary.unpaidTotal', ['summary', 'unpaidTotal']],
+  ]
+
+  it.each(listBreaks)('rejects a list with %s missing or wrong', async (_name, path) => {
+    for (const to of [undefined, {}]) {
+      server.use(http.get(base, () => HttpResponse.json(withField(listBody, path, to))))
+
+      await expect(fetchPayouts(tournamentId)).rejects.toThrow('unexpected response')
+    }
+  })
+
+  const totalsBody = { bowlers: [createTotal()] }
+  it.each([['registrationId'], ['name'], ['divisionName'], ['count'], ['total'], ['unpaidTotal']])(
+    'rejects a bowler total with %s missing or wrong',
+    async (key) => {
+      for (const to of [undefined, {}]) {
+        server.use(
+          http.get(`${base}/totals`, () =>
+            HttpResponse.json(withField(totalsBody, ['bowlers', 0, key], to)),
+          ),
+        )
+
+        await expect(fetchTotals(tournamentId, '')).rejects.toThrow('unexpected response')
+      }
+    },
+  )
+
+  it.each([['registrationId'], ['name'], ['from'], ['to']])(
+    'does not take a paid change with %s missing as a confirm (it is a refusal)',
+    async (key) => {
+      const change = { registrationId: eventId, name: 'Dana', from: '100.00', to: null }
+      const bad = withField(
+        { changes: [change] },
+        ['changes', 0, key],
+        key === 'to' ? 5 : undefined,
+      )
+      server.use(
+        http.put(`${base}/squad/${eventId}`, () =>
+          HttpResponse.json(
+            {
+              message: 'm',
+              warnings: [{}],
+              paidChanges: Reflect.get(bad as object, 'changes'),
+              errors: { event: 'refused' },
+            },
+            { status: 409 },
+          ),
+        ),
+      )
+
+      await expect(savePayouts('squad', tournamentId, eventId, [], false)).rejects.toBeInstanceOf(
+        PayoutRefusedError,
+      )
+    },
+  )
+})
+
+describe('request details and fallback words', () => {
+  it('sends JSON content for a save and a toggle', async () => {
+    const types: (string | null)[] = []
+    server.use(
+      http.put(`${base}/squad/${eventId}`, ({ request }) => {
+        types.push(request.headers.get('content-type'))
+        return HttpResponse.json({ sheet: createSheet() })
+      }),
+      http.patch(`${base}/${eventId}`, ({ request }) => {
+        types.push(request.headers.get('content-type'))
+        return HttpResponse.json({
+          payout: { id: eventId, amount: '1.00', note: null, paid: true },
+        })
+      }),
+    )
+
+    await savePayouts('squad', tournamentId, eventId, [], false)
+    await setPaid(tournamentId, eventId, true)
+
+    expect(types).toEqual(['application/json', 'application/json'])
+  })
+
+  it('falls back to a plain message when a 400 or a 409 carries none', async () => {
+    server.use(
+      http.put(`${base}/squad/${eventId}`, () =>
+        HttpResponse.json({ errors: {} }, { status: 400 }),
+      ),
+    )
+    await expect(savePayouts('squad', tournamentId, eventId, [], false)).rejects.toThrow(
+      'Fix the rows marked and save again.',
+    )
+
+    server.use(http.put(`${base}/squad/${eventId}`, () => HttpResponse.json({}, { status: 409 })))
+    await expect(savePayouts('squad', tournamentId, eventId, [], false)).rejects.toThrow(
+      'The payouts cannot be saved.',
+    )
+  })
+
+  it('says what a failed toggle means, and uses the API message when the 409 has no event error', async () => {
+    server.use(http.patch(`${base}/${eventId}`, () => new HttpResponse(null, { status: 500 })))
+    await expect(setPaid(tournamentId, eventId, true)).rejects.toThrow(
+      'Failed to change the paid flag (500)',
+    )
+
+    server.use(
+      http.patch(`${base}/${eventId}`, () =>
+        HttpResponse.json({ message: 'Locked for now' }, { status: 409 }),
+      ),
+    )
+    await expect(setPaid(tournamentId, eventId, true)).rejects.toThrow('Locked for now')
+    server.use(http.patch(`${base}/${eventId}`, () => HttpResponse.json({}, { status: 409 })))
+    await expect(setPaid(tournamentId, eventId, true)).rejects.toThrow(
+      'Failed to change the paid flag',
+    )
+  })
+
+  it('treats a 404 that is not about the tournament as a missing event, and a 400 the same', async () => {
+    server.use(
+      http.get(`${base}/squad/${eventId}`, () =>
+        HttpResponse.json({ message: 'Squad not found' }, { status: 400 }),
+      ),
+    )
+
+    await expect(fetchSheet('squad', tournamentId, eventId)).rejects.toBeInstanceOf(
+      PayoutNotFoundError,
+    )
+  })
+
+  it('does not call a 400 "Tournament not found" a missing tournament', async () => {
+    server.use(
+      http.get(`${base}/squad/${eventId}`, () =>
+        HttpResponse.json({ message: 'Tournament not found' }, { status: 400 }),
+      ),
+    )
+
+    await expect(fetchSheet('squad', tournamentId, eventId)).rejects.toBeInstanceOf(
+      PayoutNotFoundError,
+    )
+  })
+
+  it('trims the minimum before it asks, and asks for nothing when it is blank', async () => {
+    const queries: string[] = []
+    server.use(
+      http.get(`${base}/totals`, ({ request }) => {
+        queries.push(new URL(request.url).search)
+        return HttpResponse.json({ bowlers: [] })
+      }),
+    )
+
+    await fetchTotals(tournamentId, '   ')
+    await fetchTotals(tournamentId, ' 50 ')
+
+    expect(queries).toEqual(['', '?min=50'])
+  })
+})

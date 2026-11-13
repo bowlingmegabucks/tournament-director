@@ -19,6 +19,20 @@ describe('parseAmount (PAY-07)', () => {
     expect(parseAmount(input)).toEqual({ kind: 'amount', cents })
   })
 
+  it.each([['5$'], ['1-5'], ['-5x'], ['$$5']])(
+    'refuses %j as not dollars and cents (a sign or $ in the wrong place)',
+    (input) => {
+      expect(parseAmount(input)).toEqual({ kind: 'invalid', message: badAmountMessage })
+    },
+  )
+
+  it.each([['-10'], ['-1,000.50']])(
+    'refuses %j, a negative of several digits, as not above zero',
+    (input) => {
+      expect(parseAmount(input)).toEqual({ kind: 'invalid', message: needsAmountMessage })
+    },
+  )
+
   it.each([[''], ['   ']])('reads %j as blank, meaning no payout', (input) => {
     expect(parseAmount(input)).toEqual({ kind: 'blank' })
   })

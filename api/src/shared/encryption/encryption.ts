@@ -8,6 +8,7 @@ const SALT_BYTES = 32
 const IV_BYTES = 32
 const IV_USED_BYTES = 16
 const KEY_BYTES = 32
+const BLOCK_BYTES = 16
 const ROUNDS = 100_000
 
 const pbkdf2Async = promisify(pbkdf2)
@@ -56,6 +57,10 @@ export function createEncryption(key: string): Encryption {
     // is not a stored value ends in a failed decrypt below.
     const bytes = Buffer.from(cipherText, 'base64')
     const bodyStart = SALT_BYTES + IV_BYTES
+    // A cheap shape check before the costly key derivation: salt, IV, then whole 16-byte blocks.
+    // Anything else cannot decrypt, so a bad value never costs a PBKDF2 job.
+    const bodyBytes = bytes.length - bodyStart
+    if (bodyBytes < BLOCK_BYTES || bodyBytes % BLOCK_BYTES !== 0) throw new DecryptionError()
     try {
       const salt = bytes.subarray(0, SALT_BYTES)
       const iv = bytes.subarray(SALT_BYTES, bodyStart)
@@ -67,8 +72,7 @@ export function createEncryption(key: string): Encryption {
       const plain = Buffer.concat([decipher.update(bytes.subarray(bodyStart)), decipher.final()])
       return plain.toString('utf8')
     } catch {
-      // A value too short or not in whole blocks, or bad padding (usually a wrong key). Node's
-      // cipher rejects each of these, so there is no separate length check. Say nothing more (D-264).
+      // Bad padding (usually a wrong key). Say nothing more (D-264).
       throw new DecryptionError()
     }
   }

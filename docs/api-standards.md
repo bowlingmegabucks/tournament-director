@@ -166,7 +166,7 @@ Every route group declares who may call it (D-27, D-96). The .NET twin: `identif
 - `ENCRYPTION_KEY` is required, any length, and used exactly as given (D-263). It is the same text as the desk app's `EncryptionKey`. Local runs use a fake value from `.env.example`; never use it anywhere else. Never log it.
 - A failed decrypt rejects with `DecryptionError`, whose message holds no data (D-264). CBC has no integrity check, so a wrong key can sometimes return garbage: check that a result is 9 digits before you trust it.
 - Nothing in the app calls it yet. The first SSN route passes it in through `createApp(deps)`.
-- The logger redacts `ssn`, `socialSecurityNumber`, and `encryptionKey` at the top level of a logged object and one level down (D-265).
+- The logger redacts `ssn`, `socialSecurityNumber`, and `encryptionKey` (also `SSN`, `SocialSecurityNumber`, and `ENCRYPTION_KEY`) at the top level of a logged object and up to four levels down (D-265).
 - `npm run encryption:check` (in `api/`) tries the key on every stored SSN in the database `DATABASE_URL` names and prints counts only (D-266). For production data, set `DATABASE_URL` and `ENCRYPTION_KEY` in your shell and run it from your machine.
 
 ## Not built yet

@@ -25,12 +25,21 @@ describe('checkStoredValues (D-266)', () => {
     expect(counts).toEqual({ total: 7, empty: 2, nineDigits: 2, otherText: 1, failed: 2 })
   })
 
-  it.each(['1234567890', '12345678', 'x123456789', '123456789x', '123 456 789'])(
+  it.each(['1234567890', '12345678', 'x123456789', '123456789x', '123-45-678x'])(
     'counts %j as other text, not 9 digits',
     async (text) => {
       const counts = await checkStoredValues([await encryption.encrypt(text)], encryption)
 
       expect(counts).toMatchObject({ nineDigits: 0, otherText: 1 })
+    },
+  )
+
+  it.each(['123-45-6789', '123 45 6789', ' 123456789 ', '123 456 789'])(
+    'counts %j as 9 digits: dashes and spaces are a format, not a wrong key',
+    async (text) => {
+      const counts = await checkStoredValues([await encryption.encrypt(text)], encryption)
+
+      expect(counts).toMatchObject({ nineDigits: 1, otherText: 0 })
     },
   )
 

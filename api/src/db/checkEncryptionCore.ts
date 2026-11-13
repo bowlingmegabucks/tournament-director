@@ -6,7 +6,7 @@ export interface EncryptionCheckCounts {
   total: number
   /** Stored as `''`: no SSN on file. */
   empty: number
-  /** Decrypted to exactly 9 digits: the key works for this row. */
+  /** Decrypted to 9 digits, with dashes or spaces allowed: the key works for this row. */
   nineDigits: number
   /** Decrypted, but not to 9 digits: usually a wrong key that passed the padding check by chance. */
   otherText: number
@@ -51,7 +51,10 @@ async function classify(
 ): Promise<'empty' | 'nineDigits' | 'otherText' | 'failed'> {
   if (value === '') return 'empty'
   try {
-    return /^\d{9}$/.test(await encryption.decrypt(value)) ? 'nineDigits' : 'otherText'
+    // Dashes and spaces are a format the desk app may have stored, not a sign of a wrong key.
+    // A wrong key that passes the padding check gives random bytes, never nine digits.
+    const digits = (await encryption.decrypt(value)).replace(/[-\s]/g, '')
+    return /^\d{9}$/.test(digits) ? 'nineDigits' : 'otherText'
   } catch (error) {
     // Anything but a DecryptionError is a bug, not a bad row.
     if (error instanceof DecryptionError) return 'failed'

@@ -49,6 +49,22 @@ describe('createLogger', () => {
       },
     )
 
+    it.each(['SSN', 'SocialSecurityNumber', 'ENCRYPTION_KEY'])('hides the spelling %s', (field) => {
+      const { logger, records } = createCapturedLogger('info')
+
+      logger.info({ [field]: '123456789' }, 'saved')
+
+      expect(records()).toMatchObject([{ [field]: '[Redacted]' }])
+    })
+
+    it('hides a field four levels down', () => {
+      const { logger, records } = createCapturedLogger('info')
+
+      logger.info({ req: { body: { bowler: { ssn: '123456789' } } } }, 'saved')
+
+      expect(JSON.stringify(records()[0])).not.toContain('123456789')
+    })
+
     it('hides the fields on a child logger too', () => {
       const { logger, records } = createCapturedLogger('info')
 

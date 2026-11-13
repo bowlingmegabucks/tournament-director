@@ -517,3 +517,55 @@ describe('NewTournamentPage leaving with changes', () => {
     expect(await screen.findByRole('heading', { name: 'Tournaments', level: 1 })).toBeVisible()
   })
 })
+
+describe('NewTournamentPage end date message while other boxes change (TRN-02)', () => {
+  async function openWithEndBeforeStart() {
+    signInAs('director')
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    await fillIn(user, {
+      'Start date (required)': '2027-03-14',
+      'End date (required)': '2027-03-12',
+    })
+    await user.tab()
+    return user
+  }
+
+  it('keeps the end date message when another box is typed in', async () => {
+    const user = await openWithEndBeforeStart()
+    const end = screen.getByLabelText('End date (required)')
+    expect(end).toHaveAccessibleDescription('End date must be on or after start date')
+
+    await user.type(screen.getByLabelText('Name (required)'), 'x')
+
+    expect(end).toHaveAccessibleDescription('End date must be on or after start date')
+  })
+
+  it('says nothing about the end date until the director leaves a box', async () => {
+    signInAs('director')
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+
+    await user.type(screen.getByLabelText('End date (required)'), '03/12/2027')
+    await user.type(screen.getByLabelText('Start date (required)'), '03/14/2027')
+
+    expect(screen.getByLabelText('End date (required)')).not.toHaveAccessibleDescription(
+      'End date must be on or after start date',
+    )
+    expect(screen.getByLabelText('End date (required)')).toBeValid()
+  })
+
+  it('holds the end date message while the start date is only partly typed', async () => {
+    const user = await openWithEndBeforeStart()
+    const start = screen.getByLabelText('Start date (required)')
+
+    await user.clear(start)
+    await user.type(start, '03/1')
+
+    expect(screen.getByLabelText('End date (required)')).toHaveAccessibleDescription(
+      'End date must be on or after start date',
+    )
+  })
+})

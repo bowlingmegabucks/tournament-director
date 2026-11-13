@@ -11,7 +11,8 @@ export function digitsOnly(text: string): string {
 /** The score a box holds, or the words that say what is wrong (SCR-01). An empty box is neither. */
 export function readScore(text: string): { score: number } | { problem: string } {
   const score = Number(text)
-  if (text === '' || !Number.isInteger(score) || score < MIN_SCORE || score > MAX_SCORE) {
+  // An empty box reads as 0, which is under the minimum, so it needs no check of its own.
+  if (!Number.isInteger(score) || score < MIN_SCORE || score > MAX_SCORE) {
     return { problem: `Enter a score from ${MIN_SCORE} to ${MAX_SCORE}.` }
   }
   return { score }
@@ -51,6 +52,7 @@ export interface BowlerHit {
   firstLane: number
 }
 
+// Stryker disable next-line MethodExpression,Regex: upper or lower case match alike, and filtering the empty pieces makes `\s` and `\s+` the same.
 const words = (text: string) => text.toLowerCase().split(/\s+/).filter(Boolean)
 
 /**

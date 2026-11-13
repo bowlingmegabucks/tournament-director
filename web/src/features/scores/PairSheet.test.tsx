@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -398,6 +398,52 @@ describe('the pair sheet: a newer entry and leaving (D-228)', () => {
     expect(
       await screen.findByRole('heading', { level: 2, name: 'Game 2 · Lanes 3-4' }),
     ).toBeVisible()
+  })
+})
+
+describe('the pair sheet: links that leave it (D-228)', () => {
+  const next = () => screen.getByRole('link', { name: 'Next pair 3-4 →' })
+
+  it('holds a plain left click to save first', async () => {
+    await openSheet()
+
+    expect(fireEvent.click(next())).toBe(false)
+  })
+
+  it.each([
+    ['meta', { metaKey: true }],
+    ['ctrl', { ctrlKey: true }],
+    ['shift', { shiftKey: true }],
+    ['alt', { altKey: true }],
+    ['middle button', { button: 1 }],
+    ['right button', { button: 2 }],
+  ])('lets a %s click take the normal link path', async (_name, init) => {
+    const { api, cal } = await openSheet()
+    await userEvent.type(cal, '190')
+
+    expect(fireEvent.click(next(), init)).toBe(true)
+    expect(api.puts).toHaveLength(0)
+  })
+
+  it('does the same for the back to the board and the previous pair', async () => {
+    serve()
+    openEntry('/2/3')
+    await screen.findByRole('heading', { level: 2, name: 'Game 2 · Lanes 3-4' })
+    const back = screen.getByRole('link', { name: '← Game 2' })
+    const previous = screen.getByRole('link', { name: '← Pair 1-2' })
+
+    expect(fireEvent.click(back)).toBe(false)
+    expect(fireEvent.click(previous)).toBe(false)
+    expect(fireEvent.click(back, { ctrlKey: true })).toBe(true)
+    expect(fireEvent.click(previous, { shiftKey: true })).toBe(true)
+  })
+
+  it('names the next and previous pair by their lanes, without the word Lanes', async () => {
+    serve()
+    openEntry('/2/1')
+
+    const nav = within(await screen.findByRole('navigation', { name: 'Pairs' }))
+    expect(nav.getByRole('link', { name: 'Next pair 3-4 →' })).toBeVisible()
   })
 })
 

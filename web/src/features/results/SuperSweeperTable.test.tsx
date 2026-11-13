@@ -35,4 +35,31 @@ describe('SuperSweeperTable (RES-29a, D-90)', () => {
       expect(screen.getByText(figure)).toBeInTheDocument()
     }
   })
+
+  it('adds the handicap totals when only one bowler has bonus pins on only one sweeper', () => {
+    const results = createSuperSweeperResults({
+      rows: [
+        createSuperSweeperRow({ sweeperPins: [0, 0], sweeperTotals: [600, 600] }),
+        createSuperSweeperRow({ sweeperPins: [0, 6], sweeperTotals: [600, 600] }),
+      ],
+    })
+
+    render(<SuperSweeperTable results={results} />)
+
+    const names = within(screen.getByRole('table', { name: 'Super sweeper results' }))
+      .getAllByRole('columnheader')
+      .map((header) => header.textContent)
+    expect(names).toEqual(expect.arrayContaining(['Scratch Total', 'Total HDCP', 'HDCP Total']))
+  })
+
+  it('keeps one Total when no sweeper has bonus pins', () => {
+    const results = createSuperSweeperResults({
+      rows: [createSuperSweeperRow({ sweeperPins: [0, 0] })],
+    })
+
+    render(<SuperSweeperTable results={results} />)
+
+    expect(screen.queryByRole('columnheader', { name: 'HDCP Total' })).not.toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Total' })).toBeVisible()
+  })
 })

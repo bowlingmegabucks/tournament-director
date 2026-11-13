@@ -193,3 +193,40 @@ describe('applyMoves', () => {
     expect(page).toEqual(before)
   })
 })
+
+describe('applyMoves with a bowler whose position fits no pair (D-61)', () => {
+  it('takes the bowler out of the other list when they move into a pair', () => {
+    const odd = at('9Z', 'Odd Seat')
+    const page = createLanePage({
+      pairs: [createLanePair(1, [])],
+      unassigned: [],
+      other: [odd],
+    })
+
+    const result = applyMoves(
+      page,
+      new Map([[odd.registrationId, { firstLane: 1, position: '1A' }]]),
+    )
+
+    expect(result.other).toEqual([])
+    expect(result.pairs[0]?.bowlers.map((bowler) => bowler.name)).toEqual(['Odd Seat'])
+  })
+
+  it('keeps the others in the other list when one of them moves', () => {
+    const odd = at('9Z', 'Odd Seat')
+    const stay = at('8Y', 'Stays Put')
+    const page = createLanePage({
+      pairs: [createLanePair(1, [])],
+      unassigned: [],
+      other: [odd, stay],
+    })
+
+    const result = applyMoves(
+      page,
+      new Map([[odd.registrationId, { firstLane: null, position: '' }]]),
+    )
+
+    expect(result.other.map((bowler) => bowler.name)).toEqual(['Stays Put'])
+    expect(result.unassigned.map((bowler) => bowler.name)).toEqual(['Odd Seat'])
+  })
+})

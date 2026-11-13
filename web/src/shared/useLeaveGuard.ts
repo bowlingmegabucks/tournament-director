@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { useBlocker } from 'react-router'
+import { useBlocker, type BlockerFunction } from 'react-router'
+
+/**
+ * Location state for a move that must not ask: the page was just deleted, so its unsaved changes
+ * mean nothing. Spread it into the `state` of that `navigate` call.
+ */
+export const skipLeaveGuard = { skipLeaveGuard: true } as const
+
+function skipsGuard(state: unknown): boolean {
+  return (
+    typeof state === 'object' && state !== null && Reflect.get(state, 'skipLeaveGuard') === true
+  )
+}
 
 /**
  * Stops the director from leaving a form with changes they have not saved. A move to another page
@@ -14,7 +26,10 @@ import { useBlocker } from 'react-router'
  */
 export function useLeaveGuard(dirty: boolean) {
   const saving = useRef(false)
-  const shouldBlock = useCallback(() => dirty && !saving.current, [dirty])
+  const shouldBlock = useCallback<BlockerFunction>(
+    ({ nextLocation }) => dirty && !saving.current && !skipsGuard(nextLocation.state),
+    [dirty],
+  )
   const blocker = useBlocker(shouldBlock)
 
   useEffect(() => {

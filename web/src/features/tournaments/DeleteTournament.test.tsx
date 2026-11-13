@@ -618,3 +618,20 @@ describe('the delete dialog (TRN-36, D-136)', () => {
     expect(screen.queryByText(text)).not.toBeInTheDocument()
   })
 })
+
+describe('deleting from an edit page with unsaved changes', () => {
+  it('goes to the list without asking "Leave without saving?"', async () => {
+    setMockUser(createSignedInUser({ roles: ['admin'] }))
+    serve()
+    serveDelete(gone)
+    const user = userEvent.setup()
+    renderApp(`/tournaments/${id}/edit`)
+    await user.type(await screen.findByLabelText('Name (required)'), ' Two')
+
+    const dialog = await openDialog(user)
+    await typeNameAndDelete(user, dialog)
+
+    expect(await screen.findByText('Tournament deleted')).toBeVisible()
+    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).not.toBeInTheDocument()
+  })
+})

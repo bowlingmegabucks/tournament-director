@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { displayDate, formatTypedDate, isoOfDisplay, valueOfText } from './dateText'
+import { displayDate, formatTypedDate, isoOfDisplay, isRealDate, valueOfText } from './dateText'
 
 describe('displayDate', () => {
   it('shows a full ISO date as mm/dd/yyyy', () => {
@@ -104,6 +104,25 @@ describe('valueOfText', () => {
   it('keeps the trailing slash off when deleting', () => {
     expect(valueOfText('03', true)).toBe('03')
     expect(valueOfText('03')).toBe('03/')
+  })
+})
+
+describe('a separator after a partial year', () => {
+  it('leaves the year as typed', () => {
+    expect(formatTypedDate('03/04/2/')).toBe('03/04/2')
+    expect(formatTypedDate('03/04/20 ')).toBe('03/04/20')
+  })
+})
+
+describe('isRealDate', () => {
+  it('accepts a day on the calendar', () => {
+    expect(isRealDate('2024-02-29')).toBe(true)
+  })
+
+  it('refuses a day that rolls over, a month or day out of range, and other shapes', () => {
+    for (const value of ['2025-02-31', '1975-13-45', '2025-00-10', '2025-1-1', '', 'x2025-01-01']) {
+      expect(isRealDate(value)).toBe(false)
+    }
   })
 })
 

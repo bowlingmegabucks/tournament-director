@@ -14,6 +14,13 @@ export function displayDate(value: string): string {
     : value
 }
 
+/** Whether `value` is `YYYY-MM-DD` and a day on the calendar (`2025-02-31` and `1975-13-45` are not). */
+export function isRealDate(value: string): boolean {
+  if (!ISO_DATE.test(value)) return false
+  const parsed = new Date(`${value}T00:00:00.000Z`)
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(value)
+}
+
 /** `mm/dd/yyyy` to `YYYY-MM-DD`, or `undefined` while the text is not a full date. */
 export function isoOfDisplay(text: string): string | undefined {
   const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text)
@@ -54,7 +61,9 @@ export function formatTypedDate(text: string, deleting = false): string {
     }
   }
   const last = parts.length - 1
-  const padded = parts.map((part, index) => (closed || index < last ? part.padStart(2, '0') : part))
+  const padded = parts.map((part, index) =>
+    index < 2 && (closed || index < last) ? part.padStart(2, '0') : part,
+  )
   const body = padded.join('/')
   return closed && last < 2 && !deleting ? `${body}/` : body
 }

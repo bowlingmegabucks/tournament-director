@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Toast } from '../../shared/Toast'
+import { skipLeaveGuard } from '../../shared/useLeaveGuard'
 import { TournamentNotFoundError, tournamentKeys } from '../../shared/tournamentQuery'
 import {
   TournamentDeleteRefusedError,
@@ -44,7 +45,7 @@ export function DeleteTournamentButton({ tournament }: Readonly<{ tournament: To
   // Leave first, then drop the cached reads: the tournament layout would otherwise refetch the
   // deleted id and flash "not found" before the list appears.
   async function leave(state: { deleted: true } | { alreadyDeleted: true }) {
-    await navigate('/tournaments', { state })
+    await navigate('/tournaments', { state: { ...state, ...skipLeaveGuard } })
     queryClient.removeQueries({ queryKey: tournamentKeys.detail(tournament.id) })
     await queryClient.invalidateQueries({ queryKey: tournamentKeys.all })
   }

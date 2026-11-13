@@ -198,6 +198,8 @@ Details in [docs/frontend-standards.md](docs/frontend-standards.md).
 - Name components `PascalCase.tsx`, hooks `useThing.ts`, everything else `camelCase.ts`. Put a test next to its file: `Thing.test.tsx`.
 - No `useEffect` to derive state or fetch data. Compute during render or use a query.
 - Avoid horizontal scroll anywhere, not only on the page. Reflow a wide table into stacked rows instead of scrolling it.
+- Type a date in `DateInput` (`mm/dd/yyyy`, "/" moves on), never a native date box; a date and time is `DateTimeInput`. The form keeps `YYYY-MM-DD`.
+- A form that sends data calls `useLeaveGuard(dirty)` and renders `LeaveDialog`, and wraps its save in `guard.whileSaving(...)`. This needs a data router: tests wrap a lone form in `DataRouter`, not `MemoryRouter`.
 - Every list needs a stable `key` (an id, not the index).
 - Handle loading, error, and empty states on every data view. Show loading with `Loading` (`src/shared/Loading.tsx`: dots, the words, and optional placeholder `rows`), not bare text.
 - Use `Toast` (`src/shared/Toast.tsx`) for alerts and notices that are not part of a data view. Errors stay until dismissed. Pass `autoDismissMs` to make a toast close itself (success toasts do).

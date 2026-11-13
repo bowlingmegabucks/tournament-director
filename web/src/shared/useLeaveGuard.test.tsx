@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, Link, RouterProvider, useNavigate } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { LeaveDialog } from './LeaveDialog'
-import { useLeaveGuard } from './useLeaveGuard'
+import { skipLeaveGuard, useLeaveGuard } from './useLeaveGuard'
 
 /** `hold` keeps the save running until Finish is pressed, so a test can act mid-save. */
 function Form({
@@ -45,6 +45,9 @@ function Form({
         Finish
       </button>
       <Link to="/other">Other</Link>
+      <Link to="/gone" state={skipLeaveGuard}>
+        Gone
+      </Link>
       <LeaveDialog blocker={guard.blocker} />
     </>
   )
@@ -56,6 +59,7 @@ function renderForm({ saveFails = false, hold = false } = {}) {
       { path: '/', element: <Form saveFails={saveFails} hold={hold} /> },
       { path: '/other', element: <h1>Other page</h1> },
       { path: '/done', element: <h1>Done page</h1> },
+      { path: '/gone', element: <h1>Gone page</h1> },
     ],
     { initialEntries: ['/'] },
   )
@@ -108,6 +112,15 @@ describe('useLeaveGuard and LeaveDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Leave page' }))
 
     expect(screen.getByRole('heading', { name: 'Other page' })).toBeVisible()
+  })
+
+  it('lets a move marked as skipping the guard go without asking (a deleted page)', async () => {
+    const user = renderForm()
+    await user.type(screen.getByLabelText('Text'), 'abc')
+
+    await user.click(screen.getByRole('link', { name: 'Gone' }))
+
+    expect(screen.getByRole('heading', { name: 'Gone page' })).toBeVisible()
   })
 
   it('does not ask again after the changes are undone', async () => {

@@ -53,7 +53,7 @@ export async function refusalsWithEntries(page: Page, registrationIds: Map<numbe
   expect(JSON.stringify(stays.body)).toContain(known.squadD)
 }
 
-/** Squad D has saved lanes and no scores: a lane edit that no longer fits, a score above 300. */
+/** Squad D has saved lanes and no scores: a lane edit that no longer fits, a score above 300, a payout. */
 export async function refusalsWithLanes(page: Page, registrationIds: Map<number, string>) {
   const known = await ids()
   // LAN: two lanes cannot hold the pairs already saved.
@@ -70,6 +70,14 @@ export async function refusalsWithLanes(page: Page, registrationIds: Map<number,
     { score: 301 },
   )
   expect(high.status, JSON.stringify(high.body)).toBe(400)
+  // PAY-10, D-272: squad D is still open, so a payout for it is refused and nothing is saved.
+  const payout = await call(page, 'PUT', `${known.base}/payouts/squad/${known.squadD}`, {
+    payouts: [{ registrationId: registrationOf(registrationIds, 1), amount: '100.00' }],
+  })
+  expectRefused(payout, 409, 'This squad is not complete')
+  const none = await call(page, 'GET', `${known.base}/payouts`)
+  expect(none.status).toBe(200)
+  expect(JSON.stringify(none.body)).not.toContain(known.squadD)
 }
 
 /** Squad D is complete: a repeat complete, a score, and a flag are all refused. */

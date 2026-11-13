@@ -746,6 +746,20 @@ test('stage 8: the director enters payouts for squad A, a sweeper, the super swe
     .getByRole('navigation', { name: 'Squad pages' })
     .getByRole('link', { name: 'Payouts' })
     .click()
+  const squadPath = new URL(page.url()).pathname.replace(/\/payouts$/, '')
+
+  // D-285: a second window holds the squad's Results tab open. It has no amounts yet, and it shows
+  // them after the save below without a reload.
+  const watcher = await page.context().newPage()
+  await watcher.goto(`${squadPath}/results`)
+  const watchChooser = watcher.getByRole('combobox', { name: 'Division' })
+  await watchChooser.selectOption(
+    await watchChooser.getByRole('option', { name: /^Scratch \(/ }).getAttribute('value'),
+  )
+  const watched = watcher.getByRole('table', { name: 'Results for the Scratch division' })
+  await expect(watched.getByRole('row').filter({ hasText: fullNameOf(48) })).toBeVisible()
+  await expect(watched.getByText(/^Payout /)).toHaveCount(0)
+
   await page.getByRole('button', { name: 'Enter payouts' }).click()
   let sheet = page.getByRole('dialog', { name: 'Payouts: Squad' })
   await expect(sheet.getByText('Payouts are for this event only.')).toBeVisible()
@@ -779,9 +793,12 @@ test('stage 8: the director enters payouts for squad A, a sweeper, the super swe
     'added by hand',
   )
   await expect(saved.getByRole('row')).toHaveCount(1 + squadPayout.inferredCount + 1)
+  await expect(watched.getByRole('row').filter({ hasText: fullNameOf(48) })).toContainText(
+    'Payout $100.00',
+  )
+  await watcher.close()
 
   // The squad's Results tab shows the amount on each casher and on no advancer, hand-added or not (D-284).
-  const squadPath = new URL(page.url()).pathname.replace(/\/payouts$/, '')
   await page.goto(`${squadPath}/results`)
   const chooser = page.getByRole('combobox', { name: 'Division' })
   await chooser.selectOption(

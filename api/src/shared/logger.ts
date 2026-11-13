@@ -4,6 +4,9 @@ import type { Config } from '../config.ts'
 
 export type { Logger }
 
+const redactedFields = ['ssn', 'socialSecurityNumber', 'encryptionKey']
+const redactedPaths = [...redactedFields, ...redactedFields.map((field) => `*.${field}`)]
+
 /**
  * JSON lines on stdout. When telemetry is on, the pino instrumentation (see telemetry.ts) also
  * adds trace ids and sends each line to the OTel log pipeline. Pass `destination` in tests.
@@ -17,6 +20,9 @@ export function createLogger(
       level: config.logLevel,
       // Drop pid and hostname; the OTel resource already names the service.
       base: { service: config.telemetry.serviceName },
+      // A logged object never carries an SSN or the key (SEC-13, D-265). `*` reaches one level down;
+      // a field nested deeper needs its own path.
+      redact: { paths: redactedPaths, censor: '[Redacted]' },
     },
     destination,
   )

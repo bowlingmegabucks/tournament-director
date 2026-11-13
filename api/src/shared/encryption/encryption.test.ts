@@ -69,12 +69,15 @@ describe('createEncryption', () => {
       expect(await encryption.decrypt(value)).toBe('')
     })
 
-    it.each([' ', '  '])('encrypts whitespace (%j) to a value that decrypts back', async (value) => {
-      const stored = await encryption.encrypt(value)
+    it.each([' ', '  '])(
+      'encrypts whitespace (%j) to a value that decrypts back',
+      async (value) => {
+        const stored = await encryption.encrypt(value)
 
-      expect(stored).not.toBe('')
-      expect(await encryption.decrypt(stored)).toBe(value)
-    })
+        expect(stored).not.toBe('')
+        expect(await encryption.decrypt(stored)).toBe(value)
+      },
+    )
   })
 
   describe('a failed decrypt (D-264)', () => {

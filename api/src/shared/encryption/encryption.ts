@@ -44,7 +44,11 @@ export function createEncryption(key: string): Encryption {
     if (plainText === null || plainText === undefined || plainText === '') return ''
     const salt = randomBytes(SALT_BYTES)
     const iv = randomBytes(IV_BYTES)
-    const cipher = createCipheriv('aes-256-cbc', await derive(key, salt), iv.subarray(0, IV_USED_BYTES))
+    const cipher = createCipheriv(
+      'aes-256-cbc',
+      await derive(key, salt),
+      iv.subarray(0, IV_USED_BYTES),
+    )
     const body = Buffer.concat([cipher.update(plainText, 'utf8'), cipher.final()])
     return Buffer.concat([salt, iv, body]).toString('base64')
   }

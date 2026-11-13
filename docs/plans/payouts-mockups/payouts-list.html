@@ -1,0 +1,38 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>All payouts</title><link rel="stylesheet" href="../../../web/src/styles/tokens.css"><link rel="stylesheet" href="../../../web/src/styles/base.css"><link rel="stylesheet" href="mock.css"></head><body><main><p><a href="index.html">All mockups</a></p>
+<h1>Payouts (tournament sidebar link, needs payouts.read)</h1>
+<h2>By payout</h2>
+<div class="frame"><p class="cap">Every payout in the tournament. The Paid toggle needs payouts.write and an open tournament. Filters are client side.</p><div class="stage">
+<h2 style="margin:0">Payouts</h2>
+<p class="notice warn"><strong>Payouts are for this event only.</strong> Enter only what this event paid. Do not include cashes from other squads, sweepers, or the finals.</p>
+<ul class="tabs" aria-label="Payout views"><li><a href="#" aria-current="page">By payout</a></li><li><a href="#">By bowler</a></li></ul>
+<div class="summary"><div><span class="muted">Payouts</span><b>9</b></div><div><span class="muted">Total</span><b>$2,825.00</b></div><div><span class="muted">Not paid</span><b>5 ($1,450.00)</b></div></div>
+<div class="toolbar"><label>Event<select><option>All events</option><option>Sat 9:00 AM squad</option><option>Sweeper 1</option><option>Super sweeper</option><option>Finals: Open</option></select></label><label>Paid<select><option>All</option><option>Not paid</option><option>Paid</option></select></label></div>
+<table class="stack"><thead><tr><th>Event</th><th>Bowler</th><th>Division</th><th class="num">Amount</th><th>Note</th><th>Paid</th></tr></thead><tbody>
+<tr><td>Sat 9:00 AM squad</td><td>Dana Whitfield</td><td>Open</td><td class="num">$100.00</td><td></td><td><label class="check"><input type="checkbox"> Paid</label></td></tr>
+<tr><td>Sweeper 1</td><td>Dana Whitfield</td><td>Open</td><td class="num">$250.00</td><td></td><td><label class="check"><input type="checkbox" checked> Paid</label></td></tr>
+<tr><td>Super sweeper</td><td>Dana Whitfield</td><td>Open</td><td class="num">$500.00</td><td></td><td><label class="check"><input type="checkbox"> Paid</label></td></tr>
+<tr><td>Finals: Open</td><td>Dana Whitfield</td><td>Open</td><td class="num">$1,500.00</td><td>1st overall</td><td><label class="check"><input type="checkbox"> Paid</label></td></tr>
+</tbody></table>
+<p class="muted">A tournament that is complete: toggles read only, with "This tournament is complete. Payouts are locked."</p>
+</div></div>
+<h2>By bowler</h2>
+<div class="frame"><p class="cap">One row per bowler, total of every event. "Earned at least" filters (the 1099 question; the later report sets its own limit).</p><div class="stage">
+<ul class="tabs" aria-label="Payout views"><li><a href="#">By payout</a></li><li><a href="#" aria-current="page">By bowler</a></li></ul>
+<div class="toolbar"><label>Earned at least ($)<input inputmode="decimal" value="2000"></label></div>
+<table class="stack"><thead><tr><th>Bowler</th><th>Division</th><th class="num">Payouts</th><th class="num">Total</th><th class="num">Not paid</th></tr></thead><tbody>
+<tr><td>Dana Whitfield</td><td>Open</td><td class="num">4</td><td class="num">$2,350.00</td><td class="num">$2,100.00</td></tr></tbody></table>
+<p class="muted">No bowler reaches the minimum: "No bowler has earned $2,000.00 or more."</p>
+</div></div>
+<h2>Paid control by permission</h2>
+<div class="frame"><p class="cap">With payouts.write on an open tournament the Paid cell is a checkbox, and ticking it saves at once (PATCH). Without payouts.write, or once the tournament is complete, it is text with a check mark: "&#10003; Paid" or "Not paid". Never a disabled checkbox.</p><div class="stage">
+<table class="stack"><thead><tr><th>Bowler</th><th class="num">Amount</th><th>Paid (can edit)</th><th>Paid (read only)</th></tr></thead><tbody>
+<tr><td>Dana Whitfield</td><td class="num">$100.00</td><td><label class="check"><input type="checkbox" checked> Paid</label></td><td><span class="ro">&#10003; Paid</span></td></tr>
+<tr><td>Marcus Lee</td><td class="num">$100.00</td><td><label class="check"><input type="checkbox"> Paid</label></td><td><span class="ro">Not paid</span></td></tr></tbody></table>
+<p class="muted">A save that fails (for example the tournament completed in the meantime) un-ticks the box and shows a Toast: "This tournament is complete. Payouts are locked."</p>
+</div></div>
+<h2>Empty, loading, error</h2>
+<div class="frame"><p class="cap">States</p><div class="stage">
+<p>Empty: "No payouts are recorded yet. Open a completed squad, sweeper, or the Seeding page to enter them."</p>
+<p>Loading: the shared Loading (dots, "Loading payouts", placeholder rows).</p>
+<p class="notice err" role="alert">Could not load payouts. <button type="button" class="secondary">Try again</button></p>
+</div></div></main></body></html>

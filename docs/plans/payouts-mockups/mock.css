@@ -1,0 +1,54 @@
+/* Shared by the throwaway payout mockups. Tokens only; the app uses CSS Modules. */
+body{margin:0;background:var(--color-bg);color:var(--color-text);font:var(--font-size-base)/var(--line-height) var(--font-body)}
+main{max-inline-size:var(--layout-width);margin:0 auto;padding:var(--space-4)}
+h1{font-size:var(--font-size-xl)} h2{font-size:var(--font-size-lg);margin-block-start:var(--space-8)} h3{font-size:var(--font-size-base);margin:0}
+a{color:var(--color-accent)}
+.frame{border:var(--border-width) dashed var(--color-border);border-radius:var(--radius);margin-block:var(--space-4);overflow:hidden}
+.cap{margin:0;padding:var(--space-2) var(--space-4);background:var(--color-surface);color:var(--color-text-muted);font-size:var(--font-size-sm)}
+.stage{padding:var(--space-4);display:grid;gap:var(--space-3)}
+.dialog{background:var(--color-surface);border:var(--border-width) solid var(--color-border);border-radius:var(--radius);box-shadow:var(--shadow-elevated);max-inline-size:44rem;margin-inline:auto;inline-size:100%;box-sizing:border-box}
+.dialog>.content{display:grid;gap:var(--space-3);padding:var(--space-4)}
+.dialog h3{font-size:var(--font-size-lg)}
+.notice{margin:0;padding:var(--space-3);border:var(--border-width) solid var(--color-border);border-radius:var(--radius);font-size:var(--font-size-sm)}
+.warn{border-color:var(--color-accent)} .err{border-color:var(--color-danger);color:var(--color-danger)}
+.muted{color:var(--color-text-muted);font-size:var(--font-size-sm)}
+button,.btn{min-block-size:var(--target-min);padding:0 var(--space-4);border-radius:var(--radius);border:var(--border-width) solid var(--color-accent);background:var(--color-accent);color:var(--color-accent-text);font:inherit;cursor:pointer}
+button.secondary{background:transparent;color:var(--color-accent)}
+button.danger{background:transparent;color:var(--color-danger);border-color:var(--color-danger)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.actions{display:flex;flex-wrap:wrap;gap:var(--space-2);justify-content:end}
+.rows{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-2)}
+.row{display:grid;grid-template-columns:1fr;gap:var(--space-2);padding:var(--space-3);border:var(--border-width) solid var(--color-border);border-radius:var(--radius)}
+@media (min-width:40rem){.row{grid-template-columns:minmax(0,1.4fr) 8rem 1fr auto;align-items:start}}
+.who strong{display:block} .tag{display:inline-block;font-size:var(--font-size-sm);border:var(--border-width) solid var(--color-border);border-radius:var(--radius);padding:0 var(--space-2)}
+label{display:grid;gap:var(--space-1);font-size:var(--font-size-sm)}
+input,select{min-block-size:var(--target-min);box-sizing:border-box;padding:0 var(--space-2);background:var(--color-bg);color:var(--color-text);border:var(--border-width) solid var(--color-border);border-radius:var(--radius);font:inherit}
+input[type=checkbox]{min-block-size:auto;inline-size:1.25rem;block-size:1.25rem}
+.check{display:flex;align-items:center;gap:var(--space-2);min-block-size:var(--target-min);font-size:var(--font-size-base)}
+.field-error{color:var(--color-danger);font-size:var(--font-size-sm);margin:0}
+table{inline-size:100%;border-collapse:collapse}
+th,td{text-align:start;padding:var(--space-2) var(--space-3);border-block-end:var(--border-width) solid var(--color-border);vertical-align:top}
+td.num,th.num{text-align:end;font-variant-numeric:tabular-nums}
+.tabs{display:flex;gap:var(--space-1);flex-wrap:wrap;margin:0;padding:0;list-style:none;border-block-end:var(--border-width) solid var(--color-border)}
+.tabs a,.tabs span{display:flex;align-items:center;min-block-size:var(--target-min);padding:0 var(--space-4);text-decoration:none}
+.tabs [aria-current]{border-block-end:calc(var(--border-width)*3) solid var(--color-accent);color:var(--color-text)}
+.summary{display:flex;gap:var(--space-6);flex-wrap:wrap}
+.summary div{display:grid}.summary b{font-size:var(--font-size-lg)}
+.toolbar{display:flex;gap:var(--space-3);flex-wrap:wrap;align-items:end}
+/* A phone shows each table row as a card (CLAUDE.md: no sideways scroll). */
+@media (max-width:40rem){.stack thead{position:absolute;inline-size:1px;block-size:1px;overflow:hidden}.stack tr{display:grid;gap:var(--space-1);padding:var(--space-3);border:var(--border-width) solid var(--color-border);border-radius:var(--radius);margin-block-end:var(--space-2)}.stack td{border:0;padding:0}.stack td.num{text-align:start}}
+/* Phone entry sheet: a full-screen sheet with a sticky footer. */
+.sheet{inline-size:20rem;max-inline-size:100%;margin-inline:auto;box-sizing:border-box;background:var(--color-surface);border:var(--border-width) solid var(--color-border);border-radius:var(--radius);display:grid;grid-template-rows:auto 1fr auto;min-block-size:34rem}
+.sheet header{display:flex;justify-content:space-between;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);border-block-end:var(--border-width) solid var(--color-border)}
+.sheet header h3{font-size:var(--font-size-base)}
+.sheet .body{padding:var(--space-3);display:grid;gap:var(--space-3);align-content:start}
+.sheet footer{position:sticky;inset-block-end:0;display:flex;justify-content:space-between;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);border-block-start:var(--border-width) solid var(--color-border);background:var(--color-surface)}
+.pcard{display:grid;grid-template-columns:1fr 7.5rem;gap:var(--space-1) var(--space-2);padding:var(--space-3);border:var(--border-width) solid var(--color-border);border-radius:var(--radius);align-items:center}
+.pcard .who{grid-column:1}.pcard .amt{grid-column:2;grid-row:1}
+.pcard .meta{grid-column:1 / -1;display:flex;justify-content:space-between;align-items:center;gap:var(--space-2)}
+.pcard .note{grid-column:1 / -1}
+.money{display:flex;align-items:center;gap:var(--space-1)}.money input{inline-size:100%;text-align:end}
+.link{background:none;border:0;padding:0 var(--space-2);color:var(--color-accent);text-decoration:underline;min-block-size:var(--target-min)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)}
+.two button{padding:0 var(--space-2)}
+.ro{display:inline-flex;align-items:center;gap:var(--space-1)}

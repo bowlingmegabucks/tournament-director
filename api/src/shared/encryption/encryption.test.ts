@@ -1,6 +1,17 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DecryptionError, createEncryption } from './encryption.ts'
 import { legacyVectors } from './legacyVectors.ts'
+
+// Wraps the real pbkdf2 so a test can count key derivations.
+const derivations = vi.hoisted(() => ({ count: 0 }))
+vi.mock('node:crypto', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:crypto')>()
+  const counted = ((...args: Parameters<typeof actual.pbkdf2>) => {
+    derivations.count += 1
+    return actual.pbkdf2(...args)
+  }) as typeof actual.pbkdf2
+  return { ...actual, pbkdf2: counted }
+})
 
 const key = 'test-only-encryption-key'
 const encryption = createEncryption(key)
@@ -107,6 +118,31 @@ describe('createEncryption', () => {
       ['a value with no cipher block', Buffer.alloc(64).toString('base64')],
     ])('rejects %s', async (_label, value) => {
       await expect(encryption.decrypt(value)).rejects.toBeInstanceOf(DecryptionError)
+    })
+
+    describe('the shape check runs before the costly key derivation', () => {
+      beforeEach(() => {
+        derivations.count = 0
+      })
+
+      it.each([
+        ['a value that is too short', 40],
+        ['a value with no cipher block', 64],
+        ['a value with a partial block', 64 + 17],
+        ['a value one byte under a block', 64 + 15],
+        ['a value of one block and a partial', 64 + 16 + 1],
+      ])('rejects %s without deriving a key', async (_label, size) => {
+        await expect(
+          encryption.decrypt(Buffer.alloc(size).toString('base64')),
+        ).rejects.toBeInstanceOf(DecryptionError)
+        expect(derivations.count).toBe(0)
+      })
+
+      it('derives a key for a value of whole blocks', async () => {
+        await encryption.decrypt(Buffer.alloc(64 + 16).toString('base64')).catch(() => undefined)
+
+        expect(derivations.count).toBe(1)
+      })
     })
 
     it('reads a stored value that has whitespace in it, as legacy does', async () => {

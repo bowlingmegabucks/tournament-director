@@ -38,7 +38,8 @@
     "!src/db/seedScores.ts",
     "!src/db/seedUsers.ts",
     "!src/db/scriptAuth.ts",
-    "!src/db/createAdmin.ts"
+    "!src/db/createAdmin.ts",
+    "!src/db/checkEncryption.ts"
   ],
   "incremental": true,
   "reporters": ["clear-text", "html"],

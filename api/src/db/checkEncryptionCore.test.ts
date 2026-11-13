@@ -25,6 +25,15 @@ describe('checkStoredValues (D-266)', () => {
     expect(counts).toEqual({ total: 7, empty: 2, nineDigits: 2, otherText: 1, failed: 2 })
   })
 
+  it.each(['1234567890', '12345678', 'x123456789', '123456789x', '123 456 789'])(
+    'counts %j as other text, not 9 digits',
+    async (text) => {
+      const counts = await checkStoredValues([await encryption.encrypt(text)], encryption)
+
+      expect(counts).toMatchObject({ nineDigits: 0, otherText: 1 })
+    },
+  )
+
   it('counts nothing for no rows', async () => {
     expect(await checkStoredValues([], encryption)).toEqual({
       total: 0,

@@ -9,7 +9,6 @@ const IV_BYTES = 32
 const IV_USED_BYTES = 16
 const KEY_BYTES = 32
 const ROUNDS = 100_000
-const BLOCK_BYTES = 16
 
 const pbkdf2Async = promisify(pbkdf2)
 
@@ -30,8 +29,6 @@ export interface Encryption {
   /** Decrypts both and compares the text (legacy `ValuesMatch`). */
   valuesMatch(first: string, second: string): Promise<boolean>
 }
-
-const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/
 
 function derive(key: string, salt: Buffer): Promise<Buffer> {
   // Async: it runs on Node's thread pool, so a report that decrypts a list leaves the event loop free.
@@ -55,14 +52,10 @@ export function createEncryption(key: string): Encryption {
 
   async function decrypt(cipherText: string | null | undefined): Promise<string> {
     if (cipherText === null || cipherText === undefined || cipherText === '') return ''
-    // Buffer.from skips bad Base64 without a word, so check the text first.
-    if (cipherText.length % 4 !== 0 || !BASE64.test(cipherText)) throw new DecryptionError()
+    // Like .NET's FromBase64String, Buffer.from reads what it can (it skips whitespace). Text that
+    // is not a stored value ends in a failed decrypt below.
     const bytes = Buffer.from(cipherText, 'base64')
     const bodyStart = SALT_BYTES + IV_BYTES
-    // At least one cipher block, and whole blocks only.
-    if (bytes.length < bodyStart + BLOCK_BYTES || (bytes.length - bodyStart) % BLOCK_BYTES !== 0) {
-      throw new DecryptionError()
-    }
     try {
       const salt = bytes.subarray(0, SALT_BYTES)
       const iv = bytes.subarray(SALT_BYTES, bodyStart)
@@ -74,7 +67,8 @@ export function createEncryption(key: string): Encryption {
       const plain = Buffer.concat([decipher.update(bytes.subarray(bodyStart)), decipher.final()])
       return plain.toString('utf8')
     } catch {
-      // Bad padding, usually a wrong key. Say nothing more (D-264).
+      // A value too short or not in whole blocks, or bad padding (usually a wrong key). Node's
+      // cipher rejects each of these, so there is no separate length check. Say nothing more (D-264).
       throw new DecryptionError()
     }
   }

@@ -35,6 +35,7 @@ export async function checkStoredValues(
     otherText: 0,
     failed: 0,
   }
+  // Stryker disable next-line EqualityOperator: one extra pass slices nothing, so `<=` changes no result.
   for (let start = 0; start < values.length; start += BATCH) {
     const outcomes = await Promise.all(
       values.slice(start, start + BATCH).map((v) => classify(v, encryption)),

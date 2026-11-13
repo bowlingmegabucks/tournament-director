@@ -92,6 +92,7 @@ describe('createEncryption', () => {
         .catch((error: unknown) => error)
 
       expect(failure).toBeInstanceOf(DecryptionError)
+      expect((failure as Error).name).toBe('DecryptionError')
       const message = failure instanceof Error ? failure.message : ''
       expect(message).toBe('Could not decrypt the value')
       expect(message).not.toContain(vector?.cipherText ?? 'x')
@@ -106,6 +107,13 @@ describe('createEncryption', () => {
       ['a value with no cipher block', Buffer.alloc(64).toString('base64')],
     ])('rejects %s', async (_label, value) => {
       await expect(encryption.decrypt(value)).rejects.toBeInstanceOf(DecryptionError)
+    })
+
+    it('reads a stored value that has whitespace in it, as legacy does', async () => {
+      const [vector] = legacyVectors
+      const spaced = `${vector?.cipherText.slice(0, 40)}\r\n ${vector?.cipherText.slice(40)}`
+
+      expect(await createEncryption(vector?.key ?? '').decrypt(spaced)).toBe(vector?.plainText)
     })
 
     it('rejects a damaged cipher body', async () => {

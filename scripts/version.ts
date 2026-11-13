@@ -58,18 +58,11 @@ function releasedError(version: Version, api: string, latestTag?: string): strin
 
 function mainCheck(version: Version, api: string, base: string | undefined): VersionResult {
   const errors: string[] = []
-  const warnings: string[] = []
   const main = base === undefined ? undefined : parseVersion(base)
-  if (!main) return { errors, warnings }
-
-  const order = compareVersions(version, main)
-  if (order < 0) {
+  if (main && compareVersions(version, main) < 0) {
     errors.push(`Version ${api} is lower than the version on main (${base}).`)
-  } else if (order === 0) {
-    const message = `Version ${api} is the same as on main. Consider bumping to ${formatVersion(nextPatch(version))}.`
-    ;(version[0] === 0 ? warnings : errors).push(message)
   }
-  return { errors, warnings }
+  return { errors, warnings: [] }
 }
 
 /**
@@ -77,10 +70,9 @@ function mainCheck(version: Version, api: string, base: string | undefined): Ver
  * - api and web carry the same `x.y.z`.
  * - A released version (a `v*` tag) is closed: the next work needs a higher one. In 0.x the
  *   suggestion is the next minor; from 1.0.0 it is the next patch.
- * - A release candidate (`1.0.0-rc.1`) counts as 1.x: the next candidate must be higher, and the
- *   same version as main is an error. It sorts below the final `1.0.0`.
- * - Below main's version is always wrong. Equal to main's is a suggestion to bump in 0.x and an
- *   error from 1.0.0.
+ * - A release candidate (`1.0.0-rc.1`) sorts below the final `1.0.0`.
+ * - Below main's version is always wrong. Equal to main's is fine: only a release tag closes a
+ *   version.
  */
 export function checkVersion({ api, web, base, latestTag }: VersionInput): VersionResult {
   const errors: string[] = []

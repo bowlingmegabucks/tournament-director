@@ -67,31 +67,15 @@ describe('checkVersion', () => {
     )
   })
 
-  it('warns, and does not fail, when 0.x is the same as main', () => {
+  it('passes when the version is the same as main and not tagged', () => {
     const result = checkVersion({
-      api: '0.2.0',
-      web: '0.2.0',
-      base: '0.2.0',
-      latestTag: 'v0.1.0',
-    })
-
-    assert.deepEqual(result.errors, [])
-    assert.deepEqual(result.warnings, [
-      'Version 0.2.0 is the same as on main. Consider bumping to 0.2.1.',
-    ])
-  })
-
-  it('fails from 1.0.0 when the version is the same as main', () => {
-    const result = checkVersion({
-      api: '1.0.0',
-      web: '1.0.0',
-      base: '1.0.0',
+      api: '1.0.0-rc.1',
+      web: '1.0.0-rc.1',
+      base: '1.0.0-rc.1',
       latestTag: 'v0.9.0',
     })
 
-    assert.equal(result.errors.length, 1)
-    assert.match(result.errors[0] ?? '', /Consider bumping to 1\.0\.1/)
-    assert.deepEqual(result.warnings, [])
+    assert.deepEqual(result, { errors: [], warnings: [] })
   })
 
   it('fails when the version is lower than main', () => {
@@ -218,17 +202,6 @@ describe('checkVersion', () => {
         }),
         ok,
       )
-    })
-
-    it('fails on the same candidate as main and suggests the next one', () => {
-      const result = checkVersion({
-        api: '1.0.0-rc.1',
-        web: '1.0.0-rc.1',
-        base: '1.0.0-rc.1',
-      })
-
-      assert.equal(result.errors.length, 1)
-      assert.match(result.errors[0] ?? '', /Consider bumping to 1\.0\.0-rc\.2/)
     })
 
     it('fails on a tagged candidate and suggests the next one', () => {

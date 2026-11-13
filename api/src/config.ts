@@ -30,6 +30,10 @@ const envSchema = z.object({
     .string()
     .refine(isOriginUrl, 'must be an http(s) address with no path, such as https://api.example.com')
     .transform((value) => new URL(value).origin),
+  // The text the legacy desk app uses as its EncryptionKey: stored SSNs open only with the same
+  // value (D-262, D-263). Required, any length, and used exactly as given: no trim, because a
+  // changed key cannot read what the desk app wrote. Never log it.
+  ENCRYPTION_KEY: z.string().refine((value) => value.trim() !== '', 'must not be empty'),
   // Comma-separated list. Empty means same-origin only.
   CORS_ORIGIN: z.string().default(''),
   NODE_ENV: z.string().default('development'),
@@ -112,6 +116,8 @@ export interface Config {
   databaseUrl: string
   /** The key callers send in `x-api-key` (D-95). A secret: never log it. */
   apiKey: string
+  /** The shared SSN encryption key (D-263). A secret: never log it. */
+  encryptionKey: string
   auth: AuthConfig
   /** `undefined` when `SMTP_HOST` is empty: the API cannot send email. */
   mail: MailConfig | undefined
@@ -179,6 +185,15 @@ export function loadDatabaseUrl(env: NodeJS.ProcessEnv = process.env): string {
   return parseEnv(envSchema.pick({ DATABASE_URL: true }), env).DATABASE_URL
 }
 
+/** The database URL and encryption key, for `encryption:check`, which does not serve requests. */
+export function loadEncryptionCheckConfig(env: NodeJS.ProcessEnv = process.env): {
+  databaseUrl: string
+  encryptionKey: string
+} {
+  const data = parseEnv(envSchema.pick({ DATABASE_URL: true, ENCRYPTION_KEY: true }), env)
+  return { databaseUrl: data.DATABASE_URL, encryptionKey: data.ENCRYPTION_KEY }
+}
+
 /** Read and validate the environment once, at startup. Throws with every problem listed. */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const data = parseEnv(envSchema, env)
@@ -186,6 +201,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     port: data.PORT,
     databaseUrl: data.DATABASE_URL,
     apiKey: data.API_KEY,
+    encryptionKey: data.ENCRYPTION_KEY,
     auth: { secret: data.AUTH_SECRET, baseUrl: data.AUTH_BASE_URL },
     mail: mailConfigOf(data),
     logLevel: data.LOG_LEVEL,

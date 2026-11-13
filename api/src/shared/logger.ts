@@ -4,6 +4,23 @@ import type { Config } from '../config.ts'
 
 export type { Logger }
 
+// Spelling variants too: the column is `SocialSecurityNumber`, the setting is `ENCRYPTION_KEY`.
+const redactedFields = [
+  'ssn',
+  'SSN',
+  'socialSecurityNumber',
+  'SocialSecurityNumber',
+  'encryptionKey',
+  'ENCRYPTION_KEY',
+]
+const MAX_DEPTH = 5
+// `*` matches one key, so `*.*.ssn` is two levels down. Pino's wildcard cannot match any depth.
+const redactedPaths = redactedFields.flatMap((field) =>
+  Array.from({ length: MAX_DEPTH }, (_, depth) =>
+    [...new Array<string>(depth).fill('*'), field].join('.'),
+  ),
+)
+
 /**
  * JSON lines on stdout. When telemetry is on, the pino instrumentation (see telemetry.ts) also
  * adds trace ids and sends each line to the OTel log pipeline. Pass `destination` in tests.
@@ -17,6 +34,9 @@ export function createLogger(
       level: config.logLevel,
       // Drop pid and hostname; the OTel resource already names the service.
       base: { service: config.telemetry.serviceName },
+      // A logged object never carries an SSN or the key (SEC-13, D-265), up to MAX_DEPTH levels deep.
+      // A field nested deeper needs its own path.
+      redact: { paths: redactedPaths, censor: '[Redacted]' },
     },
     destination,
   )

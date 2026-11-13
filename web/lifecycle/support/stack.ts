@@ -12,6 +12,7 @@ export const apiEnv = {
   PORT: '3100',
   DATABASE_URL: databaseUrl,
   API_KEY: apiKey,
+  ENCRYPTION_KEY: 'lifecycle_encryptionKey_thisIsForTestingOnly',
   AUTH_SECRET: 'lifecycle_authSecret_thisIsForTestingOnly',
   AUTH_BASE_URL: apiUrl,
   CORS_ORIGIN: webUrl,

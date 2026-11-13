@@ -28,4 +28,57 @@ describe('createLogger', () => {
 
     expect(records()).toEqual([])
   })
+
+  describe('redaction (SEC-13, D-265)', () => {
+    it.each(['ssn', 'socialSecurityNumber', 'encryptionKey'])(
+      'hides %s at the top level and one level down',
+      (field) => {
+        const { logger, records } = createCapturedLogger('info')
+
+        logger.info(
+          { [field]: '123456789', bowler: { [field]: '123456789', name: 'Ada' } },
+          'saved',
+        )
+
+        const [record] = records()
+        expect(record).toMatchObject({
+          [field]: '[Redacted]',
+          bowler: { [field]: '[Redacted]', name: 'Ada' },
+        })
+        expect(JSON.stringify(record)).not.toContain('123456789')
+      },
+    )
+
+    it.each(['SSN', 'SocialSecurityNumber', 'ENCRYPTION_KEY'])('hides the spelling %s', (field) => {
+      const { logger, records } = createCapturedLogger('info')
+
+      logger.info({ [field]: '123456789' }, 'saved')
+
+      expect(records()).toMatchObject([{ [field]: '[Redacted]' }])
+    })
+
+    it('hides a field four levels down', () => {
+      const { logger, records } = createCapturedLogger('info')
+
+      logger.info({ req: { body: { bowler: { ssn: '123456789' } } } }, 'saved')
+
+      expect(JSON.stringify(records()[0])).not.toContain('123456789')
+    })
+
+    it('hides the fields on a child logger too', () => {
+      const { logger, records } = createCapturedLogger('info')
+
+      logger.child({ requestId: 'r1' }).info({ ssn: '123456789', count: 2 }, 'saved')
+
+      expect(records()).toMatchObject([{ requestId: 'r1', ssn: '[Redacted]', count: 2 }])
+    })
+
+    it('leaves other fields alone', () => {
+      const { logger, records } = createCapturedLogger('info')
+
+      logger.info({ registrationId: 'abc', count: 3 }, 'saved')
+
+      expect(records()).toMatchObject([{ registrationId: 'abc', count: 3 }])
+    })
+  })
 })

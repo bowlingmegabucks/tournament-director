@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { loadConfig, loadDatabaseUrl } from './config.ts'
+import { loadConfig, loadDatabaseUrl, loadEncryptionCheckConfig } from './config.ts'
 
 const databaseUrl = 'mariadb://megabucks:bowling4money@localhost:15306/bowling_megabucks'
 const apiKey = 'api_localKey_thisIsForTestingOnly'
+const encryptionKey = 'encryption_localKey_thisIsForTestingOnly'
 const authSecret = 'auth_localSecret_thisIsForTestingOnly'
 const authBaseUrl = 'http://localhost:3000'
 // The smallest valid environment. These have no default: DATABASE_URL (D-33), API_KEY (D-95), and
-// the two sign-in settings (D-98, D-99).
+// the two sign-in settings (D-98, D-99), and ENCRYPTION_KEY (D-263).
 const baseEnv = {
   DATABASE_URL: databaseUrl,
   API_KEY: apiKey,
+  ENCRYPTION_KEY: encryptionKey,
   AUTH_SECRET: authSecret,
   AUTH_BASE_URL: authBaseUrl,
 }
@@ -20,6 +22,7 @@ describe('loadConfig', () => {
       port: 3000,
       databaseUrl,
       apiKey,
+      encryptionKey,
       auth: { secret: authSecret, baseUrl: authBaseUrl },
       mail: undefined,
       logLevel: 'info',
@@ -65,6 +68,31 @@ describe('loadConfig', () => {
     const rejected = () => loadConfig({ ...baseEnv, API_KEY: 'short-secret' })
     expect(rejected).toThrow(/Invalid environment/)
     expect(rejected).not.toThrow(/short-secret/)
+  })
+
+  it('fails without ENCRYPTION_KEY (SEC-11, D-263)', () => {
+    expect(() => loadConfig({ ...baseEnv, ENCRYPTION_KEY: undefined })).toThrow(
+      /Invalid environment: .*ENCRYPTION_KEY/s,
+    )
+  })
+
+  it.each(['', '   '])('rejects ENCRYPTION_KEY=%j (D-263)', (key) => {
+    expect(() => loadConfig({ ...baseEnv, ENCRYPTION_KEY: key })).toThrow(
+      /must not be empty.*ENCRYPTION_KEY/s,
+    )
+  })
+
+  it.each(['k', 'key', ' padded key '])(
+    'accepts ENCRYPTION_KEY=%j of any length and keeps it as given (D-263)',
+    (key) => {
+      expect(loadConfig({ ...baseEnv, ENCRYPTION_KEY: key }).encryptionKey).toBe(key)
+    },
+  )
+
+  it('does not print the encryption key when it rejects the settings', () => {
+    const rejected = () => loadConfig({ ...baseEnv, ENCRYPTION_KEY: '  ', API_KEY: 'short' })
+    expect(rejected).toThrow(/Invalid environment/)
+    expect(rejected).not.toThrow(/encryption_localKey/)
   })
 
   it('fails without AUTH_SECRET (D-98)', () => {
@@ -311,5 +339,19 @@ describe('loadConfig mail settings', () => {
 
   it('rejects SMTP_SECURE other than true or false', () => {
     expect(() => loadConfig({ ...mailEnv, SMTP_SECURE: 'yes' })).toThrow(/SMTP_SECURE/)
+  })
+})
+
+describe('loadEncryptionCheckConfig', () => {
+  it('reads only the database URL and the encryption key (D-266)', () => {
+    expect(
+      loadEncryptionCheckConfig({ DATABASE_URL: databaseUrl, ENCRYPTION_KEY: encryptionKey }),
+    ).toEqual({ databaseUrl, encryptionKey })
+  })
+
+  it('fails without ENCRYPTION_KEY', () => {
+    expect(() => loadEncryptionCheckConfig({ DATABASE_URL: databaseUrl })).toThrow(
+      /Invalid environment: .*ENCRYPTION_KEY/s,
+    )
   })
 })

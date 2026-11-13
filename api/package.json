@@ -11,6 +11,7 @@
     "db:generate": "prisma generate",
     "db:tables": "node --env-file-if-exists=.env src/test/createTables.ts",
     "db:seed": "node --env-file-if-exists=.env src/db/seed.ts",
+    "encryption:check": "node --env-file-if-exists=.env src/db/checkEncryption.ts",
     "users:create-admin": "node --env-file-if-exists=.env src/db/createAdmin.ts",
     "build": "rm -rf dist && tsc -p tsconfig.build.json",
     "start": "node --import ./dist/instrumentation.js dist/server.js",

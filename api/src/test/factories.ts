@@ -155,12 +155,16 @@ export function createResultEntry(overrides: Partial<ResultEntryInput> = {}): Re
 /** The key `createConfig` sets. Send it in `x-api-key` to call as the API key. */
 export const testApiKey = 'test-api-key-0123456789-0123456789'
 
+/** The key `createConfig` sets. Fake: legacy-format values made with it hold no real data. */
+export const testEncryptionKey = 'test-only-encryption-key'
+
 /** A config with no CORS origins and no telemetry destination. The database URL points nowhere real. */
 export function createConfig(overrides: Partial<Config> = {}): Config {
   return {
     port: 0,
     databaseUrl: 'mariadb://user:password@localhost:3306/test',
     apiKey: testApiKey,
+    encryptionKey: testEncryptionKey,
     auth: {
       secret: 'test-auth-secret-at-least-32-characters-long',
       baseUrl: 'http://localhost:3000',

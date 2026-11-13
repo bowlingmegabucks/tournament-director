@@ -1,3 +1,4 @@
+import { isRealDate } from '../../shared/dateText'
 import type { Squad } from '../squads/types'
 import type { Sweeper } from '../sweepers/types'
 import type {
@@ -117,9 +118,13 @@ export function filledFields(values: BowlerValues): Partial<BowlerValues> {
   return changedFields(emptyBowler, values)
 }
 
-/** Step 1 needs the names (D-162); the server checks the rest. */
+/** Step 1 needs the names (D-162) and a date of birth that is a whole date when given; the server checks the rest. */
 export function checkBowlerStep(values: BowlerValues): DeskFieldErrors {
   const errors: DeskFieldErrors = {}
+  const born = values.dateOfBirth.trim()
+  if (born !== '' && !isRealDate(born)) {
+    errors['bowler.dateOfBirth'] = 'Enter the date of birth as mm/dd/yyyy'
+  }
   if (values.firstName.trim() === '') errors['bowler.firstName'] = 'First Name is Required'
   if (values.lastName.trim() === '') errors['bowler.lastName'] = 'Last Name is Required'
   return errors

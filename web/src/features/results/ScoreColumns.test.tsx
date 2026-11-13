@@ -77,6 +77,26 @@ describe('TotalHeaders', () => {
     expect(headers(false)).toEqual(['Total'])
     expect(headers(true)).toEqual(['Scratch Total', 'Total HDCP', 'HDCP Total'])
   })
+
+  it('puts a custom label on the last handicap column, and on the single total', () => {
+    const labelled = (handicap: boolean) => {
+      const { unmount } = render(
+        <table>
+          <thead>
+            <tr>
+              <TotalHeaders handicap={handicap} totalLabel="Finals Total" />
+            </tr>
+          </thead>
+        </table>,
+      )
+      const names = screen.getAllByRole('columnheader').map((cell) => cell.textContent)
+      unmount()
+      return names
+    }
+
+    expect(labelled(false)).toEqual(['Finals Total'])
+    expect(labelled(true)).toEqual(['Scratch Total', 'Total HDCP', 'Finals Total'])
+  })
 })
 
 describe('PlusMinusCell', () => {

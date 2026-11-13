@@ -1,3 +1,4 @@
+import { isRealDate } from '../../shared/dateText'
 import {
   tournamentFields,
   type FieldErrors,
@@ -32,12 +33,6 @@ function textError(label: string, value: string): string | undefined {
   if (trimmed === '') return `${label} is required`
   if (trimmed.length > MAX_TEXT) return `${label} cannot be longer than ${MAX_TEXT} characters`
   return undefined
-}
-
-function isRealDate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
-  const parsed = new Date(`${value}T00:00:00.000Z`)
-  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(value)
 }
 
 function dateError(label: string, value: string): string | undefined {

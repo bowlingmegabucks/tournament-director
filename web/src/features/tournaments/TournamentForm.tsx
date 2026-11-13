@@ -1,7 +1,11 @@
 import { useId, useState } from 'react'
-import type { ChangeEvent, MouseEvent, ReactNode, SubmitEvent } from 'react'
+import type { MouseEvent, ReactNode, SubmitEvent } from 'react'
 import { Link } from 'react-router'
 import { ConfirmChangesDialog } from '../../shared/ConfirmChangesDialog'
+import { LeaveDialog } from '../../shared/LeaveDialog'
+import { sameValues } from '../../shared/sameValues'
+import { useLeaveGuard } from '../../shared/useLeaveGuard'
+import { DateInput } from '../../shared/DateInput'
 import { describeChange } from './describeChange'
 import styles from './TournamentForm.module.css'
 import {
@@ -36,7 +40,7 @@ const defaultHints: Partial<Record<TournamentField, string>> = {
   superSweeperCashRatio: '1 in N super sweeper bowlers cash. At least 1.',
 }
 
-const types: Partial<Record<TournamentField, 'date'>> = { startDate: 'date', endDate: 'date' }
+const isDateField = (name: TournamentField) => name === 'startDate' || name === 'endDate'
 const inputModes: Partial<Record<TournamentField, 'decimal' | 'numeric'>> = {
   entryFee: 'decimal',
   games: 'numeric',
@@ -67,7 +71,7 @@ interface FieldProps {
   lock: string | undefined
   /** What saving this field will ask the director to confirm (D-129). */
   confirm: string | undefined
-  onChange: (event: ChangeEvent<HTMLInputElement>) => void
+  onChange: (value: string) => void
   onBlur: () => void
 }
 
@@ -95,20 +99,36 @@ function Field({
       <label className={styles.label} htmlFor={id}>
         {labels[name]} (required)
       </label>
-      <input
-        className={styles.input}
-        id={id}
-        name={name}
-        type={types[name] ?? 'text'}
-        inputMode={inputModes[name]}
-        autoComplete="off"
-        value={value}
-        readOnly={lock !== undefined}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy || undefined}
-        onChange={onChange}
-        onBlur={onBlur}
-      />
+      {isDateField(name) ? (
+        <DateInput
+          className={styles.input}
+          id={id}
+          name={name}
+          value={value}
+          readOnly={lock !== undefined}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy || undefined}
+          onValueChange={onChange}
+          onBlur={onBlur}
+        />
+      ) : (
+        <input
+          className={styles.input}
+          id={id}
+          name={name}
+          type="text"
+          inputMode={inputModes[name]}
+          autoComplete="off"
+          value={value}
+          readOnly={lock !== undefined}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy || undefined}
+          onChange={(event) => {
+            onChange(event.target.value)
+          }}
+          onBlur={onBlur}
+        />
+      )}
       {hint && (
         <p id={`${id}-hint`} className={styles.hint}>
           {hint}
@@ -190,6 +210,8 @@ export function TournamentForm({
 }: Readonly<TournamentFormProps>) {
   const base = useId()
   const [values, setValues] = useState<TournamentFormValues>(initialValues)
+  // Leaving with the boxes changed from where they started asks first.
+  const guard = useLeaveGuard(!sameValues(values, initialValues))
   const [errors, setErrors] = useState<FieldErrors>({})
   // The summary appears after a failed save and stays until the next one.
   const [summary, setSummary] = useState(false)
@@ -217,16 +239,19 @@ export function TournamentForm({
   }
 
   function change(name: TournamentField) {
-    return (event: ChangeEvent<HTMLInputElement>) => {
-      const value = event.target.value
+    return (value: string) => {
       setValues((current) => ({ ...current, [name]: value }))
       setEdited((current) => ({ ...current, [name]: true }))
       setErrors((current) => {
         // A message about the old text would mislead.
         const next = { ...current, [name]: undefined }
         // The end date's message depends on the start date, so it may be stale now.
-        // An emptied start date has nothing to compare, so the message waits for the next one.
-        if (name === 'startDate' && value !== '' && current.endDate === endBeforeStartMessage) {
+        // A start date still being typed has nothing to compare, so the message waits for the full date.
+        if (
+          name === 'startDate' &&
+          /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+          current.endDate === endBeforeStartMessage
+        ) {
           next.endDate = check({ ...values, startDate: value }).endDate
         }
         return next
@@ -261,7 +286,7 @@ export function TournamentForm({
   }
 
   async function send(confirmWarnings: boolean) {
-    const result = await onSubmit(values, confirmWarnings)
+    const result = await guard.whileSaving(() => onSubmit(values, confirmWarnings))
     if (result === undefined) return
     if ('errors' in result) {
       // The dialog goes first, so the focus that `show` sets lands on the form.
@@ -360,6 +385,7 @@ export function TournamentForm({
           }}
         />
       )}
+      <LeaveDialog blocker={guard.blocker} />
     </form>
   )
 }

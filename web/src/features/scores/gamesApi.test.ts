@@ -8,7 +8,7 @@ import {
   createGamesView,
 } from '../../mocks/gamesData'
 import { LaneSetupError, SessionNotFoundError } from '../../shared/session'
-import { fetchGames, saveScore, ScoreSaveError } from './gamesApi'
+import { fetchGames, saveScore, ScoreSaveError, setDnf } from './gamesApi'
 
 const gamesPath = '/v1/tournaments/:id/squads/:sessionId/scores/games'
 const view = createGamesView({
@@ -252,5 +252,123 @@ describe('saveScore (SCR-19, D-228)', () => {
     await expect(saveScore('squad', 't1', 's1', 'r1', 1, 200)).rejects.toThrow(
       'unexpected response',
     )
+  })
+})
+
+describe('saveScore request and messages', () => {
+  it('says the body is JSON', async () => {
+    let type: string | null | undefined
+    server.use(
+      http.put(scorePath, ({ request }) => {
+        type = request.headers.get('content-type')
+        return HttpResponse.json({ scores: [200], total: 200 })
+      }),
+    )
+
+    await saveScore('squad', 't1', 's1', 'r1', 1, 200)
+
+    expect(type).toBe('application/json')
+  })
+
+  it('uses the fallback when the API message is empty or not text', async () => {
+    server.use(http.put(scorePath, () => HttpResponse.json({ message: '' }, { status: 409 })))
+    await expect(saveScore('squad', 't1', 's1', 'r1', 1, 200)).rejects.toThrow(
+      'The score was refused.',
+    )
+    server.use(http.put(scorePath, () => HttpResponse.json({ message: 7 }, { status: 409 })))
+    await expect(saveScore('squad', 't1', 's1', 'r1', 1, 200)).rejects.toThrow(
+      'The score was refused.',
+    )
+  })
+
+  it('refuses an answer whose scores are right but whose total is not a number', async () => {
+    server.use(http.put(scorePath, () => HttpResponse.json({ scores: [200], total: 'x' })))
+    await expect(saveScore('squad', 't1', 's1', 'r1', 1, 200)).rejects.toThrow(
+      'Could not save (unexpected response).',
+    )
+    server.use(http.put(scorePath, () => HttpResponse.json({ scores: ['x'], total: 200 })))
+    await expect(saveScore('squad', 't1', 's1', 'r1', 1, 200)).rejects.toThrow(
+      'Could not save (unexpected response).',
+    )
+  })
+})
+
+describe('setDnf (SCR-24, D-248, D-249)', () => {
+  const dnfPath = '/v1/tournaments/:id/squads/:sessionId/scores/:registrationId/dnf'
+
+  it('flags with PUT and takes the flag off with DELETE', async () => {
+    const seen: { method: string; params: unknown }[] = []
+    server.use(
+      http.put(dnfPath, ({ request, params }) => {
+        seen.push({ method: request.method, params })
+        return new HttpResponse(null, { status: 204 })
+      }),
+      http.delete(dnfPath, ({ request, params }) => {
+        seen.push({ method: request.method, params })
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+
+    await setDnf('squad', 't1', 's1', 'r1', true)
+    await setDnf('squad', 't1', 's1', 'r1', false)
+
+    const params = { id: 't1', sessionId: 's1', registrationId: 'r1' }
+    expect(seen).toEqual([
+      { method: 'PUT', params },
+      { method: 'DELETE', params },
+    ])
+  })
+
+  it('uses the sweeper path for a sweeper', async () => {
+    let hit = false
+    server.use(
+      http.put('/v1/tournaments/:id/sweepers/:sessionId/scores/:registrationId/dnf', () => {
+        hit = true
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+
+    await setDnf('sweeper', 't1', 's1', 'r1', true)
+
+    expect(hit).toBe(true)
+  })
+
+  it.each([401, 403])('says the user may not enter scores for %i', async (status) => {
+    server.use(http.put(dnfPath, () => new HttpResponse(null, { status })))
+
+    await expect(setDnf('squad', 't1', 's1', 'r1', true)).rejects.toMatchObject({
+      message: 'You are not allowed to enter scores.',
+      status,
+    })
+  })
+
+  it.each([400, 404, 409])('keeps the API message for status %i', async (status) => {
+    server.use(http.put(dnfPath, () => HttpResponse.json({ message: 'No score yet.' }, { status })))
+
+    const error = await setDnf('squad', 't1', 's1', 'r1', true).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(ScoreSaveError)
+    expect(error).toMatchObject({ message: 'No score yet.', status })
+  })
+
+  it('uses a fallback message when the API sends none', async () => {
+    server.use(http.put(dnfPath, () => new HttpResponse(null, { status: 409 })))
+
+    await expect(setDnf('squad', 't1', 's1', 'r1', true)).rejects.toThrow(
+      'Could not change did not finish.',
+    )
+  })
+
+  it('says to try again on a server error, and that the connection failed when nothing answers', async () => {
+    server.use(http.put(dnfPath, () => new HttpResponse(null, { status: 500 })))
+    await expect(setDnf('squad', 't1', 's1', 'r1', true)).rejects.toMatchObject({
+      message: 'Could not save. Try again.',
+      status: 500,
+    })
+
+    server.use(http.put(dnfPath, () => HttpResponse.error()))
+    const error = await setDnf('squad', 't1', 's1', 'r1', true).catch((e: unknown) => e)
+    expect(error).toMatchObject({ message: 'Could not save. Check the connection.' })
+    expect((error as ScoreSaveError).status).toBeUndefined()
   })
 })

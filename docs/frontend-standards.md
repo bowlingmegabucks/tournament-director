@@ -19,7 +19,8 @@ web/src/
 
 ## Routing and layout
 
-- **Router:** `react-router` (declarative: `BrowserRouter` in `main.tsx`, `Routes` in `App.tsx`). Tests render the whole app with `renderApp(route)` (`src/test/renderApp.tsx`), which uses a memory router.
+- **Router:** `react-router` as a data router (`createBrowserRouter` with one catch-all route in `main.tsx`, `Routes` in `App.tsx`). Only a data router has `useBlocker`, which the unsaved-changes guard needs. Tests render the whole app with `renderApp(route)` (`src/test/renderApp.tsx`), which uses a memory router built by `DataRouter` (`src/test/DataRouter.tsx`); a test that renders a form alone wraps it in `DataRouter`, not `MemoryRouter`.
+- **Unsaved changes:** a form that sends data calls `useLeaveGuard(dirty)` (`src/shared/useLeaveGuard.ts`) and renders `<LeaveDialog blocker={guard.blocker} />`. `dirty` is true when the boxes differ from where they started (`sameValues`). Wrap the save, including its move to the next page, in `guard.whileSaving(...)`, so a save that works does not ask. A move right after a delete (the page's own data is gone) puts `...skipLeaveGuard` in its `navigate` state and does not ask either. Closing the tab gets the browser's own prompt. Pages that save one value at a time (score entry) and the sign-in pages have no guard.
 - **The URL holds what is in context** (D-21): `/tournaments/{id}/…`. Never keep the selected tournament in `useState` or a context. A page reads `useParams`.
 - **Three levels of navigation** (D-22): the main menu in `AppShell` (every page), the tournament sidebar in `TournamentLayout` (only under `/tournaments/{id}`), and, for a squad or sweeper, a page header with a breadcrumb and tabs (designed, not built yet; see `NAV-04` in [requirements/navigation.md](requirements/navigation.md)).
 - **Add a page inside a tournament** as a child route of `tournaments/:id` in `App.tsx`, and add its link to the sidebar. A child page reads the tournament with `useOutletContext<Tournament>()`.
@@ -49,6 +50,10 @@ web/src/
 - Query keys are arrays, from general to specific: `['tournaments', id]`.
 - After a mutation, invalidate the affected keys.
 - Create one `QueryClient` in `main.tsx`. Tests create their own with `retry: false`.
+
+## Dates
+
+A date is typed as `mm/dd/yyyy` in a text box (`DateInput`, `src/shared/DateInput.tsx`), not a native date box, because a native box gives the page no way to move from month to day to year. "/", "-", ".", or a space ends a part, and the slashes are added. The form keeps `YYYY-MM-DD` once the date is whole, and the typed text until then, so the form's own check says the date is not valid yet. A squad or sweeper date and time is `DateTimeInput`: a date box and a native time box. Browser tests fill a date with `fillDay` and `fillDateTime` (`e2e/dateFields.ts`).
 
 ## Styling
 

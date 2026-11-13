@@ -85,6 +85,24 @@ describe('step checks (D-162, REG-03, REG-16)', () => {
     expect(checkBowlerStep(maria)).toEqual({})
   })
 
+  it('accepts an empty or whole date of birth and refuses a partial or impossible one', () => {
+    expect(checkBowlerStep({ ...maria, dateOfBirth: '' })).toEqual({})
+    expect(checkBowlerStep({ ...maria, dateOfBirth: '1975-04-01' })).toEqual({})
+    expect(checkBowlerStep({ ...maria, dateOfBirth: ' 1975-04-01 ' })).toEqual({})
+    for (const dateOfBirth of [
+      '04/0',
+      '1975-02-31',
+      '1975-13-45',
+      '1975-4-1',
+      'x1975-04-01',
+      '1975-04-01x',
+    ]) {
+      expect(checkBowlerStep({ ...maria, dateOfBirth })).toEqual({
+        'bowler.dateOfBirth': 'Enter the date of birth as mm/dd/yyyy',
+      })
+    }
+  })
+
   it('asks for a division and a squad', () => {
     expect(checkRegistrationStep(emptyRegistration)).toEqual({
       divisionId: 'Pick a division',

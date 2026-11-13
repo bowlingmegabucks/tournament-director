@@ -15,3 +15,10 @@ export async function openTournamentPage(
     await page.getByRole('navigation', { name }).getByRole('link', { name: link }).click()
   }
 }
+
+/** A refused save leaves the form with its text in it, so the way out asks first: pick Leave. */
+export async function leaveForm(page: Page) {
+  await mainMenu(page).getByRole('link', { name: 'Tournaments' }).click()
+  await expect(page.getByRole('dialog', { name: 'Leave without saving?' })).toBeVisible()
+  await page.getByRole('button', { name: 'Leave page' }).click()
+}

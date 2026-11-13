@@ -198,6 +198,8 @@ Details in [docs/frontend-standards.md](docs/frontend-standards.md).
 - Name components `PascalCase.tsx`, hooks `useThing.ts`, everything else `camelCase.ts`. Put a test next to its file: `Thing.test.tsx`.
 - No `useEffect` to derive state or fetch data. Compute during render or use a query.
 - Avoid horizontal scroll anywhere, not only on the page. Reflow a wide table into stacked rows instead of scrolling it.
+- Type a date in `DateInput` (`mm/dd/yyyy`, "/" moves on), never a native date box; a date and time is `DateTimeInput`. The form keeps `YYYY-MM-DD`.
+- A form that sends data calls `useLeaveGuard(dirty)` and renders `LeaveDialog`, and wraps its save in `guard.whileSaving(...)`. This needs a data router: tests wrap a lone form in `DataRouter`, not `MemoryRouter`.
 - Every list needs a stable `key` (an id, not the index).
 - Handle loading, error, and empty states on every data view. Show loading with `Loading` (`src/shared/Loading.tsx`: dots, the words, and optional placeholder `rows`), not bare text.
 - Use `Toast` (`src/shared/Toast.tsx`) for alerts and notices that are not part of a data view. Errors stay until dismissed. Pass `autoDismissMs` to make a toast close itself (success toasts do).
@@ -243,8 +245,8 @@ Read any third-party skill before you add it. A skill steers Claude like code. D
 - Never commit `.env*.local`, FTP credentials, or build output.
 - Deploy secrets live in GitHub Actions secrets. Never in the repo.
 - See [docs/deployment.md](docs/deployment.md) for the GreenGeeks plan.
-- **Release candidates (from 2026-11-11).** The version is `1.0.0-rc.N`; we ship a new `rc.N` through this year's tournament and cut the first official `1.0.0` after it. `scripts/version.ts` reads `x.y.z-rc.N`: a candidate sorts below the final `x.y.z`, and the rules for 1.x apply (a missing bump fails). Tag each one `v1.0.0-rc.N` and publish it as a pre-release.
-- **Version.** One `x.y.z` (or `x.y.z-rc.N`) for the whole repo, kept the same in `api/package.json` and `web/package.json` (`npm version <x.y.z> --no-git-tag-version` in each folder). The API logs it as `service.version`. A release tag is `v<version>`. The `Version` job in the pull request workflow runs `scripts/checkVersion.ts`: in 0.x a missing bump is a warning, but a version at or below the newest release tag fails (after tagging 0.2.0, move to 0.3.0, or to 0.2.1 for a hotfix off `main`); a version below `main` or a mismatch between folders always fails; from 1.0.0 a missing bump fails. Run it locally with `npm run check:version`.
+- **Release candidates (from 2026-11-11).** The version is `1.0.0-rc.N`; we ship a new `rc.N` through this year's tournament and cut the first official `1.0.0` after it. `scripts/version.ts` reads `x.y.z-rc.N`: a candidate sorts below the final `x.y.z`, and a version equal to `main`'s passes until a tag closes it. Tag each one `v1.0.0-rc.N` and publish it as a pre-release.
+- **Version.** One `x.y.z` (or `x.y.z-rc.N`) for the whole repo, kept the same in `api/package.json` and `web/package.json` (`npm version <x.y.z> --no-git-tag-version` in each folder). The API logs it as `service.version`. A release tag is `v<version>`. The `Version` job in the pull request workflow runs `scripts/checkVersion.ts`: a version at or below the newest release tag fails (after tagging 0.2.0, move to 0.3.0, or to 0.2.1 for a hotfix off `main`); a version below `main` or a mismatch between folders always fails; a version equal to `main`'s passes (only a tag closes a version). Run it locally with `npm run check:version`.
 
 ## Working with the owner
 

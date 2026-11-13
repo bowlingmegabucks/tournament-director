@@ -1,3 +1,4 @@
+import { DateInput } from '../../shared/DateInput'
 import type { DeskFieldErrors, BowlerValues } from './types'
 import { bowlerFieldId, bowlerLabels, errorKeyOf } from './deskForm'
 import styles from './AddRegistration.module.css'
@@ -62,19 +63,32 @@ export function BowlerFields({
         <label className={styles.label} htmlFor={id}>
           {spec.label ?? bowlerLabels[key]}
         </label>
-        <input
-          id={id}
-          className={styles.input}
-          type={type}
-          value={values[key]}
-          maxLength={maxLength}
-          autoComplete={spec.autoComplete ?? 'off'}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={describedBy === '' ? undefined : describedBy}
-          onChange={(event) => {
-            onChange(key, event.target.value)
-          }}
-        />
+        {type === 'date' ? (
+          <DateInput
+            id={id}
+            className={styles.input}
+            value={values[key]}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={describedBy === '' ? undefined : describedBy}
+            onValueChange={(value) => {
+              onChange(key, value)
+            }}
+          />
+        ) : (
+          <input
+            id={id}
+            className={styles.input}
+            type={type}
+            value={values[key]}
+            maxLength={maxLength}
+            autoComplete={spec.autoComplete ?? 'off'}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={describedBy === '' ? undefined : describedBy}
+            onChange={(event) => {
+              onChange(key, event.target.value)
+            }}
+          />
+        )}
         {boxHint && (
           <p id={`${id}-hint`} className={styles.hint}>
             {boxHint}

@@ -85,7 +85,9 @@ const openForm = async () => {
 }
 /** A date-time box takes a whole value at once. */
 const pickDate = (value: string) => {
-  fireEvent.change(date(), { target: { value } })
+  const [day, time = ''] = value.split('T')
+  fireEvent.change(date(), { target: { value: day } })
+  fireEvent.change(screen.getByLabelText('Time'), { target: { value: time } })
 }
 /** The boxes every sweeper needs, filled. */
 async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
@@ -171,9 +173,8 @@ describe('NewSweeperPage', () => {
 
     await openForm()
 
-    expect(date()).toHaveAttribute('type', 'datetime-local')
-    expect(date()).toHaveAttribute('min', '2026-10-24T00:00')
-    expect(date()).toHaveAttribute('max', '2026-10-25T23:59')
+    expect(date()).toHaveAttribute('placeholder', 'mm/dd/yyyy')
+    expect(screen.getByLabelText('Time')).toHaveAttribute('type', 'time')
     expect(date()).toHaveAccessibleDescription(
       'Within the tournament dates: Oct 24 to Oct 25, 2026.',
     )

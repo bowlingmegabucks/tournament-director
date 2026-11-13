@@ -2,6 +2,10 @@ import { useId, useState } from 'react'
 import type { ChangeEvent, MouseEvent, SubmitEvent } from 'react'
 import { Link } from 'react-router'
 import { ConfirmChangesDialog } from '../../shared/ConfirmChangesDialog'
+import { LeaveDialog } from '../../shared/LeaveDialog'
+import { sameValues } from '../../shared/sameValues'
+import { useLeaveGuard } from '../../shared/useLeaveGuard'
+import { DateTimeInput } from '../../shared/DateTimeInput'
 import { FieldNoteLines } from '../../shared/FieldNoteLines'
 import { noteIds, type FieldNote, type SessionWarning } from '../../shared/sessionEdit'
 import { formatDateRange } from '../tournaments/format'
@@ -102,6 +106,8 @@ export function SweeperForm({
 }: Readonly<SweeperFormProps>) {
   const base = useId()
   const [values, setValues] = useState<SweeperFormValues>(initialValues)
+  // Leaving with the boxes changed from where they started asks first.
+  const guard = useLeaveGuard(!sameValues(values, initialValues))
   const [errors, setErrors] = useState<SweeperFieldErrors>({})
   const [summary, setSummary] = useState(false)
   // A field the director has typed in. Leaving one they never touched says nothing.
@@ -137,16 +143,20 @@ export function SweeperForm({
       ? validateSweeperChanges(initialValues, current, dates, divisionIds)
       : validateSweeper(current, dates, divisionIds)
 
+  function changeText(key: string, set: (current: SweeperFormValues) => SweeperFormValues) {
+    setValues(set)
+    setEdited((current) => ({ ...current, [key]: true }))
+    // A message about the old text would mislead. A gone division's message goes with any edit of pins.
+    setErrors((current) => without(current, key))
+  }
+
   function change(
     key: string,
     set: (current: SweeperFormValues, text: string) => SweeperFormValues,
   ) {
     return (event: ChangeEvent<HTMLInputElement>) => {
       const text = event.target.value
-      setValues((current) => set(current, text))
-      setEdited((current) => ({ ...current, [key]: true }))
-      // A message about the old text would mislead. A gone division's message goes with any edit of pins.
-      setErrors((current) => without(current, key))
+      changeText(key, (current) => set(current, text))
     }
   }
 
@@ -177,7 +187,7 @@ export function SweeperForm({
   }
 
   async function send(confirmWarnings: boolean) {
-    const result = await onSubmit(values, confirmWarnings)
+    const result = await guard.whileSaving(() => onSubmit(values, confirmWarnings))
     if (result === undefined) return
     if ('errors' in result) {
       // The dialog goes first, so the focus that `show` sets lands on the form.
@@ -310,18 +320,18 @@ export function SweeperForm({
         <label className={styles.label} htmlFor={idOf('date')}>
           Date and time (required)
         </label>
-        <input
-          className={styles.input}
+        <DateTimeInput
           id={idOf('date')}
           name="date"
-          type="datetime-local"
-          min={`${dates.startDate}T00:00`}
-          max={`${dates.endDate}T23:59`}
+          firstDay={dates.startDate}
+          inputClassName={styles.input}
           value={values.date}
           readOnly={notes['date']?.lock !== undefined}
-          aria-invalid={errors['date'] ? true : undefined}
-          aria-describedby={describedBy('date')}
-          onChange={change('date', (current, text) => ({ ...current, date: text }))}
+          invalid={Boolean(errors['date'])}
+          describedBy={describedBy('date')}
+          onValueChange={(text) => {
+            changeText('date', (current) => ({ ...current, date: text }))
+          }}
           onBlur={blur('date')}
         />
         <p id={`${idOf('date')}-hint`} className={styles.hint}>
@@ -392,6 +402,7 @@ export function SweeperForm({
           }}
         />
       )}
+      <LeaveDialog blocker={guard.blocker} />
     </form>
   )
 }

@@ -279,4 +279,21 @@ describe('applySaved (SCR-19, D-229)', () => {
     expect(beaNow).toEqual(bea)
     expect(view.games[0]?.pairs[0]?.bowlers[0]?.score).toBeNull()
   })
+
+  it('keeps a did-not-finish flag unless the save says it clears it (D-250)', () => {
+    const flagged = createGameBowler({
+      registrationId: 'cy',
+      scores: [null, null, null],
+      dnf: true,
+    })
+    const flaggedView = createGamesView({ games: [createGame(1, [createGamePair(1, [flagged])])] })
+    const dnfOf = (next: ReturnType<typeof applySaved>) => next.games[0]?.pairs[0]?.bowlers[0]?.dnf
+
+    expect(dnfOf(applySaved(flaggedView, 'cy', { scores: [null, null, null], total: 0 }))).toBe(
+      true,
+    )
+    expect(
+      dnfOf(applySaved(flaggedView, 'cy', { scores: [180, null, null], total: 180 }, true)),
+    ).toBe(false)
+  })
 })

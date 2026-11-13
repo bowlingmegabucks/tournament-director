@@ -6,6 +6,7 @@ import {
   createAtLargeResults,
   createAtLargeRow,
   createDivisionResult,
+  createLiveResults,
   createSeedingDivision,
   createSeedingResults,
   createSeedingRow,
@@ -20,6 +21,7 @@ import { SessionNotFoundError } from '../../shared/session'
 import { TournamentNotFoundError } from '../../shared/tournamentQuery'
 import {
   fetchAtLarge,
+  fetchLiveResults,
   fetchSeeding,
   fetchSquadResults,
   fetchSuperSweeper,
@@ -461,6 +463,19 @@ describe.each([
     }),
     empty: createSuperSweeperResults(),
   },
+  {
+    name: 'fetchLiveResults',
+    path: '/v1/tournaments/:id/live-results',
+    fetch: fetchLiveResults,
+    valid: createLiveResults({
+      sessions: [
+        { kind: 'squad', results: createSquadResults() },
+        { kind: 'sweeper', results: createSweeperResults() },
+      ],
+      superSweeper: createSuperSweeperResults(),
+    }),
+    empty: createLiveResults(),
+  },
 ])('$name', ({ path, fetch: load, valid, empty }) => {
   it('reads the results (RES-37)', async () => {
     respondWith(path, valid)
@@ -703,5 +718,77 @@ describe('the at-large, seeding, and super sweeper shape checks (RES-37)', () =>
     await expect(fetchSuperSweeper('t1', 'full-game')).rejects.toThrow(
       'Failed to load results (unexpected response)',
     )
+  })
+})
+
+describe('the live results shape checks (RES-47)', () => {
+  const good = createLiveResults({
+    sessions: [{ kind: 'squad', results: createSquadResults() }],
+  })
+
+  it.each([
+    ['a tournament with no id', { ...good, tournament: { id: 7, name: 'x' } }],
+    ['a tournament with no name', { ...good, tournament: { id: 'a', name: 7 } }],
+    ['a tournament that is missing', { ...good, tournament: null }],
+    ['no generated time', { ...good, generatedAt: 5 }],
+    ['sessions that is not a list', { ...good, sessions: {} }],
+    ['a session of an unknown kind', { ...good, sessions: [{ kind: 'other', results: {} }] }],
+    [
+      'a squad session holding sweeper results',
+      { ...good, sessions: [{ kind: 'squad', results: createSweeperResults() }] },
+    ],
+    [
+      'a sweeper session holding squad results',
+      { ...good, sessions: [{ kind: 'sweeper', results: createSquadResults() }] },
+    ],
+    ['a super sweeper of the wrong shape', { ...good, superSweeper: { rows: [] } }],
+    ['a super sweeper that is missing', { ...good, superSweeper: undefined }],
+  ])('rejects %s', async (_label, body) => {
+    respondWith('/v1/tournaments/:id/live-results', body)
+
+    await expect(fetchLiveResults('t1')).rejects.toThrow(
+      'Failed to load results (unexpected response)',
+    )
+  })
+
+  it('accepts a sweeper session holding sweeper results', async () => {
+    const body = createLiveResults({
+      sessions: [{ kind: 'sweeper', results: createSweeperResults() }],
+    })
+    respondWith('/v1/tournaments/:id/live-results', body)
+
+    await expect(fetchLiveResults('t1')).resolves.toEqual(body)
+  })
+})
+
+describe('the ranking mode in a results body (RES-45)', () => {
+  it.each([
+    [
+      'super sweeper',
+      () => fetchSuperSweeper('t1', 'full-game'),
+      '/v1/tournaments/:id/super-sweeper',
+    ],
+  ])('%s rejects a mode that is neither full-game nor live', async (_label, load, path) => {
+    respondWith(path, { ...createSuperSweeperResults(), mode: 'sometimes' })
+
+    await expect(load()).rejects.toThrow('Failed to load results (unexpected response)')
+  })
+
+  it('super sweeper rejects a missing complete flag with a good mode', async () => {
+    respondWith('/v1/tournaments/:id/super-sweeper', {
+      ...createSuperSweeperResults(),
+      complete: 'yes',
+    })
+
+    await expect(fetchSuperSweeper('t1', 'full-game')).rejects.toThrow(
+      'Failed to load results (unexpected response)',
+    )
+  })
+
+  it('super sweeper accepts live mode', async () => {
+    const live = { ...createSuperSweeperResults(), mode: 'live' as const }
+    respondWith('/v1/tournaments/:id/super-sweeper', live)
+
+    await expect(fetchSuperSweeper('t1', 'live')).resolves.toEqual(live)
   })
 })

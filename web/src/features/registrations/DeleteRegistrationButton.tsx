@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import danger from '../../shared/Danger.module.css'
 import { Toast } from '../../shared/Toast'
+import { skipLeaveGuard } from '../../shared/useLeaveGuard'
 import { RegistrationDeleteRefusedError, RegistrationPaidWarningError } from './deleteApi'
 import { DeleteRegistrationDialog } from './DeleteRegistrationDialog'
 import styles from './DeleteRegistration.module.css'
@@ -98,7 +99,7 @@ export function DeleteRegistrationButton({
       // Stryker disable next-line CallExpression: the row goes or the page leaves right after, which unmounts the dialog either way.
       close()
       await navigate(`/tournaments/${tournamentId}/registrations`, {
-        state: { updated: `${bowlerName}: Registration deleted.` },
+        state: { updated: `${bowlerName}: Registration deleted.`, ...skipLeaveGuard },
       })
     } catch (error) {
       if (closes.current !== closesAtStart) return
@@ -115,7 +116,7 @@ export function DeleteRegistrationButton({
       } else if (error instanceof RegistrationNotFoundError) {
         close()
         await navigate(`/tournaments/${tournamentId}/registrations`, {
-          state: { updated: `${bowlerName}: Registration was already deleted.` },
+          state: { updated: `${bowlerName}: Registration was already deleted.`, ...skipLeaveGuard },
         })
       } else {
         // Stryker disable next-line StringLiteral: a failed request always throws an Error; this only satisfies the type.

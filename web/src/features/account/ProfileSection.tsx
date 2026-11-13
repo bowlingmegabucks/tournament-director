@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { SubmitEvent } from 'react'
+import { LeaveDialog } from '../../shared/LeaveDialog'
+import { useLeaveGuard } from '../../shared/useLeaveGuard'
 import { useMe } from '../auth/useMe'
 import type { Notice } from './notice'
 import { useUpdateName } from './useAccount'
@@ -16,6 +18,8 @@ export function ProfileSection({ onNotice }: Readonly<{ onNotice: (notice: Notic
   // `undefined` until the user types, so the field shows the saved name and follows a refetch.
   const [draft, setDraft] = useState<string>()
   const name = draft ?? current
+  // Leaving with the name changed and not saved asks first.
+  const guard = useLeaveGuard(name !== current)
 
   function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -58,6 +62,7 @@ export function ProfileSection({ onNotice }: Readonly<{ onNotice: (notice: Notic
           {save.isPending ? 'Saving…' : 'Save name'}
         </button>
       </form>
+      <LeaveDialog blocker={guard.blocker} />
     </section>
   )
 }

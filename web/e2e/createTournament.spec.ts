@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { openTournamentsSignedIn } from './menu'
+import { fillDay } from './dateFields'
 
 // TRN-22: the director opens the form from the list, fixes the errors, saves, and lands on the overview.
 test('a director creates a tournament and sees it on the overview', async ({ page }) => {
@@ -13,8 +14,8 @@ test('a director creates a tournament and sees it on the overview', async ({ pag
   await expect(page.getByLabel('Name (required)', { exact: true })).toBeFocused()
 
   await page.getByLabel('Name (required)', { exact: true }).fill('Spring Classic')
-  await page.getByLabel('Start date (required)', { exact: true }).fill('2099-03-12')
-  await page.getByLabel('End date (required)', { exact: true }).fill('2099-03-14')
+  await fillDay(page, 'Start date (required)', '2099-03-12', true)
+  await fillDay(page, 'End date (required)', '2099-03-14', true)
   await page.getByLabel('Bowling center (required)', { exact: true }).fill('Bowl-O-Rama')
   await page.getByLabel('Entry fee in dollars (required)', { exact: true }).fill('60')
   await page.getByLabel('Games per squad (required)', { exact: true }).fill('6')

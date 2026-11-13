@@ -1561,3 +1561,42 @@ describe('what to collect, on every way in (D-166, D-164)', () => {
     expect(within(table).getByRole('row', { name: 'Total to collect $60.00' })).toBeVisible()
   })
 })
+
+describe('leaving the add page with changes', () => {
+  it('asks once a name is typed, and not for a form left as it started', async () => {
+    signIn()
+    serve()
+    const user = userEvent.setup()
+    await open()
+    await user.click(screen.getByRole('button', { name: 'New bowler' }))
+    await screen.findByRole('heading', { name: 'Bowler', level: 2 })
+    await user.click(screen.getByRole('link', { name: 'Cancel' }))
+    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).not.toBeInTheDocument()
+  })
+
+  it('asks after a name is typed', async () => {
+    signIn()
+    serve()
+    const user = userEvent.setup()
+    await open()
+    await user.click(screen.getByRole('button', { name: 'New bowler' }))
+    await user.type(await screen.findByLabelText('First name (required)'), 'Ann')
+
+    await user.click(screen.getByRole('link', { name: 'Cancel' }))
+
+    expect(screen.getByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
+  })
+
+  it('asks after the stored email of a picked bowler is cleared', async () => {
+    signIn()
+    serve()
+    const user = userEvent.setup()
+    await open()
+    await pickMaria(user)
+    await user.clear(await screen.findByLabelText('Email'))
+
+    await user.click(screen.getByRole('link', { name: 'Cancel' }))
+
+    expect(screen.getByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
+  })
+})

@@ -2,6 +2,10 @@ import { useId, useState } from 'react'
 import type { ChangeEvent, MouseEvent, SubmitEvent } from 'react'
 import { Link } from 'react-router'
 import { ConfirmChangesDialog } from '../../shared/ConfirmChangesDialog'
+import { LeaveDialog } from '../../shared/LeaveDialog'
+import { sameValues } from '../../shared/sameValues'
+import { useLeaveGuard } from '../../shared/useLeaveGuard'
+import { DateTimeInput } from '../../shared/DateTimeInput'
 import { FieldNoteLines } from '../../shared/FieldNoteLines'
 import { noteIds, type FieldNote, type SessionWarning } from '../../shared/sessionEdit'
 import { formatDateRange } from '../tournaments/format'
@@ -83,6 +87,8 @@ export function SquadForm({
 }: Readonly<SquadFormProps>) {
   const base = useId()
   const [values, setValues] = useState<SquadFormValues>(initialValues)
+  // Leaving with the boxes changed from where they started asks first.
+  const guard = useLeaveGuard(!sameValues(values, initialValues))
   const [errors, setErrors] = useState<SquadFieldErrors>({})
   const [summary, setSummary] = useState(false)
   // A field the director has typed in. Leaving one they never touched says nothing.
@@ -109,13 +115,16 @@ export function SquadForm({
     if (first) focusField(first)
   }
 
+  function changeTo(name: SquadField, value: string) {
+    setValues((current) => ({ ...current, [name]: value }))
+    setEdited((current) => ({ ...current, [name]: true }))
+    // A message about the old text would mislead.
+    setErrors((current) => ({ ...current, [name]: undefined }))
+  }
+
   function change(name: SquadField) {
     return (event: ChangeEvent<HTMLInputElement>) => {
-      const value = event.target.value
-      setValues((current) => ({ ...current, [name]: value }))
-      setEdited((current) => ({ ...current, [name]: true }))
-      // A message about the old text would mislead.
-      setErrors((current) => ({ ...current, [name]: undefined }))
+      changeTo(name, event.target.value)
     }
   }
 
@@ -141,7 +150,7 @@ export function SquadForm({
   }
 
   async function send(confirmWarnings: boolean) {
-    const result = await onSubmit(values, confirmWarnings)
+    const result = await guard.whileSaving(() => onSubmit(values, confirmWarnings))
     if (result === undefined) return
     if ('errors' in result) {
       // The dialog goes first, so the focus that `show` sets lands on the form.
@@ -246,18 +255,18 @@ export function SquadForm({
         <label className={styles.label} htmlFor={idOf('date')}>
           Date and time (required)
         </label>
-        <input
-          className={styles.input}
+        <DateTimeInput
           id={idOf('date')}
           name="date"
-          type="datetime-local"
-          min={`${dates.startDate}T00:00`}
-          max={`${dates.endDate}T23:59`}
+          firstDay={dates.startDate}
+          inputClassName={styles.input}
           value={values.date}
           readOnly={notes.date?.lock !== undefined}
-          aria-invalid={errors.date ? true : undefined}
-          aria-describedby={describedBy('date')}
-          onChange={change('date')}
+          invalid={Boolean(errors.date)}
+          describedBy={describedBy('date')}
+          onValueChange={(value) => {
+            changeTo('date', value)
+          }}
           onBlur={blur('date')}
         />
         <p id={`${idOf('date')}-hint`} className={styles.hint}>
@@ -311,6 +320,7 @@ export function SquadForm({
           }}
         />
       )}
+      <LeaveDialog blocker={guard.blocker} />
     </form>
   )
 }

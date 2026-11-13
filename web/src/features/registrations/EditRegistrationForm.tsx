@@ -35,6 +35,8 @@ import { EditReviewStep } from './EditReviewStep'
 import { DeskRejectedError } from './bowlerApi'
 import { RegistrationFields } from './RegistrationFields'
 import { focusOnMount, stepNames, type Step } from './stepInfo'
+import { LeaveDialog } from '../../shared/LeaveDialog'
+import { useLeaveGuard } from '../../shared/useLeaveGuard'
 import type { DeskFieldErrors, EditInfo, EditWarning, ExistingRegistration } from './types'
 import { useEditRegistration } from './useEditRegistration'
 import styles from './AddRegistration.module.css'
@@ -163,6 +165,8 @@ export function EditRegistrationForm({
   const money = moneyOf({ info, registration, squads, sweepers })
   const somethingChanged = hasChanges(request)
   const needsTick = money.refund.length > 0 && !removalConfirmed
+  // Leaving with an edit not yet saved asks first.
+  const guard = useLeaveGuard(somethingChanged)
 
   function show(next: DeskFieldErrors, at: Step) {
     setErrors(next)
@@ -184,10 +188,12 @@ export function EditRegistrationForm({
 
   async function submit(confirmWarnings: boolean): Promise<void> {
     try {
-      const result = await edit.mutateAsync(
-        buildEditRequest({ info, bowler, registration, confirmWarnings }),
-      )
-      await navigate(listUrl, { state: { updated: `${name}: ${describeResult(result)}` } })
+      await guard.whileSaving(async () => {
+        const result = await edit.mutateAsync(
+          buildEditRequest({ info, bowler, registration, confirmWarnings }),
+        )
+        await navigate(listUrl, { state: { updated: `${name}: ${describeResult(result)}` } })
+      })
     } catch (error) {
       const outcome = outcomeOf(error)
       if (outcome.kind === 'changed') {
@@ -356,6 +362,7 @@ export function EditRegistrationForm({
           }}
         />
       )}
+      <LeaveDialog blocker={guard.blocker} />
       {failure && (
         <Toast
           kind="error"

@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import { menuLink, openTournamentsAsAdmin, openTournamentsSignedIn } from './menu'
+import { fillDateTime, firstDayAt } from './dateFields'
 
 const wcagAA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 const colorSchemes = ['dark', 'light'] as const
@@ -420,9 +421,7 @@ for (const colorScheme of colorSchemes) {
       await menuLink(page, 'Sweepers')
       // The demo's two sweepers cannot be deleted, so add one first.
       await page.getByRole('link', { name: 'New sweeper' }).click()
-      const min = await page.getByLabel('Date and time (required)').getAttribute('min')
-      if (!min) throw new Error('The date box has no minimum')
-      await page.getByLabel('Date and time (required)').fill(`${min.slice(0, 10)}T21:30`)
+      await fillDateTime(page, await firstDayAt(page, '21:30'))
       await page.getByLabel('Starting lane (required)').fill('3')
       await page.getByLabel('Number of lanes (required)').fill('10')
       await page.getByLabel('Bowlers per pair (required)').fill('5')
@@ -867,6 +866,7 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
       await page.getByRole('button', { name: 'No, change the USBC ID' }).click()
       await page.getByRole('link', { name: 'Cancel' }).click()
+      await page.getByRole('button', { name: 'Leave page' }).click()
 
       // Already registered, found at save.
       await page.getByRole('link', { name: 'Add registration' }).click()

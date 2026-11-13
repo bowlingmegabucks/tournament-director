@@ -375,3 +375,21 @@ describe('AccountPage', () => {
     })
   })
 })
+
+describe('AccountPage leaving with changes', () => {
+  it('asks before leaving with an unsaved name, and not with the saved one', async () => {
+    setMockUser(createSignedInUser({ name: 'Dana Director' }))
+    renderApp('/account')
+    const name = await screen.findByLabelText('Name')
+    const home = () => screen.getByRole('link', { name: 'Home' })
+    await userEvent.type(name, 'X')
+
+    await userEvent.click(home())
+
+    expect(screen.getByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Stay on this page' }))
+    await userEvent.type(name, '{Backspace}')
+    await userEvent.click(home())
+    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).not.toBeInTheDocument()
+  })
+})

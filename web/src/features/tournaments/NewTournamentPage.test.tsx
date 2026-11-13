@@ -20,6 +20,9 @@ const filled: Record<string, string> = {
   'Super sweeper cash ratio (required)': '4',
 }
 
+/** `2027-03-12` as typed into a date box: `03/12/2027`. Other text stays. */
+const usDate = (value: string) => value.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$2/$3/$1')
+
 async function fillIn(
   user: ReturnType<typeof userEvent.setup>,
   overrides: Record<string, string> = {},
@@ -27,7 +30,7 @@ async function fillIn(
   for (const [label, value] of Object.entries({ ...filled, ...overrides })) {
     const input = screen.getByLabelText(label)
     await user.clear(input)
-    if (value !== '') await user.type(input, value)
+    if (value !== '') await user.type(input, usDate(value))
   }
 }
 
@@ -101,7 +104,7 @@ describe('NewTournamentPage', () => {
 
     const input = screen.getByLabelText(label)
     await user.clear(input)
-    await user.type(input, value)
+    await user.type(input, usDate(value))
     await user.tab()
 
     expect(input).toHaveAccessibleDescription(
@@ -269,8 +272,14 @@ describe('NewTournamentPage', () => {
     renderApp('/tournaments/new')
     await screen.findByRole('heading', { name: 'New tournament' })
 
-    expect(screen.getByLabelText('Start date (required)')).toHaveAttribute('type', 'date')
-    expect(screen.getByLabelText('End date (required)')).toHaveAttribute('type', 'date')
+    expect(screen.getByLabelText('Start date (required)')).toHaveAttribute(
+      'placeholder',
+      'mm/dd/yyyy',
+    )
+    expect(screen.getByLabelText('End date (required)')).toHaveAttribute(
+      'placeholder',
+      'mm/dd/yyyy',
+    )
     expect(screen.getByLabelText('Name (required)')).toHaveAttribute('type', 'text')
     expect(screen.getByLabelText('Name (required)')).not.toHaveAttribute('inputmode')
     expect(screen.getByLabelText('Name (required)')).not.toHaveAccessibleDescription()
@@ -433,7 +442,7 @@ describe('NewTournamentPage', () => {
     expect(screen.getByLabelText('End date (required)')).toBeInvalid()
 
     await user.clear(screen.getByLabelText('Start date (required)'))
-    await user.type(screen.getByLabelText('Start date (required)'), '2027-03-10')
+    await user.type(screen.getByLabelText('Start date (required)'), '03/10/2027')
 
     expect(screen.getByLabelText('End date (required)')).toBeValid()
   })
@@ -450,7 +459,7 @@ describe('NewTournamentPage', () => {
     await user.tab()
 
     await user.clear(screen.getByLabelText('Start date (required)'))
-    await user.type(screen.getByLabelText('Start date (required)'), '2027-03-13')
+    await user.type(screen.getByLabelText('Start date (required)'), '03/13/2027')
 
     expect(screen.getByLabelText('End date (required)')).toHaveAccessibleDescription(
       'End date must be on or after start date',
@@ -472,6 +481,88 @@ describe('NewTournamentPage', () => {
     await user.clear(start)
     await user.type(start, '2027-03-20')
     await user.tab()
+
+    expect(screen.getByLabelText('End date (required)')).toHaveAccessibleDescription(
+      'End date must be on or after start date',
+    )
+  })
+})
+
+describe('NewTournamentPage leaving with changes', () => {
+  it('asks before Cancel once a box has text, and lets an untouched form go', async () => {
+    signInAs('director')
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).not.toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('Name (required)'), 'Spring')
+    await user.click(screen.getByRole('link', { name: 'Cancel' }))
+
+    expect(screen.getByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Stay on this page' }))
+    expect(screen.getByLabelText('Name (required)')).toHaveValue('Spring')
+  })
+
+  it('asks when a date was typed, and lets Leave go to the list', async () => {
+    signInAs('director')
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    await user.type(screen.getByLabelText('Start date (required)'), '03/12/2027')
+
+    await user.click(screen.getByRole('link', { name: 'Cancel' }))
+    await user.click(screen.getByRole('button', { name: 'Leave page' }))
+
+    expect(await screen.findByRole('heading', { name: 'Tournaments', level: 1 })).toBeVisible()
+  })
+})
+
+describe('NewTournamentPage end date message while other boxes change (TRN-02)', () => {
+  async function openWithEndBeforeStart() {
+    signInAs('director')
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+    await fillIn(user, {
+      'Start date (required)': '2027-03-14',
+      'End date (required)': '2027-03-12',
+    })
+    await user.tab()
+    return user
+  }
+
+  it('keeps the end date message when another box is typed in', async () => {
+    const user = await openWithEndBeforeStart()
+    const end = screen.getByLabelText('End date (required)')
+    expect(end).toHaveAccessibleDescription('End date must be on or after start date')
+
+    await user.type(screen.getByLabelText('Name (required)'), 'x')
+
+    expect(end).toHaveAccessibleDescription('End date must be on or after start date')
+  })
+
+  it('says nothing about the end date until the director leaves a box', async () => {
+    signInAs('director')
+    const user = userEvent.setup()
+    renderApp('/tournaments/new')
+    await screen.findByRole('heading', { name: 'New tournament' })
+
+    await user.type(screen.getByLabelText('End date (required)'), '03/12/2027')
+    await user.type(screen.getByLabelText('Start date (required)'), '03/14/2027')
+
+    expect(screen.getByLabelText('End date (required)')).not.toHaveAccessibleDescription(
+      'End date must be on or after start date',
+    )
+    expect(screen.getByLabelText('End date (required)')).toBeValid()
+  })
+
+  it('holds the end date message while the start date is only partly typed', async () => {
+    const user = await openWithEndBeforeStart()
+    const start = screen.getByLabelText('Start date (required)')
+
+    await user.clear(start)
+    await user.type(start, '03/1')
 
     expect(screen.getByLabelText('End date (required)')).toHaveAccessibleDescription(
       'End date must be on or after start date',

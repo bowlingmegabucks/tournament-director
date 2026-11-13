@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import type { SubmitEvent } from 'react'
+import { LeaveDialog } from '../../shared/LeaveDialog'
 import { Loading } from '../../shared/Loading'
 import { Page } from '../../shared/Page'
 import { QueryError } from '../../shared/QueryError'
 import { Toast } from '../../shared/Toast'
+import { useLeaveGuard } from '../../shared/useLeaveGuard'
 import { RolePicker } from './RolePicker'
 import { useCreateUser, useUserOptions } from './useUsers'
 import styles from './NewUserPage.module.css'
@@ -23,6 +25,8 @@ export function NewUserPage() {
   const [roles, setRoles] = useState<string[]>([])
   const [rolesMissing, setRolesMissing] = useState(false)
   const [invited, setInvited] = useState<string>()
+  // Leaving with the boxes filled and no invite sent asks first.
+  const guard = useLeaveGuard(name !== '' || email !== '' || roles.length > 0)
 
   function toggle(role: string, checked: boolean) {
     setRoles((current) => (checked ? [...current, role] : current.filter((r) => r !== role)))
@@ -120,6 +124,7 @@ export function NewUserPage() {
           </button>
         </form>
       )}
+      <LeaveDialog blocker={guard.blocker} />
       {invited && (
         <Toast
           kind="success"

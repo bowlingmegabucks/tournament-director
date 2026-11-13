@@ -16,6 +16,7 @@ import {
   TotalCells,
   TotalHeaders,
 } from './ScoreColumns'
+import { PayoutTag } from './PayoutTag'
 import styles from './ResultsTable.module.css'
 import type { DivisionResult, SquadRow } from './types'
 
@@ -108,6 +109,7 @@ export function DivisionBody({
                       <span className={styles.tag}>Advanced earlier</span>
                     )}
                     <TieMarks row={item.row} />
+                    <PayoutTag amount={item.row.payout} />
                   </th>
                   <PlusMinusCell total={item.row.total} games={item.row.games} />
                   <GameCells

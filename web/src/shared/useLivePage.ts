@@ -19,8 +19,8 @@ interface LivePageOptions<Page, Detail extends object> {
   path: string
   queryKey: QueryKey
   enabled: boolean
-  /** The message kinds this page ignores (a lane page ignores `scores`). */
-  ignores?: string
+  /** The message kinds this page ignores (a lane page ignores `scores` and `payouts`). */
+  ignores?: readonly string[]
   /** What changed between two answers, or `undefined` when nothing the page would say. */
   change: (before: Page, after: Page) => (Detail & { text: string }) | undefined
 }
@@ -53,7 +53,7 @@ export function useLivePage<Page, Detail extends object>({
 
   const state = useEventStream(path, enabled, {
     onChange: (kind) => {
-      if (kind === ignores) return
+      if (ignores?.includes(kind)) return
       const before = queryClient.getQueryData<Page>(queryKey)
       void queryClient.invalidateQueries({ queryKey }).then(() => {
         const after = queryClient.getQueryData<Page>(queryKey)

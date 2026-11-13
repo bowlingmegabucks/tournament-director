@@ -13,7 +13,7 @@ export type SessionEvents = LivePage<{ pairs: number[] }>
 /**
  * Keeps the lane page fresh from the live stream of one squad or sweeper (LAN-21, D-217, D-218). A
  * `changed` message refetches the page and says what moved; a reconnect after a drop refetches
- * once. A `scores` message is about the Scores tab, not lanes, so this page ignores it (D-232).
+ * once. A `scores` or `payouts` message is about another tab, not lanes, so this page ignores it (D-232, D-285).
  * The stream is `useEventStream`; the refetch and the line are `useLivePage`.
  */
 export function useSessionEvents(
@@ -26,7 +26,7 @@ export function useSessionEvents(
     path: `/v1/tournaments/${tournamentId}/${kind}s/${sessionId}/events`,
     queryKey: laneKeys.page(kind, tournamentId, sessionId),
     enabled,
-    ignores: 'scores',
+    ignores: ['scores', 'payouts'],
     change: (before, after) => {
       const found = diffPages(before, after)
       const text = describeChange(after, found)

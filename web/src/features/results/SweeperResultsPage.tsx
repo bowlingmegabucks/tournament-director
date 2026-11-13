@@ -11,6 +11,7 @@ import styles from './ResultsPage.module.css'
 import tableStyles from './ResultsTable.module.css'
 import { PrintResults } from './PrintResults'
 import { SweeperTable } from './SweeperTable'
+import { useTournamentOpen } from '../tournaments/useTournamentOpen'
 import { useChosenMode } from './useChosenMode'
 import { useResultsEvents, useSweeperResults } from './useResults'
 import { UnofficialNotice } from './UnofficialNotice'
@@ -25,13 +26,16 @@ export function SweeperResultsPage() {
   // Stryker disable next-line StringLiteral: the route always has these params; this only satisfies the type.
   const { id = '', sessionId = '' } = useParams()
   const tournament = useOutletContext<Tournament>()
+  const tournamentOpen = useTournamentOpen(id)
   const mode = useChosenMode()
   const { data, error, refetch } = useSweeperResults(id, sessionId, mode)
   const live = useResultsEvents(
     'sweeper',
     id,
     sessionId,
-    data !== undefined && !data.session.complete,
+    // A complete session still follows its stream until the tournament completes: a director may
+    // save payouts, and they show in the rows (D-285).
+    data !== undefined && (!data.session.complete || tournamentOpen),
   )
   const { printing, print } = useResultsPrint()
 

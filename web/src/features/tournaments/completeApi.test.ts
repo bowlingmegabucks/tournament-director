@@ -5,6 +5,7 @@ import { TournamentNotFoundError } from '../../shared/tournamentQuery'
 import {
   completedMessage,
   completeLines,
+  payoutNotes,
   completeTournament,
   fetchCompleteInfo,
   TournamentCompleteRefusedError,
@@ -21,6 +22,9 @@ const info = (overrides: Partial<TournamentCompleteInfo> = {}): TournamentComple
   openSweeperCount: 1,
   noScoreCount: 4,
   partialCount: 2,
+  payoutCount: 5,
+  unpaidPayoutCount: 2,
+  unpaidPayoutTotal: '1450.00',
   ...overrides,
 })
 
@@ -171,18 +175,24 @@ describe('fetchCompleteInfo (TRN-41, D-259)', () => {
     expect(error).toHaveProperty('message', message)
   })
 
-  it.each(['squadCount', 'openSquadCount', 'openSweeperCount', 'noScoreCount', 'partialCount'])(
-    'throws when %s is missing',
-    async (missing) => {
-      const body: Record<string, number> = { ...info() }
-      delete body[missing]
-      server.use(http.get(infoPath, () => HttpResponse.json({ completeInfo: body })))
+  it.each([
+    'squadCount',
+    'openSquadCount',
+    'openSweeperCount',
+    'noScoreCount',
+    'partialCount',
+    'payoutCount',
+    'unpaidPayoutCount',
+    'unpaidPayoutTotal',
+  ])('throws when %s is missing', async (missing) => {
+    const body: Record<string, number | string> = { ...info() }
+    delete body[missing]
+    server.use(http.get(infoPath, () => HttpResponse.json({ completeInfo: body })))
 
-      await expect(fetchCompleteInfo(id)).rejects.toThrow(
-        'Failed to load what completing does (unexpected response)',
-      )
-    },
-  )
+    await expect(fetchCompleteInfo(id)).rejects.toThrow(
+      'Failed to load what completing does (unexpected response)',
+    )
+  })
 
   it('names the failure when the body is not JSON', async () => {
     server.use(http.get(infoPath, () => new HttpResponse('nope')))
@@ -260,5 +270,26 @@ describe('completeLines (TRN-43, D-259)', () => {
         info({ openSquadCount: 0, openSweeperCount: 0, noScoreCount: 0, partialCount: 0 }),
       ),
     ).toEqual([])
+  })
+})
+
+describe('payoutNotes (PAY-15, D-279)', () => {
+  it('says none are recorded when the count is zero', () => {
+    expect(payoutNotes(info({ payoutCount: 0, unpaidPayoutCount: 0 }))).toEqual([
+      'No payouts are recorded.',
+    ])
+  })
+
+  it('counts the unpaid ones with their total, in the singular for one', () => {
+    expect(
+      payoutNotes(info({ payoutCount: 4, unpaidPayoutCount: 2, unpaidPayoutTotal: '1450.00' })),
+    ).toEqual(['2 payouts are not marked paid ($1,450.00).'])
+    expect(
+      payoutNotes(info({ payoutCount: 4, unpaidPayoutCount: 1, unpaidPayoutTotal: '5.50' })),
+    ).toEqual(['1 payout is not marked paid ($5.50).'])
+  })
+
+  it('says nothing when every payout is paid', () => {
+    expect(payoutNotes(info({ payoutCount: 4, unpaidPayoutCount: 0 }))).toEqual([])
   })
 })

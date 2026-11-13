@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import {
+  createSettings,
   createSweeper,
   createSweeperResults,
   createSweeperRow,
@@ -266,8 +267,14 @@ describe('SweeperResultsPage', () => {
     expect(screen.queryByText(/Unofficial results/)).not.toBeInTheDocument()
   })
 
-  it('stops asking once the sweeper is complete', async () => {
+  it('stops asking once the sweeper and the tournament are complete (D-285)', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
+    server.use(
+      http.get('/v1/tournaments/:id/settings', () =>
+        HttpResponse.json({ settings: createSettings({ completed: true }) }),
+      ),
+    )
+
     const results = filled({ session: { ...filled().session, complete: true } })
     serve(results)
     let asked = 0

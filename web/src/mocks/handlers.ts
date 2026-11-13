@@ -547,6 +547,9 @@ export const handlers = [
             openSweeperCount: 1,
             noScoreCount: 3,
             partialCount: 1,
+            payoutCount: 4,
+            unpaidPayoutCount: 2,
+            unpaidPayoutTotal: '350.00',
           },
         })
       : notFound(),

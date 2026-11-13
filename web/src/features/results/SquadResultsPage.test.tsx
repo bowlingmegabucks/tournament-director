@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import {
   createDivisionResult,
+  createSettings,
   createSquad,
   createSquadResults,
   createSquadRow,
@@ -790,8 +791,14 @@ describe('SquadResultsPage refresh while the stream is down (RES-44, D-241)', ()
     })
   })
 
-  it('stops asking once the squad is complete (D-10)', async () => {
+  it('stops asking once the squad and the tournament are complete (D-10, D-285)', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
+    server.use(
+      http.get('/v1/tournaments/:id/settings', () =>
+        HttpResponse.json({ settings: createSettings({ completed: true }) }),
+      ),
+    )
+
     const results = createSquadResults({
       session: { ...createSquadResults().session, complete: true },
       divisions: [openDivision()],

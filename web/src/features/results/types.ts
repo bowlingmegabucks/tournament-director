@@ -30,6 +30,11 @@ interface RankedRow {
   total: number
   games: number
   ties: Tie[]
+  /**
+   * What the bowler cashed for in this event, saved by a director (PAY-20, D-284): money text such as
+   * `"100.00"`. `null` with no saved payout, and for any row that is not an inferred payee.
+   */
+  payout: string | null
 }
 
 /** A placed bowler of a squad division. The page draws the lines where `group` changes (RES-11). */
@@ -161,6 +166,8 @@ export interface AtLargeResults {
 
 /** RES-20: a finalist, or after the cut line any other bowler. */
 export interface SeedingRow {
+  /** What the finalist won in the finals (PAY-20, D-284), money text; `null` with no saved payout. */
+  payout: string | null
   registrationId: string
   name: string
   seed: number

@@ -170,6 +170,11 @@ function SessionPortalView({
           <li>
             <NavLink to="results">Results</NavLink>
           </li>
+          <Can permission="payouts.read">
+            <li>
+              <NavLink to="payouts">Payouts</NavLink>
+            </li>
+          </Can>
         </ul>
       </nav>
       <Outlet context={tournament} />

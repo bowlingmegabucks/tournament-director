@@ -29,14 +29,14 @@ describe('createEncryption', () => {
 
       expect(stored).toMatch(/^[A-Za-z0-9+/]+={0,2}$/)
       const bytes = Buffer.from(stored, 'base64')
-      expect(bytes.length).toBe(64 + 16)
+      expect(bytes).toHaveLength(64 + 16)
       expect(bytes.toString('base64')).toBe(stored)
     })
 
     it('grows by one block when the text fills a block (PKCS7, SEC-03)', async () => {
       const stored = await encryption.encrypt('a'.repeat(16))
 
-      expect(Buffer.from(stored, 'base64').length).toBe(64 + 32)
+      expect(Buffer.from(stored, 'base64')).toHaveLength(64 + 32)
     })
 
     it('uses a new salt and IV for each value (SEC-04, SEC-05)', async () => {

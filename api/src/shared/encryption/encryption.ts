@@ -43,7 +43,7 @@ export function createEncryption(key: string): Encryption {
     const salt = randomBytes(SALT_BYTES)
     const iv = randomBytes(IV_BYTES)
     const cipher = createCipheriv(
-      'aes-256-cbc',
+      'aes-256-cbc', // NOSONAR: the legacy desk app wrote CBC with PKCS7; reading its data needs both (D-262)
       await derive(key, salt),
       iv.subarray(0, IV_USED_BYTES),
     )
@@ -65,7 +65,7 @@ export function createEncryption(key: string): Encryption {
       const salt = bytes.subarray(0, SALT_BYTES)
       const iv = bytes.subarray(SALT_BYTES, bodyStart)
       const decipher = createDecipheriv(
-        'aes-256-cbc',
+        'aes-256-cbc', // NOSONAR: the legacy desk app wrote CBC with PKCS7; reading its data needs both (D-262)
         await derive(key, salt),
         iv.subarray(0, IV_USED_BYTES),
       )

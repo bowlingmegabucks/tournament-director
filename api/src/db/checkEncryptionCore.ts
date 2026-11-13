@@ -37,7 +37,9 @@ export async function checkStoredValues(
   }
   // Stryker disable next-line EqualityOperator: one extra pass slices nothing, so `<=` changes no result.
   for (let start = 0; start < values.length; start += BATCH) {
+    // Batches run one after another on purpose, to cap the thread pool jobs.
     const outcomes = await Promise.all(
+      // NOSONAR
       values.slice(start, start + BATCH).map((v) => classify(v, encryption)),
     )
     for (const outcome of outcomes) counts[outcome]++

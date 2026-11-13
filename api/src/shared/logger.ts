@@ -17,7 +17,7 @@ const MAX_DEPTH = 5
 // `*` matches one key, so `*.*.ssn` is two levels down. Pino's wildcard cannot match any depth.
 const redactedPaths = redactedFields.flatMap((field) =>
   Array.from({ length: MAX_DEPTH }, (_, depth) =>
-    [...Array<string>(depth).fill('*'), field].join('.'),
+    [...new Array<string>(depth).fill('*'), field].join('.'),
   ),
 )
 

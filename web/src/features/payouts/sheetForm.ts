@@ -84,6 +84,10 @@ export function fillAmount(
   return rows.map((row) => (ids.has(row.registrationId) ? { ...row, amount } : row))
 }
 
+/** The director moved the Paid tick on this row (a new row counts when it is ticked). */
+const paidMoved = (row: RowState): boolean =>
+  row.saved === null ? row.paid : row.paid !== row.saved.paid
+
 /**
  * What the save sends: every row with an amount, and every row that had a saved payout (a cleared box
  * deletes it, D-270). A row with nothing typed and nothing saved is left out.
@@ -95,7 +99,8 @@ export function saveRowsOf(rows: readonly RowState[]): SaveRow[] {
       registrationId: row.registrationId,
       amount: row.amount.trim(),
       note: row.note.trim() === '' ? null : row.note.trim(),
-      paid: row.paid,
+      // Only a tick the director moved: an untouched row keeps the server's value.
+      ...(paidMoved(row) ? { paid: row.paid } : {}),
     }))
 }
 

@@ -88,12 +88,16 @@ export interface BowlerTotal {
   unpaidTotal: string
 }
 
-/** What a save sends for one bowler (PAY-12). A blank `amount` means no payout (D-270). */
+/**
+ * What a save sends for one bowler (PAY-12). A blank `amount` means no payout (D-270). `paid` is
+ * sent only when the director changed the tick: a row left alone keeps what the server holds, so a
+ * stale sheet cannot unmark a payout another desk marked paid.
+ */
 export interface SaveRow {
   registrationId: string
   amount: string
   note: string | null
-  paid: boolean
+  paid?: boolean
 }
 
 /** A paid payout a save would change, for the confirm (D-273). `to` is `null` for a delete. */

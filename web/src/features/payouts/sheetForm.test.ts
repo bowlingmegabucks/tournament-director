@@ -117,8 +117,33 @@ describe('saveRowsOf (PAY-07, PAY-12)', () => {
     ]
 
     expect(saveRowsOf(rows)).toEqual([
-      { registrationId: 'a', amount: '100', note: null, paid: false },
-      { registrationId: 'b', amount: '', note: null, paid: true },
+      { registrationId: 'a', amount: '100', note: null },
+      { registrationId: 'b', amount: '', note: null },
+    ])
+  })
+
+  it('sends paid only when the director moved the tick', () => {
+    const saved = { amount: '50.00', note: '', paid: false }
+    const rows = [
+      row({ registrationId: 'new-ticked', amount: '10', paid: true }),
+      row({ registrationId: 'new-plain', amount: '10', paid: false }),
+      row({ registrationId: 'kept', amount: '50', payoutId: 'p1', saved, paid: false }),
+      row({ registrationId: 'ticked', amount: '50', payoutId: 'p2', saved, paid: true }),
+      row({
+        registrationId: 'unticked',
+        amount: '50',
+        payoutId: 'p3',
+        saved: { ...saved, paid: true },
+        paid: false,
+      }),
+    ]
+
+    expect(saveRowsOf(rows).map((item) => [item.registrationId, item.paid])).toEqual([
+      ['new-ticked', true],
+      ['new-plain', undefined],
+      ['kept', undefined],
+      ['ticked', true],
+      ['unticked', false],
     ])
   })
 })

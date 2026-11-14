@@ -2,7 +2,9 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { showOnMount } from '../../shared/dialogParts'
 import dialog from '../../shared/Dialog.module.css'
 import { formatMoney } from '../../shared/formatMoney'
+import { LeaveDialog } from '../../shared/LeaveDialog'
 import { plural } from '../../shared/plural'
+import { useLeaveGuard } from '../../shared/useLeaveGuard'
 import { PaidConfirmError, PayoutFieldErrorsError } from './api'
 import { AddBowlerDialog } from './AddBowlerDialog'
 import { formatCents } from './amount'
@@ -178,6 +180,8 @@ export function PayoutSheetDialog({
   const save = useSavePayouts(sheet.event.source, tournamentId, sheet.event.eventId)
   const { source } = sheet.event
   const dirty = isDirty(rows, originalCount)
+  // A move to another page (or a reload) with typed work asks first; Close and Escape ask on their own.
+  const guard = useLeaveGuard(dirty)
   const total = totalOf(rows)
   const targets = sameAmountTargets(source, rows)
   const listed = new Set(rows.map((row) => row.registrationId))
@@ -198,30 +202,26 @@ export function PayoutSheetDialog({
     )
   }
 
-  const send = (confirmPaid: boolean) => {
-    save.mutate(
-      { rows: saveRowsOf(rows), confirmPaid },
-      {
-        onSuccess: () => {
-          setPaidChanges(undefined)
-          onSaved()
-        },
-        onError: (error) => {
-          if (error instanceof PaidConfirmError) {
-            setPaidChanges(error.changes)
-            return
-          }
-          setPaidChanges(undefined)
-          if (error instanceof PayoutFieldErrorsError) {
-            setErrors(error.errors)
-            setFailure(undefined)
-          } else {
-            setFailure(error.message)
-          }
-          setAttempt((count) => count + 1)
-        },
-      },
-    )
+  const send = async (confirmPaid: boolean) => {
+    try {
+      await guard.whileSaving(() => save.mutateAsync({ rows: saveRowsOf(rows), confirmPaid }))
+    } catch (error) {
+      if (error instanceof PaidConfirmError) {
+        setPaidChanges(error.changes)
+        return
+      }
+      setPaidChanges(undefined)
+      if (error instanceof PayoutFieldErrorsError) {
+        setErrors(error.errors)
+        setFailure(undefined)
+      } else {
+        setFailure(error instanceof Error ? error.message : 'Failed to save the payouts')
+      }
+      setAttempt((count) => count + 1)
+      return
+    }
+    setPaidChanges(undefined)
+    onSaved()
   }
 
   const submit = () => {
@@ -232,7 +232,7 @@ export function PayoutSheetDialog({
       setAttempt((count) => count + 1)
       return
     }
-    send(false)
+    void send(false)
   }
 
   const close = () => {
@@ -401,12 +401,13 @@ export function PayoutSheetDialog({
           </div>
         </dialog>
       )}
+      <LeaveDialog blocker={guard.blocker} />
       {paidChanges && (
         <ConfirmPaidDialog
           changes={paidChanges}
           pending={save.isPending}
           onConfirm={() => {
-            send(true)
+            void send(true)
           }}
           onClose={() => {
             setPaidChanges(undefined)

@@ -229,7 +229,7 @@ describe('the entry sheet (PAY-07, PAY-12, D-270, D-278)', () => {
     })
     expect(sent).toEqual([
       {
-        payouts: [{ registrationId: dana.registrationId, amount: '100', note: null, paid: false }],
+        payouts: [{ registrationId: dana.registrationId, amount: '100', note: null }],
       },
     ])
     expect(await screen.findByText('Payouts saved.')).toBeVisible()
@@ -309,9 +309,7 @@ describe('the entry sheet (PAY-07, PAY-12, D-270, D-278)', () => {
       expect(sent).toHaveLength(1)
     })
     expect(sent[0]).toEqual({
-      payouts: [
-        { registrationId: tom.registrationId, amount: '25', note: 'Lane breakdown', paid: false },
-      ],
+      payouts: [{ registrationId: tom.registrationId, amount: '25', note: 'Lane breakdown' }],
     })
   })
 
@@ -568,7 +566,7 @@ describe('the entry sheet (PAY-07, PAY-12, D-270, D-278)', () => {
       expect(sent).toHaveLength(1)
     })
     expect(sent[0]).toEqual({
-      payouts: [{ registrationId: dana.registrationId, amount: '', note: null, paid: false }],
+      payouts: [{ registrationId: dana.registrationId, amount: '', note: null }],
     })
   })
 
@@ -901,5 +899,36 @@ describe('a failed load of the event page', () => {
     await user.click(await screen.findByRole('button', { name: /try again/i }))
 
     expect(await screen.findByRole('button', { name: 'Enter payouts' })).toBeVisible()
+  })
+})
+
+describe('leaving the page with typed amounts (PAY-12)', () => {
+  const tabLink = (name: string) =>
+    within(screen.getByRole('navigation', { name: 'Squad pages' })).getByRole('link', { name })
+
+  it('asks before another page opens, and Stay keeps the sheet', async () => {
+    const user = userEvent.setup()
+    serve(sheet())
+    openPage()
+    const dialog = await openSheet(user)
+    await user.type(amountOf(dialog, 'Dana Whitfield'), '100')
+
+    await user.click(tabLink('Scores'))
+
+    const leave = await screen.findByRole('dialog', { name: 'Leave without saving?' })
+    await user.click(within(leave).getByRole('button', { name: 'Stay on this page' }))
+    expect(screen.getByRole('dialog', { name: 'Payouts: Squad' })).toBeVisible()
+    expect(amountOf(dialog, 'Dana Whitfield')).toHaveValue('100')
+  })
+
+  it('lets another page open when nothing was typed', async () => {
+    const user = userEvent.setup()
+    serve(sheet())
+    openPage()
+    await openSheet(user)
+
+    await user.click(tabLink('Scores'))
+
+    expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).not.toBeInTheDocument()
   })
 })

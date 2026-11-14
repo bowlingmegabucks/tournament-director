@@ -35,6 +35,10 @@ function FinalsPayoutsLink({
   )
 }
 
+function finalsActions(division: Data['divisions'][number], tournamentId: string) {
+  return <FinalsPayoutsLink tournamentId={tournamentId} divisionId={division.id} />
+}
+
 /**
  * The finals seeding of the tournament, one division at a time (RES-18 to RES-21a, D-87, D-89,
  * D-92). It says "Unofficial results" until every squad is complete and asks again every 15
@@ -50,9 +54,7 @@ export function SeedingPage() {
       notice={notice}
       renderBody={renderBody}
       renderPrint={renderPrint}
-      actions={(division, tournamentId) => (
-        <FinalsPayoutsLink tournamentId={tournamentId} divisionId={division.id} />
-      )}
+      actions={finalsActions}
     />
   )
 }

@@ -1,4 +1,5 @@
 .disclaimer {
+  display: block;
   margin: 0;
   padding: var(--space-3);
   border: var(--border-width) solid var(--color-accent);
@@ -196,4 +197,8 @@
   background: var(--color-bg);
   color: var(--color-text);
   font: inherit;
+}
+
+.block {
+  display: block;
 }

@@ -37,6 +37,10 @@ interface PayoutSheetDialogProps {
 type Sub = 'same' | 'add' | 'discard' | undefined
 
 /** A line for the wording of one row's boxes: "Amount" plus the bowler, so a screen reader hears whose. */
+function rowsNeedFixing(count: number): string {
+  return count === 1 ? '1 row needs' : `${count} rows need`
+}
+
 function Named({ label, name }: Readonly<{ label: string; name: string }>) {
   return (
     <>
@@ -69,8 +73,10 @@ function RowEditor({ row, finals, errors, onChange }: Readonly<RowEditorProps>) 
               onChange({ ticked: event.target.checked })
             }}
           />
-          <span className={shared.hidden}>Include {row.name} in </span>
-          Same amount
+          <span>
+            <span className={shared.hidden}>Include {row.name} in </span>
+            Same amount
+          </span>
         </label>
       )}
       <div className={styles.who}>
@@ -278,15 +284,12 @@ export function PayoutSheetDialog({
           <div className={styles.body}>
             <PayoutDisclaimer />
             {readOnly ? (
-              <p role="status" className={shared.disclaimer}>
-                {sheet.reason}
-              </p>
+              <output className={shared.disclaimer}>{sheet.reason}</output>
             ) : (
               <>
                 {(failedRows > 0 || failure) && (
                   <p ref={summaryRef} tabIndex={-1} role="alert" className={styles.errorSummary}>
-                    {failure ??
-                      `${failedRows === 1 ? '1 row needs' : `${failedRows} rows need`} fixing. Nothing was saved.`}
+                    {failure ?? `${rowsNeedFixing(failedRows)} fixing. Nothing was saved.`}
                   </p>
                 )}
                 <div className={shared.toolbar}>

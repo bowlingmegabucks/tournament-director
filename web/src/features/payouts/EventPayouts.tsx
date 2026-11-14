@@ -21,6 +21,12 @@ interface EventPayoutsProps {
 }
 
 /** The saved payouts of the sheet, with the figures above the table. */
+/** "these finals" or "this squad", for the empty message. */
+function eventNoun(label: string): string {
+  const lower = label.toLowerCase()
+  return lower.startsWith('finals') ? 'these finals' : `this ${lower}`
+}
+
 function figuresOf(sheet: PayoutSheet) {
   const saved = sheet.payees.flatMap((payee) =>
     payee.payout ? [{ payee, payout: payee.payout }] : [],
@@ -95,7 +101,7 @@ export function EventPayouts({ source, tournamentId, eventId }: Readonly<EventPa
           </dd>
         </div>
       </dl>
-      {data.reason && <p role="status">{data.reason}</p>}
+      {data.reason && <output className={styles.block}>{data.reason}</output>}
       <Can permission="payouts.write">
         <div className={styles.toolbar}>
           <button
@@ -111,7 +117,7 @@ export function EventPayouts({ source, tournamentId, eventId }: Readonly<EventPa
       </Can>
       {payouts.length === 0 ? (
         data.status === 'notReady' ? null : (
-          <p>{`No payouts are recorded for ${data.event.label.toLowerCase().startsWith('finals') ? 'these finals' : `this ${data.event.label.toLowerCase()}`}.`}</p>
+          <p>{`No payouts are recorded for ${eventNoun(data.event.label)}.`}</p>
         )
       ) : (
         <table className={`${styles.table} ${styles.stack}`}>

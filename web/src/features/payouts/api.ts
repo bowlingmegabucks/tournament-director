@@ -178,9 +178,10 @@ async function checkCommon(response: Response, failure: string): Promise<void> {
       .json()
       .catch(() => undefined)
     const message = field(body, 'message')
-    throw message === 'Tournament not found' && response.status === 404
-      ? new TournamentNotFoundError()
-      : new PayoutNotFoundError(isText(message) ? message : failure)
+    if (message === 'Tournament not found' && response.status === 404) {
+      throw new TournamentNotFoundError()
+    }
+    throw new PayoutNotFoundError(isText(message) ? message : failure)
   }
 }
 
@@ -202,6 +203,32 @@ export async function fetchSheet(
   return sheetOf(await readJson(response, failure), failure)
 }
 
+/** The 400 of a save: the rows that need fixing. */
+function fieldErrorsOf(body: unknown): PayoutFieldErrorsError {
+  const errors = field(body, 'errors')
+  const message = field(body, 'message')
+  const entries =
+    typeof errors === 'object' && errors !== null
+      ? Object.entries(errors).filter((entry): entry is [string, string] => isText(entry[1]))
+      : []
+  return new PayoutFieldErrorsError(
+    isText(message) ? message : 'Fix the rows marked and save again.',
+    Object.fromEntries(entries),
+  )
+}
+
+/** The 409 of a save: a paid payout to confirm, or a refusal. */
+function conflictOf(body: unknown): PaidConfirmError | PayoutRefusedError {
+  const message = field(body, 'message')
+  const text = isText(message) ? message : 'The payouts cannot be saved.'
+  const changes = field(body, 'paidChanges')
+  if (field(body, 'warnings') !== undefined && isArrayOf(changes, isChange)) {
+    return new PaidConfirmError(text, changes)
+  }
+  const event = field(field(body, 'errors'), 'event')
+  return new PayoutRefusedError(isText(event) ? event : text)
+}
+
 /**
  * Save the whole event (PAY-12, D-278). Throws `PayoutFieldErrorsError` (400), `PayoutRefusedError`
  * or `PaidConfirmError` (409), and `PayoutNotFoundError` (404). Answers the fresh sheet.
@@ -219,30 +246,8 @@ export async function savePayouts(
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ payouts: rows, ...(confirmPaid ? { confirmPaid: true } : {}) }),
   })
-  if (response.status === 400) {
-    const body = await readJson(response, failure)
-    const errors = field(body, 'errors')
-    const message = field(body, 'message')
-    const entries =
-      typeof errors === 'object' && errors !== null
-        ? Object.entries(errors).filter((entry): entry is [string, string] => isText(entry[1]))
-        : []
-    throw new PayoutFieldErrorsError(
-      isText(message) ? message : 'Fix the rows marked and save again.',
-      Object.fromEntries(entries),
-    )
-  }
-  if (response.status === 409) {
-    const body = await readJson(response, failure)
-    const message = field(body, 'message')
-    const text = isText(message) ? message : 'The payouts cannot be saved.'
-    const changes = field(body, 'paidChanges')
-    if (field(body, 'warnings') !== undefined && isArrayOf(changes, isChange)) {
-      throw new PaidConfirmError(text, changes)
-    }
-    const event = field(field(body, 'errors'), 'event')
-    throw new PayoutRefusedError(isText(event) ? event : text)
-  }
+  if (response.status === 400) throw fieldErrorsOf(await readJson(response, failure))
+  if (response.status === 409) throw conflictOf(await readJson(response, failure))
   await checkCommon(response, failure)
   if (!response.ok) throw new Error(`${failure} (${response.status})`)
   return sheetOf(await readJson(response, failure), failure)
@@ -297,7 +302,8 @@ export async function setPaid(
     const body = await readJson(response, failure)
     const event = field(field(body, 'errors'), 'event')
     const message = field(body, 'message')
-    throw new PayoutRefusedError(isText(event) ? event : isText(message) ? message : failure)
+    if (isText(event)) throw new PayoutRefusedError(event)
+    throw new PayoutRefusedError(isText(message) ? message : failure)
   }
   await checkCommon(response, failure)
   if (!response.ok) throw new Error(`${failure} (${response.status})`)

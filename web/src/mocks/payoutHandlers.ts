@@ -123,57 +123,62 @@ export function createPayoutHandlers() {
       paid: row.paid,
     }))
 
+  /** The errors one request row earns (the same rules as the API). */
+  const errorsOf = (row: unknown): Record<string, string> => {
+    const id = String(Reflect.get(Object(row), 'registrationId'))
+    const amount = parseAmount(String(Reflect.get(Object(row), 'amount') ?? ''))
+    const note = String(Reflect.get(Object(row), 'note') ?? '').trim()
+    if (amount.kind === 'invalid') return { [`amount:${id}`]: amount.message }
+    const needsNote =
+      amount.kind === 'amount' &&
+      note === '' &&
+      !inferred.some((bowler) => bowler.registrationId === id)
+    return needsNote ? { [`note:${id}`]: 'Say why this bowler is paid' } : {}
+  }
+
+  /** Store, change, or remove the payout one request row names. */
+  const applyRow = (source: PayoutSource, eventId: string, row: unknown) => {
+    const id = String(Reflect.get(Object(row), 'registrationId'))
+    const amount = parseAmount(String(Reflect.get(Object(row), 'amount') ?? ''))
+    const note = String(Reflect.get(Object(row), 'note') ?? '').trim()
+    const paid = Reflect.get(Object(row), 'paid') === true
+    const at = stored.findIndex(
+      (item) => item.source === source && item.eventId === eventId && item.registrationId === id,
+    )
+    if (amount.kind !== 'amount') {
+      if (at >= 0) stored.splice(at, 1)
+      return
+    }
+    const next = { cents: amount.cents, note: note === '' ? null : note, paid }
+    const found = stored[at]
+    if (found) {
+      Object.assign(found, next)
+      return
+    }
+    counter += 1
+    stored.push({
+      id: `b0000000-0000-4000-8000-${String(counter).padStart(12, '0')}`,
+      source,
+      eventId,
+      registrationId: id,
+      ...next,
+    })
+  }
+
   const save = async (source: PayoutSource, eventId: string, request: Request) => {
     const body: unknown = await request.json()
     const payouts: unknown =
       typeof body === 'object' && body !== null ? Reflect.get(body, 'payouts') : []
     const rows = Array.isArray(payouts) ? payouts : []
     const errors: Record<string, string> = {}
-    for (const row of rows) {
-      const id = String(Reflect.get(row, 'registrationId'))
-      const amount = parseAmount(String(Reflect.get(row, 'amount') ?? ''))
-      const note = String(Reflect.get(row, 'note') ?? '').trim()
-      if (amount.kind === 'invalid') errors[`amount:${id}`] = amount.message
-      else if (
-        amount.kind === 'amount' &&
-        note === '' &&
-        !inferred.some((bowler) => bowler.registrationId === id)
-      ) {
-        errors[`note:${id}`] = 'Say why this bowler is paid'
-      }
-    }
+    for (const row of rows) Object.assign(errors, errorsOf(row))
     if (Object.keys(errors).length > 0) {
       return HttpResponse.json(
         { message: 'Fix the rows marked and save again.', errors },
         { status: 400 },
       )
     }
-    for (const row of rows) {
-      const id = String(Reflect.get(row, 'registrationId'))
-      const amount = parseAmount(String(Reflect.get(row, 'amount') ?? ''))
-      const note = String(Reflect.get(row, 'note') ?? '').trim()
-      const paid = Reflect.get(row, 'paid') === true
-      const at = stored.findIndex(
-        (item) => item.source === source && item.eventId === eventId && item.registrationId === id,
-      )
-      if (amount.kind !== 'amount') {
-        if (at >= 0) stored.splice(at, 1)
-        continue
-      }
-      const next = { cents: amount.cents, note: note === '' ? null : note, paid }
-      const found = stored[at]
-      if (found) Object.assign(found, next)
-      else {
-        counter += 1
-        stored.push({
-          id: `b0000000-0000-4000-8000-${String(counter).padStart(12, '0')}`,
-          source,
-          eventId,
-          registrationId: id,
-          ...next,
-        })
-      }
-    }
+    for (const row of rows) applyRow(source, eventId, row)
     return HttpResponse.json({ sheet: sheetOf(source, eventId) })
   }
 

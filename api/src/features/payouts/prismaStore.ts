@@ -13,8 +13,8 @@ const squadTypes = { squad: 0, sweeper: 1 }
 /** What a query needs: the client, or the client inside a transaction. */
 type Reader = Pick<PrismaClient, 'tournament' | 'squad' | 'division' | 'payout'>
 
-const isSource = (value: string): value is PayoutSource =>
-  payoutSources.some((source) => source === value)
+const sourceNames: readonly string[] = payoutSources
+const isSource = (value: string): value is PayoutSource => sourceNames.includes(value)
 
 interface Row {
   id: string
@@ -125,18 +125,20 @@ export function createPrismaPayoutStore(client: PrismaClient, logger: Logger): P
         if (plan.deletes.length > 0) {
           await tx.payout.deleteMany({ where: { id: { in: plan.deletes } } })
         }
-        for (const change of plan.updates) {
-          await tx.payout.update({
-            where: { id: change.id },
-            data: {
-              amount: formatCents(change.amountCents),
-              note: change.note,
-              paid: change.paid,
-              updatedAt: now,
-              updatedBy: input.actorId,
-            },
-          })
-        }
+        await Promise.all(
+          plan.updates.map((change) =>
+            tx.payout.update({
+              where: { id: change.id },
+              data: {
+                amount: formatCents(change.amountCents),
+                note: change.note,
+                paid: change.paid,
+                updatedAt: now,
+                updatedBy: input.actorId,
+              },
+            }),
+          ),
+        )
         if (plan.creates.length > 0) {
           await tx.payout.createMany({
             data: plan.creates.map((create) => ({

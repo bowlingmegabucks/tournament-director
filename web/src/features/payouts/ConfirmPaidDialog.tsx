@@ -68,7 +68,7 @@ export function ConfirmPaidDialog({
               setTicked(event.target.checked)
             }}
           />
-          I know this was already paid out
+          <span>I know this was already paid out</span>
         </label>
         <div className={styles.actions}>
           <button

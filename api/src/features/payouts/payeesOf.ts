@@ -27,8 +27,17 @@ export function squadPayees(results: SquadResults): Payee[] {
   )
 }
 
-export function sweeperPayees(results: SweeperResults): Payee[] {
-  return results.rows
+interface CasherRow {
+  registrationId: string
+  name: string
+  divisionName: string
+  group: string
+  place: number
+}
+
+/** The cashers of a list that carries its own division name per row. */
+function casherPayees(rows: readonly CasherRow[]): Payee[] {
+  return rows
     .filter((row) => row.group === 'casher')
     .map((row) => ({
       registrationId: row.registrationId,
@@ -40,17 +49,12 @@ export function sweeperPayees(results: SweeperResults): Payee[] {
     }))
 }
 
+export function sweeperPayees(results: SweeperResults): Payee[] {
+  return casherPayees(results.rows)
+}
+
 export function superSweeperPayees(results: SuperSweeperResults): Payee[] {
-  return results.rows
-    .filter((row) => row.group === 'casher')
-    .map((row) => ({
-      registrationId: row.registrationId,
-      name: row.name,
-      divisionName: row.divisionName,
-      detail: `cashed, place ${row.place}`,
-      seed: null,
-      previousCasher: false,
-    }))
+  return casherPayees(results.rows)
 }
 
 export function finalsPayees(division: SeedingDivision): Payee[] {

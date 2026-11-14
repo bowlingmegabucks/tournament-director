@@ -112,71 +112,85 @@ export function planSave(facts: SaveFacts, rows: readonly SaveRow[]): SavePlan {
   if (closed) return { kind: 'refused', reason: closed }
 
   const existingBy = new Map(facts.existing.map((payout) => [payout.registrationId, payout]))
-  const errors: Record<string, string> = {}
-  const creates: NewPayout[] = []
-  const updates: ChangedPayout[] = []
-  const deletes: string[] = []
-  const paidChanges: PaidChange[] = []
-  const nameOf = (id: string) => facts.entered.get(id) ?? 'Bowler'
+  const draft: Draft = { errors: {}, creates: [], updates: [], deletes: [], paidChanges: [] }
+  for (const row of rows) planRow(facts, existingBy.get(row.registrationId), row, draft)
 
-  for (const row of rows) {
-    const id = row.registrationId
-    const existing = existingBy.get(id)
-    const amount = parseAmount(row.amount)
+  if (Object.keys(draft.errors).length > 0) return { kind: 'invalid', errors: draft.errors }
+  if (draft.paidChanges.length > 0 && !facts.confirmPaid) {
+    return { kind: 'confirm', paidChanges: draft.paidChanges }
+  }
+  return { kind: 'save', creates: draft.creates, updates: draft.updates, deletes: draft.deletes }
+}
 
-    if (amount.kind === 'blank') {
-      if (!existing) continue
-      deletes.push(existing.id)
-      if (existing.paid)
-        paidChanges.push({ registrationId: id, name: nameOf(id), from: existing.amount, to: null })
-      continue
-    }
-    if (amount.kind === 'invalid') {
-      errors[`amount:${id}`] = amount.message
-      continue
-    }
-    if (!facts.entered.has(id)) {
-      errors[`amount:${id}`] = notEnteredMessage
-      continue
-    }
+/** What the rows have decided so far. */
+interface Draft {
+  errors: Record<string, string>
+  creates: NewPayout[]
+  updates: ChangedPayout[]
+  deletes: string[]
+  paidChanges: PaidChange[]
+}
 
-    const note = readNote(row.note)
-    if (note.kind === 'invalid') {
-      errors[`note:${id}`] = note.message
-      continue
-    }
-    // D-269: a bowler the results did not infer needs a reason.
-    if (note.value === null && !facts.inferred.has(id)) {
-      errors[`note:${id}`] = needsNoteMessage
-      continue
-    }
+/** Add one row's effect to the draft. */
+function planRow(
+  facts: SaveFacts,
+  existing: ExistingPayout | undefined,
+  row: SaveRow,
+  draft: Draft,
+): void {
+  const id = row.registrationId
+  const nameOf = facts.entered.get(id) ?? 'Bowler'
+  const amount = parseAmount(row.amount)
 
-    if (!existing) {
-      creates.push({
-        registrationId: id,
-        amountCents: amount.cents,
-        note: note.value,
-        paid: row.paid ?? false,
-      })
-      continue
+  if (amount.kind === 'blank') {
+    if (!existing) return
+    draft.deletes.push(existing.id)
+    if (existing.paid) {
+      draft.paidChanges.push({ registrationId: id, name: nameOf, from: existing.amount, to: null })
     }
-    const paid = row.paid ?? existing.paid
-    const moved = amount.cents !== centsFromText(existing.amount)
-    if (!moved && note.value === existing.note && paid === existing.paid) continue
-    updates.push({ id: existing.id, amountCents: amount.cents, note: note.value, paid })
-    if (existing.paid && moved) {
-      paidChanges.push({
-        registrationId: id,
-        name: nameOf(id),
-        from: existing.amount,
-        to: formatCents(amount.cents),
-      })
-    }
+    return
+  }
+  if (amount.kind === 'invalid') {
+    draft.errors[`amount:${id}`] = amount.message
+    return
+  }
+  if (!facts.entered.has(id)) {
+    draft.errors[`amount:${id}`] = notEnteredMessage
+    return
   }
 
-  if (Object.keys(errors).length > 0) return { kind: 'invalid', errors }
-  if (paidChanges.length > 0 && !facts.confirmPaid) return { kind: 'confirm', paidChanges }
-  return { kind: 'save', creates, updates, deletes }
+  const note = readNote(row.note)
+  if (note.kind === 'invalid') {
+    draft.errors[`note:${id}`] = note.message
+    return
+  }
+  // D-269: a bowler the results did not infer needs a reason.
+  if (note.value === null && !facts.inferred.has(id)) {
+    draft.errors[`note:${id}`] = needsNoteMessage
+    return
+  }
+
+  if (!existing) {
+    draft.creates.push({
+      registrationId: id,
+      amountCents: amount.cents,
+      note: note.value,
+      paid: row.paid ?? false,
+    })
+    return
+  }
+  const paid = row.paid ?? existing.paid
+  const moved = amount.cents !== centsFromText(existing.amount)
+  if (!moved && note.value === existing.note && paid === existing.paid) return
+  draft.updates.push({ id: existing.id, amountCents: amount.cents, note: note.value, paid })
+  if (existing.paid && moved) {
+    draft.paidChanges.push({
+      registrationId: id,
+      name: nameOf,
+      from: existing.amount,
+      to: formatCents(amount.cents),
+    })
+  }
 }
 
 type ReadNote = { kind: 'ok'; value: string | null } | { kind: 'invalid'; message: string }

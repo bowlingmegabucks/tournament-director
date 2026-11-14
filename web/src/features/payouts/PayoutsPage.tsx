@@ -44,9 +44,20 @@ function PaidCell({
           onToggle(event.target.checked)
         }}
       />
-      Paid<span className={styles.hidden}> for {row.name}</span>
+      <span>
+        Paid<span className={styles.hidden}> for {row.name}</span>
+      </span>
     </label>
   )
+}
+
+function PayoutView({
+  view,
+  id,
+  data,
+}: Readonly<{ view: string | null; id: string; data: PayoutList }>) {
+  if (view === 'payout') return <ByPayout tournamentId={id} list={data} />
+  return <ByBowler tournamentId={id} />
 }
 
 function ByPayout({ tournamentId, list }: Readonly<{ tournamentId: string; list: PayoutList }>) {
@@ -71,7 +82,7 @@ function ByPayout({ tournamentId, list }: Readonly<{ tournamentId: string; list:
       )}
       <div className={styles.toolbar}>
         <label className={styles.field}>
-          Event
+          <span>Event</span>
           <select
             className={styles.select}
             value={event}
@@ -88,7 +99,7 @@ function ByPayout({ tournamentId, list }: Readonly<{ tournamentId: string; list:
           </select>
         </label>
         <label className={styles.field}>
-          Paid
+          <span>Paid</span>
           <select
             className={styles.select}
             value={paid}
@@ -103,7 +114,7 @@ function ByPayout({ tournamentId, list }: Readonly<{ tournamentId: string; list:
         </label>
       </div>
       {list.tournamentComplete && (
-        <p role="status">This tournament is complete. Payouts are locked.</p>
+        <output className={styles.block}>This tournament is complete. Payouts are locked.</output>
       )}
       {rows.length === 0 ? (
         <p>No payout matches.</p>
@@ -314,10 +325,8 @@ export function PayoutsPage() {
           No payouts are recorded yet. Open a completed squad or sweeper, or the Seeding page, to
           enter them.
         </p>
-      ) : view === 'payout' ? (
-        <ByPayout tournamentId={id} list={data} />
       ) : (
-        <ByBowler tournamentId={id} />
+        <PayoutView view={view} id={id} data={data} />
       )}
     </>
   )

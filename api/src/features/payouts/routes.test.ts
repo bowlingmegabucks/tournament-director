@@ -615,6 +615,28 @@ describe('GET payouts and payouts/totals (PAY-19)', () => {
     expect(equal.body.bowlers).toHaveLength(2)
   })
 
+  it.each([['0'], ['0.00'], ['$0'], ['']])(
+    'reads a minimum of %j as no minimum (PAY-19)',
+    async (min) => {
+      const { app } = setup({ seed })
+
+      const response = await request(app).get(`${base}/totals`).query({ min })
+
+      expect(response.status).toBe(200)
+      expect(response.body.bowlers).toHaveLength(2)
+    },
+  )
+
+  it('answers an empty list and no totals when nothing is saved, without reading registrations (PAY-19)', async () => {
+    const { app } = setup()
+
+    const list = await request(app).get(base)
+    const totals = await request(app).get(`${base}/totals`)
+
+    expect(list.body).toMatchObject({ payouts: [], summary: { count: 0 } })
+    expect(totals.body).toEqual({ bowlers: [] })
+  })
+
   it('refuses a minimum that is not money (PAY-19)', async () => {
     const { app } = setup({ seed })
 

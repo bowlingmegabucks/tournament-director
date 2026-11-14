@@ -142,6 +142,8 @@ export async function loadSheet(
   source: PayoutSource,
   tournamentId: string,
   eventId: string,
+  /** The event as the caller already worked it out, so it is not worked out twice. */
+  known?: WorkedEvent,
 ): Promise<PayoutSheet | null> {
   const facts = await deps.payouts.eventFacts(tournamentId, source, eventId)
   if ('notFound' in facts) return null
@@ -161,7 +163,7 @@ export async function loadSheet(
     }
   }
 
-  const worked = await workOutEvent(deps, reporting, source, tournamentId, eventId)
+  const worked = known ?? (await workOutEvent(deps, reporting, source, tournamentId, eventId))
   const saved = (await deps.payouts.list(tournamentId)).filter(
     (record) => record.source === source && record.eventId === eventId,
   )

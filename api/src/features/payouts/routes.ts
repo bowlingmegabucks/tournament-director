@@ -95,13 +95,20 @@ export function createPayoutReadRouter(deps: PayoutRouterDeps): Router {
     const { id } = tournamentParams.parse(req.params)
     const settings = await deps.tournaments.getSettings(id)
     if (!settings) throw new HttpError(404, 'Tournament not found')
-    const [records, squads, sweepers, divisions, registrations] = await Promise.all([
-      deps.payouts.list(id),
-      deps.squads.listByTournament(id),
-      deps.sweepers.listByTournament(id),
-      deps.divisions.listByTournament(id),
-      deps.registrations.listByTournament(id),
-    ])
+    const records = await deps.payouts.list(id)
+    // Nothing to name when no payout is saved: skip the four reads that would name them.
+    const [squads, sweepers, divisions, registrations] =
+      records.length === 0
+        ? [[], [], [], []]
+        : await Promise.all([
+            deps.squads.listByTournament(id),
+            deps.sweepers.listByTournament(id),
+            deps.divisions.listByTournament(id),
+            // Only the bowlers who have a payout: a name and a division name each.
+            deps.registrations.listByTournament(id, [
+              ...new Set(records.map((record) => record.registrationId)),
+            ]),
+          ])
     res.json({
       payouts: buildRows(records, { squads, sweepers, divisions, registrations }),
       summary: summarize(records),
@@ -112,15 +119,19 @@ export function createPayoutReadRouter(deps: PayoutRouterDeps): Router {
   router.get('/totals', async (req, res) => {
     const { id } = tournamentParams.parse(req.params)
     const { min } = totalsQuery.parse(req.query)
-    const parsed = parseAmount(min)
+    // `min=0` (or `0.00`) says no minimum, the same as leaving the box blank.
+    const parsed = parseAmount(/^\$?0+(\.0{1,2})?$/.test(min?.trim() ?? '') ? '' : min)
     if (parsed.kind === 'invalid') {
       throw new FieldErrorsError(400, parsed.message, { min: parsed.message })
     }
     if (!(await deps.tournaments.getSettings(id))) throw new HttpError(404, 'Tournament not found')
-    const [records, registrations] = await Promise.all([
-      deps.payouts.list(id),
-      deps.registrations.listByTournament(id),
-    ])
+    const records = await deps.payouts.list(id)
+    const registrations =
+      records.length === 0
+        ? []
+        : await deps.registrations.listByTournament(id, [
+            ...new Set(records.map((record) => record.registrationId)),
+          ])
     const registrationBy = new Map(registrations.map((item) => [item.id, item]))
     const bowlers = totalsByBowler(
       records.map((record) => ({
@@ -179,6 +190,9 @@ export function createPayoutWriteRouter(deps: PayoutRouterDeps, hooks: PayoutHoo
         throw new FieldErrorsError(409, closed, { event: closed })
       }
 
+      // Read before the transaction on purpose. The gate above is open only when every session it
+      // needs is complete, and a complete session takes no entry change, score change, or reopen
+      // (D-130, D-203), so the lists cannot move between this read and the transaction.
       const worked = await workOutEvent(
         deps,
         { logger, reported },
@@ -225,7 +239,15 @@ export function createPayoutWriteRouter(deps: PayoutRouterDeps, hooks: PayoutHoo
       // Who saved what, in counts and money. A name or a note stays out (PAY-12).
       logger.info({ ...ids, ...outcome.saved }, 'Payouts saved')
       hooks.saved({ tournamentId, source: route.source, eventId })
-      const sheet = await loadSheet(deps, { logger, reported }, route.source, tournamentId, eventId)
+      // The results did not move with this save, so the sheet reuses what the save worked out.
+      const sheet = await loadSheet(
+        deps,
+        { logger, reported },
+        route.source,
+        tournamentId,
+        eventId,
+        worked,
+      )
       res.json({ sheet })
     })
   }

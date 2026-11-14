@@ -13,8 +13,8 @@ export type ParsedAmount =
   { kind: 'blank' } | { kind: 'amount'; cents: number } | { kind: 'invalid'; message: string }
 
 /**
- * Read what a director typed. A blank (or `null`) means no payout. A `$` and thousands commas are
- * allowed; more than two decimals, letters, and a minus sign are not. A number is read through its
+ * Read what a director typed. A blank (or `null`) means no payout. A `$` and thousands commas (in
+ * groups of three) are allowed; more than two decimals, letters, and a minus sign are not. A number is read through its
  * text, so `100.005` is refused instead of rounded.
  */
 export function parseAmount(input: unknown): ParsedAmount {
@@ -24,7 +24,12 @@ export function parseAmount(input: unknown): ParsedAmount {
   }
   const text = (typeof input === 'number' ? String(input) : input).trim()
   if (text === '') return { kind: 'blank' }
-  const plain = text.replace(/^\$/, '').replaceAll(',', '')
+  const unsigned = text.replace(/^\$/, '')
+  // A comma is a thousands mark only in groups of three: `1,50` is a slip, not $150.
+  if (unsigned.includes(',') && !/^-?\d{1,3}(,\d{3})+(\.\d*)?$/.test(unsigned)) {
+    return { kind: 'invalid', message: badAmountMessage }
+  }
+  const plain = unsigned.replaceAll(',', '')
   if (/^-\d+(\.\d{1,2})?$/.test(plain)) {
     return { kind: 'invalid', message: needsAmountMessage }
   }

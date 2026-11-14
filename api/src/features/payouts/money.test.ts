@@ -15,6 +15,8 @@ describe('parseAmount (PAY-07)', () => {
     ['100.50', 10050],
     ['0.01', 1],
     ['$1,250.75', 125075],
+    ['1,000', 100000],
+    ['99,999.99', 9999999],
     [' 25 ', 2500],
     ['99999.99', 9999999],
     [100, 10000],
@@ -22,6 +24,13 @@ describe('parseAmount (PAY-07)', () => {
   ])('reads %j as %i cents', (input, cents) => {
     expect(parseAmount(input)).toEqual({ kind: 'amount', cents })
   })
+
+  it.each([['1,50'], ['12,5'], ['1,2345'], [',500'], ['1,000,00'], ['1,000,'], ['1,0']])(
+    'refuses %j: a comma is a thousands mark only before three digits',
+    (input) => {
+      expect(parseAmount(input)).toEqual({ kind: 'invalid', message: badAmountMessage })
+    },
+  )
 
   it.each([['5$'], ['1-5'], ['-5x'], ['$$5']])(
     'refuses %j as not dollars and cents (a sign or $ in the wrong place)',

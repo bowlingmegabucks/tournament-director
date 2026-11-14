@@ -11,11 +11,16 @@ export const badAmountMessage = 'Enter dollars and cents, like 100.00'
 export type ParsedAmount =
   { kind: 'blank' } | { kind: 'amount'; cents: number } | { kind: 'invalid'; message: string }
 
-/** Read what a director typed. A blank means no payout. `$` and thousands commas are allowed. */
+/** Read what a director typed. A blank means no payout. `$` and thousands commas (in groups of three) are allowed. */
 export function parseAmount(input: string): ParsedAmount {
   const text = input.trim()
   if (text === '') return { kind: 'blank' }
-  const plain = text.replace(/^\$/, '').replaceAll(',', '')
+  const unsigned = text.replace(/^\$/, '')
+  // A comma is a thousands mark only in groups of three: `1,50` is a slip, not $150.
+  if (unsigned.includes(',') && !/^-?\d{1,3}(,\d{3})+(\.\d*)?$/.test(unsigned)) {
+    return { kind: 'invalid', message: badAmountMessage }
+  }
+  const plain = unsigned.replaceAll(',', '')
   if (/^-\d+(\.\d{1,2})?$/.test(plain)) return { kind: 'invalid', message: needsAmountMessage }
   const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(plain)
   if (!match) return { kind: 'invalid', message: badAmountMessage }

@@ -74,6 +74,10 @@ export function EventPayouts({ source, tournamentId, eventId }: Readonly<EventPa
   }
 
   const { saved: payouts, total, unpaid, unpaidCount } = figuresOf(data)
+  const emptyMessage =
+    data.status === 'notReady' ? null : (
+      <p>{`No payouts are recorded for ${eventNoun(data.event.label)}.`}</p>
+    )
   const Heading = source === 'squad' || source === 'sweeper' ? 'h2' : 'h1'
   return (
     <>
@@ -116,9 +120,7 @@ export function EventPayouts({ source, tournamentId, eventId }: Readonly<EventPa
         </div>
       </Can>
       {payouts.length === 0 ? (
-        data.status === 'notReady' ? null : (
-          <p>{`No payouts are recorded for ${eventNoun(data.event.label)}.`}</p>
-        )
+        emptyMessage
       ) : (
         <table className={`${styles.table} ${styles.stack}`}>
           <caption className={styles.hidden}>Payouts</caption>

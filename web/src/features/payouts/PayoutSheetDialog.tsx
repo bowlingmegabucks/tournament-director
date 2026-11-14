@@ -73,10 +73,8 @@ function RowEditor({ row, finals, errors, onChange }: Readonly<RowEditorProps>) 
               onChange({ ticked: event.target.checked })
             }}
           />
-          <span>
-            <span className={shared.hidden}>Include {row.name} in </span>
-            Same amount
-          </span>
+          <span className={shared.hidden}>Include {row.name} in </span>
+          <span>Same amount</span>
         </label>
       )}
       <div className={styles.who}>

@@ -12,10 +12,10 @@ import { PrintButtons } from './PrintButtons'
 import { PrintResults } from './PrintResults'
 import styles from './ResultsPage.module.css'
 import { useChosenDivision } from './useChosenDivision'
-import { useTournamentOpen } from '../tournaments/useTournamentOpen'
 import { useChosenMode } from './useChosenMode'
 import { useResultsEvents, useSquadResults } from './useResults'
 import { UnofficialNotice } from './UnofficialNotice'
+import { useStreamWanted } from './useStreamWanted'
 import { useResultsPrint } from './useResultsPrint'
 
 /**
@@ -28,17 +28,10 @@ export function SquadResultsPage() {
   // Stryker disable next-line StringLiteral: the route always has these params; this only satisfies the type.
   const { id = '', sessionId = '' } = useParams()
   const tournament = useOutletContext<Tournament>()
-  const tournamentOpen = useTournamentOpen(id)
   const mode = useChosenMode()
   const { data, error, refetch } = useSquadResults(id, sessionId, mode)
-  const live = useResultsEvents(
-    'squad',
-    id,
-    sessionId,
-    // A complete session still follows its stream until the tournament completes: a director may
-    // save payouts, and they show in the rows (D-285).
-    data !== undefined && (!data.session.complete || tournamentOpen),
-  )
+  const streamWanted = useStreamWanted(id, data?.session.complete)
+  const live = useResultsEvents('squad', id, sessionId, streamWanted)
   const { printing, only, print } = useResultsPrint()
   const chosen = useChosenDivision(data?.divisions ?? [])
 

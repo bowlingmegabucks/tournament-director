@@ -57,7 +57,7 @@ Run `api/prisma/score-tables.sql` once on the production database **before the d
 
 ### Database script for payouts (D-281)
 
-Run `api/prisma/payout-tables.sql` once on the production database **before the deploy that ships payouts**. It creates `Payouts` if it is missing, so running it again is safe, and it touches no legacy table. Without it the payout routes answer `503`, and so do the results routes, which read the saved amounts. Same way as the other scripts. Locally: `docker exec -i tournament-director-db mariadb -uroot -p<password> <database> < api/prisma/payout-tables.sql`. The new permissions `payouts.read` and `payouts.write` need no setting: the director and admin hold them from the first request after the deploy.
+Run `api/prisma/payout-tables.sql` once on the production database **before the deploy that ships payouts**. It creates `Payouts` if it is missing, so running it again is safe, and it touches no legacy table. Without it the payout routes answer `503`. The results routes keep working and show no payout amounts (the read fails, the API logs `Payout amounts unavailable, so the results show none`). Same way as the other scripts. Locally: `docker exec -i tournament-director-db mariadb -uroot -p<password> <database> < api/prisma/payout-tables.sql`. The new permissions `payouts.read` and `payouts.write` need no setting: the director and admin hold them from the first request after the deploy.
 
 ### Live updates (SSE, D-217)
 

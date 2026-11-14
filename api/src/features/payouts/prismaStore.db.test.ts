@@ -261,6 +261,34 @@ describe('Prisma payout store', () => {
     })
   })
 
+  it('ignores a row whose source the API never writes (PAY-01)', async () => {
+    const w = await world()
+    await complete('Squads', w.squadId)
+    await store().save(w.input())
+    const good = await client.payout.findFirstOrThrow()
+    await client.$executeRawUnsafe(`UPDATE Payouts SET Source = 'mystery' WHERE Id = ?`, good.id)
+
+    expect(await store().list(w.tournamentId)).toEqual([])
+    expect(await store().listAmounts(w.tournamentId)).toEqual([])
+    expect(await store().setPaid(w.tournamentId, good.id, true, 'u')).toEqual({ notFound: true })
+  })
+
+  it('gives no amounts, and says so in the log, when the table cannot be read (PAY-20)', async () => {
+    const captured = createCapturedLogger()
+    const broken = {
+      payout: { findMany: () => Promise.reject(new Error('Table Payouts does not exist')) },
+    } as unknown as PrismaClient
+
+    const amounts = await createPrismaPayoutStore(broken, captured.logger).listAmounts('t1')
+
+    expect(amounts).toEqual([])
+    expect(
+      captured
+        .records()
+        .some((entry) => entry.msg === 'Payout amounts unavailable, so the results show none'),
+    ).toBe(true)
+  })
+
   it('lists, reads amounts, and counts the unpaid for the Complete dialog (PAY-15, PAY-19, PAY-20)', async () => {
     const w = await world()
     await complete('Squads', w.squadId)

@@ -27,12 +27,13 @@ interface Row {
   paid: boolean
 }
 
-function toRecord(row: Row): PayoutRecord {
+/** A stored row as a record, or `null` for a `Source` the API never writes (a row we do not understand). */
+function toRecord(row: Row): PayoutRecord | null {
+  if (!isSource(row.source)) return null
   return {
     id: row.id,
     tournamentId: row.tournamentId,
-    // A value the CHECK of the API never writes would be a stored row we do not understand.
-    source: isSource(row.source) ? row.source : 'squad',
+    source: row.source,
     eventId: row.eventId,
     registrationId: row.registrationId,
     amountCents: centsFromText(row.amount.toFixed(2)),
@@ -98,7 +99,7 @@ export function createPrismaPayoutStore(client: PrismaClient, logger: Logger): P
           source: input.source,
           eventId: input.eventId,
         }
-        const existing = (await tx.payout.findMany({ where })).map(toRecord)
+        const existing = (await tx.payout.findMany({ where })).flatMap((row) => toRecord(row) ?? [])
         const plan = planSave(
           {
             tournamentComplete: facts.tournamentComplete,
@@ -167,8 +168,10 @@ export function createPrismaPayoutStore(client: PrismaClient, logger: Logger): P
   }
 
   return {
-    listAmounts: (tournamentId) =>
-      withDatabaseErrors(logger, async () => {
+    // The public results only tag a casher with this amount. A table that is missing (the script has
+    // not run yet) or a failed read must not take the results down: log it and show no amounts.
+    listAmounts: async (tournamentId) => {
+      try {
         const rows = await client.payout.findMany({
           where: { tournamentId },
           select: { source: true, eventId: true, registrationId: true, amount: true },
@@ -185,10 +188,16 @@ export function createPrismaPayoutStore(client: PrismaClient, logger: Logger): P
               ]
             : [],
         )
-      }),
+      } catch (err) {
+        logger.error({ err, tournamentId }, 'Payout amounts unavailable, so the results show none')
+        return []
+      }
+    },
     list: (tournamentId) =>
       withDatabaseErrors(logger, async () =>
-        (await client.payout.findMany({ where: { tournamentId } })).map(toRecord),
+        (await client.payout.findMany({ where: { tournamentId } })).flatMap(
+          (row) => toRecord(row) ?? [],
+        ),
       ),
     eventFacts: (tournamentId, source, eventId) =>
       withDatabaseErrors(logger, () => readFacts(client, tournamentId, source, eventId)),
@@ -199,7 +208,7 @@ export function createPrismaPayoutStore(client: PrismaClient, logger: Logger): P
           client.$transaction(
             async (tx) => {
               const row = await tx.payout.findFirst({ where: { id: payoutId, tournamentId } })
-              if (!row) return { notFound: true as const }
+              if (!row || !isSource(row.source)) return { notFound: true as const }
               const tournament = await tx.tournament.findUnique({
                 where: { id: tournamentId },
                 select: { completed: true },
@@ -213,7 +222,9 @@ export function createPrismaPayoutStore(client: PrismaClient, logger: Logger): P
                     data: { paid, updatedAt: new Date(), updatedBy: actorId },
                   })
                 : row
-              return { payout: toRecord(updated), changed }
+              const payout = toRecord(updated)
+              if (!payout) return { notFound: true as const }
+              return { payout, changed }
             },
             { isolationLevel: 'Serializable' },
           ),

@@ -1,6 +1,7 @@
 import { apiFetch } from '../../shared/apiFetch'
 import { apiUrl } from '../../shared/apiUrl'
 import { field } from '../../shared/field'
+import { formatMoney } from '../../shared/formatMoney'
 import { readJson } from '../../shared/readJson'
 import { TournamentNotFoundError } from '../../shared/tournamentQuery'
 
@@ -13,6 +14,11 @@ export interface TournamentCompleteInfo {
   noScoreCount: number
   /** Entries in open squads with some games but not all: left as entered. */
   partialCount: number
+  /** Payouts saved in the tournament (PAY-15, D-279). */
+  payoutCount: number
+  /** Payouts not marked paid, and what they add up to as money text. */
+  unpaidPayoutCount: number
+  unpaidPayoutTotal: string
 }
 
 /** What a complete closed (TRN-38, D-256). */
@@ -84,7 +90,10 @@ function isInfo(value: unknown): value is TournamentCompleteInfo {
     typeof field(value, 'openSquadCount') === 'number' &&
     typeof field(value, 'openSweeperCount') === 'number' &&
     typeof field(value, 'noScoreCount') === 'number' &&
-    typeof field(value, 'partialCount') === 'number'
+    typeof field(value, 'partialCount') === 'number' &&
+    typeof field(value, 'payoutCount') === 'number' &&
+    typeof field(value, 'unpaidPayoutCount') === 'number' &&
+    typeof field(value, 'unpaidPayoutTotal') === 'string'
   )
 }
 
@@ -143,4 +152,20 @@ export function completeLines(info: TournamentCompleteInfo): string[] {
       ? `Leave ${bowlers(info.partialCount)} with some games but not all as entered.`
       : undefined,
   ].filter((line): line is string => line !== undefined)
+}
+
+/**
+ * What the director should know about payouts before completing (PAY-15, D-279): none recorded, or
+ * some not marked paid. They are notes, not blocks: the typed name is the confirmation, and a
+ * complete locks every payout (D-273). A tournament with everything paid has no note.
+ */
+export function payoutNotes(info: TournamentCompleteInfo): string[] {
+  if (info.payoutCount === 0) return ['No payouts are recorded.']
+  if (info.unpaidPayoutCount === 0) return []
+  const total = formatMoney(info.unpaidPayoutTotal)
+  return [
+    info.unpaidPayoutCount === 1
+      ? `1 payout is not marked paid (${total}).`
+      : `${info.unpaidPayoutCount} payouts are not marked paid (${total}).`,
+  ]
 }

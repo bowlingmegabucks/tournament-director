@@ -17,6 +17,9 @@ const info = (overrides: Partial<TournamentCompleteInfo> = {}): TournamentComple
   openSweeperCount: 1,
   noScoreCount: 3,
   partialCount: 1,
+  payoutCount: 5,
+  unpaidPayoutCount: 0,
+  unpaidPayoutTotal: '0.00',
   ...overrides,
 })
 
@@ -190,6 +193,52 @@ describe('the Complete dialog (TRN-43, D-130, D-259)', () => {
     ).toBeVisible()
     expect(within(dialog).queryByText('This will:')).not.toBeInTheDocument()
     expect(within(dialog).queryByRole('list')).not.toBeInTheDocument()
+  })
+
+  it('warns when no payouts are recorded, without blocking the complete (PAY-15, D-279)', async () => {
+    setMockUser(createSignedInUser({ roles: ['director'] }))
+    serve({ info: info({ payoutCount: 0, unpaidPayoutCount: 0, unpaidPayoutTotal: '0.00' }) })
+    const user = userEvent.setup()
+    renderApp(`/tournaments/${id}`)
+
+    const dialog = await openDialog(user)
+
+    expect(await within(dialog).findByText('Before you complete:')).toBeVisible()
+    expect(within(dialog).getByText('No payouts are recorded.')).toBeVisible()
+    await user.type(
+      within(dialog).getByLabelText('Type the tournament name to confirm'),
+      'Spring Open',
+    )
+    expect(within(dialog).getByRole('button', { name: 'Complete tournament' })).toBeEnabled()
+  })
+
+  it.each([
+    [1, '100.00', '1 payout is not marked paid ($100.00).'],
+    [5, '1450.00', '5 payouts are not marked paid ($1,450.00).'],
+  ])('warns when %i payouts are not marked paid (PAY-15, D-279)', async (count, total, text) => {
+    setMockUser(createSignedInUser({ roles: ['director'] }))
+    serve({
+      info: info({ payoutCount: 9, unpaidPayoutCount: count, unpaidPayoutTotal: total }),
+    })
+    const user = userEvent.setup()
+    renderApp(`/tournaments/${id}`)
+
+    const dialog = await openDialog(user)
+
+    expect(await within(dialog).findByText(text)).toBeVisible()
+    expect(within(dialog).queryByText('No payouts are recorded.')).not.toBeInTheDocument()
+  })
+
+  it('says nothing about payouts when every one is recorded and paid (PAY-15)', async () => {
+    setMockUser(createSignedInUser({ roles: ['director'] }))
+    serve({ info: info({ payoutCount: 9, unpaidPayoutCount: 0, unpaidPayoutTotal: '0.00' }) })
+    const user = userEvent.setup()
+    renderApp(`/tournaments/${id}`)
+
+    const dialog = await openDialog(user)
+
+    await within(dialog).findByLabelText('Type the tournament name to confirm')
+    expect(within(dialog).queryByText('Before you complete:')).not.toBeInTheDocument()
   })
 
   it('turns Complete on only when the typed name matches (D-136)', async () => {

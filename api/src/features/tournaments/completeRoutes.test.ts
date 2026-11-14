@@ -225,11 +225,15 @@ describe(`GET ${infoUrl}`, () => {
       openSweeperCount: 1,
       noScoreCount: 4,
       partialCount: 2,
+      payoutCount: 9,
+      unpaidPayoutCount: 5,
+      unpaidPayoutTotal: '1450.00',
     }
 
     const response = await request(setup({ facts }).app).get(infoUrl)
 
     expect(response.status).toBe(200)
+    // The payout counts (PAY-15, D-279) carry no name and no amount of one bowler.
     expect(response.body).toEqual({ completeInfo: facts })
   })
 

@@ -101,6 +101,12 @@ export function SweepersPage() {
           <Link to={`/tournaments/${id}/super-sweeper`} className={styles.link}>
             Super sweeper results
           </Link>
+          <Can permission="payouts.read">
+            {' '}
+            <Link to={`/tournaments/${id}/super-sweeper/payouts`} className={styles.link}>
+              Super sweeper payouts
+            </Link>
+          </Can>
         </p>
       )}
       {data && data.length > 0 && (

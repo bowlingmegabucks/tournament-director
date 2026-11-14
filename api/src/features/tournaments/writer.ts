@@ -71,6 +71,11 @@ export interface TournamentCompleteInfo {
   noScoreCount: number
   /** Entries in open squads with some games but fewer than all: left as entered (D-75). */
   partialCount: number
+  /** Payouts saved in the tournament (PAY-15, D-279). The dialog says so when there are none. */
+  payoutCount: number
+  /** Payouts not marked paid, and what they add up to as text (`"1450.00"`). */
+  unpaidPayoutCount: number
+  unpaidPayoutTotal: string
 }
 
 /** What the create, edit, and delete routes need from storage. The Prisma version writes to the legacy table. */
@@ -309,6 +314,9 @@ export function createInMemoryTournamentWriter(
     openSweeperCount: 0,
     noScoreCount: 0,
     partialCount: 0,
+    payoutCount: 0,
+    unpaidPayoutCount: 0,
+    unpaidPayoutTotal: '0.00',
     ...options.completeFacts?.[id],
   })
   return {

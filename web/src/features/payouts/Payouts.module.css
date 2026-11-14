@@ -1,0 +1,204 @@
+.disclaimer {
+  display: block;
+  margin: 0;
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius);
+  font-size: var(--font-size-sm);
+}
+
+.hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+}
+
+.summary div {
+  display: grid;
+}
+
+.summary dt {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.summary dd {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.secondary {
+  background: transparent;
+  color: var(--color-accent);
+}
+
+.tag {
+  display: inline-block;
+  margin-inline-start: var(--space-2);
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.table {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--space-2) var(--space-3);
+  border-block-end: var(--border-width) solid var(--color-border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.table .num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+}
+
+.input {
+  min-block-size: var(--target-min);
+  padding-inline: var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.input[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+.fieldError {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--target-min);
+}
+
+.check input {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+}
+
+.readOnlyPaid {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* On a phone each row of a table is a card: no sideways scroll (CLAUDE.md). */
+@media (max-width: 40rem) {
+  .stack thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+  }
+
+  .stack tr {
+    display: grid;
+    gap: var(--space-1);
+    margin-block-end: var(--space-2);
+    padding: var(--space-3);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius);
+  }
+
+  .stack td,
+  .stack th {
+    padding: 0;
+    border: 0;
+  }
+
+  .stack .num {
+    text-align: start;
+  }
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-4);
+  margin: var(--space-3) 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+  border-block-end: var(--border-width) solid var(--color-border);
+}
+
+.tabs a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--target-min);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.tabs a[aria-current='page'] {
+  border-block-end: var(--marker-width) solid var(--color-accent);
+  font-weight: 600;
+}
+
+.select {
+  min-block-size: var(--target-min);
+  padding-inline: var(--space-2);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.block {
+  display: block;
+}

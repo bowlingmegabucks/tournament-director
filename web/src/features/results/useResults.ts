@@ -57,8 +57,9 @@ export function useSweeperResults(tournamentId: string, sessionId: string, mode:
  * Keeps the squad or sweeper Results tab fresh from the public stream of its session (RES-44, D-241):
  * every message, whatever its kind, asks for the results again in both modes, since a score, a
  * lane move, an entry, a DNF flag, or a complete can each change a place. The shared stream hook
- * joins a burst of messages and polls on a timer while the stream is down. `enabled` is false for a
- * complete session (D-10): its results cannot change.
+ * joins a burst of messages and polls on a timer while the stream is down. `enabled` is false once the
+ * session and the tournament are complete (D-10, D-285): a complete session's results still change
+ * when a director saves a payout, so its stream stays open until the tournament completes.
  */
 export function useResultsEvents(
   kind: SessionKind,

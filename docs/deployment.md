@@ -55,6 +55,10 @@ The site (`https://bowlingmegabucks.com/tournament-director/`) and the API (`*.a
 
 Run `api/prisma/score-tables.sql` once on the production database **before the deploy that ships score entry, and again before the deploy that ships live results** (it adds `SessionDnf`). It creates `SessionSkip` and `SessionDnf` (the "did not finish" flags, D-248) if they are missing, so running it again is safe, and it touches no legacy table. Without it the skip routes, recap sheets, and score entry answer `503`, and so do the results routes, which read the flags. Same way as the sign-in tables ([api-standards](api-standards.md#database)). Locally: `docker exec -i tournament-director-db mariadb -uroot -p<password> <database> < api/prisma/score-tables.sql`.
 
+### Database script for payouts (D-281)
+
+Run `api/prisma/payout-tables.sql` once on the production database **before the deploy that ships payouts**. It creates `Payouts` if it is missing, so running it again is safe, and it touches no legacy table. Without it the payout routes answer `503`. The results routes keep working and show no payout amounts (the read fails, the API logs `Payout amounts unavailable, so the results show none`). Same way as the other scripts. Locally: `docker exec -i tournament-director-db mariadb -uroot -p<password> <database> < api/prisma/payout-tables.sql`. The new permissions `payouts.read` and `payouts.write` need no setting: the director and admin hold them from the first request after the deploy.
+
 ### Live updates (SSE, D-217)
 
 The lane page keeps itself fresh over server-sent events: `GET /v1/tournaments/{id}/squads/{sessionId}/events` (and the sweeper twin). The Scores tab and score entry listen to the public `…/scores/events` the same way (D-232); both streams count against the 500. The streams go from the browser straight to the API's origin, so only the Azure settings matter, not GreenGeeks.

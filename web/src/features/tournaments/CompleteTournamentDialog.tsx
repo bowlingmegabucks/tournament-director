@@ -2,7 +2,7 @@ import { useId, useRef, useState } from 'react'
 import { closeDialogOf, showOnMount } from '../../shared/dialogParts'
 import styles from '../../shared/Dialog.module.css'
 import { Loading } from '../../shared/Loading'
-import { completeLines, type TournamentCompleteInfo } from './completeApi'
+import { completeLines, payoutNotes, type TournamentCompleteInfo } from './completeApi'
 import own from './DeleteTournament.module.css'
 import { nameMatches } from './nameMatches'
 
@@ -52,6 +52,7 @@ export function CompleteTournamentDialog({
   })
   const matches = nameMatches(typed, tournamentName)
   const lines = info === undefined ? [] : completeLines(info)
+  const notes = info === undefined ? [] : payoutNotes(info)
 
   let body
   if (loading) {
@@ -83,8 +84,21 @@ export function CompleteTournamentDialog({
             Every squad and sweeper is already complete, so no scores will be saved.
           </p>
         )}
+        {notes.length > 0 && (
+          <>
+            <p className={styles.text}>Before you complete:</p>
+            <ul className={own.reasons}>
+              {notes.map((note) => (
+                <li key={note}>
+                  <strong>{note}</strong>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
         <p className={styles.text}>
-          This cannot be undone. The tournament and everything in it will be locked.
+          This cannot be undone. The tournament and everything in it will be locked, payouts
+          included.
         </p>
         <div className={own.field}>
           <label className={own.label} htmlFor={inputId}>

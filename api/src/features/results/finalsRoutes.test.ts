@@ -12,6 +12,7 @@ import {
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createTestApp } from '../../test/testApp.ts'
 import { createInMemoryDnfStore } from '../dnf/store.ts'
+import { createInMemoryPayoutStore } from '../payouts/store.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
 import { createInMemoryLaneRepository } from '../lanes/repository.ts'
 import { createInMemoryScoreRepository } from '../scores/repository.ts'
@@ -132,6 +133,7 @@ describe('GET /v1/tournaments/:id/seeding', () => {
         'handicap',
         'highGame',
         'name',
+        'payout',
         'previousCasher',
         'registrationId',
         'seed',
@@ -177,6 +179,7 @@ describe('GET /v1/tournaments/:id/super-sweeper', () => {
         'games',
         'group',
         'name',
+        'payout',
         'place',
         'registrationId',
         'sweeperPins',
@@ -279,6 +282,7 @@ describe('finals cache', () => {
         lanes: createInMemoryLaneRepository([]),
         scores: createInMemoryScoreRepository([]),
         dnf: createInMemoryDnfStore().store,
+        payouts: createInMemoryPayoutStore().store,
         logger: createCapturedLogger().logger,
       },
       cacheMs,

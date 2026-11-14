@@ -33,6 +33,12 @@ import { NewUserPage } from './features/users/NewUserPage'
 import { EditTournamentPage } from './features/tournaments/EditTournamentPage'
 import { NewTournamentPage } from './features/tournaments/NewTournamentPage'
 import { TournamentLayout } from './features/tournaments/TournamentLayout'
+import {
+  FinalsPayoutsPage,
+  SessionPayoutsTab,
+  SuperSweeperPayoutsPage,
+} from './features/payouts/EventPages'
+import { PayoutsPage } from './features/payouts/PayoutsPage'
 import { TournamentOverview } from './features/tournaments/TournamentOverview'
 import { TournamentsPage } from './features/tournaments/TournamentsPage'
 import { AppShell } from './shared/AppShell'
@@ -119,6 +125,14 @@ export default function App() {
               }
             />
             <Route path="results" element={<SquadResultsPage />} />
+            <Route
+              path="payouts"
+              element={
+                <RequirePermission permission="payouts.read">
+                  <SessionPayoutsTab kind="squad" />
+                </RequirePermission>
+              }
+            />
           </Route>
           <Route path="sweepers" element={<SweepersPage />} />
           <Route
@@ -157,8 +171,24 @@ export default function App() {
               }
             />
             <Route path="results" element={<SweeperResultsPage />} />
+            <Route
+              path="payouts"
+              element={
+                <RequirePermission permission="payouts.read">
+                  <SessionPayoutsTab kind="sweeper" />
+                </RequirePermission>
+              }
+            />
           </Route>
           <Route path="super-sweeper" element={<SuperSweeperPage />} />
+          <Route
+            path="super-sweeper/payouts"
+            element={
+              <RequirePermission permission="payouts.read">
+                <SuperSweeperPayoutsPage />
+              </RequirePermission>
+            }
+          />
           <Route
             path="registrations"
             element={
@@ -185,6 +215,22 @@ export default function App() {
           />
           <Route path="at-large" element={<AtLargePage />} />
           <Route path="seeding" element={<SeedingPage />} />
+          <Route
+            path="seeding/:divisionId/payouts"
+            element={
+              <RequirePermission permission="payouts.read">
+                <FinalsPayoutsPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="payouts"
+            element={
+              <RequirePermission permission="payouts.read">
+                <PayoutsPage />
+              </RequirePermission>
+            }
+          />
         </Route>
         <Route
           path="account"

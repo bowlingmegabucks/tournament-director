@@ -14,6 +14,7 @@ import { SweeperTable } from './SweeperTable'
 import { useChosenMode } from './useChosenMode'
 import { useResultsEvents, useSweeperResults } from './useResults'
 import { UnofficialNotice } from './UnofficialNotice'
+import { useStreamWanted } from './useStreamWanted'
 import { useResultsPrint } from './useResultsPrint'
 
 /**
@@ -27,12 +28,8 @@ export function SweeperResultsPage() {
   const tournament = useOutletContext<Tournament>()
   const mode = useChosenMode()
   const { data, error, refetch } = useSweeperResults(id, sessionId, mode)
-  const live = useResultsEvents(
-    'sweeper',
-    id,
-    sessionId,
-    data !== undefined && !data.session.complete,
-  )
+  const streamWanted = useStreamWanted(id, data?.session.complete)
+  const live = useResultsEvents('sweeper', id, sessionId, streamWanted)
   const { printing, print } = useResultsPrint()
 
   if (!data) {

@@ -162,6 +162,8 @@ export function createPrismaTournamentWriter(
               where: { OR: [{ registration: registrations }, { squad: { tournamentId: id } }] },
             })
             await tx.registration.deleteMany({ where: registrations })
+            // The payouts table has no foreign key, so nothing cascades (PAY-18, D-280).
+            await tx.payout.deleteMany({ where: { tournamentId: id } })
             await tx.tournament.delete({ where: { id } })
           },
           seen,

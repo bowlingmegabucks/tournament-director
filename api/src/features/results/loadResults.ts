@@ -8,6 +8,8 @@ import type { SquadRepository } from '../squads/repository.ts'
 import type { Squad } from '../squads/types.ts'
 import type { SweeperRepository } from '../sweepers/repository.ts'
 import type { TournamentRepository } from '../tournaments/repository.ts'
+import type { PayoutAmounts } from '../payouts/store.ts'
+import { amountsFor, type PayoutsOption } from '../payouts/amounts.ts'
 import { toDivisionResult } from './divisionResult.ts'
 import { buildResultEntries, sweeperPins, type ResultEntry } from './entries.ts'
 import { limitToCountedGames, type RankMode } from './fullGame.ts'
@@ -25,10 +27,12 @@ export interface ResultsDeps {
   lanes: LaneRepository
   scores: ScoreRepository
   dnf: DnfStore
+  /** The saved payout amounts the rows show (PAY-20, D-284). */
+  payouts: PayoutAmounts
 }
 
 /** What the results routes pass on: the ranking mode (D-239) and the DNF flags (D-248). */
-export type ResultsOptions = FlowOptions
+export type ResultsOptions = FlowOptions & PayoutsOption
 
 /**
  * One worked squad as the page reads it: each division with its rows, lines, and counted games
@@ -39,6 +43,7 @@ export function toSquadResults(
   worked: WorkedSquad,
   divisions: readonly Division[],
   mode: RankMode,
+  payouts: ReadonlyMap<string, string> = new Map(),
 ): SquadResults {
   const { outcomes, advancedBefore, flagged } = worked
   // The advancers of every squad before this one decide who is an earlier advancer (RES-06).
@@ -54,6 +59,7 @@ export function toSquadResults(
         advancedBefore,
         throughGame,
         flagged,
+        payouts,
       ),
     ]
   })
@@ -105,12 +111,19 @@ export async function loadSquadResults(
   }
 
   const flagged = options.flagged ?? (await deps.dnf.listFlagged(upTo.map((item) => item.id)))
+  const amounts = options.payouts ?? (await deps.payouts.listAmounts(tournamentId))
   const worked = await workOutSquads(deps, upTo, divisions, { ...options, flagged })
   const current = worked[index]
   // Stryker disable next-line all: unreachable. `worked` has one entry for each squad up to this one.
   if (!current) throw new HttpError(404, 'Squad not found')
   reportSkipped(reporting, sessionId, current.skipped)
-  return toSquadResults(squad, current, divisions, options.mode ?? 'live')
+  return toSquadResults(
+    squad,
+    current,
+    divisions,
+    options.mode ?? 'live',
+    amountsFor(amounts, 'squad', squad.id),
+  )
 }
 
 /**
@@ -130,12 +143,14 @@ export async function loadSweeperResults(
   if (!sweeper) throw new HttpError(404, 'Sweeper not found')
   requireRatios("This sweeper's", { cash: sweeper.cashRatio })
 
-  const [divisions, entries, scores, flaggedBySession] = await Promise.all([
+  const [divisions, entries, scores, flaggedBySession, amounts] = await Promise.all([
     deps.divisions.listByTournament(tournamentId),
     deps.lanes.listEntries(sessionId),
     deps.scores.listScores(sessionId),
     options.flagged ?? deps.dnf.listFlagged([sessionId]),
+    options.payouts ?? deps.payouts.listAmounts(tournamentId),
   ])
+  const paid = amountsFor(amounts, 'sweeper', sessionId)
   // D-248: a flag counts only while the sweeper is open.
   const flagged = sweeper.complete
     ? new Set<string>()
@@ -172,6 +187,8 @@ export async function loadSweeperResults(
     bonusPins: entry.pins,
     scores: entry.gameScores,
     dnf: flagged.has(entry.registrationId),
+    // D-284: only an inferred payee, a casher, shows an amount.
+    payout: group === 'casher' ? (paid.get(entry.registrationId) ?? null) : null,
   })
 
   return {

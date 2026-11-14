@@ -70,4 +70,22 @@ describe('SeedingBody (RES-18 to RES-21a, D-92)', () => {
       screen.getByRole('rowheader', { name: /Joe Fontaine.*Full tie at the cut line/ }),
     ).toBeInTheDocument()
   })
+
+  it('shows the finals amount a finalist won under the name (PAY-20, D-284)', () => {
+    render(
+      <SeedingBody
+        division={division({
+          rows: [
+            createSeedingRow({ name: 'Joe Fontaine', seed: 1, payout: '1500.00' }),
+            createSeedingRow({ name: 'Maria Lopez', seed: 2, group: 'other' }),
+          ],
+        })}
+      />,
+    )
+
+    expect(
+      within(screen.getByRole('row', { name: /Joe Fontaine/ })).getByText('Payout $1,500.00'),
+    ).toBeInTheDocument()
+    expect(screen.getAllByText(/^Payout /)).toHaveLength(1)
+  })
 })

@@ -497,6 +497,44 @@ describe('PATCH payouts/:payoutId (PAY-13, D-274)', () => {
   })
 })
 
+describe('body limits of the payout routes (PAY-12, PAY-13)', () => {
+  const filler = (kb: number) => 'x'.repeat(kb * 1024)
+
+  it('lets a save carry a body over 10 KB, up to 100 KB', async () => {
+    const { app } = setup()
+
+    const response = await request(app)
+      .put(squadUrl)
+      .send({ payouts: [], filler: filler(50) })
+
+    expect(response.status).toBe(200)
+  })
+
+  it('refuses a save over 100 KB', async () => {
+    const { app, records } = setup()
+
+    const response = await request(app)
+      .put(squadUrl)
+      .send({ payouts: [], filler: filler(101) })
+
+    expect(response.status).toBe(400)
+    expect(response.body).toEqual({ message: 'The request body is too large.' })
+    expect(records).toHaveLength(0)
+  })
+
+  it('keeps the paid flag at 10 KB', async () => {
+    const stored = record()
+    const { app } = setup({ seed: [stored] })
+
+    const response = await request(app)
+      .patch(`${base}/${stored.id}`)
+      .send({ paid: true, filler: filler(11) })
+
+    expect(response.status).toBe(400)
+    expect(response.body).toEqual({ message: 'The request body is too large.' })
+  })
+})
+
 describe('GET payouts and payouts/totals (PAY-19)', () => {
   const seed = [
     record({ amountCents: 10000, paid: true }),

@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { setMockUser } from '../../mocks/authHandlers'
@@ -710,5 +710,196 @@ describe('the super sweeper page (PAY-04)', () => {
     expect(
       within(screen.getByRole('main')).getByRole('link', { name: 'Sweepers' }),
     ).toHaveAttribute('href', `/tournaments/${tournament.id}/sweepers`)
+  })
+})
+
+describe('the same-amount dialog with few bowlers (PAY-08)', () => {
+  it('says "This bowler" and "Fill 1 box" for one inferred bowler', async () => {
+    const user = userEvent.setup()
+    serve(sheet({ payees: [dana] }))
+    openPage()
+    const dialog = await openSheet(user)
+
+    await user.click(within(dialog).getByRole('button', { name: 'Same amount for all' }))
+    const same = await screen.findByRole('dialog', { name: 'Same amount for all' })
+
+    expect(within(same).getByText('This bowler is inferred to get the amount:')).toBeVisible()
+    await user.type(within(same).getByLabelText('Amount for each ($)'), '75')
+    await user.click(within(same).getByRole('button', { name: 'Fill 1 box' }))
+    expect(amountOf(dialog, 'Dana Whitfield')).toHaveValue('75')
+  })
+
+  it('says no bowler is inferred, and offers no Fill button, when the results name none', async () => {
+    const user = userEvent.setup()
+    serve(sheet({ payees: [] }))
+    openPage()
+    const dialog = await openSheet(user)
+
+    await user.click(within(dialog).getByRole('button', { name: 'Same amount for all' }))
+    const same = await screen.findByRole('dialog', { name: 'Same amount for all' })
+
+    expect(within(same).getByText('No bowler is inferred to be paid in this event.')).toBeVisible()
+    expect(within(same).queryByRole('button', { name: /^Fill/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('the paid-change confirm while it saves (PAY-12, D-273)', () => {
+  it('ignores Escape while the confirmed save is in flight', async () => {
+    const user = userEvent.setup()
+    const paid = sheet({
+      payees: [
+        createPayee({
+          registrationId: dana.registrationId,
+          name: 'Dana Whitfield',
+          payout: { id: 'p1', amount: '100.00', note: null, paid: true },
+        }),
+      ],
+    })
+    serve(paid)
+    server.use(
+      http.put(url, async ({ request }) => {
+        const body: unknown = await request.json()
+        if (typeof body === 'object' && body !== null && 'confirmPaid' in body) {
+          await new Promise(() => undefined)
+        }
+        return HttpResponse.json(
+          {
+            message: 'Confirm',
+            warnings: [{ field: 'paid', message: 'x' }],
+            paidChanges: [
+              {
+                registrationId: dana.registrationId,
+                name: 'Dana Whitfield',
+                from: '100.00',
+                to: '90.00',
+              },
+            ],
+          },
+          { status: 409 },
+        )
+      }),
+    )
+    openPage()
+    const dialog = await openSheet(user)
+    const box = amountOf(dialog, 'Dana Whitfield')
+    await user.clear(box)
+    await user.type(box, '90')
+    await user.click(within(dialog).getByRole('button', { name: 'Save payouts' }))
+    const confirm = await screen.findByRole('dialog', { name: 'Change payouts already paid?' })
+    await user.click(within(confirm).getByLabelText('I know this was already paid out'))
+    await user.click(within(confirm).getByRole('button', { name: 'Save payouts' }))
+    await waitFor(() => {
+      expect(within(confirm).getByRole('button', { name: /Saving/ })).toBeDisabled()
+    })
+
+    const cancel = new Event('cancel', { cancelable: true })
+    fireEvent(confirm, cancel)
+
+    expect(cancel.defaultPrevented).toBe(true)
+    expect(confirm).toBeVisible()
+  })
+})
+
+describe('the event page when the tournament is gone or the save notice is dismissed', () => {
+  it('says the tournament does not exist when the sheet answers 404 "Tournament not found"', async () => {
+    server.use(
+      http.get('/v1/tournaments/:id', () => HttpResponse.json({ tournament })),
+      http.get('/v1/tournaments/:id/squads', () =>
+        HttpResponse.json({
+          squads: [createSquad({ id: squad.id, date: squad.date, complete: true })],
+        }),
+      ),
+      http.get(url, () => HttpResponse.json({ message: 'Tournament not found' }, { status: 404 })),
+    )
+
+    openPage()
+
+    expect(await screen.findByText('This tournament does not exist.')).toBeVisible()
+  })
+
+  it('closes the "Payouts saved." notice with its Dismiss button', async () => {
+    const user = userEvent.setup()
+    serve(sheet())
+    openPage()
+    const dialog = await openSheet(user)
+    await user.type(amountOf(dialog, 'Dana Whitfield'), '100')
+    await user.click(within(dialog).getByRole('button', { name: 'Save payouts' }))
+    expect(await screen.findByText('Payouts saved.')).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
+
+    expect(screen.queryByText('Payouts saved.')).not.toBeInTheDocument()
+  })
+})
+
+describe('the paid-change confirm before the tick (PAY-12, D-273)', () => {
+  it('sends nothing when the form is submitted without the tick', async () => {
+    const user = userEvent.setup()
+    const paid = sheet({
+      payees: [
+        createPayee({
+          registrationId: dana.registrationId,
+          name: 'Dana Whitfield',
+          payout: { id: 'p1', amount: '100.00', note: null, paid: true },
+        }),
+      ],
+    })
+    const sent = serve(paid, () =>
+      HttpResponse.json(
+        {
+          message: 'Confirm',
+          warnings: [{ field: 'paid', message: 'x' }],
+          paidChanges: [
+            {
+              registrationId: dana.registrationId,
+              name: 'Dana Whitfield',
+              from: '100.00',
+              to: '90.00',
+            },
+          ],
+        },
+        { status: 409 },
+      ),
+    )
+    openPage()
+    const dialog = await openSheet(user)
+    const box = amountOf(dialog, 'Dana Whitfield')
+    await user.clear(box)
+    await user.type(box, '90')
+    await user.click(within(dialog).getByRole('button', { name: 'Save payouts' }))
+    const confirm = await screen.findByRole('dialog', { name: 'Change payouts already paid?' })
+
+    const form = confirm.querySelector('form')
+    expect(form).not.toBeNull()
+    if (form) fireEvent.submit(form)
+
+    expect(sent).toHaveLength(1)
+    expect(confirm).toBeVisible()
+  })
+})
+
+describe('a failed load of the event page', () => {
+  it('shows the error and loads again on Try again', async () => {
+    const user = userEvent.setup()
+    let calls = 0
+    server.use(
+      http.get('/v1/tournaments/:id', () => HttpResponse.json({ tournament })),
+      http.get('/v1/tournaments/:id/squads', () =>
+        HttpResponse.json({
+          squads: [createSquad({ id: squad.id, date: squad.date, complete: true })],
+        }),
+      ),
+      http.get(url, () => {
+        calls += 1
+        return calls === 1
+          ? HttpResponse.json({ message: 'Squad not found' }, { status: 404 })
+          : HttpResponse.json({ sheet: sheet() })
+      }),
+    )
+    openPage()
+
+    await user.click(await screen.findByRole('button', { name: /try again/i }))
+
+    expect(await screen.findByRole('button', { name: 'Enter payouts' })).toBeVisible()
   })
 })

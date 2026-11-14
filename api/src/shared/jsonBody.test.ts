@@ -2,11 +2,11 @@ import express from 'express'
 import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 import { HttpError } from './errors.ts'
-import { jsonBody } from './jsonBody.ts'
+import { jsonBody, jsonBodyUpTo } from './jsonBody.ts'
 
-function createTestApp() {
+function createTestApp(handler: express.RequestHandler = jsonBody) {
   const app = express()
-  app.post('/', jsonBody, (req, res) => {
+  app.post('/', handler, (req, res) => {
     res.json({ received: req.body })
   })
   app.use(
@@ -51,5 +51,36 @@ describe('jsonBody', () => {
       .send({ filler: 'x'.repeat(9 * 1024) })
 
     expect(response.status).toBe(200)
+  })
+})
+
+describe('jsonBodyUpTo', () => {
+  const upTo100kb = () => createTestApp(jsonBodyUpTo('100kb'))
+
+  it('accepts a body over 10 KB when the limit is 100 KB', async () => {
+    const response = await request(upTo100kb())
+      .post('/')
+      .send({ filler: 'x'.repeat(50 * 1024) })
+
+    expect(response.status).toBe(200)
+  })
+
+  it('answers a body over its own limit with a 400', async () => {
+    const response = await request(upTo100kb())
+      .post('/')
+      .send({ filler: 'x'.repeat(101 * 1024) })
+
+    expect(response.status).toBe(400)
+    expect(response.body).toEqual({ message: 'The request body is too large.' })
+  })
+
+  it('answers a body that is not JSON with a 400', async () => {
+    const response = await request(upTo100kb())
+      .post('/')
+      .set('Content-Type', 'application/json')
+      .send('{nope')
+
+    expect(response.status).toBe(400)
+    expect(response.body).toEqual({ message: 'The request body is not valid JSON.' })
   })
 })

@@ -2,7 +2,8 @@ import type { Registration } from './types.ts'
 
 /** What routes need from storage. Always sorted as `compareRegistrations` says (REG-23, D-51). */
 export interface RegistrationRepository {
-  listByTournament(tournamentId: string): Promise<Registration[]>
+  /** `onlyIds` limits the read to those registrations (a caller that needs a few names). */
+  listByTournament(tournamentId: string, onlyIds?: readonly string[]): Promise<Registration[]>
 }
 
 // Ignores case and accents, as the database collation does (BWL-14).
@@ -28,10 +29,11 @@ export function createInMemoryRegistrationRepository(
   seed: { tournamentId: string; registration: Registration }[],
 ): RegistrationRepository {
   return {
-    listByTournament: (tournamentId) =>
+    listByTournament: (tournamentId, onlyIds) =>
       Promise.resolve(
         seed
           .filter((entry) => entry.tournamentId === tournamentId)
+          .filter((entry) => !onlyIds || onlyIds.includes(entry.registration.id))
           .map((entry) => ({ ...entry.registration }))
           .sort(compareRegistrations),
       ),

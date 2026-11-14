@@ -25,6 +25,8 @@ interface Props<Division extends { id: string; name: string; entries: number }, 
   notice: (data: Data) => ReactNode
   renderBody: (division: Division, data: Data) => ReactNode
   renderPrint: (data: Data, only: string | undefined) => ReactNode
+  /** More links beside the chooser, for the chosen division (the seeding page's payouts, D-276). */
+  actions?: (division: Division, tournamentId: string) => ReactNode
 }
 
 /**
@@ -43,6 +45,7 @@ export function FinalsDivisionPage<
   notice,
   renderBody,
   renderPrint,
+  actions,
 }: Readonly<Props<Division, Data>>) {
   // Stryker disable next-line StringLiteral: the route always has an :id; this only satisfies the type.
   const { id = '' } = useParams()
@@ -73,6 +76,7 @@ export function FinalsDivisionPage<
         <>
           <div className={styles.toolbar}>
             <DivisionChooser divisions={divisionsOf(data)} chosenId={chosen.id} />
+            {actions?.(chosen, id)}
             <PrintButtons
               onPrintThis={() => {
                 void print(chosen.id)

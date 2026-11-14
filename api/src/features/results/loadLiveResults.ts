@@ -1,3 +1,4 @@
+import { amountsFor } from '../payouts/amounts.ts'
 import { HttpError } from '../../shared/errors.ts'
 import { loadSuperSweeper } from './loadFinals.ts'
 import { loadSweeperResults, toSquadResults, type ResultsDeps } from './loadResults.ts'
@@ -26,16 +27,26 @@ export async function loadLiveResults(
     deps.sweepers.listByTournament(tournamentId),
     deps.divisions.listByTournament(tournamentId),
   ])
-  const flagged = await deps.dnf.listFlagged([
-    ...squads.map((squad) => squad.id),
-    ...sweepers.map((sweeper) => sweeper.id),
+  const [flagged, payouts] = await Promise.all([
+    deps.dnf.listFlagged([
+      ...squads.map((squad) => squad.id),
+      ...sweepers.map((sweeper) => sweeper.id),
+    ]),
+    // Read once for every squad, sweeper, and the super sweeper (PAY-20).
+    deps.payouts.listAmounts(tournamentId),
   ])
-  const options = { mode: 'full-game' as const, flagged }
+  const options = { mode: 'full-game' as const, flagged, payouts }
 
   const worked = await workOutSquads(deps, squads, divisions, options)
   const squadSessions = worked.flatMap((each) => {
     reportSkipped(reporting, each.squad.id, each.skipped)
-    const all = toSquadResults(each.squad, each, divisions, 'full-game')
+    const all = toSquadResults(
+      each.squad,
+      each,
+      divisions,
+      'full-game',
+      amountsFor(payouts, 'squad', each.squad.id),
+    )
     // A division shows only once everyone in it has bowled game 1 (RES-40); its later games show
     // as the Results tab shows them.
     const results = { ...all, divisions: all.divisions.filter((each) => each.throughGame !== 0) }

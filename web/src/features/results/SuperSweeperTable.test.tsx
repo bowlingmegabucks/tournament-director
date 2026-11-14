@@ -62,4 +62,18 @@ describe('SuperSweeperTable (RES-29a, D-90)', () => {
     expect(screen.queryByRole('columnheader', { name: 'HDCP Total' })).not.toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Total' })).toBeVisible()
   })
+
+  it('shows the amount a casher won under the name (PAY-20, D-284)', () => {
+    render(
+      <SuperSweeperTable
+        results={createSuperSweeperResults({
+          rows: [
+            createSuperSweeperRow({ name: 'Joe Fontaine', group: 'casher', payout: '500.00' }),
+          ],
+        })}
+      />,
+    )
+
+    expect(screen.getByText('Payout $500.00')).toBeInTheDocument()
+  })
 })

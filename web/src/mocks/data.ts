@@ -31,6 +31,14 @@ import type { ScoreBowler, ScorePage, ScorePair } from '../features/scores/types
 import type { Squad } from '../features/squads/types'
 import type { Sweeper } from '../features/sweepers/types'
 import type { Tournament, TournamentSettingsView } from '../features/tournaments/types'
+import type {
+  BowlerTotal,
+  PayoutRow,
+  PayoutSheet,
+  PayoutSummary,
+  SheetOther,
+  SheetPayee,
+} from '../features/payouts/types'
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
 
@@ -725,6 +733,7 @@ export function createSquadRow(overrides: Partial<SquadRow> = {}): SquadRow {
     advancedEarlier: false,
     dnf: false,
     ties: [],
+    payout: null,
     ...overrides,
   }
 }
@@ -779,6 +788,7 @@ export function createSweeperRow(overrides: Partial<SweeperRow> = {}): SweeperRo
     bonusPins: 0,
     scores: [200, 200, 200],
     dnf: false,
+    payout: null,
     ...overrides,
   }
 }
@@ -1109,6 +1119,7 @@ export function createSeedingRow(overrides: Partial<SeedingRow> = {}): SeedingRo
     handicap: 0,
     previousCasher: false,
     ties: [],
+    payout: null,
     ...overrides,
   }
 }
@@ -1150,6 +1161,7 @@ export function createSuperSweeperRow(overrides: Partial<SuperSweeperRow> = {}):
     sweeperPins: [0, 0],
     flags: [],
     dnf: false,
+    payout: null,
     ...overrides,
   }
 }
@@ -1357,6 +1369,8 @@ const allPermissions = [
   'squads.write',
   'bowlers.read',
   'bowlers.ssn',
+  'payouts.read',
+  'payouts.write',
   'users.manage',
 ]
 
@@ -1478,4 +1492,86 @@ export function createDemoLiveResults(
     ],
     superSweeper: createDemoSuperSweeper(sweepers, 'full-game'),
   })
+}
+
+/** Factories for the payout tests and the mocks: override only what a test cares about. */
+export function createPayee(overrides: Partial<SheetPayee> = {}): SheetPayee {
+  return {
+    registrationId: crypto.randomUUID(),
+    name: 'Dana Whitfield',
+    divisionName: 'Open',
+    detail: 'cashed, place 9',
+    seed: null,
+    previousCasher: false,
+    inferred: true,
+    payout: null,
+    ...overrides,
+  }
+}
+
+export function createOther(overrides: Partial<SheetOther> = {}): SheetOther {
+  return {
+    registrationId: crypto.randomUUID(),
+    name: 'Tom Becker',
+    divisionName: 'Open',
+    ...overrides,
+  }
+}
+
+export function createSheet(overrides: Partial<PayoutSheet> = {}): PayoutSheet {
+  return {
+    event: {
+      source: 'squad',
+      eventId: 'e0000000-0000-4000-8000-000000000001',
+      label: 'Squad',
+      date: '2026-10-24T09:00:00',
+      divisionName: null,
+    },
+    status: 'open',
+    reason: null,
+    payees: [],
+    others: [],
+    tournamentComplete: false,
+    ...overrides,
+  }
+}
+
+export function createPayoutRow(overrides: Partial<PayoutRow> = {}): PayoutRow {
+  return {
+    id: crypto.randomUUID(),
+    source: 'squad',
+    eventId: 'e0000000-0000-4000-8000-000000000001',
+    eventLabel: 'Squad',
+    eventDate: '2026-10-24T09:00:00',
+    registrationId: crypto.randomUUID(),
+    name: 'Dana Whitfield',
+    divisionName: 'Open',
+    amount: '100.00',
+    note: null,
+    paid: false,
+    ...overrides,
+  }
+}
+
+export function createSummary(overrides: Partial<PayoutSummary> = {}): PayoutSummary {
+  return {
+    count: 0,
+    total: '0.00',
+    paidCount: 0,
+    unpaidCount: 0,
+    unpaidTotal: '0.00',
+    ...overrides,
+  }
+}
+
+export function createTotal(overrides: Partial<BowlerTotal> = {}): BowlerTotal {
+  return {
+    registrationId: crypto.randomUUID(),
+    name: 'Dana Whitfield',
+    divisionName: 'Open',
+    count: 1,
+    total: '100.00',
+    unpaidTotal: '100.00',
+    ...overrides,
+  }
 }

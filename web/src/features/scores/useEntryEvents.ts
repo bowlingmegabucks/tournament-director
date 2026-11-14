@@ -23,7 +23,10 @@ export function useEntryEvents(
     `/v1/tournaments/${tournamentId}/${kind}s/${sessionId}/scores/events`,
     enabled,
     {
-      onChange: refetch,
+      // A payout save changes no score, so the keeper's screen stays as it is (D-285).
+      onChange: (kind) => {
+        if (kind !== 'payouts') refetch()
+      },
       onReconnect: refetch,
     },
   )

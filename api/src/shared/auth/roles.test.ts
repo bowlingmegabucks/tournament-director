@@ -75,6 +75,15 @@ describe('roles (D-97)', () => {
     expect(permissionsOf('admin')).toContain('tournaments.delete')
   })
 
+  it('lets a director and an admin read and write payouts, not a score keeper (D-275, PAY-16)', () => {
+    expect(permissionsOf('scoreKeeper')).not.toContain('payouts.read')
+    expect(permissionsOf('scoreKeeper')).not.toContain('payouts.write')
+    for (const role of ['director', 'admin']) {
+      expect(permissionsOf(role)).toContain('payouts.read')
+      expect(permissionsOf(role)).toContain('payouts.write')
+    }
+  })
+
   it('lets no one but the admin manage users or check SSNs', () => {
     for (const role of ['scoreKeeper', 'director']) {
       expect(permissionsOf(role)).not.toContain('users.manage')

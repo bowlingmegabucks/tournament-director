@@ -1,5 +1,6 @@
 import { HttpError } from '../../shared/errors.ts'
 import type { Division } from '../divisions/types.ts'
+import { amountsFor, type PayoutsOption } from '../payouts/amounts.ts'
 import type { Squad } from '../squads/types.ts'
 import {
   workOutAtLarge,
@@ -120,7 +121,7 @@ export async function loadAtLarge(
   }
 }
 
-function seedingRows(seeding: SeedingOutcome) {
+function seedingRows(seeding: SeedingOutcome, payouts: ReadonlyMap<string, string>) {
   const marks = markCutLine(entriesOf(seeding.finalists), entriesOf(seeding.others))
   const toRow = (item: PlacedEntry, seed: number, group: 'finalist' | 'other') => ({
     registrationId: item.entry.registrationId,
@@ -133,6 +134,8 @@ function seedingRows(seeding: SeedingOutcome) {
     handicap: item.entry.pins,
     previousCasher: seeding.previousCashers.has(item.entry.bowlerId),
     ties: marks.get(item.entry.registrationId) ?? [],
+    // D-284: only an inferred payee, a finalist, shows an amount.
+    payout: group === 'finalist' ? (payouts.get(item.entry.registrationId) ?? null) : null,
   })
   return [
     ...seeding.finalists.map((item, index) => toRow(item, index + 1, 'finalist')),
@@ -148,14 +151,17 @@ export async function loadSeeding(
   reporting: Reporting,
   tournamentId: string,
 ): Promise<SeedingResults> {
-  const { finalsRatio, complete, divisions } = await loadRuns(deps, reporting, tournamentId)
+  const [{ finalsRatio, complete, divisions }, amounts] = await Promise.all([
+    loadRuns(deps, reporting, tournamentId),
+    deps.payouts.listAmounts(tournamentId),
+  ])
   return {
     complete,
     finalsRatio,
     divisions: divisions.map(({ division, runs }) => {
       const atLarge = workOutAtLarge(runs, finalsRatio)
       const seeding = workOutSeeding(runs, atLarge)
-      const rows = seedingRows(seeding)
+      const rows = seedingRows(seeding, amountsFor(amounts, 'finals', division.id))
       return {
         id: division.id,
         number: division.number,
@@ -178,7 +184,7 @@ export async function loadSuperSweeper(
   deps: ResultsDeps,
   reporting: Reporting,
   tournamentId: string,
-  options: SuperSweeperOptions = {},
+  options: SuperSweeperOptions & PayoutsOption = {},
 ): Promise<SuperSweeperResults> {
   const ratios = await deps.tournaments.getRatios(tournamentId)
   if (!ratios) throw new HttpError(404, 'Tournament not found')
@@ -189,6 +195,11 @@ export async function loadSuperSweeper(
     deps.sweepers.listByTournament(tournamentId),
     deps.divisions.listByTournament(tournamentId),
   ])
+  const paid = amountsFor(
+    options.payouts ?? (await deps.payouts.listAmounts(tournamentId)),
+    'superSweeper',
+    tournamentId,
+  )
   const inputs = await Promise.all(
     sweepers.map(async (sweeper) => {
       const [entries, scores] = await Promise.all([
@@ -225,6 +236,8 @@ export async function loadSuperSweeper(
     sweeperPins: item.sweeperPins,
     flags: item.flags,
     dnf: item.dnf,
+    // D-284: only an inferred payee, a casher, shows an amount.
+    payout: group === 'casher' ? (paid.get(item.entry.registrationId) ?? null) : null,
   })
 
   return {

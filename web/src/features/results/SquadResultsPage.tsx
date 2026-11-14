@@ -15,6 +15,7 @@ import { useChosenDivision } from './useChosenDivision'
 import { useChosenMode } from './useChosenMode'
 import { useResultsEvents, useSquadResults } from './useResults'
 import { UnofficialNotice } from './UnofficialNotice'
+import { useStreamWanted } from './useStreamWanted'
 import { useResultsPrint } from './useResultsPrint'
 
 /**
@@ -29,12 +30,8 @@ export function SquadResultsPage() {
   const tournament = useOutletContext<Tournament>()
   const mode = useChosenMode()
   const { data, error, refetch } = useSquadResults(id, sessionId, mode)
-  const live = useResultsEvents(
-    'squad',
-    id,
-    sessionId,
-    data !== undefined && !data.session.complete,
-  )
+  const streamWanted = useStreamWanted(id, data?.session.complete)
+  const live = useResultsEvents('squad', id, sessionId, streamWanted)
   const { printing, only, print } = useResultsPrint()
   const chosen = useChosenDivision(data?.divisions ?? [])
 

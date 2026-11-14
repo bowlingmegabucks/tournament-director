@@ -276,3 +276,27 @@ model SessionDnf {
   @@id([sessionId, registrationId])
   @@map("SessionDnf")
 }
+
+/// What one squad, sweeper, the super sweeper, or the finals paid one bowler (D-267). Created by
+/// prisma/payout-tables.sql, not by Prisma, and unknown to WinForms. `eventId` is the squad or
+/// sweeper id, the division id for finals, and the tournament id for the super sweeper. No foreign
+/// keys: WinForms owns the tables it points at.
+model Payout {
+  id             String   @id @map("Id") @db.Char(36)
+  tournamentId   String   @map("TournamentId") @db.Char(36)
+  /// `squad`, `sweeper`, `superSweeper`, or `finals`.
+  source         String   @map("Source") @db.VarChar(16)
+  eventId        String   @map("EventId") @db.Char(36)
+  registrationId String   @map("RegistrationId") @db.Char(36)
+  amount         Decimal  @map("Amount") @db.Decimal(7, 2)
+  note           String?  @map("Note") @db.VarChar(200)
+  paid           Boolean  @default(false) @map("Paid")
+  createdAt      DateTime @map("CreatedAt") @db.DateTime(3)
+  createdBy      String   @map("CreatedBy") @db.VarChar(36)
+  updatedAt      DateTime @map("UpdatedAt") @db.DateTime(3)
+  updatedBy      String   @map("UpdatedBy") @db.VarChar(36)
+
+  @@unique([source, eventId, registrationId], map: "UX_Payouts_Event_Registration")
+  @@index([tournamentId], map: "IX_Payouts_Tournament")
+  @@map("Payouts")
+}

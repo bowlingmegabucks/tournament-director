@@ -81,11 +81,12 @@ export function createFinalsRouter(
   kind: 'at-large' | 'seeding' | 'super-sweeper',
   deps: ResultsDeps & { logger: Logger },
   cacheMs = LIVE_CACHE_MS,
+  /** One cache for the three pages, so a payout save can drop them together (PAY-21, D-285). */
+  cached = createTtlCache<unknown>(cacheMs),
 ): Router {
   const router = Router({ mergeParams: true })
   // A bad stored row stays bad on every poll. Say so once per process (D-51).
   const reported = new Set<string>()
-  const cached = createTtlCache<unknown>(cacheMs)
   const loadAnswer = {
     'at-large': (logger: Logger, id: string) => loadAtLarge(deps, { logger, reported }, id),
     seeding: (logger: Logger, id: string) => loadSeeding(deps, { logger, reported }, id),
@@ -99,7 +100,8 @@ export function createFinalsRouter(
     // Only the super sweeper has a ranking mode (D-252). At-large and seeding stay as they are (D-247).
     const { mode } = finalsQuery.parse(req.query)
     const logger = requestLogger(res, deps.logger)
-    const key = kind === 'super-sweeper' ? cacheKey(id, mode) : cacheKey(id)
+    // The kind is in the key because the three pages may share one cache.
+    const key = kind === 'super-sweeper' ? cacheKey(kind, id, mode) : cacheKey(kind, id)
     res.json(await cached(key, () => loadAnswer(logger, id, mode)))
   })
 

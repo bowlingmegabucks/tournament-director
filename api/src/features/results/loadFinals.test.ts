@@ -9,6 +9,8 @@ import {
 } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createInMemoryDnfStore } from '../dnf/store.ts'
+import { createInMemoryPayoutStore } from '../payouts/store.ts'
+import type { PayoutRecord } from '../payouts/types.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
 import type { Division } from '../divisions/types.ts'
 import { createInMemoryLaneRepository } from '../lanes/repository.ts'
@@ -38,6 +40,8 @@ function setup(options: {
   seats?: Seat[]
   divisions?: Division[]
   ratios?: TournamentRatios
+  /** Saved payouts, as storage holds them (PAY-20). */
+  payouts?: Omit<PayoutRecord, 'id' | 'tournamentId'>[]
 }) {
   const tournament = createTournament()
   const seats = options.seats ?? []
@@ -47,6 +51,15 @@ function setup(options: {
       options.ratios && { [tournament.id]: options.ratios },
     ),
     dnf: createInMemoryDnfStore().store,
+    payouts: createInMemoryPayoutStore(
+      (options.payouts ?? []).map((payout, index) => ({
+        ...payout,
+        // The super sweeper's event id is the tournament's, which only `setup` knows.
+        eventId: payout.eventId === 'tournament' ? tournament.id : payout.eventId,
+        id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+        tournamentId: tournament.id,
+      })),
+    ).store,
     divisions: createInMemoryDivisionRepository(
       (options.divisions ?? [open]).map((division) => ({
         tournamentId: tournament.id,
@@ -692,5 +705,82 @@ describe('loadSuperSweeper', () => {
     expect(
       captured.records().some((record) => record.registrationId === stray.registrationId),
     ).toBe(true)
+  })
+})
+
+describe('payouts in the rows (PAY-20, D-284)', () => {
+  const saved = (
+    source: PayoutRecord['source'],
+    eventId: string,
+    entry: LaneEntry,
+    amountCents: number,
+  ) => ({
+    source,
+    eventId,
+    registrationId: entry.registrationId,
+    amountCents,
+    note: null,
+    paid: false,
+  })
+
+  it('shows the finals amount on a finalist of that division, and on no other row', async () => {
+    const squad = squadAt(morning)
+    const { entries, seats } = sixBowlers(squad.id)
+    const [first, , , , , last] = entries
+    if (!first || !last) throw new Error('no bowlers')
+    const { deps, reporting, tournament } = setup({
+      squads: [squad],
+      seats,
+      ratios: { finalsRatio: 2, superSweeperCashRatio: 5 },
+      payouts: [
+        saved('finals', open.id, first, 150000),
+        // Not a finalist: a hand-added payout stays out of the results.
+        saved('finals', open.id, last, 2500),
+        // The same bowler's payout in another division's finals is another event.
+        saved('finals', women.id, entries[1] ?? first, 99900),
+      ],
+    })
+
+    const result = await loadSeeding(deps, reporting, tournament.id)
+
+    const rows = result.divisions[0]?.rows ?? []
+    expect(rows.find((row) => row.registrationId === first.registrationId)).toMatchObject({
+      group: 'finalist',
+      payout: '1500.00',
+    })
+    expect(rows.find((row) => row.registrationId === last.registrationId)).toMatchObject({
+      group: 'other',
+      payout: null,
+    })
+    expect(rows.filter((row) => row.payout !== null)).toHaveLength(1)
+  })
+
+  it('shows the super sweeper amount on a casher only', async () => {
+    const sweeper = createSweeper({ date: morning, games: 3, complete: true, cashRatio: 2 })
+    const [a, b, c, d] = Array.from({ length: 4 }, () => bowler({ superSweeper: true }))
+    if (!a || !b || !c || !d) throw new Error('no bowlers')
+    const seats = [a, b, c, d].map((entry, index) => ({
+      sessionId: sweeper.id,
+      entry,
+      games: Array.from({ length: 3 }, () => 100 + index * 10),
+    }))
+    const { deps, reporting, tournament } = setup({
+      sweepers: [sweeper],
+      seats,
+      ratios: { finalsRatio: 8, superSweeperCashRatio: 2 },
+      payouts: [
+        saved('superSweeper', 'tournament', d, 50000),
+        saved('superSweeper', 'tournament', a, 1000),
+      ],
+    })
+
+    const result = await loadSuperSweeper(deps, reporting, tournament.id)
+
+    expect(result.rows.map((row) => [row.group, row.payout])).toEqual([
+      ['casher', '500.00'],
+      ['casher', null],
+      ['other', null],
+      ['other', null],
+    ])
   })
 })

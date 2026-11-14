@@ -226,6 +226,7 @@ describe('tournament pages', () => {
       'At-large',
       'Seeding',
       'Live results',
+      'Payouts',
       'Change tournament',
     ])
     expect(nav.getByRole('link', { name: 'At-large' })).toHaveAttribute(
@@ -335,6 +336,39 @@ describe('tournament pages', () => {
         'Live results',
         'Change tournament',
       ])
+    })
+  })
+
+  describe('Payouts link (PAY-16, D-275, D-276)', () => {
+    it('shows to a user who holds payouts.read, and opens the full list', async () => {
+      serveTournament()
+      renderApp(`/tournaments/${tournament.id}`)
+
+      expect(
+        await within(await findSidebar()).findByRole('link', { name: 'Payouts' }),
+      ).toHaveAttribute('href', `/tournaments/${tournament.id}/payouts`)
+    })
+
+    it('hides from a visitor who is signed out', async () => {
+      setMockUser(null)
+      serveTournament()
+      renderApp(`/tournaments/${tournament.id}`)
+
+      await screen.findByRole('link', { name: 'Sign in' })
+      expect(
+        within(await findSidebar()).queryByRole('link', { name: 'Payouts' }),
+      ).not.toBeInTheDocument()
+    })
+
+    it('hides from a score keeper, who holds neither payout permission', async () => {
+      setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+      serveTournament()
+      renderApp(`/tournaments/${tournament.id}`)
+
+      await within(await findSidebar()).findByRole('link', { name: 'Registrations' })
+      expect(
+        within(await findSidebar()).queryByRole('link', { name: 'Payouts' }),
+      ).not.toBeInTheDocument()
     })
   })
 })

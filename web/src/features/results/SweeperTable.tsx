@@ -1,4 +1,5 @@
 import { formatThroughNote, formatTie, gameColumnCount, pendingGame, sweeperItems } from './format'
+import { PayoutTag } from './PayoutTag'
 import styles from './ResultsTable.module.css'
 import {
   GameCells,
@@ -90,6 +91,7 @@ export function SweeperTable({
                       {formatTie(tie)}
                     </span>
                   ))}
+                  <PayoutTag amount={item.row.payout} />
                 </th>
                 <PlusMinusCell total={item.row.total} games={item.row.games} />
                 <GameCells scores={item.row.scores} count={count} counted={throughGame} />

@@ -10,6 +10,8 @@ import {
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
 import { createInMemoryDnfStore } from '../dnf/store.ts'
+import { createInMemoryPayoutStore } from '../payouts/store.ts'
+import type { PayoutRecord } from '../payouts/types.ts'
 import { createInMemoryLaneRepository } from '../lanes/repository.ts'
 import type { LaneEntry } from '../lanes/types.ts'
 import { createInMemoryScoreRepository } from '../scores/repository.ts'
@@ -36,6 +38,8 @@ function setup(options: {
   seats?: Seat[]
   flags?: { sessionId: string; registrationId: string }[]
   superSweeperCashRatio?: number
+  /** Saved payouts, as storage holds them (PAY-20). */
+  payouts?: Omit<PayoutRecord, 'id' | 'tournamentId'>[]
 }) {
   const tournament = createTournament({ name: 'Spring Classic' })
   const seats = options.seats ?? []
@@ -71,6 +75,13 @@ function setup(options: {
       ),
     ),
     dnf: createInMemoryDnfStore(options.flags).store,
+    payouts: createInMemoryPayoutStore(
+      (options.payouts ?? []).map((payout, index) => ({
+        ...payout,
+        id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+        tournamentId: tournament.id,
+      })),
+    ).store,
   }
   return {
     deps,
@@ -111,6 +122,76 @@ describe('loadLiveResults (RES-47, D-242, D-244)', () => {
       ['sweeper', sweeper.id],
     ])
     expect(Number.isNaN(Date.parse(result.generatedAt))).toBe(false)
+  })
+
+  it('carries the saved amount of a squad casher and a sweeper casher (PAY-20, D-284)', async () => {
+    const squad = squadAt('2026-10-24T09:00:00')
+    const sweeper = createSweeper({ cashRatio: 2, games: 2, date: '2026-10-24T18:00:00' })
+    const bowlers = [bowler(), bowler(), bowler(), bowler()]
+    const [first, second] = bowlers
+    if (!first || !second) throw new Error('no bowlers')
+    const { deps, tournament, reporting } = setup({
+      squads: [squad],
+      sweepers: [sweeper],
+      seats: [
+        ...bowlers.map((entry, index) => ({
+          sessionId: squad.id,
+          entry,
+          games: [250 - index * 20, 250 - index * 20, 250 - index * 20],
+        })),
+        { sessionId: sweeper.id, entry: first, games: [210, 210] },
+        { sessionId: sweeper.id, entry: second, games: [200, 200] },
+      ],
+      payouts: [
+        // The squad's casher is the second bowler; the first advanced.
+        {
+          source: 'squad',
+          eventId: squad.id,
+          registrationId: second.registrationId,
+          amountCents: 10000,
+          note: null,
+          paid: false,
+        },
+        {
+          source: 'squad',
+          eventId: squad.id,
+          registrationId: first.registrationId,
+          amountCents: 5000,
+          note: null,
+          paid: false,
+        },
+        {
+          source: 'sweeper',
+          eventId: sweeper.id,
+          registrationId: first.registrationId,
+          amountCents: 25000,
+          note: null,
+          paid: true,
+        },
+      ],
+    })
+
+    const result = await loadLiveResults(deps, reporting, tournament.id)
+
+    expect(liveResultsSchema.safeParse(result).success).toBe(true)
+    const [squadSession, sweeperSession] = result.sessions
+    if (squadSession?.kind !== 'squad' || sweeperSession?.kind !== 'sweeper') {
+      throw new Error('unexpected sessions')
+    }
+    expect(
+      squadSession.results.divisions.flatMap((division) =>
+        division.rows.map((row) => [row.group, row.payout]),
+      ),
+    ).toEqual([
+      ['advancer', null],
+      ['casher', '100.00'],
+      ['other', null],
+      ['other', null],
+    ])
+    expect(sweeperSession.results.rows.map((row) => [row.group, row.payout])).toEqual([
+      ['casher', '250.00'],
+      ['other', null],
+    ])
   })
 
   it('leaves out a session with no scores (RES-47)', async () => {

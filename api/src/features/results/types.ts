@@ -52,6 +52,11 @@ export const squadRowSchema = z.object({
   advancedEarlier: z.boolean(),
   /** Flagged "did not finish" in a squad that is still open (D-248, D-251). */
   dnf: z.boolean(),
+  /**
+   * What the row's bowler cashed for in this event, saved by a director (PAY-20, D-284): money text such
+   * as `"100.00"`. `null` for a bowler with no saved payout, and for any row that is not an inferred payee.
+   */
+  payout: z.string().nullable(),
 })
 
 /** A bowler listed apart on a complete squad: no place, no group, no ties (D-75). */
@@ -116,6 +121,11 @@ export const sweeperRowSchema = z.object({
   scores: gameScoresSchema,
   /** Flagged "did not finish" in a sweeper that is still open (D-248, D-251). */
   dnf: z.boolean(),
+  /**
+   * What the row's bowler cashed for in this event, saved by a director (PAY-20, D-284): money text such
+   * as `"100.00"`. `null` for a bowler with no saved payout, and for any row that is not an inferred payee.
+   */
+  payout: z.string().nullable(),
 })
 
 export type SweeperRow = z.infer<typeof sweeperRowSchema>
@@ -193,6 +203,11 @@ export const seedingRowSchema = z.object({
   handicap: z.number().int(),
   previousCasher: z.boolean(),
   ties: z.array(tieSchema),
+  /**
+   * What the row's bowler cashed for in this event, saved by a director (PAY-20, D-284): money text such
+   * as `"100.00"`. `null` for a bowler with no saved payout, and for any row that is not an inferred payee.
+   */
+  payout: z.string().nullable(),
 })
 
 export const seedingDivisionSchema = z.object({
@@ -207,6 +222,9 @@ export const seedingDivisionSchema = z.object({
   showHandicap: z.boolean(),
   rows: z.array(seedingRowSchema),
 })
+
+export type SeedingDivision = z.infer<typeof seedingDivisionSchema>
+export type SeedingRow = z.infer<typeof seedingRowSchema>
 
 export const seedingResultsSchema = z.object({
   complete: z.boolean(),
@@ -239,6 +257,11 @@ export const superSweeperRowSchema = z.object({
   flags: z.array(sweeperFlagSchema),
   /** Flagged "did not finish" in a sweeper that is still open (D-248, D-251). */
   dnf: z.boolean(),
+  /**
+   * What the row's bowler cashed for in this event, saved by a director (PAY-20, D-284): money text such
+   * as `"100.00"`. `null` for a bowler with no saved payout, and for any row that is not an inferred payee.
+   */
+  payout: z.string().nullable(),
 })
 
 export type SuperSweeperRow = z.infer<typeof superSweeperRowSchema>

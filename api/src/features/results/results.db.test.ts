@@ -7,6 +7,7 @@ import { resetDatabase } from '../../test/resetDatabase.ts'
 import { createTestApp } from '../../test/testApp.ts'
 import { createPrismaDivisionRepository } from '../divisions/prismaRepository.ts'
 import { createPrismaLaneRepository } from '../lanes/prismaRepository.ts'
+import { createPrismaPayoutStore } from '../payouts/prismaStore.ts'
 import { createPrismaScoreRepository } from '../scores/prismaRepository.ts'
 import { createPrismaSquadRepository } from '../squads/prismaRepository.ts'
 import { createPrismaSweeperRepository } from '../sweepers/prismaRepository.ts'
@@ -134,6 +135,7 @@ describe('results on a real database', () => {
       sweepers: createPrismaSweeperRepository(client, logger),
       lanes: createPrismaLaneRepository(client, logger),
       scores: createPrismaScoreRepository(client, logger),
+      payoutStore: createPrismaPayoutStore(client, logger),
     })
   }
 
@@ -239,5 +241,39 @@ describe('results on a real database', () => {
 
     expect(response.status).toBe(404)
     expect(response.body).toEqual({ message: 'Squad not found' })
+  })
+
+  it('shows the saved payout on the casher and on no other row (PAY-20, D-284)', async () => {
+    const { tournamentId, morning, bowlers } = await twoSquads()
+    const insertPayout = (registrationId: string, amount: string) =>
+      client.$executeRawUnsafe(
+        `INSERT INTO Payouts (Id, TournamentId, Source, EventId, RegistrationId, Amount, Paid, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy)
+         VALUES (?, ?, 'squad', ?, ?, ?, 0, NOW(3), 'u', NOW(3), 'u')`,
+        crypto.randomUUID(),
+        tournamentId,
+        morning,
+        registrationId,
+        amount,
+      )
+    // Baker cashes; Adams advanced, so a payout saved for Adams by hand stays out of the results.
+    await insertPayout(bowlers[1]?.registrationId ?? '', '100.00')
+    await insertPayout(bowlers[0]?.registrationId ?? '', '5.00')
+
+    const response = await request(appOnDatabase()).get(
+      `/v1/tournaments/${tournamentId}/squads/${morning}/results`,
+    )
+
+    expect(squadResultsSchema.safeParse(response.body).success).toBe(true)
+    expect(
+      response.body.divisions[0].rows.map((row: { group: string; payout: string | null }) => [
+        row.group,
+        row.payout,
+      ]),
+    ).toEqual([
+      ['advancer', null],
+      ['casher', '100.00'],
+      ['other', null],
+      ['other', null],
+    ])
   })
 })

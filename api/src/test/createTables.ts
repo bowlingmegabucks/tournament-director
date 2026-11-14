@@ -3,6 +3,7 @@ import { describeDatabase, isLocalDatabase } from '../db/localDatabase.ts'
 import { createDatabaseClient } from '../shared/database.ts'
 import { authSchemaSql } from './authSchema.ts'
 import { legacySchemaSql } from './legacySchema.ts'
+import { payoutSchemaSql } from './payoutSchema.ts'
 import { scoreSchemaSql } from './scoreSchema.ts'
 
 // Run with `npm run db:tables`. Creates the empty legacy, sign-in, and score tables, the same ones
@@ -17,7 +18,12 @@ if (!isLocalDatabase(databaseUrl)) {
 }
 const client = createDatabaseClient(databaseUrl)
 try {
-  const statements = [...legacySchemaSql, ...authSchemaSql(), ...scoreSchemaSql()]
+  const statements = [
+    ...legacySchemaSql,
+    ...authSchemaSql(),
+    ...scoreSchemaSql(),
+    ...payoutSchemaSql(),
+  ]
   for (const statement of statements) {
     // In order: a table with a foreign key needs the table it points to first.
     await client.$executeRawUnsafe(statement) // NOSONAR: order matters

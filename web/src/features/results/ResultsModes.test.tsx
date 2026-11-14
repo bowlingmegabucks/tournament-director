@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { server } from '../../mocks/server'
 import {
   createDivisionResult,
+  createSettings,
   createSquad,
   createSquadResults,
   createSquadRow,
@@ -388,7 +389,12 @@ describe('Results tab follows its stream (RES-44, D-241)', () => {
     ).toBeVisible()
   })
 
-  it('opens no stream for a complete squad (D-10)', async () => {
+  it('opens no stream for a complete squad of a complete tournament (D-10, D-285)', async () => {
+    server.use(
+      http.get('/v1/tournaments/:id/settings', () =>
+        HttpResponse.json({ settings: createSettings({ completed: true }) }),
+      ),
+    )
     const done = (mode: RankMode) =>
       createSquadResults({
         session: { ...createSquadResults().session, id: sessionId, complete: true },
@@ -401,6 +407,41 @@ describe('Results tab follows its stream (RES-44, D-241)', () => {
 
     expect(FakeEventSource.instances).toHaveLength(0)
     expect(screen.queryByRole('status', { name: /Live/ })).not.toBeInTheDocument()
+  })
+
+  it('keeps the stream of a complete squad while the tournament is open, so a saved payout shows (PAY-21, D-285)', async () => {
+    const done = (mode: RankMode) =>
+      createSquadResults({
+        session: { ...createSquadResults().session, id: sessionId, complete: true },
+        mode,
+        divisions: [createDivisionResult({ name: 'Open', entries: 1, rows: [createSquadRow()] })],
+      })
+    const { first } = serveSquad(done)
+    openSquad(first)
+    await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
+
+    await waitFor(() => {
+      expect(FakeEventSource.instances).toHaveLength(1)
+    })
+    const paid = createSquadResults({
+      session: first.session,
+      divisions: [
+        createDivisionResult({
+          name: 'Open',
+          entries: 1,
+          rows: [createSquadRow({ group: 'casher', payout: '100.00' })],
+        }),
+      ],
+    })
+    server.use(
+      http.get('/v1/tournaments/:id/squads/:sessionId/results', () => HttpResponse.json(paid)),
+    )
+    act(() => {
+      FakeEventSource.latest().open()
+      FakeEventSource.latest().message('{"kind":"payouts","version":1}')
+    })
+
+    expect(await screen.findByText('Payout $100.00')).toBeVisible()
   })
 
   it('shows the live status line while the squad is open (RES-44)', async () => {

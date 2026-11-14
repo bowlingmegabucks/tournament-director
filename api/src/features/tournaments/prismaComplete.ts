@@ -133,6 +133,14 @@ export function createTournamentCompleter(
                 ),
               ),
             )
+            const [payoutCount, unpaid] = await Promise.all([
+              tx.payout.count({ where: { tournamentId: id } }),
+              tx.payout.aggregate({
+                where: { tournamentId: id, paid: false },
+                _count: true,
+                _sum: { amount: true },
+              }),
+            ])
             const noScoreCount = infos.reduce((sum, info) => sum + info.noScoreCount, 0)
             const partialCount = infos.reduce((sum, info) => sum + info.partialCount, 0)
             return {
@@ -143,6 +151,9 @@ export function createTournamentCompleter(
               ).length,
               noScoreCount,
               partialCount,
+              payoutCount,
+              unpaidPayoutCount: unpaid._count,
+              unpaidPayoutTotal: unpaid._sum.amount?.toFixed(2) ?? '0.00',
             }
           },
           { isolationLevel: 'RepeatableRead' },

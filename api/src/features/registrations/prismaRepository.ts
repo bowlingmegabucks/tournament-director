@@ -23,10 +23,10 @@ export function createPrismaRegistrationRepository(
   }
 
   return {
-    async listByTournament(tournamentId) {
+    async listByTournament(tournamentId, onlyIds) {
       const rows = await withDatabaseErrors(logger, () =>
         client.registration.findMany({
-          where: { division: { tournamentId } },
+          where: { division: { tournamentId }, ...(onlyIds ? { id: { in: [...onlyIds] } } : {}) },
           // Named columns only: the bowler's SSN, birth date, and contact details are never read (BWL-17).
           select: {
             id: true,

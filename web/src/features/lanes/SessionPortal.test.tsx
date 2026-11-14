@@ -12,6 +12,7 @@ import {
   createSweeper,
   createSweeperResults,
   createTournament,
+  createSheet,
   createSignedInUser,
 } from '../../mocks/data'
 import { renderApp } from '../../test/renderApp'
@@ -84,7 +85,7 @@ describe('SessionPortal', () => {
       within(tabs)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['Lane assignments', 'Scores', 'Results'])
+    ).toEqual(['Lane assignments', 'Scores', 'Results', 'Payouts'])
     expect(within(tabs).getByRole('link', { name: 'Scores' })).not.toHaveAttribute('aria-current')
   })
 
@@ -322,6 +323,7 @@ describe('SessionPortal', () => {
         'Lane assignments',
         'Scores',
         'Results',
+        'Payouts',
       ])
     })
 
@@ -388,6 +390,54 @@ describe('SessionPortal', () => {
           { timeout: 3000 },
         ),
       ).toBeVisible()
+    })
+  })
+
+  describe('Payouts tab (PAY-16, D-275, D-276)', () => {
+    it.each([
+      ['squads', 'Squad pages', 'squad'],
+      ['sweepers', 'Sweeper pages', 'sweeper'],
+    ] as const)('opens the %s payouts page for a director', async (kind, nav, singular) => {
+      serve()
+      server.use(
+        http.get(`/v1/tournaments/:id/payouts/${singular}/:eventId`, ({ params }) =>
+          HttpResponse.json({
+            sheet: createSheet({
+              event: {
+                source: singular,
+                eventId: String(params['eventId']),
+                label: singular === 'squad' ? 'Squad' : 'Sweeper',
+                date: null,
+                divisionName: null,
+              },
+            }),
+          }),
+        ),
+      )
+
+      renderApp(`${base}/${kind}/${lists[kind].id}/lanes`)
+      const tabs = await screen.findByRole('navigation', { name: nav }, { timeout: 3000 })
+      await userEvent.click(await within(tabs).findByRole('link', { name: 'Payouts' }))
+
+      expect(await screen.findByRole('heading', { name: 'Payouts', level: 2 })).toBeVisible()
+      expect(within(tabs).getByRole('link', { name: 'Payouts' })).toHaveAttribute(
+        'aria-current',
+        'page',
+      )
+    })
+
+    it.each([
+      ['a score keeper', createSignedInUser({ roles: ['scoreKeeper'] })],
+      ['a signed-out visitor', null],
+    ])('hides the tab from %s', async (_who, user) => {
+      setMockUser(user)
+      serve()
+
+      renderApp(`${base}/squads/${squad.id}/scores`)
+
+      const tabs = await screen.findByRole('navigation', { name: 'Squad pages' }, { timeout: 3000 })
+      await within(tabs).findByRole('link', { name: 'Results' })
+      expect(within(tabs).queryByRole('link', { name: 'Payouts' })).not.toBeInTheDocument()
     })
   })
 })

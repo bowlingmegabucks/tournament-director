@@ -239,6 +239,20 @@ describe('live notifier (RES-49, D-243)', () => {
     expect(dropped).toHaveBeenCalledWith(tournamentId)
   })
 
+  it('says payouts were saved, with the session when a squad or sweeper has one, and drops the feed (PAY-21, D-285)', () => {
+    const { notifier, seen, dropped } = setup()
+
+    notifier().payoutsSaved(tournamentId, { kind: 'squad', id: sessionId })
+    notifier().payoutsSaved(tournamentId)
+
+    expect(seen).toEqual([
+      { kind: 'payouts', detail: { sessionId, sessionKind: 'squad' }, version: 1 },
+      { kind: 'payouts', detail: undefined, version: 2 },
+    ])
+    expect(dropped).toHaveBeenCalledTimes(2)
+    expect(dropped).toHaveBeenCalledWith(tournamentId)
+  })
+
   it('publishes a rise once when two saves fill the same game together', async () => {
     const a = bowler()
     const b = bowler()

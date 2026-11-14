@@ -25,6 +25,8 @@ export function useScoreEvents(
     path: `/v1/tournaments/${tournamentId}/${kind}s/${sessionId}/scores/events`,
     queryKey: scoreKeys.page(kind, tournamentId, sessionId),
     enabled,
+    // A payout shows in the results, not in the scores (D-285).
+    ignores: ['payouts'],
     change: (before, after) => {
       const found = diffScores(before, after)
       const text = describeScoreChange(found)

@@ -86,6 +86,14 @@
   white-space: nowrap;
 }
 
+/* What a casher won (PAY-20, D-284). Bold text on its own line, so color is not the only cue. */
+.payout {
+  display: block;
+  color: var(--color-success);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
 /* A game that is not complete yet: shown, not counted (RES-46). Italic and a dagger, so color is not the only cue. */
 .pending {
   color: var(--color-text-muted);

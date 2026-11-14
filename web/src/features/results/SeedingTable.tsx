@@ -1,5 +1,6 @@
 import { formatSquadStamp } from '../../shared/sessionFormat'
 import { formatSeedingSummary, formatTie, seedingItems } from './format'
+import { PayoutTag } from './PayoutTag'
 import styles from './ResultsTable.module.css'
 import type { SeedingDivision } from './types'
 
@@ -55,6 +56,7 @@ export function SeedingBody({ division }: Readonly<{ division: SeedingDivision }
                       {formatTie(tie)}
                     </span>
                   ))}
+                  <PayoutTag amount={item.row.payout} />
                 </th>
                 <td className={styles.totalCell} data-label="Total">
                   {item.row.total}

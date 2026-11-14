@@ -41,6 +41,11 @@ export interface LiveNotifier {
   after(snapshot: LiveSnapshot | undefined): Promise<void>
   /** A session completed (RES-49): the TV refetches it, now official. */
   completed(tournamentId: string, kind: SessionKind, sessionId: string): void
+  /**
+   * Payouts were saved (PAY-21, D-285): the TV refetches, because an amount shows in its rows. A squad
+   * or sweeper save names the session; the super sweeper and finals do not.
+   */
+  payoutsSaved(tournamentId: string, session?: { kind: SessionKind; id: string }): void
 }
 
 export interface LiveNotifierDeps {
@@ -148,6 +153,15 @@ export function createLiveNotifier({
     completed(tournamentId, kind, sessionId) {
       cache.dropTournament(tournamentId)
       events.publish(liveKey(tournamentId), 'complete', { sessionId, sessionKind: kind })
+    },
+
+    payoutsSaved(tournamentId, session) {
+      cache.dropTournament(tournamentId)
+      events.publish(
+        liveKey(tournamentId),
+        'payouts',
+        session ? { sessionId: session.id, sessionKind: session.kind } : undefined,
+      )
     },
   }
 

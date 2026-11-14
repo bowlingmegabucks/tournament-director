@@ -99,4 +99,21 @@ describe('SweeperTable (RES-22, RES-25a, D-82)', () => {
 
     expect(screen.queryByText(/is not complete yet/)).not.toBeInTheDocument()
   })
+
+  it('shows the amount a casher won under the name (PAY-20, D-284)', () => {
+    render(
+      <SweeperTable
+        rows={[
+          createSweeperRow({ name: 'Ann Lee', group: 'casher', payout: '250.00' }),
+          createSweeperRow({ name: 'Bea Moss', group: 'other', payout: null }),
+        ]}
+        games={3}
+      />,
+    )
+
+    expect(
+      within(screen.getByRole('row', { name: /Ann Lee/ })).getByText('Payout $250.00'),
+    ).toBeInTheDocument()
+    expect(screen.getAllByText(/^Payout /)).toHaveLength(1)
+  })
 })

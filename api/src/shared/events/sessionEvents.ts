@@ -6,9 +6,11 @@ import type { Logger } from '../logger.ts'
  * or a score saved or cleared (D-232). The tournament stream of the TV page (D-243) also sends
  * `game-full` and `reopened` (a division's counted games moved, with the game), `scored` (a bowler's
  * row changed in a division that shows, with no game), and `complete` (a session completed).
+ * `payouts` says a director saved payouts of a squad or sweeper (to its stream) or of any event (to the
+ * tournament stream, PAY-21, D-285); it never carries an amount.
  */
 export type ChangeKind =
-  'lanes' | 'entries' | 'scores' | 'game-full' | 'reopened' | 'scored' | 'complete'
+  'lanes' | 'entries' | 'scores' | 'game-full' | 'reopened' | 'scored' | 'complete' | 'payouts'
 
 /**
  * Where a live-results message points (D-243): ids and a number, never a score. Only the tournament

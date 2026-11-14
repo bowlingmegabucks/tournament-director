@@ -61,6 +61,22 @@ describe('in-memory registration repository', () => {
     expect(listed.map((r) => r.bowler.firstName)).toEqual(['Amy', 'Zed'])
   })
 
+  it('lists only the registrations asked for by id', async () => {
+    const [first, second, third] = [
+      named('Amy', 'Adams'),
+      named('Bob', 'Adams'),
+      named('Cy', 'Adams'),
+    ]
+    const repository = createInMemoryRegistrationRepository(
+      [first, second, third].map((registration) => ({ tournamentId: 't1', registration })),
+    )
+
+    const listed = await repository.listByTournament('t1', [first.id, third.id])
+
+    expect(listed.map((r) => r.id)).toEqual([first.id, third.id])
+    await expect(repository.listByTournament('t1', [])).resolves.toEqual([])
+  })
+
   it('lists a bowler with two registrations twice (REG-27, D-48)', async () => {
     const bowler = createRegistration().bowler
     const repository = createInMemoryRegistrationRepository([

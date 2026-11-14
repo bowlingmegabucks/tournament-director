@@ -15,6 +15,8 @@ export function toDivisionResult(
   advancedBefore: ReadonlySet<string>,
   throughGame: number | null,
   flagged: ReadonlySet<string> = new Set(),
+  /** The saved payouts of this squad by registration id (PAY-20, D-284). */
+  payouts: ReadonlyMap<string, string> = new Map(),
 ): DivisionResult {
   const { advancers, cashers, others, cutTotal } = outcome
 
@@ -37,6 +39,8 @@ export function toDivisionResult(
       advancedBefore.has(entry.bowlerId) && cutTotal !== undefined && entry.total >= cutTotal,
     ties: marks.get(entry.registrationId) ?? [],
     dnf: flagged.has(entry.registrationId),
+    // D-284: only an inferred payee, a casher, shows an amount.
+    payout: group === 'casher' ? (payouts.get(entry.registrationId) ?? null) : null,
   }))
 
   const everyone = [

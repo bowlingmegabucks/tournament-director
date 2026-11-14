@@ -127,6 +127,13 @@ export function TournamentLayout() {
                 Live results
               </NavLink>
             </li>
+            <Can permission="payouts.read">
+              <li>
+                <NavLink onClick={closeMenu} to={`/tournaments/${data.id}/payouts`}>
+                  Payouts
+                </NavLink>
+              </li>
+            </Can>
           </ul>
           <p>
             <Link onClick={closeMenu} to="/tournaments">

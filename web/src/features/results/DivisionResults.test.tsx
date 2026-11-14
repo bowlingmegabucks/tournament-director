@@ -127,4 +127,25 @@ describe('DivisionSummary', () => {
 
     expect(container.querySelectorAll('p').length).toBeGreaterThan(0)
   })
+
+  it('shows the amount a casher won under the name, and on no other row (PAY-20, D-284)', () => {
+    render(
+      <DivisionBody
+        games={3}
+        division={createDivisionResult({
+          name: 'Open',
+          rows: [
+            createSquadRow({ name: 'Ann Lee', place: 1, group: 'advancer' }),
+            createSquadRow({ name: 'Bea Moss', place: 2, group: 'casher', payout: '100.00' }),
+            createSquadRow({ name: 'Cy Park', place: 3, group: 'other' }),
+          ],
+        })}
+      />,
+    )
+
+    expect(
+      within(screen.getByRole('row', { name: /Bea Moss/ })).getByText('Payout $100.00'),
+    ).toBeInTheDocument()
+    expect(screen.getAllByText(/^Payout /)).toHaveLength(1)
+  })
 })

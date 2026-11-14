@@ -314,6 +314,9 @@ describe('Prisma complete tournament (TRN-10, TRN-38 to TRN-41, D-256 to D-259)'
         openSweeperCount: 1,
         noScoreCount: 2,
         partialCount: 1,
+        payoutCount: 0,
+        unpaidPayoutCount: 0,
+        unpaidPayoutTotal: '0.00',
       })
     })
 
@@ -326,6 +329,33 @@ describe('Prisma complete tournament (TRN-10, TRN-38 to TRN-41, D-256 to D-259)'
         openSweeperCount: 0,
         noScoreCount: 0,
         partialCount: 0,
+        payoutCount: 0,
+        unpaidPayoutCount: 0,
+        unpaidPayoutTotal: '0.00',
+      })
+    })
+
+    it('counts the payouts and the unpaid ones with their total (PAY-15, D-279)', async () => {
+      const tournamentId = await rows.tournament()
+      const payout = (amount: string, paid: boolean) =>
+        client.$executeRawUnsafe(
+          `INSERT INTO Payouts (Id, TournamentId, Source, EventId, RegistrationId, Amount, Paid, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy)
+           VALUES (?, ?, 'squad', ?, ?, ?, ?, NOW(3), 'u', NOW(3), 'u')`,
+          crypto.randomUUID(),
+          tournamentId,
+          crypto.randomUUID(),
+          crypto.randomUUID(),
+          amount,
+          paid ? 1 : 0,
+        )
+      await payout('100.00', true)
+      await payout('1000.50', false)
+      await payout('449.50', false)
+
+      expect(await writer().getCompleteInfo(tournamentId)).toMatchObject({
+        payoutCount: 3,
+        unpaidPayoutCount: 2,
+        unpaidPayoutTotal: '1450.00',
       })
     })
   })

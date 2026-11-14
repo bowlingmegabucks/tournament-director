@@ -12,6 +12,7 @@ import {
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createTestApp } from '../../test/testApp.ts'
 import { createInMemoryDnfStore } from '../dnf/store.ts'
+import { createInMemoryPayoutStore } from '../payouts/store.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
 import { createInMemoryLaneRepository } from '../lanes/repository.ts'
 import { createInMemoryScoreRepository } from '../scores/repository.ts'
@@ -104,6 +105,7 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/results', () => {
         'group',
         'handicap',
         'name',
+        'payout',
         'place',
         'registrationId',
         'scores',
@@ -346,6 +348,7 @@ describe('results cache', () => {
         lanes: createInMemoryLaneRepository([]),
         scores: createInMemoryScoreRepository([]),
         dnf: createInMemoryDnfStore().store,
+        payouts: createInMemoryPayoutStore().store,
         logger: createCapturedLogger().logger,
       },
       cache,
@@ -588,6 +591,7 @@ describe('GET /v1/tournaments/:id/live-results (RES-47)', () => {
         lanes: createInMemoryLaneRepository([]),
         scores: createInMemoryScoreRepository([]),
         dnf: createInMemoryDnfStore().store,
+        payouts: createInMemoryPayoutStore().store,
         logger: createCapturedLogger().logger,
       },
       cache,

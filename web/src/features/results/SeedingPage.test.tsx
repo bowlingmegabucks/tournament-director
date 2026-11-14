@@ -3,10 +3,12 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
+import { setMockUser } from '../../mocks/authHandlers'
 import {
   createSeedingDivision,
   createSeedingResults,
   createSeedingRow,
+  createSignedInUser,
   createTournament,
 } from '../../mocks/data'
 import { renderApp } from '../../test/renderApp'
@@ -322,5 +324,47 @@ describe('SeedingPage printing (RPT-04d, D-89)', () => {
       expect(print).toHaveBeenCalledTimes(1)
     })
     expect(labels).toEqual(['Women division'])
+  })
+
+  describe('the finals payouts link (PAY-05, PAY-16, D-276)', () => {
+    it('says Pay finals for a director and opens the chosen division', async () => {
+      setMockUser(createSignedInUser({ roles: ['director'] }))
+      const results = filled()
+      serve(results)
+
+      open()
+
+      const link = await screen.findByRole('link', { name: 'Pay finals' })
+      expect(link).toHaveAttribute(
+        'href',
+        `/tournaments/${tournament.id}/seeding/${results.divisions[0]?.id}/payouts`,
+      )
+    })
+
+    it('says Finals payouts for a user who may read but not write', async () => {
+      setMockUser(createSignedInUser({ roles: ['director'], permissions: ['payouts.read'] }))
+      serve(filled())
+
+      open()
+
+      expect(await screen.findByRole('link', { name: 'Finals payouts' })).toBeVisible()
+      expect(screen.queryByRole('link', { name: 'Pay finals' })).not.toBeInTheDocument()
+    })
+
+    it('shows no link to a score keeper or a visitor who is signed out', async () => {
+      setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+      serve(filled())
+
+      open()
+
+      await screen.findByRole(
+        'table',
+        { name: 'Finals seeding for the Open division' },
+        { timeout: 3000 },
+      )
+      expect(
+        screen.queryByRole('link', { name: /Pay finals|Finals payouts/ }),
+      ).not.toBeInTheDocument()
+    })
   })
 })

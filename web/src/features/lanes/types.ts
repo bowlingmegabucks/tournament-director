@@ -14,6 +14,8 @@ export interface LaneBowler {
   /** For sorting the unassigned list by last name, then first (D-58). */
   firstName: string
   lastName: string
+  /** `''`, or `Jr`, `Sr`, `III`. Already inside `name`; kept apart so a sheet can sort by it. */
+  suffix: string
   divisionId: string
   divisionName: string
   average: number | null

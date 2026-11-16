@@ -681,6 +681,28 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('check-in sheet dialog has no WCAG 2.2 AA violations', async ({ page }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await page
+        .getByRole('navigation', { name: /Northeast MegaBuck/ })
+        .getByRole('link', { name: 'Squads' })
+        .click()
+      await page.getByRole('link', { name: /^[A-Z][a-z]{2} \d{2}\/\d{2}\/\d{4} 1:00 PM$/ }).click()
+      await page.getByRole('button', { name: 'Check-in sheet' }).click()
+      await expect(page.getByRole('button', { name: 'Print' })).toBeVisible()
+
+      // The preview scrolls, so the keyboard must reach it and it needs a name.
+      const preview = page.getByRole('region', { name: 'Check-in sheet preview' })
+      await preview.focus()
+      await expect(preview).toBeFocused()
+
+      await expectNoViolations(page)
+
+      await page.getByRole('radio', { name: /A to Z/ }).check()
+      await expectNoViolations(page)
+    })
+
     test('lane assignments page of a complete squad has no WCAG 2.2 AA violations', async ({
       page,
     }) => {

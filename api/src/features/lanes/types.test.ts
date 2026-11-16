@@ -6,6 +6,7 @@ const bowler = {
   name: 'Joe Fontaine',
   firstName: 'Joe',
   lastName: 'Fontaine',
+  suffix: '',
   divisionId: '7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01',
   divisionName: 'Open',
   average: 212,

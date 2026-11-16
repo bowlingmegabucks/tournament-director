@@ -25,6 +25,7 @@
   --color-brand-text: #c9ae6a; /* gold text on the brand black, in both themes (contrast 9:1) */
   --color-paper: #ffffff; /* a printed sheet is black on white in both themes (D-63) */
   --color-ink: #000000;
+  --color-paper-shade: #eeeeee; /* a light grey band on a printed sheet; ink on it is 18:1 */
 
   /* Type */
   --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;

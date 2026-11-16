@@ -124,6 +124,7 @@ describe('Prisma lane repository', () => {
         average: 212,
         firstName: 'Ray',
         lastName: 'Baptiste',
+        suffix: 'Jr',
         name: 'Ray Baptiste, Jr',
         superSweeper: true,
         position: '15A',
@@ -182,6 +183,7 @@ describe('Prisma lane repository', () => {
       'name',
       'position',
       'registrationId',
+      'suffix',
       'superSweeper',
     ])
     expect(JSON.stringify(entry)).not.toContain('c2VjcmV0LXNzbg==')

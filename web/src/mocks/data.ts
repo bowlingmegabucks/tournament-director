@@ -381,6 +381,7 @@ export function createLaneBowler(overrides: Partial<LaneBowler> = {}): LaneBowle
     name: `${firstName} ${lastName}`,
     firstName,
     lastName,
+    suffix: '',
     divisionId: faker.string.uuid(),
     divisionName: 'Open',
     average: 200,

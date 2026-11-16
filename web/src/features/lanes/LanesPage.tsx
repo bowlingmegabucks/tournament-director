@@ -17,6 +17,7 @@ import { PairZone } from './PairZone'
 import { useCan } from '../auth/useCan'
 import { AddRegistrationLink } from '../registrations/AddRegistrationLink'
 import { SessionActionsDialog } from '../registrations/SessionActionsDialog'
+import { CheckInDialog } from './CheckInDialog'
 import { RecapDialog } from '../recapSheets/RecapDialog'
 import type { LaneBowler, LanePage, SessionKind } from './types'
 import { UnassignedList } from './UnassignedList'
@@ -54,6 +55,7 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
   // Moving a bowler needs `lanes.assign` (D-216). A score keeper may watch the lanes but not change them.
   const canAssign = useCan('lanes.assign')
   const { move, savingIds } = useMoveBowler(kind, id, sessionId)
+  const [checkInOpen, setCheckInOpen] = useState(false)
   // A complete session cannot change, so it needs no stream (D-10, D-217).
   const live = useSessionEvents(kind, id, sessionId, data !== undefined && !data.session.complete)
 
@@ -147,6 +149,14 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
             >
               Recap sheets
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCheckInOpen(true)
+              }}
+            >
+              Check-in sheet
+            </button>
           </span>
         </div>
         {session.complete && (
@@ -215,6 +225,15 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
       <title>{`Lane assignments · ${formatSessionDate(session.date)} · ${tournament.name} · Tournament Director`}</title>
       {!session.complete && <LiveStatus state={live.state} updated={live.updated?.text} />}
       {body}
+      {checkInOpen && (
+        <CheckInDialog
+          page={view}
+          tournamentName={tournament.name}
+          onClose={() => {
+            setCheckInOpen(false)
+          }}
+        />
+      )}
       <DragOverlay>{dragging ? <BowlerPreview name={dragging.name} /> : null}</DragOverlay>
       {assigning && (
         <AssignDialog

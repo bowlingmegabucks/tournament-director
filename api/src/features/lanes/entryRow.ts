@@ -58,6 +58,7 @@ export function toLaneEntry(row: LaneEntryRow) {
   const { suffix, superSweeper, ...fields } = checked.data
   const entry: LaneEntry = {
     ...fields,
+    suffix,
     name: displayName({ firstName: fields.firstName, lastName: fields.lastName, suffix }),
     superSweeper,
     position: row.laneAssignment ?? '',

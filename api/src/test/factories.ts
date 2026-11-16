@@ -126,6 +126,7 @@ export function createLaneEntry(overrides: Partial<LaneEntry> = {}): LaneEntry {
     name: `${firstName} ${lastName}`,
     firstName,
     lastName,
+    suffix: '',
     divisionId: faker.string.uuid(),
     average: 200,
     superSweeper: false,

@@ -78,6 +78,7 @@ export function buildLanePage(
       name: entry.name,
       firstName: entry.firstName,
       lastName: entry.lastName,
+      suffix: entry.suffix,
       divisionId: division.id,
       divisionName: division.name,
       average: entry.average,

@@ -214,6 +214,16 @@ describe('buildLanePage', () => {
     expect(page.unassigned.map((bowler) => bowler.pins)).toEqual([10, 0])
   })
 
+  it('carries the suffix on its own as well as inside the name (BWL-13)', () => {
+    const { page } = buildLanePage(
+      session(),
+      [entry('', { lastName: 'Fontaine', suffix: 'Jr', name: 'Joe Fontaine, Jr' })],
+      [division],
+    )
+
+    expect(page.unassigned[0]).toMatchObject({ suffix: 'Jr', name: 'Joe Fontaine, Jr' })
+  })
+
   it('carries the average, the super sweeper flag, the position, and the division name (LAN-11)', () => {
     const { page } = buildLanePage(
       session({ kind: 'sweeper' }),

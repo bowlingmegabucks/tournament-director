@@ -31,6 +31,7 @@ describe('toLaneEntry', () => {
         average: 200,
         firstName: 'Joe',
         lastName: 'Fontaine',
+        suffix: '',
         name: 'Joe Fontaine',
         superSweeper: true,
         position: '1A',
@@ -50,6 +51,7 @@ describe('toLaneEntry', () => {
     )
 
     expect(result.success && result.data.name).toBe('Joe Fontaine, Jr')
+    expect(result.success && result.data.suffix).toBe('Jr')
   })
 
   it('accepts a missing average', () => {

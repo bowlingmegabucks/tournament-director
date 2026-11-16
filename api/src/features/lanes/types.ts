@@ -14,6 +14,8 @@ export const laneBowlerSchema = z.object({
   /** For sorting the unassigned list by last name, then first (D-58). */
   firstName: z.string().min(1),
   lastName: z.string().min(1),
+  /** `''` or `Jr`, `Sr`, `III`. Already inside `name`; sent alone so a sheet can sort by it. */
+  suffix: z.string(),
   divisionId: z.uuid(),
   divisionName: z.string(),
   average: z.number().int().nullable(),
@@ -70,6 +72,7 @@ export interface LaneEntry {
   name: string
   firstName: string
   lastName: string
+  suffix: string
   divisionId: string
   average: number | null
   superSweeper: boolean

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -317,7 +317,7 @@ describe('LanesPage', () => {
       within(screen.getByRole('main'))
         .getAllByRole('button')
         .map((button) => button.textContent),
-    ).toEqual(['Recap sheets'])
+    ).toEqual(['Recap sheets', 'Check-in sheet'])
   })
 
   it('names the page, the session, and the tournament in the title', async () => {
@@ -778,5 +778,81 @@ describe('Recap sheets button (LAN-12, RPT-09)', () => {
 
     await screen.findByText(/No bowlers have entered this squad yet/, undefined, { timeout: 3000 })
     expect(screen.queryByRole('button', { name: 'Recap sheets' })).not.toBeInTheDocument()
+  })
+})
+
+describe('LanesPage check-in sheet', () => {
+  let print: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    print = vi.fn()
+    vi.stubGlobal('print', print)
+    vi.stubGlobal('matchMedia', () => ({
+      matches: false,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    delete document.body.dataset.checkinPrinting
+  })
+
+  async function openDialog() {
+    const page = filled()
+    serve(page)
+    open(page)
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Check-in sheet' }, { timeout: 3000 }),
+    )
+    return screen.getByRole('dialog', { name: 'Check-in sheet' })
+  }
+
+  it('opens a preview in lane order, with the pairs and the unassigned bowlers', async () => {
+    const dialog = await openDialog()
+
+    expect(within(dialog).getByRole('radio', { name: 'Lane order' })).toBeChecked()
+    expect(within(dialog).getByRole('heading', { name: 'Squad check-in' })).toBeVisible()
+    expect(within(dialog).getByRole('columnheader', { name: 'Lanes 1-2' })).toBeVisible()
+    expect(within(dialog).getByRole('columnheader', { name: 'No lane' })).toBeVisible()
+    expect(print).not.toHaveBeenCalled()
+  })
+
+  it('switches the preview to A to Z', async () => {
+    const dialog = await openDialog()
+
+    await userEvent.click(within(dialog).getByRole('radio', { name: 'A to Z (last, first)' }))
+
+    expect(within(dialog).getByText(/Alphabetical by last name/)).toBeVisible()
+    expect(within(dialog).queryByRole('columnheader', { name: 'No lane' })).not.toBeInTheDocument()
+  })
+
+  it.each([
+    [null, 'Lane order'],
+    ['A to Z (last, first)', 'Alphabetical by last name'],
+  ])('prints the chosen order (%s) from a copy outside the dialog', async (radio, order) => {
+    const dialog = await openDialog()
+    if (radio) await userEvent.click(within(dialog).getByRole('radio', { name: radio }))
+    let seen: string | undefined
+    print.mockImplementation(() => {
+      seen = document.querySelector('[data-checkin-print-copy]')?.textContent ?? undefined
+      expect(document.body.dataset.checkinPrinting).toBeDefined()
+    })
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Print' }))
+
+    expect(print).toHaveBeenCalledTimes(1)
+    expect(seen).toContain('Squad check-in')
+    expect(seen).toContain(order)
+    expect(seen).toContain('Spring Open')
+  })
+
+  it('Close shuts the dialog', async () => {
+    const dialog = await openDialog()
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Check-in sheet' })).not.toBeInTheDocument()
   })
 })

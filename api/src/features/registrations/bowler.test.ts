@@ -43,6 +43,13 @@ describe('normalizeZip (BWL-04)', () => {
     ['27601-1234', '276011234'],
     ['2760', ''],
     ['abcde', ''],
+    ['G1H 4B6', 'G1H4B6'],
+    ['g1h4b6', 'G1H4B6'],
+    ['G1H-4B6', 'G1H4B6'],
+    ['K1A 0B1', 'K1A0B1'],
+    ['G1H 4B', ''],
+    ['D1H 4B6', ''],
+    ['G1H 4B66', ''],
   ])('turns %j into %j', (raw, expected) => {
     expect(normalizeZip(raw)).toBe(expected)
   })

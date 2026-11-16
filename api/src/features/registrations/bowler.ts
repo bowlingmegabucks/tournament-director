@@ -58,10 +58,19 @@ export function normalizePhone(raw: string): string {
   return national.length === 10 ? national : ''
 }
 
-/** Five or nine digits, no dash (BWL-04); anything else is `''`, which the rules then refuse. */
+// Canadian postal code: letter, digit, letter, then digit, letter, digit. D, F, I, O, Q, and U
+// never appear, and W and Z never start one.
+const canadianPostalCode = /^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z]\d[ABCEGHJ-NPRSTV-Z]\d$/
+
+/**
+ * Five or nine digits, no dash (BWL-04), or a Canadian postal code without the space, in capitals
+ * (D-286); anything else is `''`, which the rules then refuse.
+ */
 export function normalizeZip(raw: string): string {
   const digits = raw.replace(/\D/g, '')
-  return digits.length === 5 || digits.length === 9 ? digits : ''
+  if (digits.length === 5 || digits.length === 9) return digits
+  const postal = raw.replace(/[\s-]/g, '').toUpperCase()
+  return canadianPostalCode.test(postal) ? postal : ''
 }
 
 /** D-113: `"F"` is Female; `"M"` and everything else is Male. */

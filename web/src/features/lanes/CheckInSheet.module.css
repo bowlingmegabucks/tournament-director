@@ -101,7 +101,7 @@
 .group th {
   padding-block: 3pt;
   border-block-start: 1.5pt solid var(--color-ink);
-  background: #eee;
+  background: var(--color-paper-shade);
   font-size: 10pt;
   text-transform: none;
   letter-spacing: 0;

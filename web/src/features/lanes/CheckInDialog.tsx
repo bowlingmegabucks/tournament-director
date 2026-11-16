@@ -105,11 +105,13 @@ export function CheckInDialog({ page, tournamentName, onClose }: Readonly<CheckI
           Print
         </button>
       </div>
-      <div className={styles.scroller}>
+      {/* The preview can outgrow the box, so it scrolls and takes the keyboard. */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
+      <section className={styles.scroller} tabIndex={0} aria-label="Check-in sheet preview">
         <div className={styles.preview}>
           <CheckInSheet {...props} />
         </div>
-      </div>
+      </section>
       {checkIn.order && (
         <CheckInPrintCopy
           {...props}

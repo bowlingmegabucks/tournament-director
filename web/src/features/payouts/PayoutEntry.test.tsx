@@ -974,26 +974,7 @@ describe('the printouts (PAY-22)', () => {
     expect(printed.getByRole('columnheader', { name: 'Received by' })).toBeVisible()
   })
 
-  it('prints a sign-off sheet of everyone who cashed before any amount is saved', async () => {
-    const user = userEvent.setup()
-    serve(sheet({ payees: [dana, marcus] }))
-    openPage()
-
-    await user.click(await screen.findByRole('button', { name: 'Print sign-off sheet' }))
-
-    const copy = document.querySelector<HTMLElement>('[data-payout-print-copy]')
-    expect(copy).not.toBeNull()
-    const printed = within(copy as HTMLElement)
-    expect(printed.getByRole('heading', { name: 'Squad payouts: sign-off' })).toBeVisible()
-    expect(printed.getByText('Dana Whitfield')).toBeVisible()
-    expect(printed.getByText('cashed, place 10')).toBeVisible()
-    expect(printed.getByText(/2 bowlers/)).toBeVisible()
-    expect(printed.getByRole('columnheader', { name: 'Received by' })).toBeVisible()
-    // No amount saved: the cell stays blank for the director to write in.
-    expect(printed.queryByText(/\$/)).toBeNull()
-  })
-
-  it('fills in an amount that is already saved on the sign-off sheet', async () => {
+  it('prints a sign-off sheet of the saved payouts, paid or not, for bowlers to sign', async () => {
     const user = userEvent.setup()
     serve(
       sheet({
@@ -1001,6 +982,7 @@ describe('the printouts (PAY-22)', () => {
           createPayee({
             registrationId: dana.registrationId,
             name: 'Dana Whitfield',
+            detail: 'cashed, place 9',
             payout: { id: 'p1', amount: '100.00', note: null, paid: false },
           }),
           marcus,
@@ -1012,14 +994,23 @@ describe('the printouts (PAY-22)', () => {
     await user.click(await screen.findByRole('button', { name: 'Print sign-off sheet' }))
 
     const copy = document.querySelector<HTMLElement>('[data-payout-print-copy]')
-    expect(within(copy as HTMLElement).getByText('$100.00')).toBeVisible()
+    expect(copy).not.toBeNull()
+    const printed = within(copy as HTMLElement)
+    expect(printed.getByRole('heading', { name: 'Squad payouts: sign-off' })).toBeVisible()
+    expect(printed.getByText('Dana Whitfield')).toBeVisible()
+    expect(printed.getByText('cashed, place 9')).toBeVisible()
+    expect(printed.getByText('$100.00', { selector: 'td' })).toBeVisible()
+    expect(printed.getByText(/1 payout/)).toBeVisible()
+    expect(printed.getByRole('columnheader', { name: 'Received by' })).toBeVisible()
+    // Marcus has no saved amount, so he is owed nothing and is not on the sheet.
+    expect(printed.queryByText('Marcus Lee')).toBeNull()
   })
 
-  it('offers no sign-off sheet until the event is complete (PAY-10)', async () => {
-    serve(sheet({ status: 'notReady', reason: 'This squad is not complete.' }))
+  it('offers no sign-off sheet until an amount is saved', async () => {
+    serve(sheet({ payees: [dana, marcus] }))
     openPage()
 
-    await screen.findByText('This squad is not complete.')
+    await screen.findByText('No payouts are recorded for this squad.')
 
     expect(screen.queryByRole('button', { name: 'Print sign-off sheet' })).not.toBeInTheDocument()
   })

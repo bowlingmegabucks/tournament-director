@@ -130,7 +130,7 @@ export function EventPayouts({ source, tournamentId, eventId }: Readonly<EventPa
             Enter payouts
           </button>
         </Can>
-        {data.status !== 'notReady' && data.payees.length > 0 && (
+        {payouts.length > 0 && (
           <PrintPayoutsButton
             label="Print sign-off sheet"
             tournamentName={tournament.name}
@@ -142,16 +142,14 @@ export function EventPayouts({ source, tournamentId, eventId }: Readonly<EventPa
               { label: 'Result' },
               { label: 'Amount', num: true },
             ]}
-            rows={data.payees.map((payee) => ({
+            rows={payouts.map(({ payee, payout }) => ({
               key: payee.registrationId,
-              cells: [
-                payee.name,
-                payee.divisionName,
-                payee.detail,
-                payee.payout ? formatMoney(payee.payout.amount) : '',
-              ],
+              cells: [payee.name, payee.divisionName, payee.detail, formatMoney(payout.amount)],
             }))}
-            figures={[`${data.payees.length} ${data.payees.length === 1 ? 'bowler' : 'bowlers'}`]}
+            figures={[
+              `${payouts.length} ${payouts.length === 1 ? 'payout' : 'payouts'}`,
+              `Total ${formatMoney(formatCents(total))}`,
+            ]}
             signature
             tall
             printedOn={new Date().toLocaleDateString('en-US')}

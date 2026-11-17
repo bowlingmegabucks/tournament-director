@@ -285,7 +285,16 @@ function Steps({
   }
   const stored = detail ? toBowlerValues(detail.bowler) : undefined
   const name = bowlerNameOf(bowler)
-  const listUrl = `/tournaments/${tournamentId}/registrations`
+  // From a lane page the desk goes back there, not to the list (REG-22).
+  let listUrl = `/tournaments/${tournamentId}/registrations`
+  if (presetSquadId !== undefined && squads.some((squad) => squad.id === presetSquadId)) {
+    listUrl = `/tournaments/${tournamentId}/squads/${presetSquadId}/lanes`
+  } else if (
+    presetSweeperId !== undefined &&
+    sweepers.some((sweeper) => sweeper.id === presetSweeperId)
+  ) {
+    listUrl = `/tournaments/${tournamentId}/sweepers/${presetSweeperId}/lanes`
+  }
 
   function goTo(at: Step) {
     setErrors({})

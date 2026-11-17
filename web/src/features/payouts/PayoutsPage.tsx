@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router'
+import { Link, useOutletContext, useParams, useSearchParams } from 'react-router'
 import { formatMoney } from '../../shared/formatMoney'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
@@ -7,7 +7,9 @@ import { formatSessionDate } from '../../shared/sessionFormat'
 import { Toast } from '../../shared/Toast'
 import { TournamentNotFoundError } from '../../shared/tournamentQuery'
 import { useCan } from '../auth/useCan'
+import type { Tournament } from '../tournaments/types'
 import { PayoutDisclaimer } from './PayoutDisclaimer'
+import { PrintPayoutsButton } from './PayoutPrint'
 import styles from './Payouts.module.css'
 import {
   asPaidFilter,
@@ -19,7 +21,7 @@ import {
 } from './listFilters'
 import type { BowlerTotal, PayoutList, PayoutRow } from './types'
 import { usePayoutTotals, usePayouts, useSetPaid } from './usePayouts'
-import { formatCents } from './amount'
+import { formatCents, parseAmount } from './amount'
 
 /** The Paid cell: a checkbox that saves at once for a user who may, text with a check mark for anyone else (D-274). */
 function PaidCell({
@@ -60,7 +62,39 @@ function PayoutView({
   return <ByBowler tournamentId={id} />
 }
 
+/** What the filters hide, as a line for the printed sheet. Empty when nothing is filtered. */
+function filterText(
+  options: readonly { key: string; label: string }[],
+  event: string,
+  paid: PaidFilter,
+): string | undefined {
+  const parts = [
+    event ? options.find((option) => option.key === event)?.label : undefined,
+    paid === 'paid' ? 'Paid only' : undefined,
+    paid === 'unpaid' ? 'Not paid only' : undefined,
+  ].filter((part): part is string => part !== undefined)
+  return parts.length > 0 ? parts.join(' · ') : undefined
+}
+
+/** The count, total, and not-paid total of the lines on the sheet. */
+function rowFigures(rows: readonly PayoutRow[]): string[] {
+  let total = 0
+  let unpaid = 0
+  for (const row of rows) {
+    const parsed = parseAmount(row.amount)
+    const cents = parsed.kind === 'amount' ? parsed.cents : 0
+    total += cents
+    if (!row.paid) unpaid += cents
+  }
+  return [
+    `${rows.length} ${rows.length === 1 ? 'payout' : 'payouts'}`,
+    `Total ${formatMoney(formatCents(total))}`,
+    `Not paid ${formatMoney(formatCents(unpaid))}`,
+  ]
+}
+
 function ByPayout({ tournamentId, list }: Readonly<{ tournamentId: string; list: PayoutList }>) {
+  const tournament = useOutletContext<Tournament>()
   const canWrite = useCan('payouts.write')
   const editable = canWrite && !list.tournamentComplete
   const [event, setEvent] = useState('')
@@ -115,6 +149,39 @@ function ByPayout({ tournamentId, list }: Readonly<{ tournamentId: string; list:
       </div>
       {list.tournamentComplete && (
         <output className={styles.block}>This tournament is complete. Payouts are locked.</output>
+      )}
+      {rows.length > 0 && (
+        <div className={styles.toolbar}>
+          <PrintPayoutsButton
+            label="Print list"
+            tournamentName={tournament.name}
+            title="Payouts by payout"
+            subtitle={filterText(options, event, paid)}
+            columns={[
+              { id: 'event', label: 'Event' },
+              { id: 'bowler', label: 'Bowler' },
+              { id: 'division', label: 'Division' },
+              { id: 'amount', label: 'Amount', num: true },
+              { id: 'note', label: 'Note' },
+              { id: 'paid', label: 'Paid' },
+            ]}
+            rows={rows.map((row) => ({
+              key: row.id,
+              cells: [
+                row.eventDate
+                  ? `${row.eventLabel} ${formatSessionDate(row.eventDate)}`
+                  : row.eventLabel,
+                row.name,
+                row.divisionName,
+                formatMoney(row.amount),
+                row.note ?? '',
+                row.paid ? 'Paid' : 'Not paid',
+              ],
+            }))}
+            figures={rowFigures(rows)}
+            signature
+          />
+        </div>
       )}
       {rows.length === 0 ? (
         <p>No payout matches.</p>
@@ -171,6 +238,7 @@ function ByPayout({ tournamentId, list }: Readonly<{ tournamentId: string; list:
 }
 
 function ByBowler({ tournamentId }: Readonly<{ tournamentId: string }>) {
+  const tournament = useOutletContext<Tournament>()
   const [min, setMin] = useState('')
   const { data, isPending, error, refetch } = usePayoutTotals(tournamentId, '')
   const minimum = readMinimum(min)
@@ -212,6 +280,38 @@ function ByBowler({ tournamentId }: Readonly<{ tournamentId: string }>) {
           )}
         </div>
       </div>
+      {shown.length > 0 && (
+        <div className={styles.toolbar}>
+          <PrintPayoutsButton
+            label="Print list"
+            tournamentName={tournament.name}
+            title="Payouts by bowler"
+            subtitle={
+              minimum.kind === 'least'
+                ? `Earned at least ${formatMoney(formatCents(minimum.cents))}`
+                : undefined
+            }
+            columns={[
+              { id: 'bowler', label: 'Bowler' },
+              { id: 'division', label: 'Division' },
+              { id: 'payouts', label: 'Payouts', num: true },
+              { id: 'total', label: 'Total', num: true },
+              { id: 'not-paid', label: 'Not paid', num: true },
+            ]}
+            rows={shown.map((bowler) => ({
+              key: bowler.registrationId,
+              cells: [
+                bowler.name,
+                bowler.divisionName,
+                String(bowler.count),
+                formatMoney(bowler.total),
+                formatMoney(bowler.unpaidTotal),
+              ],
+            }))}
+            figures={[`${shown.length} ${shown.length === 1 ? 'bowler' : 'bowlers'}`]}
+          />
+        </div>
+      )}
       {shown.length === 0 ? (
         <p>
           {minimum.kind === 'least'

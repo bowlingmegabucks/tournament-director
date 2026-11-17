@@ -88,6 +88,9 @@ export function fillAmount(
 const paidMoved = (row: RowState): boolean =>
   row.saved === null ? row.paid : row.paid !== row.saved.paid
 
+/** What a director typed, trimmed, with a lone trailing dot dropped: "50." means $50. */
+export const cleanAmount = (text: string) => text.trim().replace(/(?<=\d)\.$/, '')
+
 /**
  * What the save sends: every row with an amount, and every row that had a saved payout (a cleared box
  * deletes it, D-270). A row with nothing typed and nothing saved is left out.
@@ -97,7 +100,7 @@ export function saveRowsOf(rows: readonly RowState[]): SaveRow[] {
     .filter((row) => row.amount.trim() !== '' || row.payoutId !== null)
     .map((row) => ({
       registrationId: row.registrationId,
-      amount: row.amount.trim(),
+      amount: cleanAmount(row.amount),
       note: row.note.trim() === '' ? null : row.note.trim(),
       // Only a tick the director moved: an untouched row keeps the server's value.
       ...(paidMoved(row) ? { paid: row.paid } : {}),
@@ -111,7 +114,7 @@ export function saveRowsOf(rows: readonly RowState[]): SaveRow[] {
 export function validateRows(rows: readonly RowState[]): Record<string, string> {
   const errors: Record<string, string> = {}
   for (const row of rows) {
-    const amount = parseAmount(row.amount)
+    const amount = parseAmount(cleanAmount(row.amount))
     if (amount.kind === 'invalid') errors[`amount:${row.registrationId}`] = amount.message
     if (amount.kind !== 'amount') continue
     const note = row.note.trim()
@@ -126,7 +129,7 @@ export function totalOf(rows: readonly RowState[]): { cents: number; count: numb
   let cents = 0
   let count = 0
   for (const row of rows) {
-    const amount = parseAmount(row.amount)
+    const amount = parseAmount(cleanAmount(row.amount))
     if (amount.kind !== 'amount') continue
     cents += amount.cents
     count += 1

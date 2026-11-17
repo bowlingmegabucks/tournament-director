@@ -20,6 +20,31 @@ describe('AuthMenu (top bar)', () => {
     expect(link).toHaveAttribute('href', '/login')
   })
 
+  it('signs in and comes back to the page the user was on', async () => {
+    const user = userEvent.setup()
+    server.use(http.get('/v1/tournaments', () => HttpResponse.json({ tournaments: [] })))
+    renderApp('/tournaments?show=past')
+    await user.click(await within(mainMenu()).findByRole('link', { name: 'Sign in' }))
+
+    await user.click(await screen.findByRole('button', { name: 'Log in as admin' }))
+
+    expect(await within(mainMenu()).findByText('Local Admin')).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Sign in' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Tournaments', level: 1 })).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Tournament Management' })).not.toBeInTheDocument()
+  })
+
+  it('does not send the user back to a sign-in page', async () => {
+    renderApp('/forgot-password')
+
+    const link = await within(mainMenu()).findByRole('link', { name: 'Sign in' })
+    await userEvent.click(link)
+    await userEvent.click(await screen.findByRole('button', { name: 'Log in as admin' }))
+
+    expect(await within(mainMenu()).findByText('Local Admin')).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Forgot your password?' })).not.toBeInTheDocument()
+  })
+
   it('says it is checking while /v1/me loads', async () => {
     renderApp('/nowhere')
 

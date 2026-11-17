@@ -6,6 +6,7 @@ import { server } from '../../mocks/server'
 import { setMockUser } from '../../mocks/authHandlers'
 import {
   createDivision,
+  createLanePage,
   createSettings,
   createSignedInUser,
   createSquad,
@@ -93,6 +94,13 @@ function serve(options: Options = {}): Served {
       HttpResponse.json({ squads: [morning, afternoon, finished] }),
     ),
     http.get('/v1/tournaments/:id/sweepers', () => HttpResponse.json({ sweepers: [sweeper] })),
+    // The lane page the desk comes back to when it started there (REG-22).
+    http.get('/v1/tournaments/:id/squads/:sessionId/lanes', () =>
+      HttpResponse.json(createLanePage()),
+    ),
+    http.get('/v1/tournaments/:id/sweepers/:sessionId/lanes', () =>
+      HttpResponse.json(createLanePage()),
+    ),
     http.get('/v1/tournaments/:id/registrations', () =>
       HttpResponse.json({
         registrations: [],

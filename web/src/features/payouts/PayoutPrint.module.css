@@ -108,3 +108,8 @@
 .signature {
   inline-size: 2.2in;
 }
+
+/* A sign-off sheet: room to write an amount and a name on each line. */
+.tall td {
+  padding-block: 11pt 5pt;
+}

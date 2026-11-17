@@ -25,6 +25,8 @@ export interface PayoutPrintSheetProps {
   figures: readonly string[]
   /** Adds a blank "Received by" column, for a sheet signed as cash goes out. */
   signature?: boolean
+  /** Tall rows with room to write, for a sheet people sign by hand. */
+  tall?: boolean
   /** Today, as text, so a test can fix it. */
   printedOn: string
 }
@@ -43,6 +45,7 @@ export function PayoutPrintSheet({
   rows,
   figures,
   signature = false,
+  tall = false,
   printedOn,
 }: Readonly<PayoutPrintSheetProps>) {
   return (
@@ -62,7 +65,7 @@ export function PayoutPrintSheet({
           Printed {printedOn}
         </p>
       </header>
-      <table className={styles.table}>
+      <table className={tall ? `${styles.table} ${styles.tall}` : styles.table}>
         <thead>
           <tr>
             {columns.map((column) => (

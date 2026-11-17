@@ -90,6 +90,15 @@ export function EventPayouts({ source, tournamentId, eventId }: Readonly<EventPa
     data.status === 'notReady' ? null : (
       <p>{`No payouts are recorded for ${eventNoun(data.event.label)}.`}</p>
     )
+  // What both printed sheets share. Each sheet picks its own figures from the named parts below.
+  const countFigure = `${payouts.length} ${payouts.length === 1 ? 'payout' : 'payouts'}`
+  const totalFigure = `Total ${formatMoney(formatCents(total))}`
+  const unpaidFigure = `Not paid ${formatMoney(formatCents(unpaid))}`
+  const printBase = {
+    tournamentName: tournament.name,
+    subtitle: data.event.date ? formatSessionDate(data.event.date) : undefined,
+    signature: true,
+  }
   const Heading = source === 'squad' || source === 'sweeper' ? 'h2' : 'h1'
   return (
     <>
@@ -132,41 +141,35 @@ export function EventPayouts({ source, tournamentId, eventId }: Readonly<EventPa
         </Can>
         {payouts.length > 0 && (
           <PrintPayoutsButton
+            {...printBase}
             label="Print sign-off sheet"
-            tournamentName={tournament.name}
             title={`${printTitleOf(data)}: sign-off`}
-            subtitle={data.event.date ? formatSessionDate(data.event.date) : undefined}
             columns={[
-              { label: 'Bowler' },
-              { label: 'Division' },
-              { label: 'Result' },
-              { label: 'Amount', num: true },
+              { id: 'bowler', label: 'Bowler' },
+              { id: 'division', label: 'Division' },
+              { id: 'result', label: 'Result' },
+              { id: 'amount', label: 'Amount', num: true },
             ]}
             rows={payouts.map(({ payee, payout }) => ({
               key: payee.registrationId,
               cells: [payee.name, payee.divisionName, payee.detail, formatMoney(payout.amount)],
             }))}
-            figures={[
-              `${payouts.length} ${payouts.length === 1 ? 'payout' : 'payouts'}`,
-              `Total ${formatMoney(formatCents(total))}`,
-            ]}
-            signature
+            figures={[countFigure, totalFigure]}
             tall
-            printedOn={new Date().toLocaleDateString('en-US')}
           />
         )}
         {payouts.length > 0 && (
           <PrintPayoutsButton
+            {...printBase}
             label="Print payouts"
-            tournamentName={tournament.name}
             title={printTitleOf(data)}
-            subtitle={data.event.date ? formatSessionDate(data.event.date) : undefined}
+            figures={[countFigure, totalFigure, unpaidFigure]}
             columns={[
-              { label: 'Bowler' },
-              { label: 'Division' },
-              { label: 'Amount', num: true },
-              { label: 'Note' },
-              { label: 'Paid' },
+              { id: 'bowler', label: 'Bowler' },
+              { id: 'division', label: 'Division' },
+              { id: 'amount', label: 'Amount', num: true },
+              { id: 'note', label: 'Note' },
+              { id: 'paid', label: 'Paid' },
             ]}
             rows={payouts.map(({ payee, payout }) => ({
               key: payee.registrationId,
@@ -178,13 +181,6 @@ export function EventPayouts({ source, tournamentId, eventId }: Readonly<EventPa
                 payout.paid ? 'Paid' : 'Not paid',
               ],
             }))}
-            figures={[
-              `${payouts.length} ${payouts.length === 1 ? 'payout' : 'payouts'}`,
-              `Total ${formatMoney(formatCents(total))}`,
-              `Not paid ${formatMoney(formatCents(unpaid))}`,
-            ]}
-            signature
-            printedOn={new Date().toLocaleDateString('en-US')}
           />
         )}
       </div>

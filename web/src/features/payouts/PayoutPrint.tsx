@@ -4,6 +4,8 @@ import { startPrint } from '../../shared/print'
 import styles from './PayoutPrint.module.css'
 
 export interface PrintColumn {
+  /** Stable key for the column. */
+  id: string
   label: string
   /** Right-aligned, for money and counts. */
   num?: boolean
@@ -27,8 +29,8 @@ export interface PayoutPrintSheetProps {
   signature?: boolean
   /** Tall rows with room to write, for a sheet people sign by hand. */
   tall?: boolean
-  /** Today, as text, so a test can fix it. */
-  printedOn: string
+  /** Today, as text. Left out, it is the date the sheet is made, which is the day of the print. */
+  printedOn?: string
 }
 
 /**
@@ -46,7 +48,7 @@ export function PayoutPrintSheet({
   figures,
   signature = false,
   tall = false,
-  printedOn,
+  printedOn = new Date().toLocaleDateString('en-US'),
 }: Readonly<PayoutPrintSheetProps>) {
   return (
     <div className={styles.sheet}>
@@ -69,7 +71,7 @@ export function PayoutPrintSheet({
         <thead>
           <tr>
             {columns.map((column) => (
-              <th key={column.label} className={column.num ? styles.num : undefined}>
+              <th key={column.id} className={column.num ? styles.num : undefined}>
                 {column.label}
               </th>
             ))}
@@ -79,12 +81,9 @@ export function PayoutPrintSheet({
         <tbody>
           {rows.map((row) => (
             <tr key={row.key}>
-              {row.cells.map((cell, index) => (
-                <td
-                  key={columns[index]?.label}
-                  className={columns[index]?.num ? styles.num : undefined}
-                >
-                  {cell}
+              {columns.map((column, index) => (
+                <td key={column.id} className={column.num ? styles.num : undefined}>
+                  {row.cells[index]}
                 </td>
               ))}
               {signature && <td />}

@@ -158,12 +158,12 @@ function ByPayout({ tournamentId, list }: Readonly<{ tournamentId: string; list:
             title="Payouts by payout"
             subtitle={filterText(options, event, paid)}
             columns={[
-              { label: 'Event' },
-              { label: 'Bowler' },
-              { label: 'Division' },
-              { label: 'Amount', num: true },
-              { label: 'Note' },
-              { label: 'Paid' },
+              { id: 'event', label: 'Event' },
+              { id: 'bowler', label: 'Bowler' },
+              { id: 'division', label: 'Division' },
+              { id: 'amount', label: 'Amount', num: true },
+              { id: 'note', label: 'Note' },
+              { id: 'paid', label: 'Paid' },
             ]}
             rows={rows.map((row) => ({
               key: row.id,
@@ -180,7 +180,6 @@ function ByPayout({ tournamentId, list }: Readonly<{ tournamentId: string; list:
             }))}
             figures={rowFigures(rows)}
             signature
-            printedOn={new Date().toLocaleDateString('en-US')}
           />
         </div>
       )}
@@ -293,11 +292,11 @@ function ByBowler({ tournamentId }: Readonly<{ tournamentId: string }>) {
                 : undefined
             }
             columns={[
-              { label: 'Bowler' },
-              { label: 'Division' },
-              { label: 'Payouts', num: true },
-              { label: 'Total', num: true },
-              { label: 'Not paid', num: true },
+              { id: 'bowler', label: 'Bowler' },
+              { id: 'division', label: 'Division' },
+              { id: 'payouts', label: 'Payouts', num: true },
+              { id: 'total', label: 'Total', num: true },
+              { id: 'not-paid', label: 'Not paid', num: true },
             ]}
             rows={shown.map((bowler) => ({
               key: bowler.registrationId,
@@ -310,7 +309,6 @@ function ByBowler({ tournamentId }: Readonly<{ tournamentId: string }>) {
               ],
             }))}
             figures={[`${shown.length} ${shown.length === 1 ? 'bowler' : 'bowlers'}`]}
-            printedOn={new Date().toLocaleDateString('en-US')}
           />
         </div>
       )}

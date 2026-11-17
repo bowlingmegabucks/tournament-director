@@ -12,6 +12,7 @@ import {
   createRecapSheets,
   createSignedInUser,
 } from '../../mocks/data'
+import { renderApp } from '../../test/renderApp'
 import { carl, filled, joe, open, pat, serve, tournament } from './lanesTestSupport'
 
 /** The pair's card: the `li` that holds its level 3 heading. */
@@ -386,6 +387,34 @@ describe('LanesPage', () => {
       'Bowlers per pair must be 2 to 5 to assign lanes',
     )
     expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+  })
+})
+
+describe('LanesPage notice after adding a registration (REG-22)', () => {
+  const lanesUrl = (page: ReturnType<typeof filled>) =>
+    `/tournaments/${tournament.id}/${page.session.kind}s/${page.session.id}/lanes`
+
+  it('shows who was added, and Dismiss clears it', async () => {
+    const page = filled()
+    serve(page)
+
+    renderApp(lanesUrl(page), { added: 'Maria Gonzalez' })
+
+    expect(await screen.findByText('Registration added for Maria Gonzalez')).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: /dismiss/i }))
+    await waitFor(() => {
+      expect(screen.queryByText('Registration added for Maria Gonzalez')).not.toBeInTheDocument()
+    })
+  })
+
+  it('shows no notice when the page opens without it', async () => {
+    const page = filled()
+    serve(page)
+
+    open(page)
+
+    await screen.findByRole('heading', { name: 'Unassigned (2)' }, { timeout: 3000 })
+    expect(screen.queryByText(/Registration added for/)).not.toBeInTheDocument()
   })
 })
 

@@ -100,8 +100,11 @@
   break-inside: avoid;
 }
 
-.num {
-  text-align: end !important;
+/* Beats `.table th` and `.table td` by specificity. A later text-align rule on a cell must be at
+   least as specific, or money columns lose their right edge on paper. Check a print preview. */
+.table th.num,
+.table td.num {
+  text-align: end;
   white-space: nowrap;
 }
 

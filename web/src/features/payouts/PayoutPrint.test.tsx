@@ -7,7 +7,10 @@ const sheet: PayoutPrintSheetProps = {
   tournamentName: 'Spring Open',
   title: 'Squad payouts',
   subtitle: 'Sat 10/24/2026 9:00 AM',
-  columns: [{ label: 'Bowler' }, { label: 'Amount', num: true }],
+  columns: [
+    { id: 'bowler', label: 'Bowler' },
+    { id: 'amount', label: 'Amount', num: true },
+  ],
   rows: [
     { key: 'a', cells: ['Dana Whitfield', '$100.00'] },
     { key: 'b', cells: ['Marcus Lee', '$250.00'] },
@@ -33,6 +36,31 @@ afterEach(() => {
 })
 
 describe('PayoutPrintSheet (PAY-22)', () => {
+  it('drops a cell past the last column and leaves a short row blank', () => {
+    render(
+      <PayoutPrintSheet
+        {...sheet}
+        rows={[
+          { key: 'a', cells: ['Dana Whitfield', '$100.00', 'extra'] },
+          { key: 'b', cells: ['Marcus Lee'] },
+        ]}
+      />,
+    )
+
+    expect(screen.queryByText('extra')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('row')).toHaveLength(3)
+    expect(screen.getByText('Marcus Lee')).toBeVisible()
+  })
+
+  it('prints today’s date when no date is given', () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 26, 12))
+    render(<PayoutPrintSheet {...sheet} printedOn={undefined} />)
+    vi.useRealTimers()
+
+    expect(screen.getByText(/Printed 10\/26\/2026/)).toBeVisible()
+  })
+
   it('shows the title, tournament, figures, and a row for each payout', () => {
     render(<PayoutPrintSheet {...sheet} />)
 

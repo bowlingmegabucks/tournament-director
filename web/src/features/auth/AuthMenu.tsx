@@ -1,4 +1,4 @@
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { signInEnabled } from './signInEnabled'
 import { useMe, useSignOut } from './useMe'
 import styles from './AuthMenu.module.css'
@@ -9,9 +9,13 @@ export function AuthMenu() {
   return <AuthMenuContent />
 }
 
+const signInPages = ['/login', '/forgot-password', '/set-password']
+const onSignInPage = (pathname: string) => signInPages.includes(pathname)
+
 function AuthMenuContent() {
   const { data, isPending, error, refetch } = useMe()
   const signOut = useSignOut()
+  const location = useLocation()
 
   // Plain text, not `Loading`: the page below has its own status, and tests and readers find that one.
   if (isPending) return <span className={styles.muted}>Loading…</span>
@@ -34,7 +38,13 @@ function AuthMenuContent() {
   }
   if (data.user === null)
     return (
-      <Link to="/login" className={styles.link}>
+      <Link
+        to="/login"
+        // Sign-in returns to the page the user is on (the login page reads `from`). The sign-in
+        // pages themselves are no place to return to.
+        state={onSignInPage(location.pathname) ? undefined : { from: location }}
+        className={styles.link}
+      >
         Sign in
       </Link>
     )

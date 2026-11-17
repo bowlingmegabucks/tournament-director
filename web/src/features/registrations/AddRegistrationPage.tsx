@@ -24,7 +24,13 @@ export function AddRegistrationPage() {
   const settings = useTournamentSettings(id)
   const [pick, setPick] = useState<Pick>({ mode: 'search' })
   const stored = useBowler(id, pick.mode === 'stored' ? pick.id : undefined)
-  const listUrl = `/tournaments/${id}/registrations`
+  const presetSquadId = params.get('squad') ?? undefined
+  const presetSweeperId = params.get('sweeper') ?? undefined
+  // From a lane page the desk goes back there, not to the list (REG-22).
+  let listUrl = `/tournaments/${id}/registrations`
+  if (presetSquadId !== undefined) listUrl = `/tournaments/${id}/squads/${presetSquadId}/lanes`
+  else if (presetSweeperId !== undefined)
+    listUrl = `/tournaments/${id}/sweepers/${presetSweeperId}/lanes`
 
   const heading = (
     <>
@@ -62,7 +68,9 @@ export function AddRegistrationPage() {
           <strong>This tournament is complete</strong>
         </p>
         <p>A complete tournament cannot be changed, so you cannot add a registration.</p>
-        <Link to={listUrl}>Back to registrations</Link>
+        <Link to={listUrl}>
+          {presetSquadId || presetSweeperId ? 'Back to lane assignments' : 'Back to registrations'}
+        </Link>
       </>
     )
   }
@@ -70,8 +78,6 @@ export function AddRegistrationPage() {
   const toSearch = () => {
     setPick({ mode: 'search' })
   }
-  const presetSquadId = params.get('squad') ?? undefined
-  const presetSweeperId = params.get('sweeper') ?? undefined
 
   let body
   if (pick.mode === 'search') {

@@ -14,7 +14,7 @@ Needs `registrations.write` and `bowlers.read` (director and admin, D-157, D-97)
 4. **Review** shows each changed bowler field old against new, what the registration is, and **what to collect** (D-166). One button saves.
 5. Success goes to the Registrations list with a toast.
 
-Opened from a squad or sweeper lane page, the same page opens with that session checked and locked (`REG-22`, D-164).
+Opened from a squad or sweeper lane page, the same page opens with that session checked and locked, and Save and Cancel return to that lane page (with the "Registration added" notice) instead of the registrations list (`REG-22`, D-164).
 
 ## Fields
 

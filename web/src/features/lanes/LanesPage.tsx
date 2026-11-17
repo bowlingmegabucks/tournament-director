@@ -1,6 +1,6 @@
 import { DragDropProvider, DragOverlay } from '@dnd-kit/react'
 import { useState } from 'react'
-import { useOutletContext, useParams } from 'react-router'
+import { useLocation, useNavigate, useOutletContext, useParams } from 'react-router'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { formatSessionDate } from '../../shared/sessionFormat'
@@ -56,6 +56,13 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
   const canAssign = useCan('lanes.assign')
   const { move, savingIds } = useMoveBowler(kind, id, sessionId)
   const [checkInOpen, setCheckInOpen] = useState(false)
+  // The add-registration page sets this as it comes back here (REG-22). Clearing it keeps a reload quiet.
+  const location = useLocation()
+  const navigate = useNavigate()
+  const added: unknown =
+    typeof location.state === 'object' && location.state !== null && 'added' in location.state
+      ? location.state.added
+      : undefined
   // A complete session cannot change, so it needs no stream (D-10, D-217).
   const live = useSessionEvents(kind, id, sessionId, data !== undefined && !data.session.complete)
 
@@ -271,6 +278,17 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
             setRecapOpen(false)
           }}
         />
+      )}
+      {typeof added === 'string' && (
+        <Toast
+          kind="success"
+          autoDismissMs={5000}
+          onDismiss={() => {
+            void navigate('.', { replace: true, state: null })
+          }}
+        >
+          {`Registration added for ${added}`}
+        </Toast>
       )}
       {toast && (
         <Toast

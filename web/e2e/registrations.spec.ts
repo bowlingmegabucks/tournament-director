@@ -375,7 +375,10 @@ test('the lane page opens Add registration with that squad checked and locked (R
   // The squad from the lane page is charged like any other (D-166).
   await expect(page.getByRole('row', { name: 'Total to collect $60.00' })).toBeVisible()
   await addButton(page).click()
+  // The desk lands back on the lane page it started from (REG-22), then checks the list.
   await expect(page.getByText('Registration added for Maria Gonzalez')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Lanes (1 to 24)' })).toBeVisible()
+  await menuLink(page, 'Registrations')
   await expect(
     (await rowOf(page, 'Maria Gonzalez')).getByRole('button', { name: '1 squad, show list' }),
   ).toBeVisible()

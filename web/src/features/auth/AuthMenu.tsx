@@ -9,8 +9,8 @@ export function AuthMenu() {
   return <AuthMenuContent />
 }
 
-const signInPages = ['/login', '/forgot-password', '/set-password']
-const onSignInPage = (pathname: string) => signInPages.includes(pathname)
+const signInPages = new Set(['/login', '/forgot-password', '/set-password'])
+const onSignInPage = (pathname: string) => signInPages.has(pathname)
 
 function AuthMenuContent() {
   const { data, isPending, error, refetch } = useMe()

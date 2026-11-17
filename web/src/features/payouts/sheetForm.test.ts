@@ -166,6 +166,18 @@ describe('validateRows (PAY-06, PAY-07)', () => {
   })
 })
 
+describe('a trailing dot (50.)', () => {
+  it('is sent without the dot and passes validation', () => {
+    const rows = [row({ registrationId: 'a', amount: '50.', note: 'x' })]
+    expect(saveRowsOf(rows)[0]?.amount).toBe('50')
+    expect(validateRows(rows)).toEqual({})
+  })
+
+  it('still refuses a dot with no digit before it', () => {
+    expect(validateRows([row({ amount: '.', note: 'x' })])['amount:r1']).toBeDefined()
+  })
+})
+
 describe('totalOf', () => {
   it('adds the rows that read as money and counts them', () => {
     const rows = [
@@ -176,6 +188,11 @@ describe('totalOf', () => {
     ]
 
     expect(totalOf(rows)).toEqual({ cents: 12550, count: 2 })
+  })
+
+  it('counts a half-typed amount with a trailing dot as its dollars', () => {
+    expect(totalOf([row({ amount: '50.' })])).toEqual({ cents: 5000, count: 1 })
+    expect(totalOf([row({ amount: '.' })])).toEqual({ cents: 0, count: 0 })
   })
 })
 

@@ -1,12 +1,16 @@
 import { useCallback, useState } from 'react'
+import { useOutletContext } from 'react-router'
 import { Can } from '../auth/Can'
 import { formatMoney } from '../../shared/formatMoney'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { Toast } from '../../shared/Toast'
+import { formatSessionDate } from '../../shared/sessionFormat'
 import { TournamentNotFoundError } from '../../shared/tournamentQuery'
+import type { Tournament } from '../tournaments/types'
 import { formatCents, parseAmount } from './amount'
 import { PayoutDisclaimer } from './PayoutDisclaimer'
+import { PrintPayoutsButton } from './PayoutPrint'
 import { PayoutSheetDialog } from './PayoutSheetDialog'
 import styles from './Payouts.module.css'
 import type { PayoutSheet, PayoutSource } from './types'
@@ -25,6 +29,13 @@ interface EventPayoutsProps {
 function eventNoun(label: string): string {
   const lower = label.toLowerCase()
   return lower.startsWith('finals') ? 'these finals' : `this ${lower}`
+}
+
+/** The printed title names the event, since the page's own heading sits in the session portal. */
+function printTitleOf(sheet: PayoutSheet): string {
+  return sheet.event.source === 'squad' || sheet.event.source === 'sweeper'
+    ? `${sheet.event.label} payouts`
+    : titleOf(sheet)
 }
 
 function figuresOf(sheet: PayoutSheet) {
@@ -56,6 +67,7 @@ export function EventPayouts({ source, tournamentId, eventId }: Readonly<EventPa
   const { data, isPending, error, refetch } = usePayoutSheet(source, tournamentId, eventId)
   const [editing, setEditing] = useState(false)
   const [saved, setSaved] = useState(false)
+  const tournament = useOutletContext<Tournament>()
   const dismiss = useCallback(() => {
     setSaved(false)
   }, [])
@@ -106,8 +118,8 @@ export function EventPayouts({ source, tournamentId, eventId }: Readonly<EventPa
         </div>
       </dl>
       {data.reason && <output className={styles.block}>{data.reason}</output>}
-      <Can permission="payouts.write">
-        <div className={styles.toolbar}>
+      <div className={styles.toolbar}>
+        <Can permission="payouts.write">
           <button
             type="button"
             disabled={data.status !== 'open'}
@@ -117,8 +129,40 @@ export function EventPayouts({ source, tournamentId, eventId }: Readonly<EventPa
           >
             Enter payouts
           </button>
-        </div>
-      </Can>
+        </Can>
+        {payouts.length > 0 && (
+          <PrintPayoutsButton
+            label="Print payouts"
+            tournamentName={tournament.name}
+            title={printTitleOf(data)}
+            subtitle={data.event.date ? formatSessionDate(data.event.date) : undefined}
+            columns={[
+              { label: 'Bowler' },
+              { label: 'Division' },
+              { label: 'Amount', num: true },
+              { label: 'Note' },
+              { label: 'Paid' },
+            ]}
+            rows={payouts.map(({ payee, payout }) => ({
+              key: payee.registrationId,
+              cells: [
+                payee.name,
+                payee.divisionName,
+                formatMoney(payout.amount),
+                payout.note ?? '',
+                payout.paid ? 'Paid' : 'Not paid',
+              ],
+            }))}
+            figures={[
+              `${payouts.length} ${payouts.length === 1 ? 'payout' : 'payouts'}`,
+              `Total ${formatMoney(formatCents(total))}`,
+              `Not paid ${formatMoney(formatCents(unpaid))}`,
+            ]}
+            signature
+            printedOn={new Date().toLocaleDateString('en-US')}
+          />
+        )}
+      </div>
       {payouts.length === 0 ? (
         emptyMessage
       ) : (

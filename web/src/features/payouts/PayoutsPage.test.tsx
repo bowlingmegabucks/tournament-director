@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -290,5 +290,80 @@ describe('the full payouts page, by bowler (PAY-19, D-276, D-282)', () => {
     open('?view=bowler')
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Failed to load the totals (500)')
+  })
+})
+
+describe('the printout (PAY-22)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('print', vi.fn())
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => ({ addEventListener: vi.fn(), removeEventListener: vi.fn() })),
+    )
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    delete document.body.dataset.payoutPrinting
+  })
+
+  const copy = () => {
+    const root = document.querySelector<HTMLElement>('[data-payout-print-copy]')
+    if (!root) throw new Error('Nothing is set to print')
+    return within(root)
+  }
+
+  it('prints every payout with its event, and the figures of the lines shown', async () => {
+    const user = userEvent.setup()
+    serve()
+    open()
+
+    await user.click(await screen.findByRole('button', { name: 'Print list' }))
+
+    expect(window.print).toHaveBeenCalledTimes(1)
+    expect(copy().getByRole('heading', { name: 'Payouts by payout' })).toBeVisible()
+    expect(copy().getByText('Marcus Lee')).toBeVisible()
+    expect(copy().getByText('Sweeper Sat 10/24/2026 1:00 PM')).toBeVisible()
+    expect(copy().getByText(/3 payouts/)).toBeVisible()
+    expect(copy().getByText(/Total \$1,850\.00/)).toBeVisible()
+  })
+
+  it('prints only what the filters show, and says which filter it was', async () => {
+    const user = userEvent.setup()
+    serve()
+    open()
+    await screen.findByRole('table', { name: 'Payouts by payout' })
+    await user.selectOptions(screen.getByLabelText('Paid'), 'unpaid')
+
+    await user.click(screen.getByRole('button', { name: 'Print list' }))
+
+    expect(copy().getByText(/Not paid only/)).toBeVisible()
+    expect(copy().getByText(/2 payouts/)).toBeVisible()
+    expect(copy().queryByText('Dana Whitfield', { selector: 'td' })).toBeVisible()
+  })
+
+  it('prints the totals of each bowler in the By bowler view', async () => {
+    const user = userEvent.setup()
+    serve()
+    open('?view=bowler')
+
+    await user.click(await screen.findByRole('button', { name: 'Print list' }))
+
+    expect(copy().getByRole('heading', { name: 'Payouts by bowler' })).toBeVisible()
+    expect(copy().getByText('Dana Whitfield')).toBeVisible()
+    expect(copy().getByText('$1,600.00')).toBeVisible()
+    expect(copy().queryByRole('columnheader', { name: 'Received by' })).toBeNull()
+  })
+
+  it('offers no print button when no payout matches', async () => {
+    const user = userEvent.setup()
+    serve()
+    open()
+    await screen.findByRole('table', { name: 'Payouts by payout' })
+    await user.selectOptions(screen.getByLabelText('Event'), 'sweeper:e2')
+    await user.selectOptions(screen.getByLabelText('Paid'), 'paid')
+
+    expect(screen.getByText('No payout matches.')).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Print list' })).not.toBeInTheDocument()
   })
 })

@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { afterEach, describe, expect, it, beforeEach, vi } from 'vitest'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -930,5 +930,56 @@ describe('leaving the page with typed amounts (PAY-12)', () => {
     await user.click(tabLink('Scores'))
 
     expect(screen.queryByRole('dialog', { name: 'Leave without saving?' })).not.toBeInTheDocument()
+  })
+})
+
+describe('the printout (PAY-22)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('print', vi.fn())
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => ({ addEventListener: vi.fn(), removeEventListener: vi.fn() })),
+    )
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    delete document.body.dataset.payoutPrinting
+  })
+
+  it('prints the saved payouts of the event with a signature column', async () => {
+    const user = userEvent.setup()
+    serve(
+      sheet({
+        payees: [
+          createPayee({
+            registrationId: dana.registrationId,
+            name: 'Dana Whitfield',
+            payout: { id: 'p1', amount: '100.00', note: null, paid: true },
+          }),
+        ],
+      }),
+    )
+    openPage()
+
+    await user.click(await screen.findByRole('button', { name: 'Print payouts' }))
+
+    expect(window.print).toHaveBeenCalledTimes(1)
+    const copy = document.querySelector<HTMLElement>('[data-payout-print-copy]')
+    expect(copy).not.toBeNull()
+    const printed = within(copy as HTMLElement)
+    expect(printed.getByRole('heading', { name: 'Squad payouts' })).toBeVisible()
+    expect(printed.getByText('Dana Whitfield')).toBeVisible()
+    expect(printed.getByText('$100.00', { selector: 'td' })).toBeVisible()
+    expect(printed.getByRole('columnheader', { name: 'Received by' })).toBeVisible()
+  })
+
+  it('offers no print button while no payout is saved', async () => {
+    serve(sheet())
+    openPage()
+
+    await screen.findByText('No payouts are recorded for this squad.')
+
+    expect(screen.queryByRole('button', { name: 'Print payouts' })).not.toBeInTheDocument()
   })
 })

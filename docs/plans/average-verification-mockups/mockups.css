@@ -41,7 +41,6 @@ textarea { padding: var(--space-2) var(--space-3); inline-size: 100%; min-block-
 .skeleton td > span { display: block; block-size: 1rem; background: var(--color-surface); border-radius: var(--radius); }
 /* The markers (D-293, D-295) */
 .mark { display: inline-flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-2); border: var(--border-width) solid var(--color-accent); border-radius: var(--radius); color: var(--color-accent); font-size: var(--font-size-sm); white-space: nowrap; }
-.mark::before { content: '!'; font-weight: 700; }
 .ok { color: var(--color-success); font-weight: 700; }
 .adj { color: var(--color-accent); }
 .pill { display: inline-block; padding: 0 var(--space-2); border: var(--border-width) solid var(--color-border); border-radius: var(--radius); font-size: var(--font-size-sm); color: var(--color-text-muted); }

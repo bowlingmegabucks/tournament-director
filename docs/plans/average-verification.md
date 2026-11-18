@@ -81,7 +81,7 @@ New change kind `averages` on the session stream (every session the registration
 Mockups: `averages.html`, `registrations.html`, `lanes.html`, `results.html`, `tv.html`.
 
 - **Averages page** `/tournaments/{id}/averages`, a sidebar link after Registrations. Components in `web/src/features/averages/`: `AveragesPage`, `AdjustDialog`, `AverageDetails` (popup, shared with Registrations). `useAverages`, `useAverageCheck`. States: loading, error with Try again, two empty sentences, read-only (no permission or complete). Table reflows to stacked rows on a phone. Buttons hide without `averages.verify` (`Can`, D-102).
-- **Marker** `AverageMarker` in `web/src/shared/`: the "Avg not verified" outline mark with a `!`, text plus symbol, tokens only. Used by the lane page, results pages, scores tab, score entry, TV, Registrations (long form there: "Not verified" or "No average").
+- **Marker** `AverageMarker` in `web/src/shared/`: the "Avg not verified" outline chip, text only (no symbol), tokens only. Used by the lane page, results pages, scores tab, score entry, TV, Registrations (long form there: "Not verified" or "No average").
 - **Registrations page**: a new Average column per the mockup.
 - **Lane page**: shows the in-use average and the marker. The recap dialog adds the unverified notice. The complete-squad dialog shows the D-297 warning and a "Complete anyway" button. The check-in sheet gets an "Average check" column on a squad sheet.
 - **Live**: every screen above already refetches on events; add `averages` to the kinds each one reacts to (the lane page, results tabs, score entry, scores tab, TV). Seeding and super sweeper keep their poll.

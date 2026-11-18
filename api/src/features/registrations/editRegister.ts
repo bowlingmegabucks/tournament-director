@@ -202,6 +202,7 @@ async function eligibilityFailures(
     tournament: { id: string; startDate: EligibilityInput['tournamentStart'] }
     average: EligibilityInput['average']
     bowler: EligibilityInput['bowler']
+    requireHandicapAverage: boolean
   },
 ): Promise<Failure[]> {
   const located = await findDivision(deps, divisionId, next.tournament.id)
@@ -211,6 +212,7 @@ async function eligibilityFailures(
     average: next.average,
     bowler: next.bowler,
     tournamentStart: next.tournament.startDate,
+    requireHandicapAverage: next.requireHandicapAverage,
   })
 }
 
@@ -307,6 +309,8 @@ export async function editRegistration(
         tournament,
         average,
         bowler: bowler.merged,
+        // Saving a squad on an old registration with no average stays allowed (D-289).
+        requireHandicapAverage: divisionMoved || averageChanged,
       })),
     )
   }
@@ -328,7 +332,15 @@ export async function editRegistration(
   try {
     await writer.save({
       bowler: { id: stored.bowlerId, isNew: false, patch: bowler.patch },
-      registration: { id: stored.id, isNew: false, divisionId, average, superSweeper },
+      registration: {
+        id: stored.id,
+        isNew: false,
+        divisionId,
+        average,
+        superSweeper,
+        // A new average or division is unverified again (AVG-08, D-290).
+        clearAverageCheck: divisionMoved || averageChanged,
+      },
       addSessionIds,
       removeSessionIds,
       // D-200: only an added session records the desk placeholder.

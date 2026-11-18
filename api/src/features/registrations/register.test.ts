@@ -388,6 +388,27 @@ describe('squads and sweepers (D-108, REG-03, REG-06)', () => {
   })
 })
 
+describe('a handicap division needs an average (AVG-16, D-289, VC-08)', () => {
+  const handicap = { handicapPercentage: 90, handicapBase: 220 }
+
+  it('refuses a create with no average (AVG-16)', async () => {
+    const { deps, input, state } = setup({ division: handicap })
+
+    const failures = await failuresOf(register(deps, input({ average: null })))
+
+    expect(failures.map((f) => [f.kind, f.description])).toEqual([
+      ['validation', 'Average is required for selected division'],
+    ])
+    expect(state.registrations).toEqual([])
+  })
+
+  it('takes a create with an average (AVG-16)', async () => {
+    const { deps, input } = setup({ division: handicap })
+
+    expect(await register(deps, input({ average: 180 }))).toMatchObject({ ok: true })
+  })
+})
+
 describe('eligibility and bowler rules are a 400 (D-107, REG-04, REG-05)', () => {
   it('refuses an average below the division minimum', async () => {
     const { deps, input, state } = setup({ division: { minimumAverage: 190 } })
@@ -423,14 +444,16 @@ describe('eligibility and bowler rules are a 400 (D-107, REG-04, REG-05)', () =>
 })
 
 describe('appending to an existing registration (REG-10 to REG-14)', () => {
-  function withRegistration(options: Options & { alsoOnSweeper?: boolean } = {}) {
+  function withRegistration(
+    options: Options & { alsoOnSweeper?: boolean; average?: number | null } = {},
+  ) {
     const base = setup(options)
     const bowler = createCommonBowler({ usbcId: '1234-56789' })
     const registration = {
       id: faker.string.uuid(),
       bowlerId: bowler.id,
       divisionId: base.division.id,
-      average: 170,
+      average: options.average === undefined ? 170 : options.average,
       superSweeper: false,
       sessionIds: [
         base.squads[0]?.id ?? '',
@@ -516,6 +539,33 @@ describe('appending to an existing registration (REG-10 to REG-14)', () => {
     await register(deps, input({ divisionId: other.id, squads: [squads[1]?.id] }))
 
     expect(state.registrations[0]?.registration.divisionId).toBe(other.id)
+  })
+
+  it('lets an append keep an old handicap registration that has no average (AVG-16, D-289)', async () => {
+    const { deps, input, squads } = withRegistration({
+      division: { handicapPercentage: 90, handicapBase: 220 },
+      average: null,
+    })
+
+    const result = await register(deps, input({ average: null, squads: [squads[1]?.id] }))
+
+    expect(result).toMatchObject({ ok: true, mode: 'append' })
+  })
+
+  it('clears the average check when an append changes the average (AVG-08, D-290)', async () => {
+    const { deps, state, input, squads, registration } = withRegistration()
+
+    await register(deps, input({ average: 199, squads: [squads[1]?.id] }))
+
+    expect(state.clearedAverageChecks).toEqual([registration.id])
+  })
+
+  it('keeps the average check when an append leaves the average and division alone (AVG-08, D-290)', async () => {
+    const { deps, state, input, squads } = withRegistration()
+
+    await register(deps, input({ average: null, squads: [squads[1]?.id] }))
+
+    expect(state.clearedAverageChecks).toEqual([])
   })
 
   it('keeps the old average when the request has none (REG-12)', async () => {

@@ -414,6 +414,68 @@ describe('division and average (REG-15, REG-16, REG-04, BWL-18, D-201, D-205)', 
     ])
   })
 
+  it('refuses to clear the average of a handicap division (AVG-16, D-289)', async () => {
+    const { run } = setup({ division: { handicapPercentage: 80, handicapBase: 200 }, average: 180 })
+
+    expect(await messagesOf(run({ average: null }))).toEqual([
+      'Average is required for selected division',
+    ])
+  })
+
+  it('refuses a move to a handicap division when the bowler has no average (AVG-16, D-289)', async () => {
+    const { run, otherDivision } = setup({
+      average: null,
+      otherDivision: { handicapPercentage: 80, handicapBase: 200 },
+    })
+
+    expect(await messagesOf(run({ divisionId: otherDivision.id }))).toEqual([
+      'Average is required for selected division',
+    ])
+  })
+
+  it('lets the desk add a squad to an old handicap registration with no average (AVG-16, D-289)', async () => {
+    const { run, squads } = setup({
+      division: { handicapPercentage: 80, handicapBase: 200 },
+      average: null,
+    })
+
+    expect(await run({ addSquadIds: [squads[1]?.id] })).toMatchObject({ ok: true })
+  })
+
+  it('lets the desk enter an average on an old handicap registration with none (AVG-16, D-289)', async () => {
+    const { run, state } = setup({
+      division: { handicapPercentage: 80, handicapBase: 200 },
+      average: null,
+    })
+
+    expect(await run({ average: 170 })).toMatchObject({ ok: true })
+    expect(state.registrations[0]?.registration.average).toBe(170)
+  })
+
+  it('clears the average check when the average changes (AVG-08, D-290)', async () => {
+    const { run, state, registrationId } = setup()
+
+    await run({ average: 190 })
+
+    expect(state.clearedAverageChecks).toEqual([registrationId])
+  })
+
+  it('keeps the average check when the average is saved again unchanged (AVG-08, D-290)', async () => {
+    const { run, state, squads } = setup({ average: 180 })
+
+    await run({ average: 180, addSquadIds: [squads[1]?.id] })
+
+    expect(state.clearedAverageChecks).toEqual([])
+  })
+
+  it('clears the average check when the division changes, handicap or not (AVG-08, D-290)', async () => {
+    const { run, state, registrationId, otherDivision } = setup()
+
+    await run({ divisionId: otherDivision.id })
+
+    expect(state.clearedAverageChecks).toEqual([registrationId])
+  })
+
   it('does not run eligibility when nothing it reads changed (D-205)', async () => {
     // The division was edited after the bowler registered (D-12): they no longer fit, yet they can add a squad.
     const { run, squads } = setup({ division: { minimumAverage: 250 }, average: 180 })

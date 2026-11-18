@@ -622,6 +622,49 @@ describe('Prisma registration writer', () => {
     expect(await ssnOf(bowlerId)).toBe(legacySsn)
   })
 
+  it('clears the average check in the same save as a new average or division, and keeps it otherwise (AVG-08, D-290)', async () => {
+    const { writer } = setup()
+    const tournamentId = await insertTournament()
+    const divisionId = await insertDivision(tournamentId)
+    const squadId = await insertSession(tournamentId)
+    const bowlerId = await insertLegacyBowler('1234-56789')
+    const registrationId = crypto.randomUUID()
+    await client.$executeRawUnsafe(
+      `INSERT INTO Registrations (Id, BowlerId, DivisionId, Average, SuperSweeper) VALUES (?, ?, ?, 180, 0)`,
+      registrationId,
+      bowlerId,
+      divisionId,
+    )
+    const check = () =>
+      client.$executeRawUnsafe(
+        `INSERT INTO AverageVerifications (RegistrationId, ProvidedAverage, VerifiedAverage, Note, VerifiedBy, VerifiedAt)
+         VALUES (?, 180, 180, NULL, 'user-1', NOW(3)) ON DUPLICATE KEY UPDATE VerifiedAverage = 180`,
+        registrationId,
+      )
+    const save = (clearAverageCheck: boolean, average: number) =>
+      writer.save({
+        bowler: { id: bowlerId, isNew: false, patch: {} },
+        registration: {
+          id: registrationId,
+          isNew: false,
+          divisionId,
+          average,
+          superSweeper: false,
+          clearAverageCheck,
+        },
+        // Adding the squad twice would break its key; the first save adds it, the second does not.
+        addSessionIds: clearAverageCheck ? [] : [squadId],
+        payment: null,
+      })
+    await check()
+
+    await save(false, 180)
+    expect(await client.averageVerification.count()).toBe(1)
+
+    await save(true, 190)
+    expect(await client.averageVerification.count()).toBe(0)
+  })
+
   it('refuses a delete once the bowler has scores in the tournament (REG-19)', async () => {
     const { writer, logger } = setup()
     const tournamentId = await insertTournament()

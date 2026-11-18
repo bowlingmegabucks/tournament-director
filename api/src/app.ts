@@ -208,7 +208,14 @@ export function createApp({
     storedRegistrationWriter,
     events,
     logger,
+    (tournamentId) => tellAveragesChanged(tournamentId),
   )
+  // The tournament-wide half of an average change: the finals pages and the TV feed (AVG-19, D-298).
+  // A function declaration, so the registration writer above can call it once the pages exist.
+  function tellAveragesChanged(tournamentId: string): void {
+    finalsCache.dropWhere((key) => key.includes(tournamentId.toLowerCase()))
+    liveNotifier.averagesChanged(tournamentId)
+  }
   const app = express()
   // Without this, req.ip is the proxy's address.
   app.set('trust proxy', config.trustProxy)
@@ -284,17 +291,9 @@ export function createApp({
 
   // A check drops the cached public pages, then tells the screens (AVG-19, D-298), as a payout save does.
   const averageHooks = {
-    changed: ({
-      tournamentId,
-      sessionIds,
-    }: {
-      tournamentId: string
-      registrationId: string
-      sessionIds: string[]
-    }) => {
-      finalsCache.dropWhere((key) => key.includes(tournamentId.toLowerCase()))
+    changed: ({ tournamentId, sessionIds }: { tournamentId: string; sessionIds: string[] }) => {
       for (const sessionId of sessionIds) events.publish(sessionId, 'averages')
-      liveNotifier.averagesChanged(tournamentId)
+      tellAveragesChanged(tournamentId)
     },
   }
   const averageDeps = { averages: averageStore, logger }

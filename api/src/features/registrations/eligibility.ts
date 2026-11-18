@@ -16,13 +16,27 @@ export interface EligibilityInput {
   bowler: { dateOfBirth: string | null; gender: Gender | null; usbcId: string }
   /** `YYYY-MM-DD`; age counts on this day (BWL-09). */
   tournamentStart: string
+  /**
+   * Whether a handicap division needs an average (AVG-16, D-289). On unless the request changes
+   * neither the division nor the average, so an old registration with no average stays editable.
+   */
+  requireHandicapAverage?: boolean
 }
 
 type Fail = (code: string, description: string) => void
 
-function checkAverage(division: Division, average: number | null, fail: Fail) {
+function checkAverage(
+  division: Division,
+  average: number | null,
+  requireHandicapAverage: boolean,
+  fail: Fail,
+) {
   const { minimumAverage, maximumAverage } = division
-  if ((minimumAverage !== null || maximumAverage !== null) && average === null) {
+  const needsAverage =
+    minimumAverage !== null ||
+    maximumAverage !== null ||
+    (requireHandicapAverage && division.handicapPercentage !== null)
+  if (needsAverage && average === null) {
     fail('Registration.AverageRequired', 'Average is required for selected division')
   }
   if (average !== null && minimumAverage !== null && average < minimumAverage) {
@@ -71,7 +85,8 @@ function checkGender(division: Division, bowler: EligibilityInput['bowler'], fai
 }
 
 /**
- * REG-04a to REG-04h and REG-05. A failure is a 400 for every caller (D-107).
+ * REG-04a to REG-04h and REG-05. A failure is a 400 for every caller (D-107). A handicap division also
+ * needs an average (AVG-16, D-289).
  * With no date of birth the age is 0, so a minimum age fails and a maximum age passes, as in legacy.
  */
 export function checkEligibility({
@@ -79,13 +94,14 @@ export function checkEligibility({
   average,
   bowler,
   tournamentStart,
+  requireHandicapAverage = true,
 }: EligibilityInput): Failure[] {
   const failures: Failure[] = []
   const fail: Fail = (code, description) => {
     failures.push(validation(code, description))
   }
 
-  checkAverage(division, average, fail)
+  checkAverage(division, average, requireHandicapAverage, fail)
   checkAge(division, bowler, tournamentStart, fail)
   checkGender(division, bowler, fail)
   if (division.handicapPercentage !== null && bowler.usbcId === '') {

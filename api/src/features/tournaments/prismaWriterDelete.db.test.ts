@@ -76,6 +76,27 @@ describe('Prisma tournament writer: delete (TRN-32 to TRN-35, D-132 to D-135)', 
     expect(await count('Tournaments')).toBe(1)
   })
 
+  it("removes the tournament's average checks and no one else's (AVG-01, D-287)", async () => {
+    const id = await rows.tournament()
+    const other = await rows.tournament()
+    const checkOf = async (tournamentId: string) => {
+      const division = await rows.division(tournamentId)
+      const { registrationId } = await rows.registration(division)
+      await client.$executeRawUnsafe(
+        `INSERT INTO AverageVerifications (RegistrationId, ProvidedAverage, VerifiedAverage, Note, VerifiedBy, VerifiedAt)
+         VALUES (?, 175, 175, NULL, 'u', NOW(3))`,
+        registrationId,
+      )
+    }
+    await checkOf(id)
+    await checkOf(other)
+
+    expect(await remove(id, true)).toMatchObject({ deleted: expect.any(Object) })
+
+    expect(await count('AverageVerifications')).toBe(1)
+    expect(await count('Tournaments')).toBe(1)
+  })
+
   it('refuses a complete tournament and deletes nothing (TRN-33, D-130)', async () => {
     const id = await rows.tournament({ completed: true })
 

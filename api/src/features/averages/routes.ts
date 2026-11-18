@@ -21,7 +21,10 @@ export interface AverageRouterDeps {
 }
 
 const tournamentParams = z.object({ id: z.uuid() })
-const checkParams = z.object({ id: z.uuid(), registrationId: z.uuid() })
+// The database matches ids without regard to case; the row this app writes must carry the stored
+// (lower case) spelling, or the lists never find it again.
+const lowerUuid = z.uuid().transform((value) => value.toLowerCase())
+const checkParams = z.object({ id: lowerUuid, registrationId: lowerUuid })
 // A `DELETE` takes no body, so confirming rides in the query string (D-210).
 const removeQuery = z.object({ confirmWarnings: z.literal('true').optional() })
 
@@ -46,10 +49,10 @@ export function createAverageReadRouter({ averages }: AverageRouterDeps): Router
 
 const jsonBody = jsonBodyUpTo('10kb')
 
-/** The one thing a refused or confirming plan turns into; a plan that saves or removes returns. */
-function throwUnlessDone(
-  plan: CheckPlan,
-): asserts plan is Extract<CheckPlan, { kind: 'save' | 'remove' }> {
+type Stopped = Exclude<CheckPlan, { kind: 'save' | 'remove' }>
+
+/** Turn a plan that does not save or remove into the HTTP answer it stands for. */
+function stop(plan: Stopped): never {
   switch (plan.kind) {
     case 'refused':
       throw new HttpError(plan.status, plan.message)
@@ -65,7 +68,6 @@ function throwUnlessDone(
         plan.warnings[0]?.message ?? 'Confirm the change.',
         plan.warnings,
       )
-    default:
   }
 }
 
@@ -101,11 +103,9 @@ export function createAverageWriteRouter(
         'Average check refused',
       )
     }
-    throwUnlessDone(plan)
-    // Stryker disable next-line StringLiteral: `throwUnlessDone` threw for every other plan, so this only narrows the type.
-    if (plan.kind !== 'save') throw new HttpError(500, 'Unexpected plan')
+    if (plan.kind !== 'save') stop(plan)
 
-    await averages.save(registrationId, plan.check, actorId)
+    await averages.save(registrationId, plan.check, actorId, { tournamentId: id, reading })
     log.info(
       {
         actorId,
@@ -142,9 +142,9 @@ export function createAverageWriteRouter(
         'Average check refused',
       )
     }
-    throwUnlessDone(plan)
+    if (plan.kind !== 'remove') stop(plan)
 
-    await averages.remove(registrationId)
+    await averages.remove(registrationId, { tournamentId: id, reading })
     log.info(
       {
         actorId,

@@ -66,7 +66,9 @@ export function AdjustDialog({ tournamentId, row, onClose, onSaved }: Readonly<A
             setWarning(undefined)
             setErrors(error.errors)
             if (error.errors['average']) averageRef.current?.focus()
-            else noteRef.current?.focus()
+            else if (error.errors['note']) noteRef.current?.focus()
+            // A refusal that names no field (not a handicap division, say) shows as the message.
+            else setFailure(error.message)
           } else {
             setFailure(error.message)
           }

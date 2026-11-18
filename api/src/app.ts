@@ -214,8 +214,11 @@ export function createApp({
   )
   // The tournament-wide half of an average change: the finals pages and the TV feed (AVG-19, D-298).
   // A function declaration, so the registration writer above can call it once the pages exist.
-  function tellAveragesChanged(tournamentId: string): void {
+  function dropFinalsPages(tournamentId: string): void {
     finalsCache.dropWhere((key) => key.includes(tournamentId.toLowerCase()))
+  }
+  function tellAveragesChanged(tournamentId: string): void {
+    dropFinalsPages(tournamentId)
     liveNotifier.averagesChanged(tournamentId)
   }
   const app = express()
@@ -281,7 +284,7 @@ export function createApp({
       source: string
       eventId: string
     }) => {
-      finalsCache.dropWhere((key) => key.includes(tournamentId.toLowerCase()))
+      dropFinalsPages(tournamentId)
       if (source === 'squad' || source === 'sweeper') {
         events.publish(eventId, 'payouts')
         liveNotifier.payoutsSaved(tournamentId, { kind: source, id: eventId })
@@ -302,9 +305,11 @@ export function createApp({
   // Handicap bowlers with scores on an average no director checked, for the complete warning (AVG-18, D-297).
   const unverifiedIn: UnverifiedCounter = async (tournamentId, sessionId) =>
     countUnverifiedBowlers(
-      await lanes.listEntries(sessionId),
-      await scores.listScores(sessionId),
-      await divisions.listByTournament(tournamentId),
+      ...(await Promise.all([
+        lanes.listEntries(sessionId),
+        scores.listScores(sessionId),
+        divisions.listByTournament(tournamentId),
+      ])),
     )
 
   // One router serves every method; the two groups below give each its own access.

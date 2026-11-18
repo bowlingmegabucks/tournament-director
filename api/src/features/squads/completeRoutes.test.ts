@@ -336,6 +336,35 @@ describe('unchecked averages (AVG-18, D-297)', () => {
     expect(completeOf(stored, sessionId)).toBe(false)
   })
 
+  it('gives a complete squad its own refusal, not a warning to confirm (AVG-18)', async () => {
+    const { app } = withAverages()
+    await request(app).post(url).send({ confirmWarnings: true })
+
+    const response = await request(app).post(url)
+
+    const message = 'This squad is already complete'
+    expect(response.status).toBe(409)
+    expect(response.body).toEqual({ message, errors: { session: message } })
+  })
+
+  it('gives a complete tournament its own refusal, not a warning to confirm (AVG-18)', async () => {
+    const made = setup({ completed: [tournamentId] })
+    const app = createSignedInTestApp({
+      squadWriter: made.writer,
+      divisions: createInMemoryDivisionRepository([{ tournamentId, division: handicapped }]),
+      lanes: createInMemoryLaneRepository([{ sessionId, entry: flagged }]),
+      scores: createInMemoryScoreRepository([
+        { sessionId, score: { bowlerId: flagged.bowlerId, game: 1, score: 200 } },
+      ]),
+    })
+
+    const response = await request(app).post(url)
+
+    expect(response.status).toBe(409)
+    expect(response.body.errors).toHaveProperty('tournament')
+    expect(response.body).not.toHaveProperty('warnings')
+  })
+
   it('completes once the director confirms (AVG-18)', async () => {
     const { app, stored } = withAverages()
 

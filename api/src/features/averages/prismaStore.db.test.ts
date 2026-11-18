@@ -3,6 +3,7 @@ import { createDatabaseClient, type PrismaClient } from '../../shared/database.t
 import { legacyRows } from '../../test/legacyRows.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { resetDatabase } from '../../test/resetDatabase.ts'
+import { HttpError } from '../../shared/errors.ts'
 import { createPrismaAverageStore } from './prismaStore.ts'
 
 describe('Prisma average store', () => {
@@ -150,6 +151,82 @@ describe('Prisma average store', () => {
     const reading = await store().read(tournamentId, bill.registrationId)
 
     expect(reading?.scored).toEqual([{ complete: true }])
+  })
+
+  it('ignores a check made on an average the registration no longer holds (AVG-08)', async () => {
+    const { tournamentId, bill } = await world()
+    await store().save(
+      bill.registrationId,
+      { providedAverage: 175, verifiedAverage: 175, note: null },
+      'director-1',
+    )
+    // WinForms writes the column directly until it is sunset.
+    await run('UPDATE Registrations SET Average = 150 WHERE Id = ?', bill.registrationId)
+
+    const listing = await store().list(tournamentId)
+    const reading = await store().read(tournamentId, bill.registrationId)
+
+    expect(listing?.rows[0]).toMatchObject({
+      status: 'unverified',
+      providedAverage: 150,
+      averageInUse: 150,
+    })
+    expect(reading?.existing).toBeUndefined()
+  })
+
+  describe('a save that checks what it was planned from (D-130, D-294)', () => {
+    const check = { providedAverage: 175, verifiedAverage: 175, note: null }
+
+    it('writes when nothing changed since the read', async () => {
+      const { tournamentId, bill } = await world()
+      const reading = await store().read(tournamentId, bill.registrationId)
+      if (!reading) throw new Error('no reading')
+
+      await store().save(bill.registrationId, check, 'director-1', { tournamentId, reading })
+
+      expect((await store().list(tournamentId))?.rows[0]?.status).toBe('verified')
+    })
+
+    it('answers 409 and writes nothing when the tournament was completed after the read', async () => {
+      const { tournamentId, bill } = await world()
+      const reading = await store().read(tournamentId, bill.registrationId)
+      if (!reading) throw new Error('no reading')
+      await run('UPDATE Tournaments SET Completed = 1 WHERE Id = ?', tournamentId)
+
+      await expect(
+        store().save(bill.registrationId, check, 'director-1', { tournamentId, reading }),
+      ).rejects.toMatchObject({ status: 409 })
+      await expect(
+        store().save(bill.registrationId, check, 'director-1', { tournamentId, reading }),
+      ).rejects.toBeInstanceOf(HttpError)
+
+      expect((await store().list(tournamentId))?.rows[0]?.status).toBe('unverified')
+    })
+
+    it('answers 409 when a score was saved after the read, so the scores warning is not skipped', async () => {
+      const { rows, tournamentId, squadId, bill } = await world()
+      const reading = await store().read(tournamentId, bill.registrationId)
+      if (!reading) throw new Error('no reading')
+      await rows.score(bill.bowlerId, squadId)
+
+      await expect(
+        store().save(bill.registrationId, check, 'director-1', { tournamentId, reading }),
+      ).rejects.toMatchObject({ status: 409 })
+    })
+
+    it('keeps the check when a removal was planned from an old reading', async () => {
+      const { tournamentId, bill } = await world()
+      await store().save(bill.registrationId, check, 'director-1')
+      const reading = await store().read(tournamentId, bill.registrationId)
+      if (!reading) throw new Error('no reading')
+      await run('UPDATE Tournaments SET Completed = 1 WHERE Id = ?', tournamentId)
+
+      await expect(
+        store().remove(bill.registrationId, { tournamentId, reading }),
+      ).rejects.toMatchObject({ status: 409 })
+
+      expect((await store().list(tournamentId))?.rows[0]?.status).toBe('verified')
+    })
   })
 
   it('says a division with no handicap is not a handicap division (AVG-02)', async () => {

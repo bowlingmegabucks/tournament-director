@@ -161,6 +161,14 @@ export function createPrismaTournamentWriter(
             await tx.squadRegistration.deleteMany({
               where: { OR: [{ registration: registrations }, { squad: { tournamentId: id } }] },
             })
+            // The average checks have no foreign key either (AVG-01, D-287): go before their registrations.
+            const checked = await tx.registration.findMany({
+              where: registrations,
+              select: { id: true },
+            })
+            await tx.averageVerification.deleteMany({
+              where: { registrationId: { in: checked.map((item) => item.id) } },
+            })
             await tx.registration.deleteMany({ where: registrations })
             // The payouts table has no foreign key, so nothing cascades (PAY-18, D-280).
             await tx.payout.deleteMany({ where: { tournamentId: id } })

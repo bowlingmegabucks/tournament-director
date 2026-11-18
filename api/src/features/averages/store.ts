@@ -23,8 +23,20 @@ export interface AverageStore {
   list(tournamentId: string): Promise<AverageListing | undefined>
   /** `undefined` for an unknown registration, or one in another tournament. */
   read(tournamentId: string, registrationId: string): Promise<CheckReading | undefined>
-  save(registrationId: string, check: AverageCheck, actorId: string): Promise<void>
-  remove(registrationId: string): Promise<void>
+  /** With `against`, the write holds only if the registration still reads as it did (a `409` otherwise). */
+  save(
+    registrationId: string,
+    check: AverageCheck,
+    actorId: string,
+    against?: SavedAgainst,
+  ): Promise<void>
+  remove(registrationId: string, against?: SavedAgainst): Promise<void>
+}
+
+/** The reading a save or removal was planned from, to check again inside the write (D-130, D-294). */
+export interface SavedAgainst {
+  tournamentId: string
+  reading: CheckReading
 }
 
 /** A registration of the in-memory store. */

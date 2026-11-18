@@ -190,6 +190,41 @@ describe.each(kinds)(
       })
     })
 
+    it('confirms on the next click after the API asked, even when the dialog never read the count (AVG-18)', async () => {
+      const user = userEvent.setup()
+      const row = session()
+      let tries = 0
+      serve(row, {
+        // The count could not be read (a stale dialog gives the same answer): no warning shows first.
+        info: () => HttpResponse.json({ message: 'down' }, { status: 500 }),
+        complete: () => {
+          tries += 1
+          return tries === 1
+            ? HttpResponse.json(
+                {
+                  message: '1 handicap bowler with scores has an average that is not verified.',
+                  warnings: [{ field: 'average', message: 'x' }],
+                },
+                { status: 409 },
+              )
+            : undefined
+        },
+      })
+      open(row)
+
+      await user.click(await trigger())
+      await user.click(
+        await within(await dialog()).findByRole('button', { name: `Complete ${word}` }),
+      )
+      await within(await dialog()).findByText(
+        '1 handicap bowler with scores has an average that is not verified.',
+      )
+      await user.click(within(await dialog()).getByRole('button', { name: 'Complete anyway' }))
+
+      await completedNotice()
+      expect(bodies).toEqual(['', JSON.stringify({ confirmWarnings: true })])
+    })
+
     describe('who sees Complete (D-193, D-195)', () => {
       it.each(['director', 'admin'] as const)(
         'gives a %s the button in the header',

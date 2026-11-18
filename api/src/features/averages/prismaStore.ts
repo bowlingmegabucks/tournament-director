@@ -1,8 +1,10 @@
 import type { Logger } from '../../shared/logger.ts'
 import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import { displayName } from '../registrations/registrationRow.ts'
-import { averageInUse, averageStatus } from './inUse.ts'
-import type { AverageListing, AverageStore, CheckReading } from './store.ts'
+import { HttpError } from '../../shared/errors.ts'
+import { withRetry } from '../../shared/serializableRetry.ts'
+import { averageInUse, averageStatus, liveCheck, type AverageCheck } from './inUse.ts'
+import type { AverageListing, AverageStore, CheckReading, SavedAgainst } from './store.ts'
 import type { AverageRow } from './types.ts'
 
 /** Sort as the registrations list does (REG-23): last name, first name, then id. */
@@ -68,7 +70,7 @@ export function createPrismaAverageStore(client: PrismaClient, logger: Logger): 
             ),
           )
           .map((item): AverageRow => {
-            const check = checkOf.get(item.id)
+            const check = liveCheck(item.average, checkOf.get(item.id))
             return {
               registrationId: item.id,
               bowlerName: displayName(item.bowler),
@@ -76,7 +78,7 @@ export function createPrismaAverageStore(client: PrismaClient, logger: Logger): 
               usbcId: item.bowler.usbcId,
               providedAverage: check ? check.providedAverage : item.average,
               status: averageStatus(check),
-              averageInUse: averageInUse(item.average, check && toCheck(check)),
+              averageInUse: averageInUse(item.average, check),
               note: check?.note ?? null,
               verifiedBy: check ? (userName.get(check.verifiedBy) ?? null) : null,
               verifiedAt: check ? check.verifiedAt.toISOString() : null,
@@ -86,62 +88,10 @@ export function createPrismaAverageStore(client: PrismaClient, logger: Logger): 
       })
     },
 
-    async read(tournamentId, registrationId): Promise<CheckReading | undefined> {
-      return withDatabaseErrors(logger, async () => {
-        const row = await client.registration.findUnique({
-          where: { id: registrationId },
-          select: {
-            average: true,
-            bowlerId: true,
-            bowler: { select: { firstName: true, lastName: true, suffix: true } },
-            division: {
-              select: {
-                tournamentId: true,
-                handicapPercentage: true,
-                minimumAverage: true,
-                maximumAverage: true,
-              },
-            },
-            squads: { select: { squadId: true } },
-          },
-        })
-        if (row?.division.tournamentId !== tournamentId) return undefined
-        const tournament = await client.tournament.findUnique({
-          where: { id: tournamentId },
-          select: { completed: true },
-        })
-        if (!tournament) return undefined
-        const existing = await client.averageVerification.findUnique({ where: { registrationId } })
-        // A bowler record outlives a tournament, so only the sessions of this one count.
-        const scoredIds = (
-          await client.squadScore.findMany({
-            where: { bowlerId: row.bowlerId },
-            distinct: ['squadId'],
-            select: { squadId: true },
-          })
-        ).map((score) => score.squadId)
-        const scored =
-          scoredIds.length === 0
-            ? []
-            : await client.squad.findMany({
-                where: { id: { in: scoredIds }, tournamentId },
-                select: { complete: true },
-              })
-        return {
-          bowlerName: displayName(row.bowler),
-          tournamentComplete: tournament.completed,
-          handicap: row.division.handicapPercentage !== null,
-          providedAverage: row.average,
-          minimumAverage: row.division.minimumAverage,
-          maximumAverage: row.division.maximumAverage,
-          scored,
-          existing: existing ? toCheck(existing) : undefined,
-          sessionIds: row.squads.map((entry) => entry.squadId),
-        }
-      })
-    },
+    read: (tournamentId, registrationId) =>
+      withDatabaseErrors(logger, () => readCheck(client, tournamentId, registrationId)),
 
-    async save(registrationId, check, actorId) {
+    async save(registrationId, check, actorId, against) {
       const data = {
         providedAverage: check.providedAverage,
         verifiedAverage: check.verifiedAverage,
@@ -149,20 +99,125 @@ export function createPrismaAverageStore(client: PrismaClient, logger: Logger): 
         verifiedBy: actorId,
         verifiedAt: new Date(),
       }
-      await withDatabaseErrors(logger, () =>
-        client.averageVerification.upsert({
+      const write = (db: Db) =>
+        db.averageVerification.upsert({
           where: { registrationId },
           create: { registrationId, ...data },
           update: data,
-        }),
-      )
+        })
+      await withDatabaseErrors(logger, () => guarded(client, registrationId, against, write))
     },
 
-    async remove(registrationId) {
+    async remove(registrationId, against) {
       await withDatabaseErrors(logger, () =>
-        client.averageVerification.deleteMany({ where: { registrationId } }),
+        guarded(client, registrationId, against, (db) =>
+          db.averageVerification.deleteMany({ where: { registrationId } }),
+        ),
       )
     },
+  }
+}
+
+/** What the reads and the guarded writes use: the client, or the client inside a transaction. */
+type Db = Pick<
+  PrismaClient,
+  'registration' | 'tournament' | 'averageVerification' | 'squadScore' | 'squad'
+>
+
+const changedMessage = 'This registration changed. Reload the page and check it again.'
+
+/** What a plan was made from; two readings with the same stamp would make the same plan. */
+function stampOf(reading: CheckReading): string {
+  return JSON.stringify([
+    reading.tournamentComplete,
+    reading.handicap,
+    reading.providedAverage,
+    reading.minimumAverage,
+    reading.maximumAverage,
+    reading.scored,
+    reading.existing ?? null,
+  ])
+}
+
+/**
+ * Write only if what the plan read still holds (D-130, D-294). The read is made again inside a
+ * serializable transaction with the write, so a tournament completed, a score saved, or another
+ * director's check landing in between turns this save into a `409` and not a stale write.
+ */
+async function guarded(
+  client: PrismaClient,
+  registrationId: string,
+  against: SavedAgainst | undefined,
+  write: (db: Db) => Promise<unknown>,
+): Promise<void> {
+  if (against === undefined) {
+    await write(client)
+    return
+  }
+  await withRetry(() =>
+    client.$transaction(
+      async (tx) => {
+        const now = await readCheck(tx, against.tournamentId, registrationId)
+        if (!now || stampOf(now) !== stampOf(against.reading))
+          throw new HttpError(409, changedMessage)
+        await write(tx)
+      },
+      { isolationLevel: 'Serializable' },
+    ),
+  )
+}
+
+async function readCheck(
+  db: Db,
+  tournamentId: string,
+  registrationId: string,
+): Promise<CheckReading | undefined> {
+  const row = await db.registration.findUnique({
+    where: { id: registrationId },
+    select: {
+      average: true,
+      bowlerId: true,
+      bowler: { select: { firstName: true, lastName: true, suffix: true } },
+      division: {
+        select: {
+          tournamentId: true,
+          handicapPercentage: true,
+          minimumAverage: true,
+          maximumAverage: true,
+        },
+      },
+      squads: { select: { squadId: true } },
+    },
+  })
+  if (row?.division.tournamentId !== tournamentId) return undefined
+  const [tournament, existing, scoredIds] = await Promise.all([
+    db.tournament.findUnique({ where: { id: tournamentId }, select: { completed: true } }),
+    db.averageVerification.findUnique({ where: { registrationId } }),
+    db.squadScore.findMany({
+      where: { bowlerId: row.bowlerId },
+      distinct: ['squadId'],
+      select: { squadId: true },
+    }),
+  ])
+  if (!tournament) return undefined
+  // A bowler record outlives a tournament, so only the sessions of this one count.
+  const scored =
+    scoredIds.length === 0
+      ? []
+      : await db.squad.findMany({
+          where: { id: { in: scoredIds.map((score) => score.squadId) }, tournamentId },
+          select: { complete: true },
+        })
+  return {
+    bowlerName: displayName(row.bowler),
+    tournamentComplete: tournament.completed,
+    handicap: row.division.handicapPercentage !== null,
+    providedAverage: row.average,
+    minimumAverage: row.division.minimumAverage,
+    maximumAverage: row.division.maximumAverage,
+    scored,
+    existing: liveCheck(row.average, existing ? toCheck(existing) : undefined),
+    sessionIds: row.squads.map((entry) => entry.squadId),
   }
 }
 
@@ -170,7 +225,7 @@ function toCheck(row: {
   providedAverage: number | null
   verifiedAverage: number
   note: string | null
-}) {
+}): AverageCheck {
   return {
     providedAverage: row.providedAverage,
     verifiedAverage: row.verifiedAverage,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { averageInUse, averageStatus, type AverageCheck } from './inUse.ts'
+import { averageInUse, averageStatus, liveCheck, type AverageCheck } from './inUse.ts'
 
 const verified: AverageCheck = { providedAverage: 175, verifiedAverage: 175, note: null }
 const adjusted: AverageCheck = { providedAverage: 175, verifiedAverage: 182, note: 'USBC book' }
@@ -25,6 +25,27 @@ describe('averageInUse (AVG-09, D-288)', () => {
     expect(
       averageInUse(null, { providedAverage: null, verifiedAverage: 160, note: 'League sheet' }),
     ).toBe(160)
+  })
+})
+
+describe('liveCheck (AVG-08)', () => {
+  it('keeps a check made on the average the registration holds now', () => {
+    expect(liveCheck(175, verified)).toBe(verified)
+  })
+
+  it('drops a check made on another average, as when WinForms edited the column', () => {
+    expect(liveCheck(150, verified)).toBeUndefined()
+  })
+
+  it('matches a bowler with no average to a check made with none', () => {
+    const noAverage = { providedAverage: null, verifiedAverage: 160, note: 'League sheet' }
+
+    expect(liveCheck(null, noAverage)).toBe(noAverage)
+    expect(liveCheck(150, noAverage)).toBeUndefined()
+  })
+
+  it('has nothing to keep with no check', () => {
+    expect(liveCheck(175, undefined)).toBeUndefined()
   })
 })
 

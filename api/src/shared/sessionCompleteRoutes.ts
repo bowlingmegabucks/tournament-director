@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Router, type Request, type Response } from 'express'
 import { z } from 'zod'
 import { callerOf } from './auth/caller.ts'
 import { FieldErrorsError, HttpError, WarningsError } from './errors.ts'
@@ -58,9 +58,32 @@ export function createSessionCompleteRouter<Session>(
 ): Router {
   const router = Router({ mergeParams: true })
 
+  /** Turn a not-found or a refusal into its HTTP answer. */
+  function refuse(
+    outcome: SessionNotFound | { refused: Record<string, string> },
+    req: Request,
+    res: Response,
+  ): never {
+    if ('notFound' in outcome) throw notFound(outcome, kind)
+    const { id, sessionId } = idParams.parse(req.params)
+    requestLogger(res, logger).warn(
+      {
+        actorId: callerOf(res).user?.id,
+        tournamentId: id,
+        [`${kind}Id`]: sessionId,
+        reasons: Object.keys(outcome.refused).length,
+      },
+      `${sessionName(kind)} complete refused`,
+    )
+    throw new FieldErrorsError(409, firstOf(outcome.refused), outcome.refused)
+  }
+
   router.post('/:sessionId/complete', jsonBodyUpTo('1kb'), async (req, res) => {
     const { id, sessionId } = idParams.parse(req.params)
     const body = confirmBody.parse(req.body)
+    // A session that cannot be completed gets its real answer, not a warning about completing it.
+    const early = await completer.check?.(id, sessionId)
+    if (early) refuse(early, req, res)
     const unchecked = (await unverified?.(id, sessionId)) ?? 0
     if (unchecked > 0 && body?.confirmWarnings !== true) {
       const noun =
@@ -77,15 +100,8 @@ export function createSessionCompleteRouter<Session>(
       })
     }
     const outcome = await completer.complete(id, sessionId)
-    if ('notFound' in outcome) throw notFound(outcome, kind)
+    if ('notFound' in outcome || 'refused' in outcome) refuse(outcome, req, res)
     const ids = { actorId: callerOf(res).user?.id, tournamentId: id, [`${kind}Id`]: sessionId }
-    if ('refused' in outcome) {
-      requestLogger(res, logger).warn(
-        { ...ids, reasons: Object.keys(outcome.refused).length },
-        `${sessionName(kind)} complete refused`,
-      )
-      throw new FieldErrorsError(409, firstOf(outcome.refused), outcome.refused)
-    }
 
     // Who completed what, and for a squad how many no-shows got zeros. The date stays out (D-193).
     requestLogger(res, logger).info(

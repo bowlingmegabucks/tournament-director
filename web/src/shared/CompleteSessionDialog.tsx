@@ -16,6 +16,8 @@ interface CompleteSessionDialogProps {
   pending: boolean
   /** Why the request did not go through, when it did not. */
   failure?: string
+  /** The API asked for a confirm the dialog did not know about: the button says "Complete anyway". */
+  confirming?: boolean
   onConfirm: () => void
   onClose: () => void
 }
@@ -66,6 +68,7 @@ export function CompleteSessionDialog({
   loading,
   pending,
   failure,
+  confirming = false,
   onConfirm,
   onClose,
 }: Readonly<CompleteSessionDialogProps>) {
@@ -149,7 +152,11 @@ export function CompleteSessionDialog({
             disabled={loading || pending}
             onClick={onConfirm}
           >
-            {pending ? 'Completing…' : unchecked > 0 ? 'Complete anyway' : `Complete ${name}`}
+            {pending
+              ? 'Completing…'
+              : unchecked > 0 || confirming
+                ? 'Complete anyway'
+                : `Complete ${name}`}
           </button>
         </div>
       </div>

@@ -62,14 +62,17 @@ function warningFor(facts: CheckFacts, next: number | null) {
   return [{ field: 'average', message: lines.join(' ') }]
 }
 
-function guard(facts: CheckFacts): CheckPlan | undefined {
+function guard(facts: CheckFacts): Extract<CheckPlan, { kind: 'refused' }> | undefined {
   if (facts.tournamentComplete) return { kind: 'refused', status: 409, message: completeMessage }
   if (!facts.handicap) return { kind: 'refused', status: 400, message: notHandicapMessage }
   return undefined
 }
 
 /** A save: a verify or an adjust (AVG-03 to AVG-06). A scores warning waits for `confirmWarnings`. */
-export function planCheck(facts: CheckFacts, body: CheckBody): CheckPlan {
+export function planCheck(
+  facts: CheckFacts,
+  body: CheckBody,
+): Exclude<CheckPlan, { kind: 'remove' }> {
   const refused = guard(facts)
   if (refused) return refused
 
@@ -99,7 +102,10 @@ export function planCheck(facts: CheckFacts, body: CheckBody): CheckPlan {
 }
 
 /** Taking a check away puts handicap back on the provided average (AVG-07). */
-export function planRemove(facts: CheckFacts, confirmWarnings: boolean): CheckPlan {
+export function planRemove(
+  facts: CheckFacts,
+  confirmWarnings: boolean,
+): Exclude<CheckPlan, { kind: 'save' }> {
   const refused = guard(facts)
   if (refused) return refused
   if (facts.existing === undefined) return { kind: 'refused', status: 400, message: noCheckMessage }

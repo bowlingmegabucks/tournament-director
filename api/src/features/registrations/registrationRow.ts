@@ -1,4 +1,4 @@
-import { averageInUse, averageStatus, type AverageCheck } from '../averages/inUse.ts'
+import { averageInUse, averageStatus, liveCheck, type AverageCheck } from '../averages/inUse.ts'
 import { registrationSchema } from './types.ts'
 
 /** `Squads.SquadType` values. Any other value is not read (D-42, D-51). */
@@ -45,7 +45,12 @@ export function displayName(bowler: {
  * on read. A squad of another tournament, or a `SquadType` that is neither squad nor sweeper, is
  * ignored (D-51). `check` is the registration's average check, if any (AVG-09).
  */
-export function toRegistration(row: RegistrationRow, tournamentId: string, check?: AverageCheck) {
+export function toRegistration(
+  row: RegistrationRow,
+  tournamentId: string,
+  storedCheck?: AverageCheck,
+) {
+  const check = liveCheck(row.average, storedCheck)
   const ofThisTournament = row.squads
     .map((entry) => entry.squad)
     .filter((squad) => squad.tournamentId === tournamentId)

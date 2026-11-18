@@ -174,6 +174,24 @@ export function createSessionCompleter<
   return {
     complete: (tournamentId, sessionId) =>
       withDatabaseErrors(logger, () => withRetry(() => completeOnce(tournamentId, sessionId))),
+    check: (tournamentId, sessionId) =>
+      withDatabaseErrors(logger, async () => {
+        const tournament = await client.tournament.findUnique({
+          where: { id: tournamentId },
+          select: { completed: true },
+        })
+        if (!tournament) return { notFound: 'tournament' as const }
+        const row = await client.squad.findFirst({
+          where: { id: sessionId, tournamentId, squadType },
+          select: { complete: true },
+        })
+        if (!row) return { notFound: 'session' as const }
+        const plan = planSessionComplete(
+          { completed: tournament.completed, complete: row.complete },
+          kind,
+        )
+        return plan.kind === 'refused' ? { refused: plan.errors } : undefined
+      }),
     getCompleteInfo: (tournamentId, sessionId) =>
       withDatabaseErrors(logger, async (): Promise<Info | SessionNotFound> => {
         const tournament = await client.tournament.findUnique({

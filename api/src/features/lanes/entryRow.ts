@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { averageInUse, averageStatus, type AverageCheck } from '../averages/inUse.ts'
+import { averageInUse, averageStatus, liveCheck, type AverageCheck } from '../averages/inUse.ts'
 import { displayName } from '../registrations/registrationRow.ts'
 import type { LaneEntry } from './types.ts'
 
@@ -43,7 +43,7 @@ const entrySchema = z.object({
  * skips and logs a row that does not (D-51). `check` is the registration's average check, if any:
  * the entry's `average` is the one handicap uses (AVG-09, D-288).
  */
-export function toLaneEntry(row: LaneEntryRow, check?: AverageCheck) {
+export function toLaneEntry(row: LaneEntryRow, storedCheck?: AverageCheck) {
   const { registration } = row
   const bowler = registration?.bowler
   const checked = entrySchema.safeParse({
@@ -58,6 +58,7 @@ export function toLaneEntry(row: LaneEntryRow, check?: AverageCheck) {
   })
   if (!checked.success) return checked
   const { suffix, superSweeper, average: provided, ...fields } = checked.data
+  const check = liveCheck(provided, storedCheck)
   const entry: LaneEntry = {
     ...fields,
     average: averageInUse(provided, check),

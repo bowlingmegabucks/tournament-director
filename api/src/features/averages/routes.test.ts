@@ -65,6 +65,19 @@ function setup(options: { role?: 'director' | 'scoreKeeper' | 'admin'; complete?
 const base = `/v1/tournaments/${tournament.id}`
 const checkUrl = (id: string) => `${base}/registrations/${id}/average-check`
 
+describe('the id in the URL (AVG-03)', () => {
+  it('is saved in lower case, the spelling the lists look up', async () => {
+    const { app, store } = setup()
+
+    const response = await request(app)
+      .put(checkUrl(billId.toUpperCase()))
+      .send({ action: 'verify' })
+
+    expect(response.status).toBe(200)
+    expect(store.saved.map((item) => item.registrationId)).toEqual([billId])
+  })
+})
+
 describe('GET /v1/tournaments/{id}/averages (AVG-02)', () => {
   it('lists handicap-division registrations with their status (AVG-02)', async () => {
     const { app } = setup()

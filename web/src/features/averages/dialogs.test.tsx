@@ -265,6 +265,24 @@ describe('AdjustDialog (AVG-04, AVG-05)', () => {
     expect(note).toHaveAccessibleDescription('Bad note')
   })
 
+  it('shows a refusal that names no field, since no box can show it', async () => {
+    server.use(
+      http.put(check, () =>
+        HttpResponse.json(
+          { message: 'This registration is not in a handicap division.' },
+          { status: 400 },
+        ),
+      ),
+    )
+    const { save, dialog } = setup()
+
+    await save()
+
+    expect(
+      await within(dialog).findByText('This registration is not in a handicap division.'),
+    ).toBeVisible()
+  })
+
   it('shows the warning, takes it back when the director edits, and sends the confirm once', async () => {
     const bodies: { confirmWarnings?: boolean }[] = []
     server.use(

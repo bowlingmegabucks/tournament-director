@@ -17,6 +17,19 @@ export function averageStatus(check: AverageCheck | undefined): AverageStatus {
 }
 
 /**
+ * The check that still holds. A check copies the provided average it looked at; if
+ * `Registrations.Average` has since changed (WinForms writes it directly until it is sunset), the
+ * director checked another number, so the check no longer counts and the bowler is unverified again.
+ * Saving a new check replaces the stale row.
+ */
+export function liveCheck<Check extends AverageCheck>(
+  provided: number | null,
+  check: Check | undefined,
+): Check | undefined {
+  return check !== undefined && check.providedAverage === provided ? check : undefined
+}
+
+/**
  * The average handicap uses (D-288, AVG-09): the checked average when a director checked it,
  * otherwise the one the bowler gave. Every screen that works out a handicap asks here, and none
  * reads `Registrations.Average` for it.

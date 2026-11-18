@@ -106,6 +106,15 @@ export type CompleteSessionOutcome<Session> =
 /** What the complete and complete-info routes need from storage, for a squad or a sweeper. */
 export interface SessionCompleter<Session, Info> {
   complete(tournamentId: string, sessionId: string): Promise<CompleteSessionOutcome<Session>>
+  /**
+   * What would stop a complete, read without changing anything: a missing tournament or session, or
+   * a refusal. The route asks before it counts unchecked averages, so a session that cannot be
+   * completed never gets a warning about completing it. `complete` still decides (D-192).
+   */
+  check?(
+    tournamentId: string,
+    sessionId: string,
+  ): Promise<SessionNotFound | { refused: FieldErrors } | undefined>
   /** What the dialog shows before the director presses Complete (D-194). */
   getCompleteInfo(tournamentId: string, sessionId: string): Promise<Info | SessionNotFound>
 }

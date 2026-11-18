@@ -223,6 +223,7 @@ interface DemoBowler {
   suffix?: string
   usbc: string
   division: number
+  average: number
   squads: number[]
   sweepers: number[]
   superSweeper: boolean
@@ -234,6 +235,7 @@ const demoBowlers: DemoBowler[] = [
     last: 'Abbott',
     usbc: '4821-10394',
     division: 0,
+    average: 205,
     squads: [0, 1],
     sweepers: [0, 1],
     superSweeper: true,
@@ -244,6 +246,7 @@ const demoBowlers: DemoBowler[] = [
     suffix: 'Jr',
     usbc: '1190-55820',
     division: 0,
+    average: 198,
     squads: [0],
     sweepers: [],
     superSweeper: false,
@@ -253,6 +256,7 @@ const demoBowlers: DemoBowler[] = [
     last: 'Chen',
     usbc: '3377-20418',
     division: 1,
+    average: 185,
     squads: [0, 1],
     sweepers: [0, 1],
     superSweeper: true,
@@ -262,6 +266,7 @@ const demoBowlers: DemoBowler[] = [
     last: 'Delgado',
     usbc: '',
     division: 0,
+    average: 176,
     squads: [1],
     sweepers: [0],
     superSweeper: false,
@@ -271,6 +276,7 @@ const demoBowlers: DemoBowler[] = [
     last: 'Fontaine',
     usbc: '2045-88123',
     division: 0,
+    average: 210,
     squads: [0, 1],
     sweepers: [],
     superSweeper: false,
@@ -280,6 +286,7 @@ const demoBowlers: DemoBowler[] = [
     last: 'Fontaine',
     usbc: '5560-11902',
     division: 1,
+    average: 172,
     squads: [1],
     sweepers: [],
     superSweeper: false,
@@ -295,23 +302,28 @@ export function createDemoRegistrationList(
   squads: Squad[],
   sweepers: Sweeper[],
 ): RegistrationList {
-  const registrations = demoBowlers.map(({ first, last, suffix, usbc, division, ...entered }) => {
-    const name = `${first} ${last}`
-    return createRegistration({
-      bowler: {
-        id: faker.string.uuid(),
-        name: suffix ? `${name}, ${suffix}` : name,
-        firstName: first,
-        lastName: last,
-        usbcId: usbc,
-      },
-      divisionId: divisions[division]?.id ?? '',
-      divisionName: divisions[division]?.name ?? '',
-      squadIds: entered.squads.flatMap((position) => squads[position]?.id ?? []),
-      sweeperIds: entered.sweepers.flatMap((position) => sweepers[position]?.id ?? []),
-      superSweeper: entered.superSweeper,
-    })
-  })
+  const registrations = demoBowlers.map(
+    ({ first, last, suffix, usbc, division, average, ...entered }) => {
+      const name = `${first} ${last}`
+      return createRegistration({
+        bowler: {
+          id: faker.string.uuid(),
+          name: suffix ? `${name}, ${suffix}` : name,
+          firstName: first,
+          lastName: last,
+          usbcId: usbc,
+        },
+        divisionId: divisions[division]?.id ?? '',
+        divisionName: divisions[division]?.name ?? '',
+        average,
+        // A handicap division has an average to check; a scratch division has nothing to check (D-293).
+        averageStatus: divisions[division]?.handicapPercentage === null ? 'none' : 'unverified',
+        squadIds: entered.squads.flatMap((position) => squads[position]?.id ?? []),
+        sweeperIds: entered.sweepers.flatMap((position) => sweepers[position]?.id ?? []),
+        superSweeper: entered.superSweeper,
+      })
+    },
+  )
   const entries = (position: number, key: 'squads' | 'sweepers') =>
     demoBowlers.filter((bowler) => bowler[key].includes(position)).length
   return {
@@ -545,6 +557,8 @@ export function createDemoLanePage(
       divisionId: division?.id ?? '',
       divisionName: division?.name ?? '',
       average: demo.average,
+      // A handicap division has an average to check; a scratch division has nothing to check (D-293).
+      averageStatus: division?.handicapPercentage == null ? 'none' : 'unverified',
       pins: lanePins(kind, division, demo.average),
       superSweeper: demo.superSweeper,
     })

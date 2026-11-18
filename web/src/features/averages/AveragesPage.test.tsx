@@ -167,6 +167,15 @@ describe('the Averages page (AVG-02, D-295)', () => {
     ).toBeVisible()
   })
 
+  it('shows a dash for a bowler with no USBC ID, so no stacked cell is empty (AVG-02)', async () => {
+    serve({ rows: [createAverageRow({ bowlerName: 'Tom Delgado', usbcId: '' })] })
+
+    open()
+
+    const row = (await screen.findByRole('rowheader', { name: 'Tom Delgado' })).closest('tr')
+    expect(within(row as HTMLElement).getByText('–')).toBeVisible()
+  })
+
   it('shows an error with Try again when the list fails to load', async () => {
     server.use(
       http.get('/v1/tournaments/:id', () => HttpResponse.json({ tournament })),

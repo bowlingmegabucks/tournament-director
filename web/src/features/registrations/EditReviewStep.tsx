@@ -127,6 +127,12 @@ export function EditReviewStep({
               {averageNow === '' ? '(cleared)' : averageNow}
             </li>
           )}
+          {(moved || averageChanged) && (
+            <li>
+              Any check on this bowler&apos;s average is cleared. A handicap bowler needs the new
+              average verified on the Averages page.
+            </li>
+          )}
           {superChanged && (
             <li>Super sweeper: turned {registration.superSweeper ? 'on' : 'off'}.</li>
           )}

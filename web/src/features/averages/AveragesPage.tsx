@@ -219,7 +219,7 @@ export function AveragesPage() {
                   {row.bowlerName}
                 </th>
                 <td data-label="Division">{row.divisionName}</td>
-                <td data-label="USBC ID">{row.usbcId}</td>
+                <td data-label="USBC ID">{row.usbcId || '–'}</td>
                 <td data-label="Provided" className={styles.num}>
                   {row.providedAverage ?? '—'}
                 </td>

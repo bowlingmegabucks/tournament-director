@@ -121,6 +121,23 @@ describe('EditReviewStep registration changes (REG-15, REG-16, REG-17, REG-18)',
     expect(screen.queryByText(/Moves the registration/)).not.toBeInTheDocument()
   })
 
+  it('says the average check is cleared when the average or the division changes (AVG-08, D-290)', () => {
+    show({ registration: { average: '175' } })
+    expect(screen.getByText(/Any check on this bowler's average is cleared/)).toBeVisible()
+  })
+
+  it('says it for a division change too (AVG-08, D-290)', () => {
+    show({ registration: { divisionId: scratch.id } })
+
+    expect(screen.getByText(/Any check on this bowler's average is cleared/)).toBeVisible()
+  })
+
+  it('says nothing about the check when neither changes (AVG-08)', () => {
+    show({ registration: { squadIds: [morning.id, afternoon.id] } })
+
+    expect(screen.queryByText(/Any check on this bowler's average/)).not.toBeInTheDocument()
+  })
+
   it.each([
     ['a new number', '175', 'Average: 182 → 175'],
     ['a cleared box', '', 'Average: 182 → (cleared)'],

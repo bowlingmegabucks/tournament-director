@@ -82,6 +82,7 @@ describe('GET /v1/tournaments/{id}/averages (AVG-02)', () => {
       status: 'unverified',
       providedAverage: 175,
       averageInUse: 175,
+      usbcId: '',
     })
   })
 
@@ -262,7 +263,103 @@ describe('PUT average-check (AVG-03 to AVG-07, AVG-10)', () => {
   })
 })
 
+describe('not found (AVG-02, AVG-03)', () => {
+  it('says which thing is missing', async () => {
+    const { app } = setup()
+
+    const tournamentMissing = await request(app).get(
+      `/v1/tournaments/${crypto.randomUUID()}/averages`,
+    )
+    const registrationMissing = await request(app)
+      .put(checkUrl(crypto.randomUUID()))
+      .send({ action: 'verify' })
+
+    expect(tournamentMissing.body.message).toBe('Tournament not found')
+    expect(registrationMissing.body.message).toBe('Registration not found')
+  })
+
+  it('answers 404 for a registration that is in another tournament (AVG-03)', async () => {
+    const { app, store } = setup()
+
+    const response = await request(app)
+      .put(`/v1/tournaments/${crypto.randomUUID()}/registrations/${billId}/average-check`)
+      .send({ action: 'verify' })
+
+    expect(response.status).toBe(404)
+    expect(store.saved).toEqual([])
+  })
+})
+
+describe('what a save and a removal log (D-292)', () => {
+  it('logs a refused save with the action and who asked, and a removal with the numbers', async () => {
+    const { app, captured } = setup()
+
+    await request(app).put(checkUrl(billId)).send({ action: 'adjust', average: 500, note: 'x' })
+    await request(app).put(checkUrl(billId)).send({ action: 'verify' })
+    await request(app).delete(checkUrl(billId))
+    await request(app).delete(checkUrl(billId))
+
+    const lines = captured.records()
+    const refused = lines.filter((entry) => entry.msg === 'Average check refused')
+    expect(refused).toHaveLength(2)
+    expect(refused[0]).toMatchObject({ registrationId: billId, action: 'adjust' })
+    expect(refused[0]?.actorId).toEqual(expect.any(String))
+    expect(refused[1]).toMatchObject({ registrationId: billId, action: 'remove' })
+    expect(lines.find((entry) => entry.msg === 'Average check removed')).toMatchObject({
+      registrationId: billId,
+      action: 'remove',
+      was: 175,
+      now: 175,
+    })
+  })
+})
+
+describe('refusals and removals leave a clear trail (D-292)', () => {
+  it('logs a save the complete tournament refused, and a removal that works logs no refusal', async () => {
+    const complete = setup({ complete: true })
+    await request(complete.app).put(checkUrl(billId)).send({ action: 'verify' })
+    const open = setup()
+    await request(open.app).put(checkUrl(billId)).send({ action: 'verify' })
+    await request(open.app).delete(checkUrl(billId))
+
+    expect(
+      complete.captured.records().find((entry) => entry.msg === 'Average check refused'),
+    ).toMatchObject({ registrationId: billId, action: 'verify' })
+    expect(open.captured.records().some((entry) => entry.msg === 'Average check refused')).toBe(
+      false,
+    )
+  })
+
+  it('removes the check of the registration asked for and no other', async () => {
+    const { app } = setup()
+    await request(app).put(checkUrl(billId)).send({ action: 'verify' })
+    await request(app)
+      .put(checkUrl(carlaId))
+      .send({ action: 'adjust', average: 180, note: 'League sheet', confirmWarnings: true })
+
+    await request(app).delete(`${checkUrl(carlaId)}?confirmWarnings=true`)
+
+    const rows = (await request(app).get(`${base}/averages`)).body.rows as {
+      registrationId: string
+      status: string
+    }[]
+    const statusOf = (id: string) => rows.find((row) => row.registrationId === id)?.status
+    expect(statusOf(billId)).toBe('verified')
+    expect(statusOf(carlaId)).toBe('unverified')
+  })
+})
+
 describe('the averages event (AVG-19, D-298)', () => {
+  it('tells only the tournament stream for a registration on no session', async () => {
+    const { app, published } = setup()
+
+    await request(app)
+      .put(checkUrl(priyaId))
+      .send({ action: 'adjust', average: 160, note: 'League sheet' })
+
+    expect(published).toEqual([{ sessionId: liveKey(tournament.id), kind: 'averages' }])
+  })
+
   it('tells every session of the registration and the tournament stream, and no more', async () => {
     const { app, published } = setup()
 

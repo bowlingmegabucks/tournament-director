@@ -151,6 +151,19 @@ describe('planCheck with scores (AVG-06, D-294)', () => {
     })
   })
 
+  it('words the warning in full, with the bowler, then the payouts line for a complete session (AVG-06)', () => {
+    const plan = planCheck(facts({ scored: [{ complete: true }] }), adjust(182))
+
+    expect(plan).toMatchObject({
+      warnings: [
+        {
+          message:
+            'Bill Tran already has scores. A new average changes handicap, so results change. A squad or sweeper they bowled is complete. Payouts already made may now be wrong.',
+        },
+      ],
+    })
+  })
+
   it('saves once confirmed (AVG-06)', () => {
     expect(planCheck(facts({ scored }), adjust(182, 'USBC book', true)).kind).toBe('save')
   })

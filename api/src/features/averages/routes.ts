@@ -54,12 +54,14 @@ function throwUnlessDone(
     case 'refused':
       throw new HttpError(plan.status, plan.message)
     case 'invalid': {
+      // Stryker disable next-line StringLiteral: an invalid plan always names a field, so the fallback never shows.
       const [first = 'Check the average.'] = Object.values(plan.errors)
       throw new FieldErrorsError(400, first, plan.errors)
     }
     case 'confirm':
       throw new WarningsError(
         409,
+        // Stryker disable next-line StringLiteral: a confirming plan always holds a warning, so the fallback never shows.
         plan.warnings[0]?.message ?? 'Confirm the change.',
         plan.warnings,
       )
@@ -88,6 +90,7 @@ export function createAverageWriteRouter(
     const { id, registrationId } = checkParams.parse(req.params)
     const body = checkBodySchema.parse(req.body)
     const log = requestLogger(res, logger)
+    // Stryker disable next-line StringLiteral,LogicalOperator: a route behind `averages.verify` always has a user.
     const actorId = callerOf(res).user?.id ?? 'unknown'
     const reading = await load(id, registrationId)
 
@@ -99,6 +102,7 @@ export function createAverageWriteRouter(
       )
     }
     throwUnlessDone(plan)
+    // Stryker disable next-line StringLiteral: `throwUnlessDone` threw for every other plan, so this only narrows the type.
     if (plan.kind !== 'save') throw new HttpError(500, 'Unexpected plan')
 
     await averages.save(registrationId, plan.check, actorId)
@@ -127,6 +131,7 @@ export function createAverageWriteRouter(
     const { id, registrationId } = checkParams.parse(req.params)
     const query = removeQuery.parse(req.query)
     const log = requestLogger(res, logger)
+    // Stryker disable next-line StringLiteral,LogicalOperator: a route behind `averages.verify` always has a user.
     const actorId = callerOf(res).user?.id ?? 'unknown'
     const reading = await load(id, registrationId)
 

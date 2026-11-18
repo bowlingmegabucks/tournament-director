@@ -10,6 +10,7 @@ import {
 } from './format'
 import { PayoutTag } from './PayoutTag'
 import styles from './ResultsTable.module.css'
+import { UnverifiedChip } from './UnverifiedChip'
 import { GameCells, GameHeaders, PlusMinusHeader, TotalCells, TotalHeaders } from './ScoreColumns'
 import type { SuperSweeperResults } from './types'
 
@@ -78,6 +79,7 @@ export function SuperSweeperTable({ results }: Readonly<{ results: SuperSweeperR
                         rowSpan={lines}
                       >
                         {row.name}
+                        <UnverifiedChip show={row.unverified} />
                         {row.dnf && <span className={styles.tag}>DNF</span>}
                         {row.flags.map((flag) => (
                           <span key={flag.sweeperId} className={styles.tag}>

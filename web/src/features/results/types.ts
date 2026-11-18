@@ -35,6 +35,8 @@ interface RankedRow {
    * `"100.00"`. `null` with no saved payout, and for any row that is not an inferred payee.
    */
   payout: string | null
+  /** A handicap bowler on an average no director checked (AVG-13, D-293). A flag only. */
+  unverified: boolean
 }
 
 /** A placed bowler of a squad division. The page draws the lines where `group` changes (RES-11). */
@@ -58,6 +60,8 @@ export interface UnplacedRow {
   games: number
   handicap: number
   scores: (number | null)[]
+  /** A handicap bowler on an average no director checked (AVG-13, D-293). A flag only. */
+  unverified: boolean
 }
 
 export interface DivisionResult {
@@ -144,6 +148,8 @@ export interface AtLargeRow {
   /** The bowler cashed in a squad (RES-16, D-07). */
   previousCasher: boolean
   ties: Tie[]
+  /** A handicap bowler on an average no director checked (AVG-13, D-293). A flag only. */
+  unverified: boolean
 }
 
 export interface AtLargeDivision {
@@ -178,6 +184,8 @@ export interface SeedingRow {
   handicap: number
   previousCasher: boolean
   ties: Tie[]
+  /** A handicap bowler on an average no director checked (AVG-13, D-293). A flag only. */
+  unverified: boolean
 }
 
 export interface SeedingDivision {

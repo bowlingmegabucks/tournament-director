@@ -743,6 +743,7 @@ export function createSquadRow(overrides: Partial<SquadRow> = {}): SquadRow {
     scores: [200, 200, 200],
     advancedEarlier: false,
     dnf: false,
+    unverified: false,
     ties: [],
     payout: null,
     ...overrides,
@@ -798,6 +799,7 @@ export function createSweeperRow(overrides: Partial<SweeperRow> = {}): SweeperRo
     divisionName: 'Open',
     bonusPins: 0,
     scores: [200, 200, 200],
+    unverified: false,
     dnf: false,
     payout: null,
     ...overrides,
@@ -1010,6 +1012,7 @@ function createDemoSquad(
             games: 2,
             handicap: 0,
             scores: [230, 215],
+            unverified: false,
           },
         ],
         noShows: [{ registrationId: faker.string.uuid(), name: 'Mike Tran' }],
@@ -1094,6 +1097,7 @@ export function createAtLargeRow(overrides: Partial<AtLargeRow> = {}): AtLargeRo
     highGame: 240,
     previousCasher: false,
     ties: [],
+    unverified: false,
     ...overrides,
   }
 }
@@ -1130,6 +1134,7 @@ export function createSeedingRow(overrides: Partial<SeedingRow> = {}): SeedingRo
     handicap: 0,
     previousCasher: false,
     ties: [],
+    unverified: false,
     payout: null,
     ...overrides,
   }
@@ -1172,6 +1177,7 @@ export function createSuperSweeperRow(overrides: Partial<SuperSweeperRow> = {}):
     sweeperPins: [0, 0],
     flags: [],
     dnf: false,
+    unverified: false,
     payout: null,
     ...overrides,
   }

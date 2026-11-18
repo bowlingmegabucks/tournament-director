@@ -411,6 +411,7 @@ describe('SquadResultsPage', () => {
       games: 2,
       handicap: 12,
       scores: [215, 230],
+      unverified: false,
     }
     const withHandicap = createSquadResults({
       session: { ...createSquadResults().session, complete: true },
@@ -463,6 +464,7 @@ describe('SquadResultsPage', () => {
               games: 2,
               handicap: 0,
               scores: [230, 215],
+              unverified: false,
             },
           ],
           noShows: [{ registrationId: 'r2', name: 'Mike Tran' }],
@@ -513,6 +515,7 @@ describe('SquadResultsPage', () => {
               games: 1,
               handicap: 0,
               scores: [1],
+              unverified: false,
             },
           ],
         }),

@@ -57,3 +57,22 @@ describe('AtLargeBody (RES-12 to RES-17, D-92)', () => {
     ).toBeInTheDocument()
   })
 })
+
+describe('AtLargeBody and the average chip (AVG-13, D-293)', () => {
+  it('marks only a bowler on an unchecked average', () => {
+    const division = createAtLargeDivision({
+      atLargeSpots: 2,
+      rows: [
+        createAtLargeRow({ name: 'Carla Mendes', place: 1, unverified: true }),
+        createAtLargeRow({ name: 'Bill Tran', place: 2 }),
+      ],
+    })
+
+    render(<AtLargeBody division={division} finalsRatio={8} />)
+
+    expect(screen.getAllByText('Avg not verified')).toHaveLength(1)
+    expect(
+      within(screen.getByRole('rowheader', { name: /Carla Mendes/ })).getByText('Avg not verified'),
+    ).toBeVisible()
+  })
+})

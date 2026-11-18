@@ -18,6 +18,7 @@ import {
 } from './ScoreColumns'
 import { PayoutTag } from './PayoutTag'
 import styles from './ResultsTable.module.css'
+import { UnverifiedChip } from './UnverifiedChip'
 import type { DivisionResult, SquadRow } from './types'
 
 function TieMarks({ row }: Readonly<{ row: SquadRow }>) {
@@ -104,6 +105,7 @@ export function DivisionBody({
                   <td className={styles.place}>{item.row.place}</td>
                   <th scope="row" className={styles.who}>
                     {item.row.name}
+                    <UnverifiedChip show={item.row.unverified} />
                     {item.row.dnf && <span className={styles.tag}>DNF</span>}
                     {item.row.advancedEarlier && (
                       <span className={styles.tag}>Advanced earlier</span>
@@ -167,6 +169,7 @@ export function DivisionBody({
                 <tr key={row.registrationId}>
                   <th scope="row" className={styles.who}>
                     {row.name}
+                    <UnverifiedChip show={row.unverified} />
                   </th>
                   <td className={styles.num} data-label="Games">
                     {formatGamesOf(row.games, games)}

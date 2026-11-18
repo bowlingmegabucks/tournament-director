@@ -77,3 +77,25 @@ describe('SuperSweeperTable (RES-29a, D-90)', () => {
     expect(screen.getByText('Payout $500.00')).toBeInTheDocument()
   })
 })
+
+describe('SuperSweeperTable and the average chip (AVG-13, D-293)', () => {
+  it('marks only a bowler on an unchecked average', () => {
+    render(
+      <SuperSweeperTable
+        results={createSuperSweeperResults({
+          rows: [
+            createSuperSweeperRow({ name: 'Walt Kowalczyk', unverified: true }),
+            createSuperSweeperRow({ name: 'Frank Dorsey', place: 2 }),
+          ],
+        })}
+      />,
+    )
+
+    expect(screen.getAllByText('Avg not verified')).toHaveLength(1)
+    expect(
+      within(screen.getByRole('rowheader', { name: /Walt Kowalczyk/ })).getByText(
+        'Avg not verified',
+      ),
+    ).toBeVisible()
+  })
+})

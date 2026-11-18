@@ -89,3 +89,23 @@ describe('SeedingBody (RES-18 to RES-21a, D-92)', () => {
     expect(screen.getAllByText(/^Payout /)).toHaveLength(1)
   })
 })
+
+describe('SeedingBody and the average chip (AVG-13, D-293)', () => {
+  it('marks only a bowler on an unchecked average', () => {
+    render(
+      <SeedingBody
+        division={division({
+          rows: [
+            createSeedingRow({ name: 'Carla Mendes', seed: 1, unverified: true }),
+            createSeedingRow({ name: 'Bill Tran', seed: 2 }),
+          ],
+        })}
+      />,
+    )
+
+    expect(screen.getAllByText('Avg not verified')).toHaveLength(1)
+    expect(
+      within(screen.getByRole('rowheader', { name: /Carla Mendes/ })).getByText('Avg not verified'),
+    ).toBeVisible()
+  })
+})

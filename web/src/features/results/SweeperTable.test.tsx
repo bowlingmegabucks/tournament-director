@@ -117,3 +117,24 @@ describe('SweeperTable (RES-22, RES-25a, D-82)', () => {
     expect(screen.getAllByText(/^Payout /)).toHaveLength(1)
   })
 })
+
+describe('SweeperTable and the average chip (AVG-13, D-293)', () => {
+  it('marks only a bowler on an unchecked average', () => {
+    render(
+      <SweeperTable
+        rows={[
+          createSweeperRow({ name: 'Walt Kowalczyk', bonusPins: 8, unverified: true }),
+          createSweeperRow({ name: 'Frank Dorsey', place: 2, unverified: false }),
+        ]}
+        games={3}
+      />,
+    )
+
+    expect(screen.getAllByText('Avg not verified')).toHaveLength(1)
+    expect(
+      within(screen.getByRole('rowheader', { name: /Walt Kowalczyk/ })).getByText(
+        'Avg not verified',
+      ),
+    ).toBeVisible()
+  })
+})

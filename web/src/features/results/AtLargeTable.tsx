@@ -1,6 +1,7 @@
 import { formatSquadStamp } from '../../shared/sessionFormat'
 import { formatAtLargeSummary, formatTie } from './format'
 import styles from './ResultsTable.module.css'
+import { UnverifiedChip } from './UnverifiedChip'
 import type { AtLargeDivision } from './types'
 
 /**
@@ -50,6 +51,7 @@ export function AtLargeBody({
                 </td>
                 <th scope="row" className={styles.who}>
                   {row.name}
+                  <UnverifiedChip show={row.unverified} />
                   {row.ties.map((tie) => (
                     <span key={tie.line} className={styles.mark}>
                       {formatTie(tie, 'last at-large spot')}

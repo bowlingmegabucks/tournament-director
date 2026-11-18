@@ -9,6 +9,9 @@ import type { RegistrationList } from './types'
 const isText = (value: unknown) => typeof value === 'string'
 const isNumber = (value: unknown) => typeof value === 'number'
 const isTextList = (value: unknown) => Array.isArray(value) && value.every(isText)
+const isAverage = (value: unknown) => value === null || isNumber(value)
+const isAverageStatus = (value: unknown) =>
+  value === 'none' || value === 'unverified' || value === 'verified' || value === 'adjusted'
 
 function isRegistration(value: unknown): boolean {
   const bowler = field(value, 'bowler')
@@ -23,7 +26,9 @@ function isRegistration(value: unknown): boolean {
     isText(field(value, 'divisionName')) &&
     isTextList(field(value, 'squadIds')) &&
     isTextList(field(value, 'sweeperIds')) &&
-    typeof field(value, 'superSweeper') === 'boolean'
+    typeof field(value, 'superSweeper') === 'boolean' &&
+    isAverage(field(value, 'average')) &&
+    isAverageStatus(field(value, 'averageStatus'))
   )
 }
 

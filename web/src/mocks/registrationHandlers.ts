@@ -295,6 +295,8 @@ export function createRegistrationHandlers({
       squadIds: [...entry.squadIds],
       sweeperIds: [...entry.sweeperIds],
       superSweeper: entry.superSweeper,
+      average: entry.average,
+      averageStatus: 'none' as const,
     }
     if (row) Object.assign(row, next)
     else registrations.registrations.push(next)

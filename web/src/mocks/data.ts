@@ -210,6 +210,8 @@ export function createRegistration(overrides: Partial<Registration> = {}): Regis
     squadIds: [],
     sweeperIds: [],
     superSweeper: false,
+    average: 200,
+    averageStatus: 'none',
     ...overrides,
   }
 }

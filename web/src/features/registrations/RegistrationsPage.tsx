@@ -1,17 +1,20 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate, useOutletContext, useParams } from 'react-router'
+import { AverageMarker } from '../../shared/AverageMarker'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { Toast } from '../../shared/Toast'
 import { field } from '../../shared/field'
 import type { Tournament } from '../tournaments/types'
 import { useCan } from '../auth/useCan'
+import { AverageDetailsFor } from '../averages/AverageDetailsFor'
 import { useTournamentSettings } from '../tournaments/useTournamentSettings'
 import { AddRegistrationLink } from './AddRegistrationLink'
 import { DeleteRegistrationButton } from './DeleteRegistrationButton'
 import addStyles from './AddRegistration.module.css'
 import { filterRegistrations } from './filter'
 import { RegistrationSummary } from './RegistrationSummary'
+import type { Registration } from './types'
 import { SessionsDialog } from './SessionsDialog'
 import styles from './RegistrationsPage.module.css'
 import { useRegistrations } from './useRegistrations'
@@ -46,6 +49,48 @@ function SessionCount({
 }
 
 /**
+ * The Average column (AVG-11, D-295). A scratch division shows the number the bowler gave. In a
+ * handicap division a check mark says a director verified it, the adjusted number opens its
+ * details, and a chip says no one checked it.
+ */
+function AverageCell({
+  registration,
+  onDetails,
+}: Readonly<{ registration: Registration; onDetails: () => void }>) {
+  const { average, averageStatus } = registration
+  if (averageStatus === 'none') return <>{average ?? '–'}</>
+  if (averageStatus === 'verified') {
+    return (
+      <>
+        {average}{' '}
+        <span className={styles.verified} aria-hidden="true">
+          ✓
+        </span>
+        <span className={styles.hidden}> verified</span>
+      </>
+    )
+  }
+  if (averageStatus === 'adjusted') {
+    return (
+      <button
+        type="button"
+        className={styles.adjusted}
+        aria-haspopup="dialog"
+        aria-label={`Average ${average}, adjusted. Show details`}
+        onClick={onDetails}
+      >
+        {average} adjusted
+      </button>
+    )
+  }
+  return (
+    <>
+      {average ?? '–'} <AverageMarker label={average === null ? 'No average' : 'Not verified'} />
+    </>
+  )
+}
+
+/**
  * The registrations of the tournament in the URL, as a table with a summary and one filter box
  * (REG-23, REG-24, REG-26, D-47, D-49, D-50). Read only. Needs
  * `registrations.read` (D-46, D-52, D-105).
@@ -65,6 +110,8 @@ export function RegistrationsPage() {
   // The popup keeps only which registration and which list. Its content is read from the live data
   // at render, so a refetch cannot leave the count and the popup disagreeing.
   const [popup, setPopup] = useState<{ registrationId: string; kind: Kind } | null>(null)
+  // The adjusted average's details: only which registration; the dialog reads the Averages query (AVG-11).
+  const [averagePopup, setAveragePopup] = useState<string | null>(null)
 
   // The Edit link needs `registrations.write`, and a complete tournament cannot change (D-197, D-198).
   const settings = useTournamentSettings(id)
@@ -143,6 +190,7 @@ export function RegistrationsPage() {
                   <th scope="col">Bowler</th>
                   <th scope="col">USBC ID</th>
                   <th scope="col">Division</th>
+                  <th scope="col">Average</th>
                   <th scope="col" className={styles.count}>
                     Squads
                   </th>
@@ -170,6 +218,14 @@ export function RegistrationsPage() {
                     <th scope="row">{registration.bowler.name}</th>
                     <td data-label="USBC ID">{registration.bowler.usbcId || '–'}</td>
                     <td data-label="Division">{registration.divisionName}</td>
+                    <td data-label="Average">
+                      <AverageCell
+                        registration={registration}
+                        onDetails={() => {
+                          setAveragePopup(registration.id)
+                        }}
+                      />
+                    </td>
                     <td data-label="Squads" className={styles.count}>
                       <SessionCount
                         count={registration.squadIds.length}
@@ -226,6 +282,15 @@ export function RegistrationsPage() {
                 ))}
               </tbody>
             </table>
+          )}
+          {averagePopup && (
+            <AverageDetailsFor
+              tournamentId={id}
+              registrationId={averagePopup}
+              onClose={() => {
+                setAveragePopup(null)
+              }}
+            />
           )}
           {popup && popupRegistration && (
             <SessionsDialog

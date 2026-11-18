@@ -19,6 +19,10 @@ export interface Registration {
   squadIds: string[]
   sweeperIds: string[]
   superSweeper: boolean
+  /** The average handicap uses: the checked one, else the one the bowler gave; `null` when none (AVG-11). */
+  average: number | null
+  /** Whether a director checked it. `none` in a division with no handicap, where there is nothing to check. */
+  averageStatus: 'none' | 'unverified' | 'verified' | 'adjusted'
 }
 
 /** Counts for the whole tournament, not the filtered rows (REG-24, D-50). */

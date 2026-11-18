@@ -14,10 +14,14 @@ export async function verifyAllAverages(page: Page) {
   const done = page.getByText('Every handicap bowler has a checked average.')
   // Wait for the first answer: either a button to press, or the page that says there is none.
   await expect(verify.first().or(done)).toBeVisible()
-  for (let left = await verify.count(); left > 0; left = await verify.count()) {
+  const verifyNext = async (): Promise<void> => {
+    const left = await verify.count()
+    if (left === 0) return
     await verify.first().click()
     // The list asks again after each save: wait for the row to leave before the next click.
     await expect(verify).toHaveCount(left - 1)
+    await verifyNext()
   }
+  await verifyNext()
   await expect(done).toBeVisible()
 }

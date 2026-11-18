@@ -134,6 +134,16 @@ export function AveragesPage() {
   }
   const pending = save.isPending || remove.isPending
 
+  let emptyText: string | undefined
+  if (data.rows.length === 0) {
+    emptyText = 'This tournament has no handicap divisions, so there are no averages to check.'
+  } else if (shown.length === 0) {
+    emptyText =
+      filter === 'unverified' && text.trim() === ''
+        ? 'Every handicap bowler has a checked average. Choose All to review them.'
+        : 'No bowler matches.'
+  }
+
   return (
     <>
       <title>Averages · Tournament Director</title>
@@ -156,7 +166,8 @@ export function AveragesPage() {
         divisions.
       </p>
       <div className={styles.toolbar}>
-        <div className={styles.seg} role="group" aria-label="Show">
+        <fieldset className={styles.seg}>
+          <legend className={styles.legend}>Show</legend>
           <button
             type="button"
             aria-pressed={filter === 'unverified'}
@@ -175,7 +186,7 @@ export function AveragesPage() {
           >
             All ({data.rows.length})
           </button>
-        </div>
+        </fieldset>
         <label className={styles.field}>
           <span>Find a bowler</span>
           <input
@@ -189,12 +200,8 @@ export function AveragesPage() {
           />
         </label>
       </div>
-      {data.rows.length === 0 ? (
-        <p>This tournament has no handicap divisions, so there are no averages to check.</p>
-      ) : shown.length === 0 && filter === 'unverified' && text.trim() === '' ? (
-        <p>Every handicap bowler has a checked average. Choose All to review them.</p>
-      ) : shown.length === 0 ? (
-        <p>No bowler matches.</p>
+      {emptyText !== undefined ? (
+        <p>{emptyText}</p>
       ) : (
         <table className={styles.table}>
           <thead>

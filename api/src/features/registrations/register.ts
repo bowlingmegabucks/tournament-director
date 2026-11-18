@@ -241,7 +241,7 @@ export async function completeRegistration(
       bowler,
       tournamentStart: tournament.startDate,
       // An append that keeps the division keeps an old registration's missing average (D-289).
-      requireHandicapAverage: existing === undefined || input.divisionId !== existing.divisionId,
+      requireHandicapAverage: existing?.divisionId !== input.divisionId,
     }),
   )
   if (squadCount === 0) {

@@ -26,7 +26,7 @@ export function liveCheck<Check extends AverageCheck>(
   provided: number | null,
   check: Check | undefined,
 ): Check | undefined {
-  return check !== undefined && check.providedAverage === provided ? check : undefined
+  return check?.providedAverage === provided ? check : undefined
 }
 
 /**

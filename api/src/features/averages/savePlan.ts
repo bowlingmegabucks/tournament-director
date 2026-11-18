@@ -68,6 +68,32 @@ function guard(facts: CheckFacts): Extract<CheckPlan, { kind: 'refused' }> | und
   return undefined
 }
 
+type Made = { check: AverageCheck } | { errors: Record<string, string> }
+
+function verifyCheck(facts: CheckFacts): Made {
+  if (facts.providedAverage === null) return { errors: { average: noAverageMessage } }
+  return {
+    check: {
+      providedAverage: facts.providedAverage,
+      verifiedAverage: facts.providedAverage,
+      note: null,
+    },
+  }
+}
+
+function adjustCheck(facts: CheckFacts, body: Extract<CheckBody, { action: 'adjust' }>): Made {
+  const errors: Record<string, string> = {}
+  const problem = averageProblem(body.average, facts)
+  if (problem) errors.average = problem
+  const note = typeof body.note === 'string' ? body.note.trim() : ''
+  if (note === '') errors.note = noteRequiredMessage
+  else if (note.length > maxNoteLength) errors.note = noteLengthMessage
+  if (Object.keys(errors).length > 0) return { errors }
+  return {
+    check: { providedAverage: facts.providedAverage, verifiedAverage: Number(body.average), note },
+  }
+}
+
 /** A save: a verify or an adjust (AVG-03 to AVG-06). A scores warning waits for `confirmWarnings`. */
 export function planCheck(
   facts: CheckFacts,
@@ -76,25 +102,9 @@ export function planCheck(
   const refused = guard(facts)
   if (refused) return refused
 
-  let check: AverageCheck
-  if (body.action === 'verify') {
-    if (facts.providedAverage === null)
-      return { kind: 'invalid', errors: { average: noAverageMessage } }
-    check = {
-      providedAverage: facts.providedAverage,
-      verifiedAverage: facts.providedAverage,
-      note: null,
-    }
-  } else {
-    const errors: Record<string, string> = {}
-    const problem = averageProblem(body.average, facts)
-    if (problem) errors.average = problem
-    const note = typeof body.note === 'string' ? body.note.trim() : ''
-    if (note === '') errors.note = noteRequiredMessage
-    else if (note.length > maxNoteLength) errors.note = noteLengthMessage
-    if (Object.keys(errors).length > 0) return { kind: 'invalid', errors }
-    check = { providedAverage: facts.providedAverage, verifiedAverage: Number(body.average), note }
-  }
+  const made = body.action === 'verify' ? verifyCheck(facts) : adjustCheck(facts, body)
+  if ('errors' in made) return { kind: 'invalid', errors: made.errors }
+  const check = made.check
 
   const warnings = warningFor(facts, check.verifiedAverage)
   if (warnings.length > 0 && body.confirmWarnings !== true) return { kind: 'confirm', warnings }

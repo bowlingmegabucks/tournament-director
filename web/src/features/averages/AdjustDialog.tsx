@@ -77,6 +77,9 @@ export function AdjustDialog({ tournamentId, row, onClose, onSaved }: Readonly<A
     )
   }
 
+  const idleLabel = warning ? 'Adjust anyway' : 'Save adjusted average'
+  const saveLabel = save.isPending ? 'Saving…' : idleLabel
+
   return (
     <dialog
       ref={open}
@@ -170,7 +173,7 @@ export function AdjustDialog({ tournamentId, row, onClose, onSaved }: Readonly<A
             Cancel
           </button>
           <button type="submit" disabled={save.isPending}>
-            {save.isPending ? 'Saving…' : warning ? 'Adjust anyway' : 'Save adjusted average'}
+            {saveLabel}
           </button>
         </div>
       </form>

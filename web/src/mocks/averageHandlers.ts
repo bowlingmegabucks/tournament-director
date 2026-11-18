@@ -22,6 +22,11 @@ const message = {
   note: 'Say why the average changed, or where it came from.',
 }
 
+function statusOf(check: Check | undefined): 'unverified' | 'verified' | 'adjusted' {
+  if (!check) return 'unverified'
+  return check.note === null ? 'verified' : 'adjusted'
+}
+
 function averageProblem(value: unknown, division: Division | undefined): string | undefined {
   if (typeof value !== 'number' || !Number.isInteger(value))
     return 'Average must be a whole number.'
@@ -58,7 +63,7 @@ export function createAverageHandlers({
     const check = checks.get(registrationId)
     row.average = check ? check.verifiedAverage : providedOf(registrationId)
     if (row.averageStatus !== 'none') {
-      row.averageStatus = check ? (check.note === null ? 'verified' : 'adjusted') : 'unverified'
+      row.averageStatus = statusOf(check)
     }
   }
 
@@ -73,13 +78,50 @@ export function createAverageHandlers({
           divisionName: row.divisionName,
           usbcId: row.bowler.usbcId,
           providedAverage: check ? check.providedAverage : providedOf(row.id),
-          status: check ? (check.note === null ? 'verified' : 'adjusted') : 'unverified',
+          status: statusOf(check),
           averageInUse: check ? check.verifiedAverage : providedOf(row.id),
           note: check?.note ?? null,
           verifiedBy: check ? 'Demo Director' : null,
           verifiedAt: check ? (when.get(row.id) ?? null) : null,
         }
       })
+
+  /** Save a verify; a response means the request is refused. */
+  function verify(registrationId: string) {
+    const given = providedOf(registrationId)
+    if (given === null) {
+      const text = 'Enter an average with Adjust before it can be verified.'
+      return HttpResponse.json({ message: text, errors: { average: text } }, { status: 400 })
+    }
+    checks.set(registrationId, { providedAverage: given, verifiedAverage: given, note: null })
+    return undefined
+  }
+
+  /** Save an adjust; a response means the request is refused. */
+  function adjust(registrationId: string, row: { divisionId: string }, body: unknown) {
+    const average: unknown = Reflect.get(body as object, 'average')
+    const rawNote: unknown = Reflect.get(body as object, 'note')
+    const note = typeof rawNote === 'string' ? rawNote.trim() : ''
+    const errors: Record<string, string> = {}
+    const problem = averageProblem(
+      average,
+      divisions.find((division) => division.id === row.divisionId),
+    )
+    if (problem) errors['average'] = problem
+    if (note === '') errors['note'] = message.note
+    if (Object.keys(errors).length > 0) {
+      return HttpResponse.json(
+        { message: Object.values(errors)[0] ?? 'Check the average.', errors },
+        { status: 400 },
+      )
+    }
+    checks.set(registrationId, {
+      providedAverage: providedOf(registrationId),
+      verifiedAverage: Number(average),
+      note,
+    })
+    return undefined
+  }
 
   const answer = (registrationId: string) => {
     const row = rowOf(registrationId)
@@ -103,38 +145,12 @@ export function createAverageHandlers({
         const body: unknown = await request.json()
         const action =
           typeof body === 'object' && body !== null ? Reflect.get(body, 'action') : undefined
-        if (action === 'verify') {
-          const given = providedOf(registrationId)
-          if (given === null) {
-            const text = 'Enter an average with Adjust before it can be verified.'
-            return HttpResponse.json({ message: text, errors: { average: text } }, { status: 400 })
-          }
-          checks.set(registrationId, { providedAverage: given, verifiedAverage: given, note: null })
-        } else if (action === 'adjust') {
-          const average: unknown = Reflect.get(body as object, 'average')
-          const rawNote: unknown = Reflect.get(body as object, 'note')
-          const note = typeof rawNote === 'string' ? rawNote.trim() : ''
-          const errors: Record<string, string> = {}
-          const problem = averageProblem(
-            average,
-            divisions.find((division) => division.id === row.divisionId),
-          )
-          if (problem) errors['average'] = problem
-          if (note === '') errors['note'] = message.note
-          if (Object.keys(errors).length > 0) {
-            return HttpResponse.json(
-              { message: Object.values(errors)[0] ?? 'Check the average.', errors },
-              { status: 400 },
-            )
-          }
-          checks.set(registrationId, {
-            providedAverage: providedOf(registrationId),
-            verifiedAverage: Number(average),
-            note,
-          })
-        } else {
+        if (action !== 'verify' && action !== 'adjust') {
           return HttpResponse.json({ message: 'Invalid request' }, { status: 400 })
         }
+        const refused =
+          action === 'verify' ? verify(registrationId) : adjust(registrationId, row, body)
+        if (refused) return refused
         when.set(registrationId, new Date().toISOString())
         sync(registrationId)
         return answer(registrationId)

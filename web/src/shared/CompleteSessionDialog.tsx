@@ -106,6 +106,7 @@ export function CompleteSessionDialog({
   }
 
   const unchecked = info?.unverifiedBowlers ?? 0
+  const completeLabel = unchecked > 0 || confirming ? 'Complete anyway' : `Complete ${name}`
 
   return (
     <dialog
@@ -152,11 +153,7 @@ export function CompleteSessionDialog({
             disabled={loading || pending}
             onClick={onConfirm}
           >
-            {pending
-              ? 'Completing…'
-              : unchecked > 0 || confirming
-                ? 'Complete anyway'
-                : `Complete ${name}`}
+            {pending ? 'Completing…' : completeLabel}
           </button>
         </div>
       </div>

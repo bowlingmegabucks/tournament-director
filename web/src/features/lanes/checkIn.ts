@@ -10,6 +10,8 @@ export interface CheckInRow {
   lane: string
   divisionName: string
   average: number | null
+  /** What the sheet says about the check, so a bowler sees it at check-in; `''` in a division with no handicap (AVG-17). */
+  averageCheck: string
   pins: number
   superSweeper: boolean
 }
@@ -40,6 +42,22 @@ export function checkInName(bowler: Pick<LaneBowler, 'firstName' | 'lastName' | 
   return bowler.suffix === '' ? name : `${name}, ${bowler.suffix}`
 }
 
+/** "Verified", "Adjusted from 175: USBC book", or "Not verified"; empty when there is nothing to check (AVG-17, D-296). */
+export function averageCheckText(
+  bowler: Pick<LaneBowler, 'averageStatus' | 'providedAverage' | 'averageNote'>,
+): string {
+  switch (bowler.averageStatus) {
+    case 'verified':
+      return 'Verified ✓'
+    case 'adjusted':
+      return `Adjusted from ${bowler.providedAverage ?? 'none'}: ${bowler.averageNote ?? ''}`
+    case 'unverified':
+      return 'Not verified'
+    case 'none':
+      return ''
+  }
+}
+
 function toRow(bowler: LaneBowler): CheckInRow {
   return {
     registrationId: bowler.registrationId,
@@ -47,6 +65,7 @@ function toRow(bowler: LaneBowler): CheckInRow {
     lane: bowler.position,
     divisionName: bowler.divisionName,
     average: bowler.average,
+    averageCheck: averageCheckText(bowler),
     pins: bowler.pins,
     superSweeper: bowler.superSweeper,
   }

@@ -75,3 +75,18 @@ describe('UnassignedList', () => {
     expect(screen.getByText('Carl Dubois').closest('li')).toHaveAttribute('aria-busy', 'false')
   })
 })
+
+describe('UnassignedList and the average chip (AVG-12, D-293)', () => {
+  it('marks only a handicap bowler whose average no director checked', () => {
+    show([
+      createLaneBowler({ name: 'Carla Mendes', averageStatus: 'unverified' }),
+      createLaneBowler({ name: 'Anita Brooks', averageStatus: 'verified' }),
+      createLaneBowler({ name: 'Bill Tran', averageStatus: 'adjusted' }),
+      createLaneBowler({ name: 'Frank Dorsey', averageStatus: 'none' }),
+    ])
+
+    expect(screen.getAllByText('Avg not verified')).toHaveLength(1)
+    const row = screen.getByText('Carla Mendes').closest('li')
+    expect(row).toHaveTextContent('Avg not verified')
+  })
+})

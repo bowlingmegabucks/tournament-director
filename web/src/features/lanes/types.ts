@@ -18,7 +18,14 @@ export interface LaneBowler {
   suffix: string
   divisionId: string
   divisionName: string
+  /** The average handicap uses: the checked one, else the one the bowler gave (AVG-09, D-288). */
   average: number | null
+  /** The average the bowler gave (AVG-17). */
+  providedAverage: number | null
+  /** Whether a director checked it. `none` in a division with no handicap, where there is nothing to check (D-293). */
+  averageStatus: 'none' | 'unverified' | 'verified' | 'adjusted'
+  /** Why it was adjusted; `null` unless adjusted (AVG-17). */
+  averageNote: string | null
   position: string
   pins: number
   superSweeper: boolean

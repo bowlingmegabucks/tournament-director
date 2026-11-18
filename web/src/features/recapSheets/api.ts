@@ -46,7 +46,8 @@ function isRecapSheets(value: unknown): value is RecapSheets {
     Array.isArray(sheets) &&
     sheets.every(isSheet) &&
     isNumber(field(value, 'withoutLane')) &&
-    isNumber(field(value, 'withoutDivision'))
+    isNumber(field(value, 'withoutDivision')) &&
+    isNumber(field(value, 'withoutVerifiedAverage'))
   )
 }
 

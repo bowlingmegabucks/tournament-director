@@ -152,3 +152,32 @@ describe('formatSpots (D-58)', () => {
     expect(formatSpots(createLanePage({ pairs: [], unassigned: some(2) }))).toBeUndefined()
   })
 })
+
+describe('formatBowler and the average check (AVG-12, D-293)', () => {
+  const bowler = (status: 'none' | 'unverified' | 'verified' | 'adjusted') =>
+    createLaneBowler({ average: 182, averageStatus: status, pins: 29 })
+
+  it('says when a director verified or adjusted the average in use', () => {
+    expect(formatBowler(bowler('verified'), 'squad', false)).toBe(
+      'Open · avg 182, verified · hdcp 29',
+    )
+    expect(formatBowler(bowler('adjusted'), 'squad', false)).toBe(
+      'Open · avg 182, adjusted · hdcp 29',
+    )
+  })
+
+  it('says nothing about a check no one made, or in a division with no handicap', () => {
+    expect(formatBowler(bowler('unverified'), 'squad', false)).toBe('Open · avg 182 · hdcp 29')
+    expect(formatBowler(bowler('none'), 'squad', false)).toBe('Open · avg 182 · hdcp 29')
+  })
+
+  it('says no average even when a director adjusted nothing', () => {
+    expect(
+      formatBowler(
+        createLaneBowler({ average: null, averageStatus: 'unverified' }),
+        'squad',
+        false,
+      ),
+    ).toBe('Open · no average · hdcp 0')
+  })
+})

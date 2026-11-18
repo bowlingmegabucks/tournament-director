@@ -102,6 +102,8 @@ export function CompleteSessionDialog({
     )
   }
 
+  const unchecked = info?.unverifiedBowlers ?? 0
+
   return (
     <dialog
       ref={showOnMount}
@@ -118,6 +120,15 @@ export function CompleteSessionDialog({
           Complete this {name}?
         </h2>
         {body}
+        {unchecked > 0 && (
+          <p role="alert" className={styles.error}>
+            {unchecked === 1
+              ? '1 handicap bowler with scores has an average that is not verified.'
+              : `${unchecked} handicap bowlers with scores have an average that is not verified.`}{' '}
+            Once the {name} is complete, a later change to an average changes finished results and
+            payouts. Verify them first on the Averages page.
+          </p>
+        )}
         {failure && (
           <p role="alert" className={styles.error}>
             {failure}
@@ -138,7 +149,7 @@ export function CompleteSessionDialog({
             disabled={loading || pending}
             onClick={onConfirm}
           >
-            {pending ? 'Completing…' : `Complete ${name}`}
+            {pending ? 'Completing…' : unchecked > 0 ? 'Complete anyway' : `Complete ${name}`}
           </button>
         </div>
       </div>

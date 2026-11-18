@@ -32,7 +32,7 @@ describe.each(['squads', 'sweepers'] as const)('useCompleteSession, %s', (kind) 
     )
     const { client, key, result } = setup(kind)
 
-    result.current.mutate('s1')
+    result.current.mutate({ sessionId: 's1', confirmWarnings: false })
 
     await waitFor(() => {
       expect(client.getQueryState(key('t1'))?.isInvalidated).toBe(true)
@@ -49,7 +49,7 @@ describe.each(['squads', 'sweepers'] as const)('useCompleteSession, %s', (kind) 
     )
     const { client, key, result } = setup(kind)
 
-    result.current.mutate('s1')
+    result.current.mutate({ sessionId: 's1', confirmWarnings: false })
 
     await waitFor(() => {
       expect(result.current.isError).toBe(true)
@@ -63,7 +63,7 @@ describe.each(['squads', 'sweepers'] as const)('useCompleteSession, %s', (kind) 
     server.use(http.post(path, () => new HttpResponse(null, { status: 404 })))
     const { client, key, result } = setup(kind)
 
-    result.current.mutate('s1')
+    result.current.mutate({ sessionId: 's1', confirmWarnings: false })
 
     await waitFor(() => {
       expect(result.current.isError).toBe(true)

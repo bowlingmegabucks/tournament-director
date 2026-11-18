@@ -351,6 +351,17 @@ export function RecapDialog({
             The lanes in use change the cross, so print after everyone has a lane.
           </output>
         )}
+        {data && data.withoutVerifiedAverage > 0 && (
+          <output className={styles.notice}>
+            <strong>
+              {data.withoutVerifiedAverage} handicap{' '}
+              {plural(data.withoutVerifiedAverage, 'bowler has', 'bowlers have')} an average that is
+              not verified.
+            </strong>{' '}
+            Their sheets print the handicap from the average they gave. Verify them first on the
+            Averages page.
+          </output>
+        )}
         {data && data.withoutDivision > 0 && (
           <output className={styles.notice}>
             <strong>

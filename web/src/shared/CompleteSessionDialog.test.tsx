@@ -201,3 +201,32 @@ describe('CompleteSessionDialog, Escape while the request runs', () => {
     expect(fireEvent(squadDialog(), cancel())).toBe(true)
   })
 })
+
+describe('CompleteSessionDialog and unchecked averages (AVG-18, D-297)', () => {
+  it('warns how many handicap bowlers with scores are on an unchecked average, and offers Complete anyway', () => {
+    show({ info: squadInfo({ unverifiedBowlers: 2 }) })
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      '2 handicap bowlers with scores have an average that is not verified.',
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent('Verify them first on the Averages page.')
+    expect(screen.getByRole('button', { name: 'Complete anyway' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: 'Complete squad' })).not.toBeInTheDocument()
+  })
+
+  it('says it in the singular for one bowler, and for a sweeper', () => {
+    show({ kind: 'sweepers', info: { entryCount: 5, unverifiedBowlers: 1 } })
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      '1 handicap bowler with scores has an average that is not verified.',
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent('Once the sweeper is complete')
+  })
+
+  it('shows no warning when every scored handicap bowler is checked', () => {
+    show({ info: squadInfo({ unverifiedBowlers: 0 }) })
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Complete squad' })).toBeEnabled()
+  })
+})

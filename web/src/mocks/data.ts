@@ -388,6 +388,9 @@ export function createLaneBowler(overrides: Partial<LaneBowler> = {}): LaneBowle
     divisionId: faker.string.uuid(),
     divisionName: 'Open',
     average: 200,
+    providedAverage: overrides.average === undefined ? 200 : overrides.average,
+    averageStatus: 'none',
+    averageNote: null,
     position: '',
     pins: 0,
     superSweeper: false,
@@ -599,6 +602,7 @@ export function createRecapSheets(overrides: Partial<RecapSheets> = {}): RecapSh
     sheets: [],
     withoutLane: 0,
     withoutDivision: 0,
+    withoutVerifiedAverage: 0,
     ...rest,
   }
 }
@@ -643,6 +647,9 @@ export function createDemoRecapSheets(
     },
     sheets,
     withoutLane: page.unassigned.length + page.other.length,
+    withoutVerifiedAverage: page.pairs
+      .flatMap((pair) => pair.bowlers)
+      .filter((bowler) => bowler.averageStatus === 'unverified').length,
   })
 }
 

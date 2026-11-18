@@ -160,6 +160,7 @@ describe('fetchRecapSheets (RPT-08)', () => {
     ['no skip', { ...recap, skip: undefined }],
     ['no withoutLane', { ...recap, withoutLane: undefined }],
     ['no withoutDivision', { ...recap, withoutDivision: undefined }],
+    ['no withoutVerifiedAverage', { ...recap, withoutVerifiedAverage: undefined }],
   ])('rejects %s', async (_label, body) => {
     respondWith(body)
 

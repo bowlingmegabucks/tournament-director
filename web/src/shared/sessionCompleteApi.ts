@@ -16,6 +16,8 @@ export interface SessionCompleteInfo {
   partialCount?: number
   /** Squad only: games each bowler bowls. */
   games?: number
+  /** Handicap bowlers with scores whose average no director checked (AVG-18, D-297). 0 when none. */
+  unverifiedBowlers?: number
 }
 
 /**
@@ -33,21 +35,36 @@ export class SessionCompleteRefusedError extends Error {
 }
 
 /**
+ * The API wants a confirm (409 with `warnings`): handicap bowlers with scores are on an average no
+ * director checked (AVG-18, D-297). Nothing changed. The dialog reads the count again and asks.
+ */
+export class SessionCompleteWarningError extends Error {}
+
+/**
  * Complete a squad or sweeper (SQD-15, SQD-16). Resolves with how many bowlers got zeros (always 0
- * for a sweeper). Throws `SessionCompleteRefusedError` for a 409.
+ * for a sweeper). Throws `SessionCompleteRefusedError` for a 409, and `SessionCompleteWarningError`
+ * for a 409 that waits for `confirmWarnings` (AVG-18).
  */
 export async function completeSession(
   kind: SessionKind,
   tournamentId: string,
   sessionId: string,
+  confirmWarnings = false,
 ): Promise<{ noShowCount: number }> {
   const response = await apiFetch(`${sessionUrl(kind, tournamentId, sessionId)}/complete`, {
     method: 'POST',
+    ...(confirmWarnings
+      ? {
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ confirmWarnings: true }),
+        }
+      : {}),
   })
   if (response.status === 409) {
     const body = await readJson(response, `Failed to complete the ${word(kind)}`)
     const message = field(body, 'message')
     const text = typeof message === 'string' ? message : `The ${word(kind)} cannot be completed.`
+    if (field(body, 'warnings') !== undefined) throw new SessionCompleteWarningError(text)
     throw new SessionCompleteRefusedError(
       text,
       reasonsFor(field(body, 'errors'), ['tournament', 'session'], text),
@@ -83,7 +100,9 @@ export async function fetchSessionCompleteInfo(
   if (typeof entryCount !== 'number') {
     throw new TypeError(`Failed to load the ${word(kind)} (unexpected response)`)
   }
-  if (kind === 'sweepers') return { entryCount }
+  const unverified = field(info, 'unverifiedBowlers')
+  const unverifiedBowlers = typeof unverified === 'number' ? unverified : 0
+  if (kind === 'sweepers') return { entryCount, unverifiedBowlers }
   const noScoreCount = field(info, 'noScoreCount')
   const partialCount = field(info, 'partialCount')
   const games = field(info, 'games')
@@ -94,5 +113,5 @@ export async function fetchSessionCompleteInfo(
   ) {
     throw new TypeError(`Failed to load the ${word(kind)} (unexpected response)`)
   }
-  return { entryCount, noScoreCount, partialCount, games }
+  return { entryCount, noScoreCount, partialCount, games, unverifiedBowlers }
 }

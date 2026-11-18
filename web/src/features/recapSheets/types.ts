@@ -37,4 +37,6 @@ export interface RecapSheets {
   withoutLane: number
   /** Bowlers with a lane whose division is not one of the tournament's, so they have no sheet (D-51). */
   withoutDivision: number
+  /** Bowlers with a sheet, in a handicap division, whose average no director checked (AVG-14, D-293). */
+  withoutVerifiedAverage: number
 }

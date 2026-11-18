@@ -26,7 +26,8 @@ function OpenDialog({
   session: SessionToComplete
   pending: boolean
   failure: string | undefined
-  onConfirm: () => void
+  /** `confirmWarnings`: the dialog showed the unchecked-averages warning, so this click confirms it (AVG-18). */
+  onConfirm: (confirmWarnings: boolean) => void
   onClose: () => void
 }>) {
   const info = useSessionCompleteInfo(kind, tournamentId, session.id)
@@ -38,7 +39,9 @@ function OpenDialog({
       loading={info.isPending}
       pending={pending}
       failure={failure}
-      onConfirm={onConfirm}
+      onConfirm={() => {
+        onConfirm((info.data?.unverifiedBowlers ?? 0) > 0)
+      }}
       onClose={onClose}
     />
   )
@@ -79,11 +82,11 @@ export function CompleteSessionButton({
     setFailure(undefined)
   }
 
-  async function confirm() {
+  async function confirm(confirmWarnings: boolean) {
     setFailure(undefined)
     const closesAtStart = closes.current
     try {
-      const result = await complete.mutateAsync(session.id)
+      const result = await complete.mutateAsync({ sessionId: session.id, confirmWarnings })
       close()
       onCompleted(result)
     } catch (error) {
@@ -115,8 +118,8 @@ export function CompleteSessionButton({
           session={session}
           pending={complete.isPending}
           failure={failure}
-          onConfirm={() => {
-            void confirm()
+          onConfirm={(confirmWarnings) => {
+            void confirm(confirmWarnings)
           }}
           onClose={close}
         />

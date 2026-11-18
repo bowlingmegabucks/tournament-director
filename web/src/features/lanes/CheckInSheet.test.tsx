@@ -95,3 +95,73 @@ describe('CheckInSheet', () => {
     expect(screen.getByText(/^1 bowler(?!s)/)).toBeInTheDocument()
   })
 })
+
+describe('CheckInSheet and the average check (AVG-17, D-296)', () => {
+  const checked = createLanePage({
+    pairs: [
+      createLanePair(1, [
+        createLaneBowler({
+          firstName: 'Anita',
+          lastName: 'Brooks',
+          position: '1A',
+          average: 178,
+          providedAverage: 178,
+          averageStatus: 'verified',
+        }),
+        createLaneBowler({
+          firstName: 'Bill',
+          lastName: 'Tran',
+          position: '1B',
+          average: 182,
+          providedAverage: 175,
+          averageStatus: 'adjusted',
+          averageNote: 'USBC book average',
+        }),
+        createLaneBowler({
+          firstName: 'Carla',
+          lastName: 'Mendes',
+          position: '2A',
+          averageStatus: 'unverified',
+        }),
+        createLaneBowler({
+          firstName: 'Frank',
+          lastName: 'Dorsey',
+          position: '2B',
+          averageStatus: 'none',
+        }),
+      ]),
+    ],
+  })
+
+  const showChecked = (kind: 'squad' | 'sweeper') => {
+    render(
+      <CheckInSheet
+        tournamentName="Spring Open"
+        kind={kind}
+        date="2026-10-24T09:00:00"
+        order="lane"
+        groups={buildCheckIn(checked, 'lane')}
+        printedOn="11/16/2026"
+      />,
+    )
+  }
+
+  it('prints what the check says for each handicap bowler, and nothing for a scratch bowler', () => {
+    showChecked('squad')
+
+    const row = (name: string) => screen.getByRole('row', { name: new RegExp(name) })
+    expect(within(row('Brooks')).getByText('Verified ✓')).toBeInTheDocument()
+    expect(
+      within(row('Tran')).getByText('Adjusted from 175: USBC book average'),
+    ).toBeInTheDocument()
+    expect(within(row('Mendes')).getByText('Not verified')).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Average check' })).toBeInTheDocument()
+    expect(within(row('Dorsey')).queryByText(/Verified|Adjusted|Not verified/)).toBeNull()
+  })
+
+  it('leaves the column off a sweeper sheet, which has no handicap', () => {
+    showChecked('sweeper')
+
+    expect(screen.queryByRole('columnheader', { name: 'Average check' })).not.toBeInTheDocument()
+  })
+})

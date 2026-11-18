@@ -61,7 +61,7 @@ All new routes are web-only, beside the vendor routes, which stay untouched exce
 
 | Route | Access | Does |
 | --- | --- | --- |
-| `GET /v1/tournaments/{id}/averages` | `registrations.read` | Rows for handicap-division registrations: `registrationId`, `bowlerName`, `divisionName`, `usbcId`, `providedAverage`, `status` (`unverified`, `verified`, `adjusted`), `verifiedAverage`, `note`, `verifiedBy`, `verifiedAt`, plus `locked` (tournament complete) and, per row, `hasScores`. `404` for an unknown tournament. |
+| `GET /v1/tournaments/{id}/averages` | `registrations.read` | Rows for handicap-division registrations: `registrationId`, `bowlerName`, `divisionName`, `usbcId`, `providedAverage`, `status` (`unverified`, `verified`, `adjusted`), `averageInUse`, `note`, `verifiedBy` (the user's name), `verifiedAt`, plus `tournamentComplete`. (Built without a per-row `hasScores`: the API warns, the page need not know.) `404` for an unknown tournament. |
 | `PUT /v1/tournaments/{id}/registrations/{registrationId}/average-check` | `averages.verify` | Body `{ action: 'verify' }` or `{ action: 'adjust', average, note, confirmWarnings? }`. `200` with the new row. `400 { message, errors }` for a bad number, a missing note, a limit breach (field `average`), or an unverifiable null average. `404`. `409 { message, warnings }` when scores exist and `confirmWarnings` is missing (text per D-294). `409` when the tournament is complete. |
 | `DELETE /v1/tournaments/{id}/registrations/{registrationId}/average-check` | `averages.verify` | Removes the row. Same `409` rules (a removal changes handicap when the adjusted number differs from the provided one). |
 
@@ -70,9 +70,11 @@ Changed existing routes:
 - Create, append, and `PATCH` (vendor) and the desk add and edit routes: the average-required check (AVG-16). Vendor shapes keep their wording; only the new 400 appears (`VC-08`, vendor note before release).
 - Edit and `PATCH`: delete the verification row when the average value or the division changes (AVG-08).
 - Lane page read: bowler rows gain `average` (in use), `averageStatus` (`verified`, `adjusted`, `unverified`, or `none` for a scratch division), `providedAverage`, and `averageNote`. The check-in sheet and the marker read these.
-- Results, scores, score entry, and TV feeds: each bowler row gains `unverified: boolean`, nothing else. Handicap in those feeds already comes from one place; it moves to the in-use function (AVG-09).
-- Squad and sweeper complete routes: `409 warnings` per D-297.
+- Results, scores, score entry, and TV feeds: each bowler row gains `unverified: boolean` (named without the word "average", so the leak tests that ban it still hold), nothing else. Handicap in those feeds already comes from one place; it moves to the in-use function (AVG-09).
+- Squad and sweeper complete routes: `409` with `warnings` and `unverifiedBowlers` per D-297, until the body holds `confirmWarnings: true`. `GET .../complete-info` gains `unverifiedBowlers`.
+- Registrations list read: each row gains `average` (in use) and `averageStatus` (`none` for a scratch division), for the Average column. The popup reads the Averages list.
 - Recap sheets route: counts `withoutVerifiedAverage` next to `withoutLane`.
+- Vendor and desk registration writes: a save that changes the average or the division carries `clearAverageCheck`, and the writers delete the row in the same transaction (AVG-08); the delete routes remove it too.
 
 New change kind `averages` on the session stream (every session the registration is on) and the tournament TV stream. Handlers drop the same caches the `payouts` save drops.
 

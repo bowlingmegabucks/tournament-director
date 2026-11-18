@@ -82,6 +82,10 @@ export function buildLanePage(
       divisionId: division.id,
       divisionName: division.name,
       average: entry.average,
+      providedAverage: entry.providedAverage,
+      // A scratch division has nothing to check (D-293).
+      averageStatus: division.handicapPercentage === null ? 'none' : entry.averageStatus,
+      averageNote: entry.averageNote,
       position: entry.position,
       pins:
         session.kind === 'squad'

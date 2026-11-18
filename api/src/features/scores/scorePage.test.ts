@@ -40,6 +40,32 @@ function build(
   return buildScorePage(page, entries, scores, games)
 }
 
+describe('the unverified flag (AVG-13, D-293)', () => {
+  const handicapped = createDivision({
+    number: 3,
+    name: 'Handicap',
+    handicapBase: 220,
+    handicapPercentage: 90,
+  })
+  const flags = (...entries: LaneEntry[]) => {
+    const { page } = buildLanePage(session(), entries, [open, handicapped])
+    return buildScorePage(page, entries, [], 3).pairs.flatMap((pair) =>
+      pair.bowlers.map((bowler) => bowler.unverified),
+    )
+  }
+
+  it('flags only a handicap bowler on an average no director checked', () => {
+    expect(
+      flags(
+        entry('1A', { divisionId: handicapped.id, averageStatus: 'unverified' }),
+        entry('1B', { divisionId: handicapped.id, averageStatus: 'verified' }),
+        entry('2A', { divisionId: handicapped.id, averageStatus: 'adjusted' }),
+        entry('2B', { divisionId: open.id, averageStatus: 'unverified' }),
+      ),
+    ).toEqual([true, false, false, false])
+  })
+})
+
 describe('buildScorePage', () => {
   it('groups bowlers by lane pair, lane then letter (SCR-13, LAN-04)', () => {
     const entries = [entry('4C'), entry('2C'), entry('1B'), entry('1A')]
@@ -184,6 +210,7 @@ describe('buildScorePage', () => {
       'registrationId',
       'scores',
       'total',
+      'unverified',
     ])
   })
 })

@@ -17,6 +17,7 @@ function entry(scores: (number | null)[], over: Partial<ResultEntry> = {}): Resu
     games: scores.filter((score): score is number => score !== null),
     gameScores: scores,
     pins: 0,
+    unverified: false,
     ...over,
   })
 }

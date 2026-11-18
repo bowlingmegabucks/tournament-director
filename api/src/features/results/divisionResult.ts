@@ -39,6 +39,7 @@ export function toDivisionResult(
       advancedBefore.has(entry.bowlerId) && cutTotal !== undefined && entry.total >= cutTotal,
     ties: marks.get(entry.registrationId) ?? [],
     dnf: flagged.has(entry.registrationId),
+    unverified: entry.unverified,
     // D-284: only an inferred payee, a casher, shows an amount.
     payout: group === 'casher' ? (payouts.get(entry.registrationId) ?? null) : null,
   }))
@@ -64,6 +65,7 @@ export function toDivisionResult(
       games: entry.games.length,
       handicap: entry.pins,
       scores: entry.gameScores,
+      unverified: entry.unverified,
     })),
     noShows: outcome.noShows.map((entry) => ({
       registrationId: entry.registrationId,

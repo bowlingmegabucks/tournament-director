@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { averageInUse, averageStatus, type AverageCheck } from '../averages/inUse.ts'
 import { displayName } from '../registrations/registrationRow.ts'
 import type { LaneEntry } from './types.ts'
 
@@ -39,9 +40,10 @@ const entrySchema = z.object({
 
 /**
  * Turn a stored entry into a `LaneEntry`. The result says whether the row fits; the repository
- * skips and logs a row that does not (D-51).
+ * skips and logs a row that does not (D-51). `check` is the registration's average check, if any:
+ * the entry's `average` is the one handicap uses (AVG-09, D-288).
  */
-export function toLaneEntry(row: LaneEntryRow) {
+export function toLaneEntry(row: LaneEntryRow, check?: AverageCheck) {
   const { registration } = row
   const bowler = registration?.bowler
   const checked = entrySchema.safeParse({
@@ -55,9 +57,13 @@ export function toLaneEntry(row: LaneEntryRow) {
     superSweeper: registration?.superSweeper,
   })
   if (!checked.success) return checked
-  const { suffix, superSweeper, ...fields } = checked.data
+  const { suffix, superSweeper, average: provided, ...fields } = checked.data
   const entry: LaneEntry = {
     ...fields,
+    average: averageInUse(provided, check),
+    providedAverage: provided,
+    averageStatus: averageStatus(check),
+    averageNote: check?.note ?? null,
     suffix,
     name: displayName({ firstName: fields.firstName, lastName: fields.lastName, suffix }),
     superSweeper,

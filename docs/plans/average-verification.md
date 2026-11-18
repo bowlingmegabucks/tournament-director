@@ -70,7 +70,7 @@ Changed existing routes:
 - Create, append, and `PATCH` (vendor) and the desk add and edit routes: the average-required check (AVG-16). Vendor shapes keep their wording; only the new 400 appears (`VC-08`, vendor note before release).
 - Edit and `PATCH`: delete the verification row when the average value or the division changes (AVG-08).
 - Lane page read: bowler rows gain `average` (in use), `averageStatus` (`verified`, `adjusted`, `unverified`, or `none` for a scratch division), `providedAverage`, and `averageNote`. The check-in sheet and the marker read these.
-- Results, scores, score entry, and TV feeds: each bowler row gains `averageUnverified: boolean`, nothing else. Handicap in those feeds already comes from one place; it moves to the in-use function (AVG-09).
+- Results, scores, score entry, and TV feeds: each bowler row gains `unverified: boolean`, nothing else. Handicap in those feeds already comes from one place; it moves to the in-use function (AVG-09).
 - Squad and sweeper complete routes: `409 warnings` per D-297.
 - Recap sheets route: counts `withoutVerifiedAverage` next to `withoutLane`.
 
@@ -136,7 +136,7 @@ Playwright (`web/e2e/`): verify one bowler and watch the marker leave the result
 1. Table script, Prisma model, `averageInUse`, the `averages.verify` permission and role mapping. Green.
 2. Store and the save rules (verify, adjust, limits, scores warning, complete freeze), with routes `GET`, `PUT`, `DELETE`, and the `averages` event.
 3. AVG-16 on the vendor, desk add, and edit routes. AVG-08 on edit and `PATCH`. Vendor note for `VC-08`.
-4. Switch every handicap read to `averageInUse` (lane page, recap sheets, results, finals, seeding, super sweeper, TV). Add `averageUnverified` to the feeds and the lane fields.
+4. Switch every handicap read to `averageInUse` (lane page, recap sheets, results, finals, seeding, super sweeper, TV). Add `unverified` to the feeds and the lane fields.
 5. Complete-squad and sweeper warning (AVG-18). Recap count (AVG-14).
 6. Web: `AverageMarker`, `AverageDetails`, Averages page and menu link, Adjust dialog.
 7. Web: Registrations column, lane page, check-in sheet, results pages, scores, entry, TV, live kinds.

@@ -129,6 +129,9 @@ export function createLaneEntry(overrides: Partial<LaneEntry> = {}): LaneEntry {
     suffix: '',
     divisionId: faker.string.uuid(),
     average: 200,
+    providedAverage: overrides.average === undefined ? 200 : overrides.average,
+    averageStatus: 'unverified',
+    averageNote: null,
     superSweeper: false,
     position: '',
     ...overrides,
@@ -149,6 +152,7 @@ export function createResultEntry(overrides: Partial<ResultEntryInput> = {}): Re
     divisionName: 'Open',
     games: [200, 200, 200],
     pins: 0,
+    unverified: false,
     ...overrides,
   })
 }

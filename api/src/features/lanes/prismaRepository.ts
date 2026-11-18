@@ -34,8 +34,14 @@ export function createPrismaLaneRepository(client: PrismaClient, logger: Logger)
           },
         }),
       )
+      const checks = await withDatabaseErrors(logger, () =>
+        client.averageVerification.findMany({
+          where: { registrationId: { in: rows.map((row) => row.registrationId) } },
+        }),
+      )
+      const checkOf = new Map(checks.map((check) => [check.registrationId, check]))
       return rows.flatMap((row) => {
-        const result = toLaneEntry(row)
+        const result = toLaneEntry(row, checkOf.get(row.registrationId))
         if (result.success) return [result.data]
         const key = `skipped:${sessionId}:${row.registrationId}`
         if (!reported.has(key)) {

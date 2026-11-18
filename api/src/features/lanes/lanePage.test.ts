@@ -242,6 +242,53 @@ describe('buildLanePage', () => {
     })
   })
 
+  describe('the average check (AVG-12, AVG-17, D-293)', () => {
+    const handicapped = createDivision({
+      number: 2,
+      handicapBase: 220,
+      handicapPercentage: 90,
+      maximumHandicapPerGame: 50,
+    })
+    const check = (overrides: Parameters<typeof entry>[1], divisions = [handicapped]) =>
+      buildLanePage(session(), [entry('', { divisionId: handicapped.id, ...overrides })], divisions)
+        .page.unassigned[0]
+
+    it('works the handicap from the average in use, and carries the provided one and the note', () => {
+      const bowler = check({
+        average: 182,
+        providedAverage: 175,
+        averageStatus: 'adjusted',
+        averageNote: 'USBC book',
+      })
+
+      expect(bowler).toMatchObject({
+        average: 182,
+        providedAverage: 175,
+        averageStatus: 'adjusted',
+        averageNote: 'USBC book',
+        pins: 34,
+      })
+    })
+
+    it.each(['unverified', 'verified', 'adjusted'] as const)(
+      'carries %s in a handicap division',
+      (status) => {
+        expect(check({ averageStatus: status })?.averageStatus).toBe(status)
+      },
+    )
+
+    it('says none in a division with no handicap, where there is nothing to check', () => {
+      const scratch = createDivision({ number: 1 })
+      const { page } = buildLanePage(
+        session(),
+        [entry('', { divisionId: scratch.id, averageStatus: 'unverified' })],
+        [scratch],
+      )
+
+      expect(page.unassigned[0]?.averageStatus).toBe('none')
+    })
+  })
+
   it('counts entries per division, listing 0, in division order (LAN-10)', () => {
     const second = createDivision({ number: 2, name: 'Scratch' })
     const third = createDivision({ number: 3, name: 'Women' })

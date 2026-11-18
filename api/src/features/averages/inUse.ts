@@ -27,3 +27,11 @@ export function averageInUse(
 ): number | null {
   return check?.verifiedAverage ?? provided
 }
+
+/**
+ * Whether a bowler is bowling handicap on an average no director checked (D-293, AVG-12, AVG-13). A
+ * scratch division has no handicap, so nothing to check. Lane entries carry `averageStatus`.
+ */
+export function isUnverified(status: AverageStatus, handicapDivision: boolean): boolean {
+  return handicapDivision && status === 'unverified'
+}

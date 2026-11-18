@@ -16,6 +16,8 @@ export const scoreBowlerSchema = z.object({
   position: z.string(),
   scores: z.array(z.number().int().nullable()),
   total: z.number().int(),
+  /** In a handicap division, bowling on an average no director checked (AVG-13, D-293). A flag only. */
+  unverified: z.boolean(),
 })
 
 export type ScoreBowler = z.infer<typeof scoreBowlerSchema>

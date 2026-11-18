@@ -1,4 +1,5 @@
 import type { Division } from '../divisions/types.ts'
+import { isUnverified } from '../averages/inUse.ts'
 import { handicap } from '../lanes/handicap.ts'
 import type { LaneEntry } from '../lanes/types.ts'
 import type { ScoreRow } from '../scores/types.ts'
@@ -23,6 +24,8 @@ export interface ResultEntryInput {
   gameScores?: (number | null)[]
   /** Pins added per game: the handicap on a squad (SCR-07), the bonus pins on a sweeper (SCR-09). */
   pins: number
+  /** In a handicap division, bowling on an average no director checked (AVG-13, D-293). */
+  unverified: boolean
 }
 
 /** An entry with the figures that ranking compares (SCR-11). */
@@ -126,6 +129,7 @@ export function buildResultEntries(
           (_, index) => stored.get(index + 1) ?? null,
         ),
         pins: pinsFor(entry, division),
+        unverified: isUnverified(entry.averageStatus, division.handicapPercentage !== null),
       }),
     )
   }

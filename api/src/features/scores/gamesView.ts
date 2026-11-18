@@ -92,6 +92,7 @@ export function buildGamesView(
             scores: row.scores,
             total: row.total,
             dnf: flagged.has(row.bowler.registrationId),
+            unverified: row.bowler.averageStatus === 'unverified',
           })),
       }))
     const everyone = pairs.flatMap((pair) => pair.bowlers)

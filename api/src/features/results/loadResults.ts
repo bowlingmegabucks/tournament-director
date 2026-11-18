@@ -187,6 +187,7 @@ export async function loadSweeperResults(
     bonusPins: entry.pins,
     scores: entry.gameScores,
     dnf: flagged.has(entry.registrationId),
+    unverified: entry.unverified,
     // D-284: only an inferred payee, a casher, shows an amount.
     payout: group === 'casher' ? (paid.get(entry.registrationId) ?? null) : null,
   })

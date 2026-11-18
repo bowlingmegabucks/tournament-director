@@ -29,6 +29,9 @@ describe('toLaneEntry', () => {
         bowlerId: '5a9e3c71-8d24-4b6f-9c10-2e7a4f6b8d33',
         divisionId: '7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01',
         average: 200,
+        providedAverage: 200,
+        averageStatus: 'unverified',
+        averageNote: null,
         firstName: 'Joe',
         lastName: 'Fontaine',
         suffix: '',
@@ -52,6 +55,45 @@ describe('toLaneEntry', () => {
 
     expect(result.success && result.data.name).toBe('Joe Fontaine, Jr')
     expect(result.success && result.data.suffix).toBe('Jr')
+  })
+
+  it('uses the adjusted average for handicap and keeps the provided one and the note (AVG-09, D-288)', () => {
+    const result = toLaneEntry(row({ average: 175 }), {
+      providedAverage: 175,
+      verifiedAverage: 182,
+      note: 'USBC book',
+    })
+
+    expect(result.success && result.data).toMatchObject({
+      average: 182,
+      providedAverage: 175,
+      averageStatus: 'adjusted',
+      averageNote: 'USBC book',
+    })
+  })
+
+  it('marks a verified average and keeps it (AVG-09, D-288)', () => {
+    const result = toLaneEntry(row({ average: 175 }), {
+      providedAverage: 175,
+      verifiedAverage: 175,
+      note: null,
+    })
+
+    expect(result.success && result.data).toMatchObject({
+      average: 175,
+      averageStatus: 'verified',
+      averageNote: null,
+    })
+  })
+
+  it('gives a bowler with no average one when a director adjusted it (AVG-09)', () => {
+    const result = toLaneEntry(row({ average: null }), {
+      providedAverage: null,
+      verifiedAverage: 160,
+      note: 'League sheet',
+    })
+
+    expect(result.success && result.data).toMatchObject({ average: 160, providedAverage: null })
   })
 
   it('accepts a missing average', () => {

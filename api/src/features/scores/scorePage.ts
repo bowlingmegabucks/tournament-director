@@ -46,6 +46,8 @@ export function buildScorePage(
       position: bowler.position,
       scores: row,
       total: row.reduce<number>((sum, score) => sum + (score ?? 0), 0),
+      // `none` in a scratch division, so only a handicap bowler on an unchecked average (D-293).
+      unverified: bowler.averageStatus === 'unverified',
     }
   }
 

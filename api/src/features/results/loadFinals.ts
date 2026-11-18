@@ -115,6 +115,7 @@ export async function loadAtLarge(
           highGame: entry.highGame,
           previousCasher: outcome.previousCashers.has(entry.bowlerId),
           ties: marks.get(entry.registrationId) ?? [],
+          unverified: entry.unverified,
         })),
       }
     }),
@@ -134,6 +135,7 @@ function seedingRows(seeding: SeedingOutcome, payouts: ReadonlyMap<string, strin
     handicap: item.entry.pins,
     previousCasher: seeding.previousCashers.has(item.entry.bowlerId),
     ties: marks.get(item.entry.registrationId) ?? [],
+    unverified: item.entry.unverified,
     // D-284: only an inferred payee, a finalist, shows an amount.
     payout: group === 'finalist' ? (payouts.get(item.entry.registrationId) ?? null) : null,
   })
@@ -236,6 +238,7 @@ export async function loadSuperSweeper(
     sweeperPins: item.sweeperPins,
     flags: item.flags,
     dnf: item.dnf,
+    unverified: item.entry.unverified,
     // D-284: only an inferred payee, a casher, shows an amount.
     payout: group === 'casher' ? (paid.get(item.entry.registrationId) ?? null) : null,
   })

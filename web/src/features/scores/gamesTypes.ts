@@ -18,6 +18,8 @@ export interface GameBowler {
   total: number
   /** Flagged "did not finish" (D-248): the full-game count leaves the bowler out. */
   dnf: boolean
+  /** A handicap bowler on an average no director checked (AVG-13, D-293). A flag only. */
+  unverified: boolean
 }
 
 /** A pair of lanes as bowled in one game. */

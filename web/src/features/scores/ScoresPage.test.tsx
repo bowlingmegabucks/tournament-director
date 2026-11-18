@@ -706,3 +706,26 @@ describe('ScoresPage live (SCR-18, SCR-20, D-232)', () => {
     expect(marked[0]).toHaveTextContent('Priya Nair')
   })
 })
+
+describe('the Scores tab and the average chip (AVG-13, D-293)', () => {
+  it('marks a handicap bowler on an unchecked average, though the scores are scratch (D-68)', async () => {
+    const flagged = createScoreBowler({
+      name: 'Carla Mendes',
+      position: '1A',
+      scores: [200, 210, 190],
+      unverified: true,
+    })
+    const page = createScorePage({
+      pairs: [
+        createScorePair(1, [flagged, createScoreBowler({ name: 'Bill Tran', position: '1B' })]),
+      ],
+    })
+    serve(page)
+
+    open(page)
+
+    const row = (await screen.findByRole('rowheader', { name: /Carla Mendes/ })).closest('tr')
+    expect(within(row as HTMLElement).getByText('Avg not verified')).toBeVisible()
+    expect(screen.getAllByText('Avg not verified')).toHaveLength(1)
+  })
+})

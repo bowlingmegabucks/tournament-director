@@ -119,3 +119,9 @@
     font-weight: 400;
   }
 }
+
+.chip {
+  display: block;
+  margin-block: var(--space-1);
+  font-weight: 400;
+}

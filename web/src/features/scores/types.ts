@@ -15,6 +15,8 @@ export interface ScoreBowler {
   position: string
   scores: (number | null)[]
   total: number
+  /** A handicap bowler on an average no director checked (AVG-13, D-293). A flag only. */
+  unverified: boolean
 }
 
 /** One lane pair that holds at least one bowler (D-73). */

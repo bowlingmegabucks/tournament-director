@@ -663,6 +663,7 @@ export function createScoreBowler(overrides: Partial<ScoreBowler> = {}): ScoreBo
     position: '',
     scores,
     total: scores.reduce<number>((sum, score) => sum + (score ?? 0), 0),
+    unverified: false,
     ...overrides,
   }
 }

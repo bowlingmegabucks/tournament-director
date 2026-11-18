@@ -145,6 +145,33 @@ describe('useSessionEvents (LAN-21, D-217, D-218)', () => {
     expect(result.current.events.updated).toBeUndefined()
   })
 
+  it('refetches on an averages message, so the marker and the handicap follow a check (AVG-12, AVG-19, D-298)', async () => {
+    const { result, api } = setup()
+    await waitFor(() => {
+      expect(result.current.lanes.data).toBeDefined()
+    })
+    act(() => {
+      FakeEventSource.latest().open()
+    })
+    const [first, ...rest] = api.current().unassigned
+    if (!first) throw new Error('No waiting bowler')
+    api.replace({
+      ...api.current(),
+      unassigned: [{ ...first, averageStatus: 'verified', average: 190 }, ...rest],
+    })
+
+    act(() => {
+      FakeEventSource.latest().message('{"kind":"averages","version":4}')
+    })
+
+    await waitFor(() => {
+      expect(result.current.lanes.data?.unassigned[0]).toMatchObject({
+        averageStatus: 'verified',
+        average: 190,
+      })
+    })
+  })
+
   it('names the pair another desk changed (LAN-21)', async () => {
     const { result, api } = setup()
     await waitFor(() => {

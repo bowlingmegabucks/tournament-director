@@ -17,6 +17,7 @@ export const permissions = [
   'bowlers.ssn',
   'payouts.read',
   'payouts.write',
+  'averages.verify',
   'users.manage',
 ] as const
 

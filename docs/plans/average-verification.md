@@ -93,7 +93,7 @@ Mockups: `averages.html`, `registrations.html`, `lanes.html`, `results.html`, `t
 
 ```
 AverageVerification
-  RegistrationId  char(36) primary key, foreign key to Registrations(Id) on delete cascade
+  RegistrationId  char(36) primary key (no foreign key, like Payouts: WinForms owns Registrations; our delete routes remove the row)
   ProvidedAverage int null
   VerifiedAverage int not null
   Note            varchar(500) null   -- null means verified as provided
@@ -109,7 +109,7 @@ Types: `averageInUse(provided, verification)` in `api/src/features/averages/`. T
 
 | Rule | Test |
 | --- | --- |
-| AVG-01 | `averages/prismaStore.db.test.ts`: cascade delete with the registration, one row per registration |
+| AVG-01 | `averages/prismaStore.db.test.ts`: one row per registration, removed by the desk and vendor delete; `test/averageSchema.test.ts` |
 | AVG-02 | `averages/routes.test.ts`: handicap divisions only, status values; `AveragesPage.test.tsx`: filter, states |
 | AVG-03 | `averages/save.test.ts`: verify copies the provided number, no note; `AveragesPage.test.tsx`: Verify button |
 | AVG-04 | `save.test.ts`: whole number, 1 to 300, note required and at most 500; `AdjustDialog.test.tsx`: messages |

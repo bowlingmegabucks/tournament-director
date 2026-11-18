@@ -16,6 +16,7 @@ import { createInMemoryRegistrationWriter } from '../features/registrations/writ
 import { createInMemoryScoreRepository } from '../features/scores/repository.ts'
 import { createInMemoryScoreWriter } from '../features/scores/scoreWriter.ts'
 import { createInMemoryDnfStore } from '../features/dnf/store.ts'
+import { createInMemoryAverageStore } from '../features/averages/store.ts'
 import { createInMemoryPayoutStore } from '../features/payouts/store.ts'
 import { createInMemorySkipStore } from '../features/skip/store.ts'
 import { createInMemorySquadRepository } from '../features/squads/repository.ts'
@@ -47,6 +48,7 @@ export function createTestApp(overrides: Partial<AppDependencies> = {}): Express
     skipStore: createInMemorySkipStore().store,
     dnfStore: createInMemoryDnfStore().store,
     payoutStore: createInMemoryPayoutStore().store,
+    averageStore: createInMemoryAverageStore([]),
     squads: createInMemorySquadRepository([]),
     squadWriter: createInMemorySquadWriter().writer,
     sweepers: createInMemorySweeperRepository([]),

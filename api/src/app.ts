@@ -53,6 +53,8 @@ import { createLiveNotifier } from './features/results/liveEvents.ts'
 import { createTournamentEventsRouter } from './shared/events/sseRoute.ts'
 import type { DnfStore } from './features/dnf/store.ts'
 import { createTtlCache, LIVE_CACHE_MS } from './shared/ttlCache.ts'
+import { createAverageReadRouter, createAverageWriteRouter } from './features/averages/routes.ts'
+import type { AverageStore } from './features/averages/store.ts'
 import { createPayoutReadRouter, createPayoutWriteRouter } from './features/payouts/routes.ts'
 import type { PayoutStore } from './features/payouts/store.ts'
 import { createSquadRouter } from './features/squads/routes.ts'
@@ -142,6 +144,8 @@ export interface AppDependencies {
   dnfStore: DnfStore
   /** The payouts (PAY-01): the entry routes write them, the results read the amounts (PAY-20). */
   payoutStore: PayoutStore
+  /** The average checks (AVG-01): the Averages page writes them, every handicap reads the one in use (AVG-09). */
+  averageStore: AverageStore
   squads: SquadRepository
   /** Adds squads (SQD-01 to SQD-08, D-167). */
   squadWriter: SquadWriter
@@ -175,6 +179,7 @@ export function createApp({
   skipStore,
   dnfStore,
   payoutStore,
+  averageStore,
   squads,
   squadWriter,
   sweepers,
@@ -276,6 +281,23 @@ export function createApp({
       }
     },
   }
+
+  // A check drops the cached public pages, then tells the screens (AVG-19, D-298), as a payout save does.
+  const averageHooks = {
+    changed: ({
+      tournamentId,
+      sessionIds,
+    }: {
+      tournamentId: string
+      registrationId: string
+      sessionIds: string[]
+    }) => {
+      finalsCache.dropWhere((key) => key.includes(tournamentId.toLowerCase()))
+      for (const sessionId of sessionIds) events.publish(sessionId, 'averages')
+      liveNotifier.averagesChanged(tournamentId)
+    },
+  }
+  const averageDeps = { averages: averageStore, logger }
 
   // One router serves every method; the two groups below give each its own access.
   const vendorRegistrations = createVendorRegistrationRouter({
@@ -732,6 +754,18 @@ export function createApp({
         access: { permission: 'payouts.write' }, // PAY-16, D-275: director and admin; no API key
         methods: ['PUT', 'PATCH'],
         router: createPayoutWriteRouter(payoutDeps, payoutHooks),
+      },
+      {
+        path: '/v1/tournaments/:id/averages',
+        access: { permission: 'registrations.read' }, // AVG-02, AVG-10: the API key cannot reach it
+        methods: ['GET'],
+        router: createAverageReadRouter(averageDeps),
+      },
+      {
+        path: '/v1/tournaments/:id/registrations',
+        access: { permission: 'averages.verify' }, // AVG-10, D-292: director and admin; no API key
+        methods: ['PUT', 'DELETE'],
+        router: createAverageWriteRouter(averageDeps, averageHooks),
       },
       {
         path: '/v1/bowlers',

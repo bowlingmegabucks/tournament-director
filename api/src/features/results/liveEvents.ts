@@ -46,6 +46,11 @@ export interface LiveNotifier {
    * or sweeper save names the session; the super sweeper and finals do not.
    */
   payoutsSaved(tournamentId: string, session?: { kind: SessionKind; id: string }): void
+  /**
+   * A bowler's average was checked, adjusted, or cleared (AVG-19, D-298): handicap and the marker
+   * change, so the TV refetches. The message names no bowler and no number.
+   */
+  averagesChanged(tournamentId: string): void
 }
 
 export interface LiveNotifierDeps {
@@ -162,6 +167,11 @@ export function createLiveNotifier({
         'payouts',
         session ? { sessionId: session.id, sessionKind: session.kind } : undefined,
       )
+    },
+
+    averagesChanged(tournamentId) {
+      cache.dropTournament(tournamentId)
+      events.publish(liveKey(tournamentId), 'averages')
     },
   }
 

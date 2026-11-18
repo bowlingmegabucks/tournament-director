@@ -98,6 +98,7 @@ describe('GET /v1/tournaments/:id/at-large', () => {
         'squadDate',
         'ties',
         'total',
+        'unverified',
       ].toSorted(),
     )
   })
@@ -140,6 +141,7 @@ describe('GET /v1/tournaments/:id/seeding', () => {
         'squadDate',
         'ties',
         'total',
+        'unverified',
       ].toSorted(),
     )
   })
@@ -187,6 +189,7 @@ describe('GET /v1/tournaments/:id/super-sweeper', () => {
         'sweeperTotals',
         'ties',
         'total',
+        'unverified',
       ].toSorted(),
     )
   })

@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -148,5 +148,21 @@ describe('the pair sheet: marks and drafts (SCR-15, D-228, D-231)', () => {
   it('does not warn about earlier games for a bowler who has a score in this one', async () => {
     await openSheet(viewOf({ ...afterGameOne, cal: [null, 211, null] }))
     expect(screen.queryByText(/No scores for game/)).not.toBeInTheDocument()
+  })
+})
+
+describe('the pair sheet and the average chip (AVG-13, D-293)', () => {
+  it('marks only a bowler on an average no director checked', async () => {
+    const view = viewOf()
+    const cal = view.games[1]?.pairs[0]?.bowlers[0]
+    if (cal) cal.unverified = true
+    serve(view)
+    openEntry('/2/1')
+
+    const rows = within(await screen.findByRole('list', { name: 'Scores for lanes 1-2, game 2' }))
+    const items = rows.getAllByRole('listitem')
+    expect(items[0]).toHaveTextContent('Cal Ode')
+    expect(within(items[0] as HTMLElement).getByText('Avg not verified')).toBeVisible()
+    expect(within(items[1] as HTMLElement).queryByText('Avg not verified')).not.toBeInTheDocument()
   })
 })

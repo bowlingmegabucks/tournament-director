@@ -10,6 +10,7 @@ import {
   createSignedInUser,
   createTournament,
 } from '../../mocks/data'
+import { createAverageRow } from '../../mocks/data'
 import { renderApp } from '../../test/renderApp'
 import type { Registration, RegistrationList, Summary } from './types'
 
@@ -55,7 +56,7 @@ function serve(registrations: Registration[], summary: Partial<Summary> = {}) {
 
 const open = () => renderApp(`/tournaments/${tournament.id}/registrations`)
 
-/** The cells of one bowler's row, after the name: USBC ID, division, squads, sweepers, super sweeper. */
+/** The cells of one bowler's row, after the name: USBC ID, division, average, squads, sweepers, super sweeper. */
 async function cellsOf(name: string): Promise<(string | null)[]> {
   const row = (await screen.findByRole('rowheader', { name })).closest('tr')
   if (!row) throw new Error(`No row for ${name}`)
@@ -77,6 +78,78 @@ beforeEach(() => {
   setMockUser(createSignedInUser({ roles: ['director'] }))
 })
 
+describe('the Average column (AVG-11, D-295)', () => {
+  it('shows the number a scratch bowler gave, with nothing to check', async () => {
+    serve([named('Frank', 'Dorsey', { average: 214, averageStatus: 'none' })])
+    open()
+
+    const cells = await cellsOf('Frank Dorsey')
+
+    expect(cells[2]).toBe('214')
+  })
+
+  it('shows a dash for a scratch bowler with no average', async () => {
+    serve([named('Frank', 'Dorsey', { average: null, averageStatus: 'none' })])
+    open()
+
+    expect((await cellsOf('Frank Dorsey'))[2]).toBe('–')
+  })
+
+  it('shows a check mark, with the word for a screen reader, when a director verified it', async () => {
+    serve([named('Anita', 'Brooks', { average: 178, averageStatus: 'verified' })])
+    open()
+
+    expect((await cellsOf('Anita Brooks'))[2]).toBe('178 ✓ verified')
+  })
+
+  it('shows a chip when a handicap bowler has not been checked (AVG-12)', async () => {
+    serve([
+      named('Carla', 'Mendes', { average: 187, averageStatus: 'unverified' }),
+      named('Priya', 'Natarajan', { average: null, averageStatus: 'unverified' }),
+    ])
+    open()
+
+    expect((await cellsOf('Carla Mendes'))[2]).toBe('187 Not verified')
+    expect((await cellsOf('Priya Natarajan'))[2]).toBe('– No average')
+  })
+
+  it('shows the adjusted average, and opens what was provided, why, and by whom (AVG-11)', async () => {
+    const user = userEvent.setup()
+    const bill = named('Bill', 'Tran', { average: 182, averageStatus: 'adjusted' })
+    serve([bill])
+    server.use(
+      http.get('/v1/tournaments/:id/averages', () =>
+        HttpResponse.json({
+          rows: [
+            createAverageRow({
+              registrationId: bill.id,
+              bowlerName: 'Bill Tran',
+              providedAverage: 175,
+              averageInUse: 182,
+              status: 'adjusted',
+              note: 'USBC book average',
+              verifiedBy: 'Dana Reyes',
+              verifiedAt: '2026-11-17T21:12:00.000Z',
+            }),
+          ],
+          tournamentComplete: false,
+        }),
+      ),
+    )
+    open()
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Average 182, adjusted. Show details' }),
+    )
+
+    const dialog = await screen.findByRole('dialog', { name: 'Average: Bill Tran' })
+    expect(within(dialog).getByText('175')).toBeVisible()
+    expect(within(dialog).getByText('182')).toBeVisible()
+    expect(within(dialog).getByText('USBC book average')).toBeVisible()
+    expect(within(dialog).getByText(/Dana Reyes/)).toBeVisible()
+  })
+})
+
 describe('RegistrationsPage', () => {
   it('lists the registrations in the order the API sends, one row each (REG-23)', async () => {
     serve([
@@ -92,7 +165,7 @@ describe('RegistrationsPage', () => {
       within(table)
         .getAllByRole('columnheader')
         .map((header) => header.textContent),
-    ).toEqual(['Bowler', 'USBC ID', 'Division', 'Squads', 'Sweepers', 'Super sweeper'])
+    ).toEqual(['Bowler', 'USBC ID', 'Division', 'Average', 'Squads', 'Sweepers', 'Super sweeper'])
     expect(names()).toEqual(['Dana Abbott', 'Ray Baptiste, Jr', 'Maria Chen'])
     expect(screen.queryByText('No registrations yet.')).not.toBeInTheDocument()
     expect(screen.queryByText('No registrations match the filter.')).not.toBeInTheDocument()
@@ -110,7 +183,7 @@ describe('RegistrationsPage', () => {
 
     open()
 
-    expect(await cellsOf('Dana Abbott')).toEqual(['4821-10394', 'Women', '3', '2', 'No'])
+    expect(await cellsOf('Dana Abbott')).toEqual(['4821-10394', 'Women', '200', '3', '2', 'No'])
   })
 
   it('shows a dash for an empty USBC ID (REG-23)', async () => {
@@ -127,7 +200,7 @@ describe('RegistrationsPage', () => {
     open()
 
     const yes = await cellsOf('Dana Abbott')
-    expect(yes[4]).toBe('✓Yes')
+    expect(yes[5]).toBe('✓Yes')
     expect(await cellsOf('Ray Baptiste')).toEqual(expect.arrayContaining(['No']))
     const row = (await screen.findByRole('rowheader', { name: 'Dana Abbott' })).closest('tr')
     expect(within(row as HTMLElement).getByText('✓')).toHaveAttribute('aria-hidden', 'true')

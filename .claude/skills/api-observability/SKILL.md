@@ -90,3 +90,7 @@ Always end the span in `finally`. Name it `<area>.<action>`.
 - Does any line or attribute hold personal data, a secret, or a high-cardinality value?
 - Is a metric added only because the automatic ones cannot answer the question?
 - Is a new log or metric covered by a test (`createCapturedLogger`, `InMemoryMetricExporter`)?
+
+## Agents
+
+The `api-reviewer` agent loads this skill and checks logging, metrics, and secrets in every api/ diff.

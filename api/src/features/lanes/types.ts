@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { sessionFields } from '../../shared/sessions.ts'
+import type { AverageStatus } from '../averages/inUse.ts'
 
 /**
  * One bowler on the lane page (LAN-11). `pins` is the handicap on a squad (SCR-07) and the bonus
@@ -18,7 +19,17 @@ export const laneBowlerSchema = z.object({
   suffix: z.string(),
   divisionId: z.uuid(),
   divisionName: z.string(),
+  /** The average handicap uses: the checked one, else the provided one (AVG-09, D-288). */
   average: z.number().int().nullable(),
+  /** The average the bowler gave (AVG-17). */
+  providedAverage: z.number().int().nullable(),
+  /**
+   * Whether a director checked it (D-287). `none` in a division with no handicap, where there is
+   * nothing to check (D-293).
+   */
+  averageStatus: z.enum(['unverified', 'verified', 'adjusted', 'none']),
+  /** The adjustment's note; null unless adjusted (AVG-17). */
+  averageNote: z.string().nullable(),
   position: z.string(),
   pins: z.number().int(),
   superSweeper: z.boolean(),
@@ -74,7 +85,13 @@ export interface LaneEntry {
   lastName: string
   suffix: string
   divisionId: string
+  /** The average handicap uses: the checked one, else the provided one (AVG-09, D-288). */
   average: number | null
+  /** The average the bowler gave. */
+  providedAverage: number | null
+  averageStatus: AverageStatus
+  /** The adjustment's note; null unless adjusted. */
+  averageNote: string | null
   superSweeper: boolean
   position: string
 }

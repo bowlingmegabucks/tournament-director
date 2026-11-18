@@ -20,7 +20,8 @@ function isBowler(value: unknown): boolean {
     isText(field(value, 'divisionName')) &&
     isText(field(value, 'position')) &&
     isEvery(field(value, 'scores'), (score) => score === null || isNumber(score)) &&
-    isNumber(field(value, 'total'))
+    isNumber(field(value, 'total')) &&
+    typeof field(value, 'unverified') === 'boolean'
   )
 }
 

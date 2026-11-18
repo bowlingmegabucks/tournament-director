@@ -31,6 +31,7 @@ describe('useSessionCompleteInfo (D-194)', () => {
         noScoreCount: 1,
         partialCount: 0,
         games: 3,
+        unverifiedBowlers: 0,
       })
     })
   })
@@ -47,7 +48,7 @@ describe('useSessionCompleteInfo (D-194)', () => {
     })
 
     await waitFor(() => {
-      expect(result.current.data).toEqual({ entryCount: 7 })
+      expect(result.current.data).toEqual({ entryCount: 7, unverifiedBowlers: 0 })
     })
   })
 

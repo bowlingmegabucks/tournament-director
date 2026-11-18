@@ -53,6 +53,10 @@ import { createLiveNotifier } from './features/results/liveEvents.ts'
 import { createTournamentEventsRouter } from './shared/events/sseRoute.ts'
 import type { DnfStore } from './features/dnf/store.ts'
 import { createTtlCache, LIVE_CACHE_MS } from './shared/ttlCache.ts'
+import { createAverageReadRouter, createAverageWriteRouter } from './features/averages/routes.ts'
+import type { AverageStore } from './features/averages/store.ts'
+import { countUnverifiedBowlers } from './features/averages/unverifiedCount.ts'
+import type { UnverifiedCounter } from './shared/sessionCompleteRoutes.ts'
 import { createPayoutReadRouter, createPayoutWriteRouter } from './features/payouts/routes.ts'
 import type { PayoutStore } from './features/payouts/store.ts'
 import { createSquadRouter } from './features/squads/routes.ts'
@@ -142,6 +146,8 @@ export interface AppDependencies {
   dnfStore: DnfStore
   /** The payouts (PAY-01): the entry routes write them, the results read the amounts (PAY-20). */
   payoutStore: PayoutStore
+  /** The average checks (AVG-01): the Averages page writes them, every handicap reads the one in use (AVG-09). */
+  averageStore: AverageStore
   squads: SquadRepository
   /** Adds squads (SQD-01 to SQD-08, D-167). */
   squadWriter: SquadWriter
@@ -175,6 +181,7 @@ export function createApp({
   skipStore,
   dnfStore,
   payoutStore,
+  averageStore,
   squads,
   squadWriter,
   sweepers,
@@ -203,7 +210,17 @@ export function createApp({
     storedRegistrationWriter,
     events,
     logger,
+    (tournamentId) => tellAveragesChanged(tournamentId),
   )
+  // The tournament-wide half of an average change: the finals pages and the TV feed (AVG-19, D-298).
+  // A function declaration, so the registration writer above can call it once the pages exist.
+  function dropFinalsPages(tournamentId: string): void {
+    finalsCache.dropWhere((key) => key.includes(tournamentId.toLowerCase()))
+  }
+  function tellAveragesChanged(tournamentId: string): void {
+    dropFinalsPages(tournamentId)
+    liveNotifier.averagesChanged(tournamentId)
+  }
   const app = express()
   // Without this, req.ip is the proxy's address.
   app.set('trust proxy', config.trustProxy)
@@ -267,7 +284,7 @@ export function createApp({
       source: string
       eventId: string
     }) => {
-      finalsCache.dropWhere((key) => key.includes(tournamentId.toLowerCase()))
+      dropFinalsPages(tournamentId)
       if (source === 'squad' || source === 'sweeper') {
         events.publish(eventId, 'payouts')
         liveNotifier.payoutsSaved(tournamentId, { kind: source, id: eventId })
@@ -276,6 +293,24 @@ export function createApp({
       }
     },
   }
+
+  // A check drops the cached public pages, then tells the screens (AVG-19, D-298), as a payout save does.
+  const averageHooks = {
+    changed: ({ tournamentId, sessionIds }: { tournamentId: string; sessionIds: string[] }) => {
+      for (const sessionId of sessionIds) events.publish(sessionId, 'averages')
+      tellAveragesChanged(tournamentId)
+    },
+  }
+  const averageDeps = { averages: averageStore, logger }
+  // Handicap bowlers with scores on an average no director checked, for the complete warning (AVG-18, D-297).
+  const unverifiedIn: UnverifiedCounter = async (tournamentId, sessionId) =>
+    countUnverifiedBowlers(
+      ...(await Promise.all([
+        lanes.listEntries(sessionId),
+        scores.listScores(sessionId),
+        divisions.listByTournament(tournamentId),
+      ])),
+    )
 
   // One router serves every method; the two groups below give each its own access.
   const vendorRegistrations = createVendorRegistrationRouter({
@@ -380,13 +415,13 @@ export function createApp({
         path: '/v1/tournaments/:id/squads',
         access: { permission: 'squads.write' }, // SQD-15, D-193: complete; no API key
         methods: ['POST'],
-        router: createSquadCompleteRouter(squadWriter, logger, events, liveNotifier),
+        router: createSquadCompleteRouter(squadWriter, logger, events, liveNotifier, unverifiedIn),
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/complete-info',
         access: { permission: 'squads.write' }, // D-194: no API key
         methods: ['GET'],
-        router: createSquadCompleteInfoRouter(squadWriter),
+        router: createSquadCompleteInfoRouter(squadWriter, unverifiedIn),
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/delete-info',
@@ -427,13 +462,19 @@ export function createApp({
         path: '/v1/tournaments/:id/sweepers',
         access: { permission: 'squads.write' }, // SQD-16, D-193: complete; no API key
         methods: ['POST'],
-        router: createSweeperCompleteRouter(sweeperWriter, logger, events, liveNotifier),
+        router: createSweeperCompleteRouter(
+          sweeperWriter,
+          logger,
+          events,
+          liveNotifier,
+          unverifiedIn,
+        ),
       },
       {
         path: '/v1/tournaments/:id/sweepers/:sessionId/complete-info',
         access: { permission: 'squads.write' }, // D-194: no API key
         methods: ['GET'],
-        router: createSweeperCompleteInfoRouter(sweeperWriter),
+        router: createSweeperCompleteInfoRouter(sweeperWriter, unverifiedIn),
       },
       {
         path: '/v1/tournaments/:id/sweepers/:sessionId/delete-info',
@@ -732,6 +773,18 @@ export function createApp({
         access: { permission: 'payouts.write' }, // PAY-16, D-275: director and admin; no API key
         methods: ['PUT', 'PATCH'],
         router: createPayoutWriteRouter(payoutDeps, payoutHooks),
+      },
+      {
+        path: '/v1/tournaments/:id/averages',
+        access: { permission: 'registrations.read' }, // AVG-02, AVG-10: the API key cannot reach it
+        methods: ['GET'],
+        router: createAverageReadRouter(averageDeps),
+      },
+      {
+        path: '/v1/tournaments/:id/registrations',
+        access: { permission: 'averages.verify' }, // AVG-10, D-292: director and admin; no API key
+        methods: ['PUT', 'DELETE'],
+        router: createAverageWriteRouter(averageDeps, averageHooks),
       },
       {
         path: '/v1/bowlers',

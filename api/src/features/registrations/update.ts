@@ -274,6 +274,7 @@ export async function updateRegistration(
       average,
       bowler: stored.bowler,
       tournamentStart: tournament.startDate,
+      requireHandicapAverage: divisionChanged,
     })
     if ('failure' in eligibility) return fail(eligibility.failure)
     failures.push(...eligibility.failures)
@@ -282,7 +283,15 @@ export async function updateRegistration(
 
   await writer.save({
     bowler: { id: stored.bowlerId, isNew: false, patch: {} },
-    registration: { id: stored.id, isNew: false, divisionId, average, superSweeper },
+    registration: {
+      id: stored.id,
+      isNew: false,
+      divisionId,
+      average,
+      superSweeper,
+      // A new average or division is unverified again (AVG-08, D-290).
+      clearAverageCheck: divisionChanged || average !== stored.average,
+    },
     addSessionIds: [...addSquads, ...addSweepers],
     removeSessionIds: removeIds,
     payment,

@@ -1,4 +1,5 @@
 import { useDraggable } from '@dnd-kit/react'
+import { AverageMarker } from '../../shared/AverageMarker'
 import { formatBowler } from './format'
 import styles from './BowlerRow.module.css'
 import type { LaneBowler, SessionKind } from './types'
@@ -26,6 +27,12 @@ function Details({
   return (
     <div>
       <span className={styles.who}>{bowler.name}</span>
+      {bowler.averageStatus === 'unverified' && (
+        <>
+          {' '}
+          <AverageMarker />
+        </>
+      )}
       <p className={styles.meta}>{formatBowler(bowler, kind, compact)}</p>
     </div>
   )

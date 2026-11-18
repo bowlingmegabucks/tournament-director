@@ -223,3 +223,8 @@
     min-block-size: 0;
   }
 }
+
+.chip {
+  justify-self: start;
+  margin-block: var(--space-1);
+}

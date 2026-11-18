@@ -1,0 +1,13 @@
+/* The chip beside a handicap bowler whose average no director checked (D-293). Text, not color alone. */
+.marker {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius);
+  color: var(--color-accent);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+  line-height: var(--line-height);
+  white-space: nowrap;
+}

@@ -1,3 +1,4 @@
+import { averageInUse, averageStatus, liveCheck, type AverageCheck } from '../averages/inUse.ts'
 import { registrationSchema } from './types.ts'
 
 /** `Squads.SquadType` values. Any other value is not read (D-42, D-51). */
@@ -12,6 +13,8 @@ const sweeperType = 1
 export interface RegistrationRow {
   id: string
   superSweeper: boolean
+  /** `Registrations.Average`: what the bowler gave. */
+  average: number | null
   /** NULL when the row points at no bowler (no foreign key in MyISAM). The mapper rejects it. */
   bowler: {
     id: string
@@ -20,7 +23,7 @@ export interface RegistrationRow {
     suffix: string
     usbcId: string
   } | null
-  division: { name: string }
+  division: { name: string; handicapPercentage: unknown }
   divisionId: string
   /** The squads and sweepers this registration bowls (`SquadRegistration`). */
   squads: { squad: { id: string; tournamentId: string; squadType: number } }[]
@@ -40,9 +43,14 @@ export function displayName(bowler: {
  * Turn a stored registration into the shape the list reads. The result says whether the row fits;
  * the repository skips and logs a row that does not (D-51). `BWL-01` to `BWL-12` run on save, not
  * on read. A squad of another tournament, or a `SquadType` that is neither squad nor sweeper, is
- * ignored (D-51).
+ * ignored (D-51). `check` is the registration's average check, if any (AVG-09).
  */
-export function toRegistration(row: RegistrationRow, tournamentId: string) {
+export function toRegistration(
+  row: RegistrationRow,
+  tournamentId: string,
+  storedCheck?: AverageCheck,
+) {
+  const check = liveCheck(row.average, storedCheck)
   const ofThisTournament = row.squads
     .map((entry) => entry.squad)
     .filter((squad) => squad.tournamentId === tournamentId)
@@ -63,6 +71,9 @@ export function toRegistration(row: RegistrationRow, tournamentId: string) {
     divisionId: row.divisionId,
     divisionName: row.division.name,
     superSweeper: row.superSweeper,
+    average: averageInUse(row.average, check),
+    // A division with no handicap has nothing to check (D-293).
+    averageStatus: row.division.handicapPercentage === null ? 'none' : averageStatus(check),
     squadIds: idsOfType(squadType),
     sweeperIds: idsOfType(sweeperType),
   })

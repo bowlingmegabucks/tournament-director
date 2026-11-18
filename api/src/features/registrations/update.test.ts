@@ -29,6 +29,9 @@ interface Options {
   scoredOn?: ('squad' | 'sweeper')[]
   /** The tournament has a second sweeper the bowler is not on. */
   secondSweeper?: boolean
+  otherDivision?: Partial<Division>
+  /** The stored average; `null` is an old registration with none. */
+  average?: number | null
 }
 
 /**
@@ -38,7 +41,7 @@ interface Options {
 function setup(options: Options = {}) {
   const tournament = createTournament({ startDate: '2026-10-23' })
   const division = createDivision(options.division)
-  const otherDivision = createDivision()
+  const otherDivision = createDivision(options.otherDivision)
   const squad = session('squad', tournament.id, options.completeSquad)
   const secondSquad = session('squad', tournament.id)
   const sweeper = session('sweeper', tournament.id)
@@ -63,7 +66,7 @@ function setup(options: Options = {}) {
           id: registrationId,
           bowlerId: bowler.id,
           divisionId: division.id,
-          average: 185,
+          average: options.average === undefined ? 185 : options.average,
           superSweeper: options.superSweeper ?? false,
           sessionIds: [squad.id, sweeper.id],
         },
@@ -513,6 +516,85 @@ describe('super sweeper (REG-35, REG-36, D-110)', () => {
     const result = await updateRegistration(deps, registrationId, input({ superSweeper: true }))
 
     expect(result.ok).toBe(true)
+  })
+})
+
+describe('a handicap division needs an average (AVG-16, D-289, VC-08)', () => {
+  const handicap = { handicapPercentage: 90, handicapBase: 220 }
+
+  it('refuses a move to a handicap division when the registration has no average', async () => {
+    const { deps, input, registrationId, otherDivision, stored } = setup({
+      average: null,
+      otherDivision: handicap,
+    })
+
+    const result = await updateRegistration(
+      deps,
+      registrationId,
+      input({ divisionId: otherDivision.id }),
+    )
+
+    expect(result).toMatchObject({
+      ok: false,
+      failures: [{ description: 'Average is required for selected division' }],
+    })
+    expect(stored()?.divisionId).not.toBe(otherDivision.id)
+  })
+
+  it('takes the move when the request sends an average', async () => {
+    const { deps, input, registrationId, otherDivision } = setup({
+      average: null,
+      otherDivision: handicap,
+    })
+
+    const result = await updateRegistration(
+      deps,
+      registrationId,
+      input({ divisionId: otherDivision.id, average: 170 }),
+    )
+
+    expect(result.ok).toBe(true)
+  })
+
+  it('lets an old handicap registration with no average change something else', async () => {
+    const { deps, input, registrationId, division, secondSquad } = setup({
+      average: null,
+      division: handicap,
+    })
+
+    const result = await updateRegistration(
+      deps,
+      registrationId,
+      input({ divisionId: division.id, squadIds: [secondSquad.id] }),
+    )
+
+    expect(result.ok).toBe(true)
+  })
+})
+
+describe('the average check clears with a new average or division (AVG-08, D-290)', () => {
+  it('clears it when the average changes', async () => {
+    const { deps, input, registrationId, state } = setup()
+
+    await updateRegistration(deps, registrationId, input({ average: 201 }))
+
+    expect(state.clearedAverageChecks).toEqual([registrationId])
+  })
+
+  it('clears it when the division changes', async () => {
+    const { deps, input, registrationId, otherDivision, state } = setup()
+
+    await updateRegistration(deps, registrationId, input({ divisionId: otherDivision.id }))
+
+    expect(state.clearedAverageChecks).toEqual([registrationId])
+  })
+
+  it('keeps it when the same average is sent again', async () => {
+    const { deps, input, registrationId, state } = setup()
+
+    await updateRegistration(deps, registrationId, input({ average: 185 }))
+
+    expect(state.clearedAverageChecks).toEqual([])
   })
 })
 

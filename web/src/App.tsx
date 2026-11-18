@@ -38,6 +38,7 @@ import {
   SessionPayoutsTab,
   SuperSweeperPayoutsPage,
 } from './features/payouts/EventPages'
+import { AveragesPage } from './features/averages/AveragesPage'
 import { PayoutsPage } from './features/payouts/PayoutsPage'
 import { TournamentOverview } from './features/tournaments/TournamentOverview'
 import { TournamentsPage } from './features/tournaments/TournamentsPage'
@@ -228,6 +229,14 @@ export default function App() {
             element={
               <RequirePermission permission="payouts.read">
                 <PayoutsPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="averages"
+            element={
+              <RequirePermission permission="registrations.read">
+                <AveragesPage />
               </RequirePermission>
             }
           />

@@ -31,8 +31,9 @@ export function createPrismaRegistrationRepository(
           select: {
             id: true,
             superSweeper: true,
+            average: true,
             divisionId: true,
-            division: { select: { name: true } },
+            division: { select: { name: true, handicapPercentage: true } },
             bowler: {
               select: { id: true, firstName: true, lastName: true, suffix: true, usbcId: true },
             },
@@ -44,8 +45,14 @@ export function createPrismaRegistrationRepository(
           },
         }),
       )
+      const checks = await withDatabaseErrors(logger, () =>
+        client.averageVerification.findMany({
+          where: { registrationId: { in: rows.map((row) => row.id) } },
+        }),
+      )
+      const checkOf = new Map(checks.map((check) => [check.registrationId, check]))
       const registrations = rows.flatMap((row) => {
-        const result = toRegistration(row, tournamentId)
+        const result = toRegistration(row, tournamentId, checkOf.get(row.id))
         if (result.success) return [result.data]
         // D-51: one old row must not hide the rest.
         warnOnce(

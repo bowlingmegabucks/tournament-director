@@ -3,6 +3,7 @@ import type { SignedInUser } from '../features/auth/types'
 import type { Division } from '../features/divisions/types'
 import type { LaneBowler, LanePage, LanePair } from '../features/lanes/types'
 import type { SessionKind } from '../shared/session'
+import type { AverageRow } from '../features/averages/types'
 import type { RecapSheet, RecapSheets } from '../features/recapSheets/types'
 import type {
   DeleteInfo,
@@ -209,6 +210,8 @@ export function createRegistration(overrides: Partial<Registration> = {}): Regis
     squadIds: [],
     sweeperIds: [],
     superSweeper: false,
+    average: 200,
+    averageStatus: 'none',
     ...overrides,
   }
 }
@@ -220,6 +223,7 @@ interface DemoBowler {
   suffix?: string
   usbc: string
   division: number
+  average: number
   squads: number[]
   sweepers: number[]
   superSweeper: boolean
@@ -231,6 +235,7 @@ const demoBowlers: DemoBowler[] = [
     last: 'Abbott',
     usbc: '4821-10394',
     division: 0,
+    average: 205,
     squads: [0, 1],
     sweepers: [0, 1],
     superSweeper: true,
@@ -241,6 +246,7 @@ const demoBowlers: DemoBowler[] = [
     suffix: 'Jr',
     usbc: '1190-55820',
     division: 0,
+    average: 198,
     squads: [0],
     sweepers: [],
     superSweeper: false,
@@ -250,6 +256,7 @@ const demoBowlers: DemoBowler[] = [
     last: 'Chen',
     usbc: '3377-20418',
     division: 1,
+    average: 185,
     squads: [0, 1],
     sweepers: [0, 1],
     superSweeper: true,
@@ -259,6 +266,7 @@ const demoBowlers: DemoBowler[] = [
     last: 'Delgado',
     usbc: '',
     division: 0,
+    average: 176,
     squads: [1],
     sweepers: [0],
     superSweeper: false,
@@ -268,6 +276,7 @@ const demoBowlers: DemoBowler[] = [
     last: 'Fontaine',
     usbc: '2045-88123',
     division: 0,
+    average: 210,
     squads: [0, 1],
     sweepers: [],
     superSweeper: false,
@@ -277,6 +286,7 @@ const demoBowlers: DemoBowler[] = [
     last: 'Fontaine',
     usbc: '5560-11902',
     division: 1,
+    average: 172,
     squads: [1],
     sweepers: [],
     superSweeper: false,
@@ -292,23 +302,28 @@ export function createDemoRegistrationList(
   squads: Squad[],
   sweepers: Sweeper[],
 ): RegistrationList {
-  const registrations = demoBowlers.map(({ first, last, suffix, usbc, division, ...entered }) => {
-    const name = `${first} ${last}`
-    return createRegistration({
-      bowler: {
-        id: faker.string.uuid(),
-        name: suffix ? `${name}, ${suffix}` : name,
-        firstName: first,
-        lastName: last,
-        usbcId: usbc,
-      },
-      divisionId: divisions[division]?.id ?? '',
-      divisionName: divisions[division]?.name ?? '',
-      squadIds: entered.squads.flatMap((position) => squads[position]?.id ?? []),
-      sweeperIds: entered.sweepers.flatMap((position) => sweepers[position]?.id ?? []),
-      superSweeper: entered.superSweeper,
-    })
-  })
+  const registrations = demoBowlers.map(
+    ({ first, last, suffix, usbc, division, average, ...entered }) => {
+      const name = `${first} ${last}`
+      return createRegistration({
+        bowler: {
+          id: faker.string.uuid(),
+          name: suffix ? `${name}, ${suffix}` : name,
+          firstName: first,
+          lastName: last,
+          usbcId: usbc,
+        },
+        divisionId: divisions[division]?.id ?? '',
+        divisionName: divisions[division]?.name ?? '',
+        average,
+        // A handicap division has an average to check; a scratch division has nothing to check (D-293).
+        averageStatus: divisions[division]?.handicapPercentage === null ? 'none' : 'unverified',
+        squadIds: entered.squads.flatMap((position) => squads[position]?.id ?? []),
+        sweeperIds: entered.sweepers.flatMap((position) => sweepers[position]?.id ?? []),
+        superSweeper: entered.superSweeper,
+      })
+    },
+  )
   const entries = (position: number, key: 'squads' | 'sweepers') =>
     demoBowlers.filter((bowler) => bowler[key].includes(position)).length
   return {
@@ -385,6 +400,9 @@ export function createLaneBowler(overrides: Partial<LaneBowler> = {}): LaneBowle
     divisionId: faker.string.uuid(),
     divisionName: 'Open',
     average: 200,
+    providedAverage: overrides.average === undefined ? 200 : overrides.average,
+    averageStatus: 'none',
+    averageNote: null,
     position: '',
     pins: 0,
     superSweeper: false,
@@ -539,6 +557,8 @@ export function createDemoLanePage(
       divisionId: division?.id ?? '',
       divisionName: division?.name ?? '',
       average: demo.average,
+      // A handicap division has an average to check; a scratch division has nothing to check (D-293).
+      averageStatus: division?.handicapPercentage == null ? 'none' : 'unverified',
       pins: lanePins(kind, division, demo.average),
       superSweeper: demo.superSweeper,
     })
@@ -596,6 +616,7 @@ export function createRecapSheets(overrides: Partial<RecapSheets> = {}): RecapSh
     sheets: [],
     withoutLane: 0,
     withoutDivision: 0,
+    withoutVerifiedAverage: 0,
     ...rest,
   }
 }
@@ -640,6 +661,9 @@ export function createDemoRecapSheets(
     },
     sheets,
     withoutLane: page.unassigned.length + page.other.length,
+    withoutVerifiedAverage: page.pairs
+      .flatMap((pair) => pair.bowlers)
+      .filter((bowler) => bowler.averageStatus === 'unverified').length,
   })
 }
 
@@ -653,6 +677,7 @@ export function createScoreBowler(overrides: Partial<ScoreBowler> = {}): ScoreBo
     position: '',
     scores,
     total: scores.reduce<number>((sum, score) => sum + (score ?? 0), 0),
+    unverified: false,
     ...overrides,
   }
 }
@@ -733,6 +758,7 @@ export function createSquadRow(overrides: Partial<SquadRow> = {}): SquadRow {
     scores: [200, 200, 200],
     advancedEarlier: false,
     dnf: false,
+    unverified: false,
     ties: [],
     payout: null,
     ...overrides,
@@ -788,6 +814,7 @@ export function createSweeperRow(overrides: Partial<SweeperRow> = {}): SweeperRo
     divisionName: 'Open',
     bonusPins: 0,
     scores: [200, 200, 200],
+    unverified: false,
     dnf: false,
     payout: null,
     ...overrides,
@@ -1000,6 +1027,7 @@ function createDemoSquad(
             games: 2,
             handicap: 0,
             scores: [230, 215],
+            unverified: false,
           },
         ],
         noShows: [{ registrationId: faker.string.uuid(), name: 'Mike Tran' }],
@@ -1084,6 +1112,7 @@ export function createAtLargeRow(overrides: Partial<AtLargeRow> = {}): AtLargeRo
     highGame: 240,
     previousCasher: false,
     ties: [],
+    unverified: false,
     ...overrides,
   }
 }
@@ -1120,6 +1149,7 @@ export function createSeedingRow(overrides: Partial<SeedingRow> = {}): SeedingRo
     handicap: 0,
     previousCasher: false,
     ties: [],
+    unverified: false,
     payout: null,
     ...overrides,
   }
@@ -1162,6 +1192,7 @@ export function createSuperSweeperRow(overrides: Partial<SuperSweeperRow> = {}):
     sweeperPins: [0, 0],
     flags: [],
     dnf: false,
+    unverified: false,
     payout: null,
     ...overrides,
   }
@@ -1372,6 +1403,7 @@ const allPermissions = [
   'bowlers.ssn',
   'payouts.read',
   'payouts.write',
+  'averages.verify',
   'users.manage',
 ]
 
@@ -1533,6 +1565,23 @@ export function createSheet(overrides: Partial<PayoutSheet> = {}): PayoutSheet {
     payees: [],
     others: [],
     tournamentComplete: false,
+    ...overrides,
+  }
+}
+
+/** A registration in a handicap division that no director has checked (AVG-02). */
+export function createAverageRow(overrides: Partial<AverageRow> = {}): AverageRow {
+  return {
+    registrationId: faker.string.uuid(),
+    bowlerName: faker.person.fullName(),
+    divisionName: 'Handicap A',
+    usbcId: `${faker.string.numeric(4)}-${faker.string.numeric(4)}`,
+    providedAverage: 187,
+    status: 'unverified',
+    averageInUse: 187,
+    note: null,
+    verifiedBy: null,
+    verifiedAt: null,
     ...overrides,
   }
 }

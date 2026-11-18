@@ -2,6 +2,7 @@ import { formatSquadStamp } from '../../shared/sessionFormat'
 import { formatSeedingSummary, formatTie, seedingItems } from './format'
 import { PayoutTag } from './PayoutTag'
 import styles from './ResultsTable.module.css'
+import { UnverifiedChip } from './UnverifiedChip'
 import type { SeedingDivision } from './types'
 
 /**
@@ -51,6 +52,7 @@ export function SeedingBody({ division }: Readonly<{ division: SeedingDivision }
                 </td>
                 <th scope="row" className={styles.who}>
                   {item.row.name}
+                  <UnverifiedChip show={item.row.unverified} />
                   {item.row.ties.map((tie) => (
                     <span key={tie.line} className={styles.mark}>
                       {formatTie(tie)}

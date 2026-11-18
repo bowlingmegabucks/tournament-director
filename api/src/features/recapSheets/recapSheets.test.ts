@@ -33,6 +33,31 @@ function sheetsFor(
 }
 
 describe('buildRecapSheets', () => {
+  it('counts the sheets of handicap bowlers on an average no director checked (AVG-14, D-293)', () => {
+    const handicapped = createDivision({
+      number: 2,
+      name: 'Handicap',
+      handicapBase: 220,
+      handicapPercentage: 90,
+    })
+    const entries = [
+      createLaneEntry({ divisionId: handicapped.id, position: '1A', averageStatus: 'unverified' }),
+      createLaneEntry({ divisionId: handicapped.id, position: '1B', averageStatus: 'unverified' }),
+      createLaneEntry({ divisionId: handicapped.id, position: '2A', averageStatus: 'verified' }),
+      createLaneEntry({ divisionId: handicapped.id, position: '2B', averageStatus: 'adjusted' }),
+      // No lane, so no sheet: not counted.
+      createLaneEntry({ divisionId: handicapped.id, position: '', averageStatus: 'unverified' }),
+      // A scratch division has nothing to check.
+      createLaneEntry({ divisionId: division.id, position: '3A', averageStatus: 'unverified' }),
+    ]
+    const { page, skipped } = buildLanePage(session(), entries, [division, handicapped])
+
+    const built = buildRecapSheets(page, 6, skipped.length, 'staggered')
+
+    expect(built.withoutVerifiedAverage).toBe(2)
+    expect(recapSheetsSchema.safeParse(built).success).toBe(true)
+  })
+
   it('makes one sheet for each bowler with a saved lane (RPT-05c)', () => {
     const { built } = sheetsFor(['1A', '2C', '', '5A'])
 

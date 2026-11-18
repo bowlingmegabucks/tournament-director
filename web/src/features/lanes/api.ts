@@ -9,6 +9,10 @@ import type { LanePage } from './types'
 const isText = (value: unknown) => typeof value === 'string'
 const isNumber = (value: unknown) => typeof value === 'number'
 const isFlag = (value: unknown) => typeof value === 'boolean'
+const isNullableNumber = (value: unknown) => value === null || isNumber(value)
+const isNullableText = (value: unknown) => value === null || isText(value)
+const isAverageStatus = (value: unknown) =>
+  value === 'none' || value === 'unverified' || value === 'verified' || value === 'adjusted'
 
 function isEvery(value: unknown, test: (item: unknown) => boolean): boolean {
   return Array.isArray(value) && value.every(test)
@@ -25,6 +29,9 @@ function isBowler(value: unknown): boolean {
     isText(field(value, 'divisionId')) &&
     isText(field(value, 'divisionName')) &&
     (average === null || isNumber(average)) &&
+    isNullableNumber(field(value, 'providedAverage')) &&
+    isAverageStatus(field(value, 'averageStatus')) &&
+    isNullableText(field(value, 'averageNote')) &&
     isText(field(value, 'position')) &&
     isNumber(field(value, 'pins')) &&
     isFlag(field(value, 'superSweeper'))

@@ -57,7 +57,8 @@ function isRankedRow(value: unknown): boolean {
     isNumber(field(value, 'place')) &&
     isNumber(field(value, 'total')) &&
     isNumber(field(value, 'games')) &&
-    isEvery(field(value, 'ties'), isTie)
+    isEvery(field(value, 'ties'), isTie) &&
+    isBoolean(field(value, 'unverified'))
   )
 }
 
@@ -80,7 +81,8 @@ function isUnplacedRow(value: unknown): boolean {
     isNumber(field(value, 'total')) &&
     isNumber(field(value, 'games')) &&
     isNumber(field(value, 'handicap')) &&
-    isGameScores(field(value, 'scores'))
+    isGameScores(field(value, 'scores')) &&
+    isBoolean(field(value, 'unverified'))
   )
 }
 
@@ -217,7 +219,8 @@ function isAtLargeRow(value: unknown): boolean {
     isNumber(field(value, 'total')) &&
     isNumber(field(value, 'highGame')) &&
     isBoolean(field(value, 'previousCasher')) &&
-    isEvery(field(value, 'ties'), isTie)
+    isEvery(field(value, 'ties'), isTie) &&
+    isBoolean(field(value, 'unverified'))
   )
 }
 
@@ -254,7 +257,8 @@ function isSeedingRow(value: unknown): boolean {
     isNumber(field(value, 'highGame')) &&
     isNumber(field(value, 'handicap')) &&
     isBoolean(field(value, 'previousCasher')) &&
-    isEvery(field(value, 'ties'), isTie)
+    isEvery(field(value, 'ties'), isTie) &&
+    isBoolean(field(value, 'unverified'))
   )
 }
 

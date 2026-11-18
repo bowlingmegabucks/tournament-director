@@ -2,6 +2,7 @@ import { MariaDbContainer } from '@testcontainers/mariadb'
 import type { TestProject } from 'vitest/node'
 import { createDatabaseClient } from '../shared/database.ts'
 import { authSchemaSql } from './authSchema.ts'
+import { averageSchemaSql } from './averageSchema.ts'
 import { payoutSchemaSql } from './payoutSchema.ts'
 import { scoreSchemaSql } from './scoreSchema.ts'
 import { legacySchemaSql } from './legacySchema.ts'
@@ -27,6 +28,8 @@ export default async function setup(project: TestProject): Promise<() => Promise
       ...authSchemaSql(),
       ...scoreSchemaSql(),
       ...payoutSchemaSql(),
+      ...averageSchemaSql(),
+      ...averageSchemaSql(),
     ]) {
       // In order: a table with a foreign key needs the table it points to first.
       await client.$executeRawUnsafe(statement) // NOSONAR: order matters

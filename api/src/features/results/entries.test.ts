@@ -18,6 +18,7 @@ const base: ResultEntryInput = {
   divisionName: 'Open',
   games: [],
   pins: 0,
+  unverified: false,
 }
 
 describe('toResultEntry', () => {
@@ -84,6 +85,35 @@ describe('buildResultEntries', () => {
       registrationId: bowler.registrationId,
       divisionName: 'Open',
       games: [190, 210],
+    })
+  })
+
+  describe('the unverified flag (AVG-13, D-293)', () => {
+    const scratch = createDivision({ name: 'Scratch' })
+    const flagOf = (
+      status: 'unverified' | 'verified' | 'adjusted',
+      division: typeof open | typeof scratch,
+    ) => {
+      const bowler = createLaneEntry({ divisionId: division.id, averageStatus: status })
+      const { entries } = buildResultEntries(
+        [bowler],
+        [{ bowlerId: bowler.bowlerId, game: 1, score: 200 }],
+        [division],
+        () => 0,
+      )
+      return entries[0]?.unverified
+    }
+
+    it('flags a handicap bowler whose average no director checked', () => {
+      expect(flagOf('unverified', open)).toBe(true)
+    })
+
+    it.each(['verified', 'adjusted'] as const)('does not flag a %s average', (status) => {
+      expect(flagOf(status, open)).toBe(false)
+    })
+
+    it('does not flag a bowler in a scratch division, where there is nothing to check', () => {
+      expect(flagOf('unverified', scratch)).toBe(false)
     })
   })
 

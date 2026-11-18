@@ -20,9 +20,10 @@ function createRow(overrides: Partial<RegistrationRow> = {}): RegistrationRow {
   return {
     id: '55555555-5555-4555-8555-555555555555',
     superSweeper: false,
+    average: 200,
     bowler: createBowler(),
     divisionId: '77777777-7777-4777-8777-777777777777',
-    division: { name: 'Open' },
+    division: { name: 'Open', handicapPercentage: null },
     squads: [],
     ...overrides,
   }
@@ -73,8 +74,52 @@ describe('toRegistration', () => {
       divisionId: '77777777-7777-4777-8777-777777777777',
       divisionName: 'Open',
       superSweeper: true,
+      average: 200,
+      averageStatus: 'none',
       squadIds: [squadId],
       sweeperIds: [sweeperId],
+    })
+  })
+
+  describe('the average and its check (AVG-09, AVG-11, D-288)', () => {
+    const handicapRow = (average: number | null = 175) =>
+      createRow({ average, division: { name: 'Handicap A', handicapPercentage: 90 } })
+
+    it('is unverified in a handicap division with no check', () => {
+      expect(toRegistration(handicapRow(), tournamentId).data).toMatchObject({
+        average: 175,
+        averageStatus: 'unverified',
+      })
+    })
+
+    it('shows the verified average and says verified', () => {
+      const check = { providedAverage: 175, verifiedAverage: 175, note: null }
+      expect(toRegistration(handicapRow(), tournamentId, check).data).toMatchObject({
+        average: 175,
+        averageStatus: 'verified',
+      })
+    })
+
+    it('shows the adjusted average and says adjusted', () => {
+      const check = { providedAverage: 175, verifiedAverage: 182, note: 'USBC book' }
+      expect(toRegistration(handicapRow(), tournamentId, check).data).toMatchObject({
+        average: 182,
+        averageStatus: 'adjusted',
+      })
+    })
+
+    it('has no average when the bowler gave none and no one checked', () => {
+      expect(toRegistration(handicapRow(null), tournamentId).data).toMatchObject({
+        average: null,
+        averageStatus: 'unverified',
+      })
+    })
+
+    it('says none in a division with no handicap, with the average the bowler gave', () => {
+      expect(toRegistration(createRow({ average: 214 }), tournamentId).data).toMatchObject({
+        average: 214,
+        averageStatus: 'none',
+      })
     })
   })
 

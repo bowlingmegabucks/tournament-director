@@ -168,6 +168,25 @@ describe('deleting a registration at the desk on MariaDB (REG-19, D-209 to D-212
     expect(await count('Squads')).toBe(3)
   })
 
+  it('deletes the average check with the registration, and no other (AVG-01, D-287)', async () => {
+    const world = await tournament()
+    const { registrationId } = await register(world)
+    const other = await register(world)
+    for (const checked of [registrationId, other.registrationId]) {
+      await client.$executeRawUnsafe(
+        `INSERT INTO AverageVerifications (RegistrationId, ProvidedAverage, VerifiedAverage, Note, VerifiedBy, VerifiedAt)
+         VALUES (?, 180, 180, NULL, 'user-1', NOW(3))`,
+        checked,
+      )
+    }
+
+    await writerOf().removeForDesk(registrationId, world.tournamentId, (facts) =>
+      planDeskDelete(facts, 0),
+    )
+
+    expect(await count('AverageVerifications')).toBe(1)
+  })
+
   it('removes only the one registration (REG-19)', async () => {
     const world = await tournament()
     const gone = await register(world, [{ code: 'BowlingSite_one', amount: 100 }])

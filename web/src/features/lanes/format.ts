@@ -14,14 +14,23 @@ export function formatFill(pair: Pick<LanePair, 'bowlers' | 'capacity'>): string
   return pair.bowlers.length >= pair.capacity ? `${text}, full` : text
 }
 
+/** "avg 182, adjusted": the average in use, and a word when a director checked it (AVG-12, D-293). */
+function averageText(bowler: LaneBowler): string {
+  if (bowler.average === null) return 'no average'
+  const text = `avg ${bowler.average}`
+  if (bowler.averageStatus === 'adjusted') return `${text}, adjusted`
+  return bowler.averageStatus === 'verified' ? `${text}, verified` : text
+}
+
 /**
  * The line under a bowler's name (LAN-11): division, average, and handicap on a squad; division,
  * average, bonus pins, and super sweeper on a sweeper. `compact` leaves out the average, for the
- * narrow rows inside a pair.
+ * narrow rows inside a pair. The average is the one handicap uses, and says when a director
+ * checked it (AVG-12).
  */
 export function formatBowler(bowler: LaneBowler, kind: SessionKind, compact: boolean): string {
   const parts = [bowler.divisionName]
-  if (!compact) parts.push(bowler.average === null ? 'no average' : `avg ${bowler.average}`)
+  if (!compact) parts.push(averageText(bowler))
   if (kind === 'squad') {
     parts.push(`hdcp ${bowler.pins}`)
   } else {

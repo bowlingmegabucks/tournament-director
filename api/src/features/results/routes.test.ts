@@ -111,6 +111,7 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/results', () => {
         'scores',
         'ties',
         'total',
+        'unverified',
       ].toSorted(),
     )
     expect(Object.keys(response.body.divisions[0]).toSorted()).toEqual(

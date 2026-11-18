@@ -2,10 +2,13 @@ import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 import { apiKeyHeader } from '../../shared/auth/caller.ts'
 import { HttpError } from '../../shared/errors.ts'
-import { createSquad, testApiKey } from '../../test/factories.ts'
+import { createDivision, createLaneEntry, createSquad, testApiKey } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createSignedInTestApp, createTestApp } from '../../test/testApp.ts'
 import { recordingEvents } from '../../test/recordingEvents.ts'
+import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
+import { createInMemoryLaneRepository } from '../lanes/repository.ts'
+import { createInMemoryScoreRepository } from '../scores/repository.ts'
 import { createInMemorySquadWriter, type SquadWriter } from './writer.ts'
 
 const tournamentId = '11111111-1111-4111-8111-111111111111'
@@ -207,7 +210,13 @@ describe(`GET ${infoUrl}`, () => {
 
     expect(response.status).toBe(200)
     expect(response.body).toEqual({
-      completeInfo: { entryCount: 3, noScoreCount: 1, partialCount: 1, games: 3 },
+      completeInfo: {
+        entryCount: 3,
+        noScoreCount: 1,
+        partialCount: 1,
+        games: 3,
+        unverifiedBowlers: 0,
+      },
     })
   })
 
@@ -215,7 +224,13 @@ describe(`GET ${infoUrl}`, () => {
     const response = await request(setup({ entries: {} }).app).get(infoUrl)
 
     expect(response.body).toEqual({
-      completeInfo: { entryCount: 0, noScoreCount: 0, partialCount: 0, games: 3 },
+      completeInfo: {
+        entryCount: 0,
+        noScoreCount: 0,
+        partialCount: 0,
+        games: 3,
+        unverifiedBowlers: 0,
+      },
     })
   })
 
@@ -268,5 +283,108 @@ describe('live updates after Complete (LAN-22, D-10, D-219)', () => {
       { sessionId, kind: 'lanes' },
       { sessionId: `live:${tournamentId}`, kind: 'complete' },
     ])
+  })
+})
+
+describe('unchecked averages (AVG-18, D-297)', () => {
+  const handicapped = createDivision({ handicapBase: 220, handicapPercentage: 90 })
+  const scratch = createDivision()
+  const bowler = (divisionId: string, averageStatus: 'unverified' | 'verified') =>
+    createLaneEntry({ divisionId, averageStatus })
+  const flagged = bowler(handicapped.id, 'unverified')
+  const checked = bowler(handicapped.id, 'verified')
+  const scratchBowler = bowler(scratch.id, 'unverified')
+  const quiet = bowler(handicapped.id, 'unverified')
+
+  function withAverages() {
+    const made = setup()
+    const entriesOf = [flagged, checked, scratchBowler, quiet]
+    const app = createSignedInTestApp({
+      squadWriter: made.writer,
+      divisions: createInMemoryDivisionRepository([
+        { tournamentId, division: handicapped },
+        { tournamentId, division: scratch },
+      ]),
+      lanes: createInMemoryLaneRepository(entriesOf.map((entry) => ({ sessionId, entry }))),
+      // `quiet` has no score, so has not bowled on the number.
+      scores: createInMemoryScoreRepository(
+        [flagged, checked, scratchBowler].map((entry) => ({
+          sessionId,
+          score: { bowlerId: entry.bowlerId, game: 1, score: 200 },
+        })),
+      ),
+    })
+    return { ...made, app }
+  }
+
+  it('says how many handicap bowlers with scores are on an unchecked average (AVG-18)', async () => {
+    const response = await request(withAverages().app).get(infoUrl)
+
+    expect(response.body.completeInfo.unverifiedBowlers).toBe(1)
+  })
+
+  it('answers 409 with a warning and completes nothing until confirmed (AVG-18)', async () => {
+    const { app, stored } = withAverages()
+
+    const response = await request(app).post(url)
+
+    expect(response.status).toBe(409)
+    expect(response.body.unverifiedBowlers).toBe(1)
+    expect(response.body.warnings[0].message).toContain(
+      '1 handicap bowler with scores has an average that is not verified.',
+    )
+    expect(completeOf(stored, sessionId)).toBe(false)
+  })
+
+  it('gives a complete squad its own refusal, not a warning to confirm (AVG-18)', async () => {
+    const { app } = withAverages()
+    await request(app).post(url).send({ confirmWarnings: true })
+
+    const response = await request(app).post(url)
+
+    const message = 'This squad is already complete'
+    expect(response.status).toBe(409)
+    expect(response.body).toEqual({ message, errors: { session: message } })
+  })
+
+  it('gives a complete tournament its own refusal, not a warning to confirm (AVG-18)', async () => {
+    const made = setup({ completed: [tournamentId] })
+    const app = createSignedInTestApp({
+      squadWriter: made.writer,
+      divisions: createInMemoryDivisionRepository([{ tournamentId, division: handicapped }]),
+      lanes: createInMemoryLaneRepository([{ sessionId, entry: flagged }]),
+      scores: createInMemoryScoreRepository([
+        { sessionId, score: { bowlerId: flagged.bowlerId, game: 1, score: 200 } },
+      ]),
+    })
+
+    const response = await request(app).post(url)
+
+    expect(response.status).toBe(409)
+    expect(response.body.errors).toHaveProperty('tournament')
+    expect(response.body).not.toHaveProperty('warnings')
+  })
+
+  it('completes once the director confirms (AVG-18)', async () => {
+    const { app, stored } = withAverages()
+
+    const response = await request(app).post(url).send({ confirmWarnings: true })
+
+    expect(response.status).toBe(200)
+    expect(completeOf(stored, sessionId)).toBe(true)
+  })
+
+  it('completes with no warning when every scored handicap bowler is checked (AVG-18)', async () => {
+    const made = setup()
+    const app = createSignedInTestApp({
+      squadWriter: made.writer,
+      divisions: createInMemoryDivisionRepository([{ tournamentId, division: handicapped }]),
+      lanes: createInMemoryLaneRepository([{ sessionId, entry: checked }]),
+      scores: createInMemoryScoreRepository([
+        { sessionId, score: { bowlerId: checked.bowlerId, game: 1, score: 200 } },
+      ]),
+    })
+
+    expect((await request(app).post(url)).status).toBe(200)
   })
 })

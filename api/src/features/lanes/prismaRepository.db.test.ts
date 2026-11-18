@@ -122,6 +122,9 @@ describe('Prisma lane repository', () => {
         bowlerId: stored?.BowlerId,
         divisionId,
         average: 212,
+        providedAverage: 212,
+        averageStatus: 'unverified',
+        averageNote: null,
         firstName: 'Ray',
         lastName: 'Baptiste',
         suffix: 'Jr',
@@ -130,6 +133,34 @@ describe('Prisma lane repository', () => {
         position: '15A',
       },
     ])
+  })
+
+  it('reads the average a director checked as the one in use, with its status (AVG-09, D-288)', async () => {
+    const tournamentId = await insertTournament()
+    const divisionId = await insertDivision(tournamentId)
+    const sessionId = await insertSession(tournamentId)
+    const adjusted = await insertEntry(divisionId, sessionId, { last: 'Adams', average: 175 })
+    const verified = await insertEntry(divisionId, sessionId, { last: 'Brown', average: 180 })
+    await insertEntry(divisionId, sessionId, { last: 'Cole', average: 190 })
+    await client.$executeRawUnsafe(
+      `INSERT INTO AverageVerifications (RegistrationId, ProvidedAverage, VerifiedAverage, Note, VerifiedBy, VerifiedAt)
+       VALUES (?, 175, 182, 'USBC book', 'user-1', NOW(3)), (?, 180, 180, NULL, 'user-1', NOW(3))`,
+      adjusted,
+      verified,
+    )
+    const { repository } = setup()
+
+    const entries = await repository.listEntries(sessionId)
+
+    const byName = (last: string) => entries.find((entry) => entry.lastName === last)
+    expect(byName('Adams')).toMatchObject({
+      average: 182,
+      providedAverage: 175,
+      averageStatus: 'adjusted',
+      averageNote: 'USBC book',
+    })
+    expect(byName('Brown')).toMatchObject({ average: 180, averageStatus: 'verified' })
+    expect(byName('Cole')).toMatchObject({ average: 190, averageStatus: 'unverified' })
   })
 
   it('reads an empty position as unassigned and a missing average as null (LAN-01, D-58)', async () => {
@@ -176,12 +207,15 @@ describe('Prisma lane repository', () => {
 
     expect(Object.keys(entry ?? {}).sort()).toEqual([
       'average',
+      'averageNote',
+      'averageStatus',
       'bowlerId',
       'divisionId',
       'firstName',
       'lastName',
       'name',
       'position',
+      'providedAverage',
       'registrationId',
       'suffix',
       'superSweeper',

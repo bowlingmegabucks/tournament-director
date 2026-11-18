@@ -28,6 +28,7 @@
     "!src/features/scores/scoreWriter.ts",
     "!src/features/scores/prismaScoreWriter.ts",
     "!src/features/skip/prismaStore.ts",
+    "!src/features/averages/prismaStore.ts",
     "!src/openapi/openapi.ts",
     "!src/features/lanes/prismaRepository.ts",
     "!src/features/scores/prismaRepository.ts",

@@ -16,6 +16,8 @@ interface CompleteSessionDialogProps {
   pending: boolean
   /** Why the request did not go through, when it did not. */
   failure?: string
+  /** The API asked for a confirm the dialog did not know about: the button says "Complete anyway". */
+  confirming?: boolean
   onConfirm: () => void
   onClose: () => void
 }
@@ -66,6 +68,7 @@ export function CompleteSessionDialog({
   loading,
   pending,
   failure,
+  confirming = false,
   onConfirm,
   onClose,
 }: Readonly<CompleteSessionDialogProps>) {
@@ -102,6 +105,9 @@ export function CompleteSessionDialog({
     )
   }
 
+  const unchecked = info?.unverifiedBowlers ?? 0
+  const completeLabel = unchecked > 0 || confirming ? 'Complete anyway' : `Complete ${name}`
+
   return (
     <dialog
       ref={showOnMount}
@@ -118,6 +124,15 @@ export function CompleteSessionDialog({
           Complete this {name}?
         </h2>
         {body}
+        {unchecked > 0 && (
+          <p role="alert" className={styles.error}>
+            {unchecked === 1
+              ? '1 handicap bowler with scores has an average that is not verified.'
+              : `${unchecked} handicap bowlers with scores have an average that is not verified.`}{' '}
+            Once the {name} is complete, a later change to an average changes finished results and
+            payouts. Verify them first on the Averages page.
+          </p>
+        )}
         {failure && (
           <p role="alert" className={styles.error}>
             {failure}
@@ -138,7 +153,7 @@ export function CompleteSessionDialog({
             disabled={loading || pending}
             onClick={onConfirm}
           >
-            {pending ? 'Completing…' : `Complete ${name}`}
+            {pending ? 'Completing…' : completeLabel}
           </button>
         </div>
       </div>

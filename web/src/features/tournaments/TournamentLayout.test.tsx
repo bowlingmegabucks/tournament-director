@@ -205,7 +205,7 @@ describe('tournament pages', () => {
     )
   })
 
-  it('links to At-large and Seeding after Registrations, and marks each on its own page (D-87)', async () => {
+  it('links to Averages, At-large, and Seeding after Registrations, and marks each on its own page (D-87, D-295)', async () => {
     serveTournament()
     server.use(
       http.get('/v1/tournaments/:id/at-large', () =>
@@ -223,6 +223,7 @@ describe('tournament pages', () => {
       'Squads',
       'Sweepers',
       'Registrations',
+      'Averages',
       'At-large',
       'Seeding',
       'Live results',
@@ -336,6 +337,38 @@ describe('tournament pages', () => {
         'Live results',
         'Change tournament',
       ])
+    })
+  })
+
+  describe('Averages link (AVG-02, AVG-10, D-295)', () => {
+    it('shows to a user who holds registrations.read, after Registrations', async () => {
+      serveTournament()
+      renderApp(`/tournaments/${tournament.id}`)
+
+      expect(
+        await within(await findSidebar()).findByRole('link', { name: 'Averages' }),
+      ).toHaveAttribute('href', `/tournaments/${tournament.id}/averages`)
+    })
+
+    it('shows to a score keeper, who can read it', async () => {
+      setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+      serveTournament()
+      renderApp(`/tournaments/${tournament.id}`)
+
+      expect(
+        await within(await findSidebar()).findByRole('link', { name: 'Averages' }),
+      ).toBeVisible()
+    })
+
+    it('hides from a visitor who is signed out', async () => {
+      setMockUser(null)
+      serveTournament()
+      renderApp(`/tournaments/${tournament.id}`)
+
+      await screen.findByRole('link', { name: 'Sign in' })
+      expect(
+        within(await findSidebar()).queryByRole('link', { name: 'Averages' }),
+      ).not.toBeInTheDocument()
     })
   })
 

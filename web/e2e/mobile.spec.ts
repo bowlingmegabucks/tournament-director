@@ -51,7 +51,7 @@ test('every page fits a phone with no sideways scroll, signed in as a director (
   await expect(sidebar(page)).toBeVisible()
   await fits(page, 'overview')
 
-  for (const link of ['Divisions', 'Registrations', 'At-large', 'Seeding', 'Payouts']) {
+  for (const link of ['Divisions', 'Registrations', 'Averages', 'At-large', 'Seeding', 'Payouts']) {
     await menuLink(page, link)
     await fits(page, link)
   }

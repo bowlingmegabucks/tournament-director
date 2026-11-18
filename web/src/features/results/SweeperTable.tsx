@@ -1,6 +1,7 @@
 import { formatThroughNote, formatTie, gameColumnCount, pendingGame, sweeperItems } from './format'
 import { PayoutTag } from './PayoutTag'
 import styles from './ResultsTable.module.css'
+import { UnverifiedChip } from './UnverifiedChip'
 import {
   GameCells,
   GameHeaders,
@@ -84,6 +85,7 @@ export function SweeperTable({
                 <td className={styles.place}>{item.row.place}</td>
                 <th scope="row" className={styles.who}>
                   {item.row.name}
+                  <UnverifiedChip show={item.row.unverified} />
                   {item.row.dnf && <span className={styles.tag}>DNF</span>}
                   <span className={styles.sub}>{formatBonus(item.row)}</span>
                   {item.row.ties.map((tie) => (

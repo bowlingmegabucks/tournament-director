@@ -3,6 +3,7 @@ import { metrics } from '@opentelemetry/api'
 import { createApp } from './app.ts'
 import { createPrismaScoreWriter } from './features/scores/prismaScoreWriter.ts'
 import { createPrismaDnfStore } from './features/dnf/prismaStore.ts'
+import { createPrismaAverageStore } from './features/averages/prismaStore.ts'
 import { createPrismaPayoutStore } from './features/payouts/prismaStore.ts'
 import { createPrismaSkipStore } from './features/skip/prismaStore.ts'
 import { createPrismaLaneWriter } from './features/lanes/prismaWriter.ts'
@@ -71,6 +72,7 @@ const app = createApp({
   skipStore: createPrismaSkipStore(database, logger),
   dnfStore: createPrismaDnfStore(database, logger),
   payoutStore: createPrismaPayoutStore(database, logger),
+  averageStore: createPrismaAverageStore(database, logger),
   squads: createPrismaSquadRepository(database, logger),
   squadWriter: createPrismaSquadWriter(database, logger),
   sweeperWriter: createPrismaSweeperWriter(database, logger),

@@ -79,3 +79,7 @@ Playwright covers main user journeys only, a few tests. Query by role, as in uni
 ## Check current docs
 
 Vitest is pinned to 4.x and MSW is 3.x (`onUnhandledFrame`, not `onUnhandledRequest`). Check Context7 before you use an API from memory.
+
+## Agents
+
+Hand test writing to the `web-test-writer` agent (it writes test files only). To check that a change has tests and that they hold up, use `react-reviewer`.

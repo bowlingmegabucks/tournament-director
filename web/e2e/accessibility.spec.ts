@@ -553,6 +553,23 @@ for (const colorScheme of colorSchemes) {
       await expectNoViolations(page)
     })
 
+    test('averages page (list, adjust form with errors, details) has no WCAG 2.2 AA violations', async ({
+      page,
+    }) => {
+      await openTournamentsSignedIn(page)
+      await page.getByRole('article').first().getByRole('link').click()
+      await menuLink(page, 'Averages')
+      await expect(page.getByRole('table')).toBeVisible()
+      await expectNoViolations(page)
+
+      await page.getByRole('button', { name: 'Adjust Maria Chen' }).click()
+      const dialog = page.getByRole('dialog', { name: 'Adjust average: Maria Chen' })
+      await dialog.getByLabel('Verified average').fill('205')
+      await dialog.getByRole('button', { name: 'Save adjusted average' }).click()
+      await expect(dialog.getByText(/above the division limit/)).toBeVisible()
+      await expectNoViolations(page)
+    })
+
     test('scores page (loaded, on a wide and a narrow screen) has no WCAG 2.2 AA violations', async ({
       page,
     }) => {

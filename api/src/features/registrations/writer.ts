@@ -57,6 +57,11 @@ export interface SaveRegistration {
     divisionId: string
     average: number | null
     superSweeper: boolean
+    /**
+     * Delete the registration's average check in the same save (AVG-08, D-290): the average or the
+     * division changed, so the old check no longer says anything.
+     */
+    clearAverageCheck?: boolean
   }
   addSessionIds: string[]
   /** Squads and sweepers taken off the registration (REG-31). */
@@ -135,6 +140,8 @@ export function createInMemoryRegistrationWriter(seed: InMemoryWriterSeed = {}) 
     payments: [...(seed.payments ?? [])],
     scores: [...(seed.scores ?? [])],
     completedTournamentIds: [...(seed.completedTournamentIds ?? [])],
+    /** The registrations whose average check a save or a delete cleared (AVG-08, D-287, D-290). */
+    clearedAverageChecks: [] as string[],
   }
 
   function deskFacts(registrationId: string, tournamentId: string): DeskDeleteFacts | undefined {
@@ -243,6 +250,7 @@ export function createInMemoryRegistrationWriter(seed: InMemoryWriterSeed = {}) 
           })
         }
       }
+      if (registration.clearAverageCheck) state.clearedAverageChecks.push(registration.id)
       if (payment) {
         state.payments.push({
           registrationId: registration.id,
@@ -252,6 +260,7 @@ export function createInMemoryRegistrationWriter(seed: InMemoryWriterSeed = {}) 
       return Promise.resolve()
     },
     deleteRegistration: (registrationId) => {
+      state.clearedAverageChecks.push(registrationId)
       state.registrations = state.registrations.filter(
         (entry) => entry.registration.id !== registrationId,
       )
@@ -271,6 +280,7 @@ export function createInMemoryRegistrationWriter(seed: InMemoryWriterSeed = {}) 
         state.payments = state.payments.filter(
           (payment) => payment.registrationId !== registrationId,
         )
+        state.clearedAverageChecks.push(registrationId)
       }
       return Promise.resolve(plan)
     },

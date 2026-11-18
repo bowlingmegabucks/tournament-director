@@ -300,3 +300,20 @@ model Payout {
   @@index([tournamentId], map: "IX_Payouts_Tournament")
   @@map("Payouts")
 }
+
+/// A director's check of one registration's average (D-287, AVG-01). One row for each registration; no
+/// row means unverified. A null `note` means the provided average was verified; a note means it was
+/// adjusted. No foreign key: WinForms owns `Registrations`, and our delete routes remove the row.
+model AverageVerification {
+  registrationId  String   @id @map("RegistrationId") @db.Char(36)
+  /// The registration's average when it was checked; null when the bowler gave none.
+  providedAverage Int?     @map("ProvidedAverage")
+  /// The average handicap uses (D-288).
+  verifiedAverage Int      @map("VerifiedAverage")
+  note            String?  @map("Note") @db.VarChar(500)
+  /// A user id (`user`.`id`).
+  verifiedBy      String   @map("VerifiedBy") @db.VarChar(36)
+  verifiedAt      DateTime @map("VerifiedAt") @db.DateTime(3)
+
+  @@map("AverageVerifications")
+}

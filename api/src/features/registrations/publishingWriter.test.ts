@@ -251,6 +251,52 @@ describe('createPublishingRegistrationWriter', () => {
     ).toMatchObject({ level: 40, sessionId: a })
   })
 
+  it('tells the sessions and the tournament when a save clears an average check (AVG-08, AVG-19, D-290)', async () => {
+    const { hub, published } = recordingHub()
+    const cleared: string[] = []
+    const writer = createPublishingRegistrationWriter(
+      storage().writer,
+      hub,
+      createCapturedLogger().logger,
+      (tournament) => cleared.push(tournament),
+    )
+
+    await writer.save(
+      edit({
+        registration: {
+          id: registrationId,
+          isNew: false,
+          divisionId,
+          average: 190,
+          superSweeper: false,
+          clearAverageCheck: true,
+        },
+      }),
+    )
+
+    expect(published).toEqual([
+      { sessionId: a, kind: 'entries' },
+      { sessionId: a, kind: 'averages' },
+    ])
+    expect(cleared).toEqual([tournamentId])
+  })
+
+  it('sends no averages message when the save keeps the average (AVG-08)', async () => {
+    const { hub, published } = recordingHub()
+    const cleared: string[] = []
+    const writer = createPublishingRegistrationWriter(
+      storage().writer,
+      hub,
+      createCapturedLogger().logger,
+      (tournament) => cleared.push(tournament),
+    )
+
+    await writer.save(edit({ addSessionIds: [b] }))
+
+    expect(published.map((event) => event.kind)).not.toContain('averages')
+    expect(cleared).toEqual([])
+  })
+
   it('leaves the reads of the inner writer as they were', async () => {
     const { hub } = recordingHub()
     const { writer: inner } = storage()

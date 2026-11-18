@@ -4,6 +4,7 @@ import { formatPair } from '../lanes/format'
 import { digitsOnly, gamesToFill, priorGames, readScore, sayGames } from './entryLogic'
 import { entryPath } from './entryPaths'
 import type { Game, GameBowler, GamePair } from './gamesTypes'
+import { AverageMarker } from '../../shared/AverageMarker'
 import styles from './PairSheet.module.css'
 import type { SessionKind } from './types'
 import { useSaveScore } from './useSaveScore'
@@ -281,6 +282,11 @@ export function PairSheet({
               <div className={styles.who}>
                 <span className={styles.lane}>{bowler.lane}</span>
                 <span className={styles.name}>{bowler.name}</span>
+                {bowler.unverified && (
+                  <span className={styles.chip}>
+                    <AverageMarker />
+                  </span>
+                )}
                 <span className={styles.division}>{bowler.divisionName}</span>
               </div>
               <p className={styles.total}>

@@ -17,6 +17,7 @@ import {
 } from '../../shared/sessionDelete.ts'
 import {
   applySessionComplete,
+  planSessionComplete,
   type EntryScores,
   type SessionCompleter,
   type SweeperCompleteInfo,
@@ -222,6 +223,18 @@ export function createInMemorySweeperWriter(
           ? result
           : { completed: found.entry.sweeper, noShowCount: result.noShowCount },
       )
+    },
+    check: (tournamentId, sweeperId) => {
+      const found = locate(tournamentId, sweeperId)
+      if (!('entry' in found)) return Promise.resolve(found)
+      const plan = planSessionComplete(
+        {
+          completed: options.completed?.includes(tournamentId) ?? false,
+          complete: found.entry.sweeper.complete,
+        },
+        'sweeper',
+      )
+      return Promise.resolve(plan.kind === 'refused' ? { refused: plan.errors } : undefined)
     },
     getCompleteInfo: (tournamentId, sweeperId) => {
       const found = locate(tournamentId, sweeperId)

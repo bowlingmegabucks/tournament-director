@@ -247,6 +247,30 @@ describe('RecapDialog warning', () => {
     expect(screen.getByText(/That lane is left out of the lanes in use too/)).toBeVisible()
   })
 
+  it('warns how many handicap bowlers are on an average no director checked, and still lets the desk print (AVG-14, D-293)', async () => {
+    await loaded(createRecapSheets({ sheets: [joey, dana], withoutVerifiedAverage: 2 }))
+
+    expect(
+      screen.getByText(/2 handicap bowlers have an average that is not verified\./),
+    ).toBeVisible()
+    expect(screen.getByText(/Verify them first on the Averages page\./)).toBeVisible()
+    expect(screen.getByRole('button', { name: /^Print selected/ })).toBeEnabled()
+  })
+
+  it('says "bowler has" for one unchecked average (AVG-14)', async () => {
+    await loaded(createRecapSheets({ sheets: [joey], withoutVerifiedAverage: 1 }))
+
+    expect(
+      screen.getByText(/1 handicap bowler has an average that is not verified\./),
+    ).toBeVisible()
+  })
+
+  it('shows no averages notice when every handicap bowler is checked (AVG-14)', async () => {
+    await loaded(createRecapSheets({ sheets: [joey], withoutVerifiedAverage: 0 }))
+
+    expect(screen.queryByText(/average that is not verified/)).not.toBeInTheDocument()
+  })
+
   it('shows neither notice when every bowler is placed (D-51)', async () => {
     await loaded()
 

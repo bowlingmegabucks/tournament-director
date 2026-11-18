@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createLaneBowler, createLanePage, createLanePair } from '../../mocks/data'
-import { buildCheckIn, checkInName } from './checkIn'
+import { averageCheckText, buildCheckIn, checkInName } from './checkIn'
 
 const names = (rows: { name: string }[]) => rows.map((row) => row.name)
 
@@ -110,5 +110,56 @@ describe('buildCheckIn', () => {
       pins: 12,
       superSweeper: true,
     })
+  })
+})
+
+describe('averageCheckText (AVG-17, D-296)', () => {
+  it('says verified, with a check mark', () => {
+    expect(
+      averageCheckText({ averageStatus: 'verified', providedAverage: 175, averageNote: null }),
+    ).toBe('Verified ✓')
+  })
+
+  it('says what the average was adjusted from, and why', () => {
+    expect(
+      averageCheckText({
+        averageStatus: 'adjusted',
+        providedAverage: 175,
+        averageNote: 'USBC book average',
+      }),
+    ).toBe('Adjusted from 175: USBC book average')
+  })
+
+  it('says none when the bowler gave no average', () => {
+    expect(
+      averageCheckText({ averageStatus: 'adjusted', providedAverage: null, averageNote: 'League' }),
+    ).toBe('Adjusted from none: League')
+  })
+
+  it('says not verified for a handicap bowler no one checked', () => {
+    expect(
+      averageCheckText({ averageStatus: 'unverified', providedAverage: 175, averageNote: null }),
+    ).toBe('Not verified')
+  })
+
+  it('is empty where there is nothing to check', () => {
+    expect(
+      averageCheckText({ averageStatus: 'none', providedAverage: 200, averageNote: null }),
+    ).toBe('')
+  })
+
+  it('goes on every row of the sheet', () => {
+    const groups = buildCheckIn(
+      createLanePage({
+        pairs: [
+          createLanePair(1, [
+            createLaneBowler({ position: '1A', averageStatus: 'verified', providedAverage: 200 }),
+          ]),
+        ],
+      }),
+      'lane',
+    )
+
+    expect(groups[0]?.rows[0]?.averageCheck).toBe('Verified ✓')
   })
 })

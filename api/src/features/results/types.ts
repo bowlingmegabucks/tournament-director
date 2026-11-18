@@ -39,6 +39,11 @@ const rowFields = {
   total: z.number().int(),
   games: z.number().int().nonnegative(),
   ties: z.array(tieSchema),
+  /**
+   * A bowler in a handicap division bowling on an average no director checked (AVG-13, D-293). A flag
+   * only: no average goes in a results page.
+   */
+  unverified: z.boolean(),
 }
 
 /** A placed bowler of a squad division. The page draws the lines where `group` changes (RES-11). */
@@ -67,6 +72,11 @@ export const unplacedRowSchema = z.object({
   games: z.number().int().nonnegative(),
   handicap: z.number().int(),
   scores: gameScoresSchema,
+  /**
+   * A bowler in a handicap division bowling on an average no director checked (AVG-13, D-293). A flag
+   * only: no average goes in a results page.
+   */
+  unverified: z.boolean(),
 })
 
 export const divisionResultSchema = z.object({
@@ -165,6 +175,11 @@ export const atLargeRowSchema = z.object({
   /** The bowler cashed in a squad (RES-16, D-07). */
   previousCasher: z.boolean(),
   ties: z.array(tieSchema),
+  /**
+   * A bowler in a handicap division bowling on an average no director checked (AVG-13, D-293). A flag
+   * only: no average goes in a results page.
+   */
+  unverified: z.boolean(),
 })
 
 export const atLargeDivisionSchema = z.object({
@@ -203,6 +218,11 @@ export const seedingRowSchema = z.object({
   handicap: z.number().int(),
   previousCasher: z.boolean(),
   ties: z.array(tieSchema),
+  /**
+   * A bowler in a handicap division bowling on an average no director checked (AVG-13, D-293). A flag
+   * only: no average goes in a results page.
+   */
+  unverified: z.boolean(),
   /**
    * What the row's bowler cashed for in this event, saved by a director (PAY-20, D-284): money text such
    * as `"100.00"`. `null` for a bowler with no saved payout, and for any row that is not an inferred payee.

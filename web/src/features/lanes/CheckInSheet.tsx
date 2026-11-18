@@ -37,7 +37,7 @@ export function CheckInSheet({
 }: Readonly<CheckInSheetProps>) {
   const count = groups.reduce((total, group) => total + group.rows.length, 0)
   const sweeper = kind === 'sweeper'
-  const columns = sweeper ? 8 : 7
+  const columns = 8
   return (
     <div className={styles.sheet}>
       <header className={styles.head}>
@@ -61,6 +61,7 @@ export function CheckInSheet({
             <th>Bowler</th>
             <th>Division</th>
             <th className={styles.num}>Avg</th>
+            {!sweeper && <th>Average check</th>}
             <th className={styles.num}>{sweeper ? 'Pins' : 'Hdcp'}</th>
             {sweeper && <th>Super</th>}
             <th className={styles.notes}>Notes</th>
@@ -84,6 +85,7 @@ export function CheckInSheet({
                 <td>{row.name}</td>
                 <td>{row.divisionName}</td>
                 <td className={styles.num}>{row.average ?? '—'}</td>
+                {!sweeper && <td>{row.averageCheck}</td>}
                 <td className={styles.num}>{row.pins}</td>
                 {sweeper && <td>{row.superSweeper ? 'Yes' : 'No'}</td>}
                 <td />

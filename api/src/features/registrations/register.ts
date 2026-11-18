@@ -240,6 +240,8 @@ export async function completeRegistration(
       average,
       bowler,
       tournamentStart: tournament.startDate,
+      // An append that keeps the division keeps an old registration's missing average (D-289).
+      requireHandicapAverage: existing?.divisionId !== input.divisionId,
     }),
   )
   if (squadCount === 0) {
@@ -266,6 +268,10 @@ export async function completeRegistration(
       divisionId: input.divisionId,
       average,
       superSweeper: input.superSweeper,
+      // A new average or division is unverified again (AVG-08, D-290).
+      clearAverageCheck:
+        existing !== undefined &&
+        (average !== existing.average || input.divisionId !== existing.divisionId),
     },
     addSessionIds: [...squadIds, ...sweeperIds],
     payment: input.payment,

@@ -18,6 +18,7 @@ import {
 } from '../../shared/sessionDelete.ts'
 import {
   applySessionComplete,
+  planSessionComplete,
   squadCompleteInfo,
   zeroScores,
   type EntryScores,
@@ -206,6 +207,18 @@ export function createInMemorySquadWriter(
           ? result
           : { completed: found.entry.squad, noShowCount: result.noShowCount },
       )
+    },
+    check: (tournamentId, squadId) => {
+      const found = locate(tournamentId, squadId)
+      if (!('entry' in found)) return Promise.resolve(found)
+      const plan = planSessionComplete(
+        {
+          completed: options.completed?.includes(tournamentId) ?? false,
+          complete: found.entry.squad.complete,
+        },
+        'squad',
+      )
+      return Promise.resolve(plan.kind === 'refused' ? { refused: plan.errors } : undefined)
     },
     getCompleteInfo: (tournamentId, squadId) => {
       const found = locate(tournamentId, squadId)

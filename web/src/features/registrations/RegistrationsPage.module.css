@@ -237,3 +237,19 @@
     text-align: start;
   }
 }
+
+.verified {
+  color: var(--color-success);
+  font-weight: 700;
+}
+
+.adjusted {
+  min-block-size: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}

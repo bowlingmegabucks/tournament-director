@@ -46,6 +46,8 @@ describe.each(kinds)(
   'completing a $word (SQD-15, SQD-16, D-190 to D-195)',
   ({ kind, word, make }) => {
     const session = () => make({ date: '2026-10-24T09:00:00', complete: false })
+    /** The body of each POST, so a test sees whether the click confirmed a warning (AVG-18). */
+    let bodies: string[] = []
 
     /** A page the complete can change: the POST flips the row, so the refetch shows it complete. */
     function serve(
@@ -57,6 +59,7 @@ describe.each(kinds)(
       } = {},
     ) {
       const requests: string[] = []
+      bodies = []
       server.use(
         http.get(`/v1/tournaments/${id}`, () => HttpResponse.json({ tournament })),
         http.get(`/v1/tournaments/${id}/settings`, () =>
@@ -88,15 +91,19 @@ describe.each(kinds)(
                     : { entryCount: 9 },
               })),
         ),
-        http.post(`/v1/tournaments/${id}/${kind}/:sessionId/complete`, async ({ params }) => {
-          requests.push(String(params['sessionId']))
-          const answer = await options.complete?.()
-          if (answer) return answer
-          row.complete = true
-          return HttpResponse.json(
-            kind === 'squads' ? { squad: row, noShowCount: 3 } : { sweeper: row },
-          )
-        }),
+        http.post(
+          `/v1/tournaments/${id}/${kind}/:sessionId/complete`,
+          async ({ params, request }) => {
+            bodies.push(await request.text())
+            requests.push(String(params['sessionId']))
+            const answer = await options.complete?.()
+            if (answer) return answer
+            row.complete = true
+            return HttpResponse.json(
+              kind === 'squads' ? { squad: row, noShowCount: 3 } : { sweeper: row },
+            )
+          },
+        ),
       )
       return requests
     }
@@ -105,6 +112,118 @@ describe.each(kinds)(
 
     const trigger = () => screen.findByRole('button', { name: `Complete ${word}` })
     const dialog = () => screen.findByRole('dialog', { name: `Complete this ${word}?` })
+
+    describe('unchecked averages (AVG-18, D-297)', () => {
+      const withUnchecked = (count: number) => () =>
+        HttpResponse.json({
+          completeInfo:
+            kind === 'squads'
+              ? {
+                  entryCount: 12,
+                  noScoreCount: 0,
+                  partialCount: 0,
+                  games: 3,
+                  unverifiedBowlers: count,
+                }
+              : { entryCount: 9, unverifiedBowlers: count },
+        })
+
+      it('warns in the dialog and confirms with the click that says Complete anyway', async () => {
+        const user = userEvent.setup()
+        const row = session()
+        const requests = serve(row, { info: withUnchecked(2) })
+        open(row)
+
+        await user.click(await trigger())
+        const confirmDialog = await dialog()
+        expect(
+          await within(confirmDialog).findByText(/2 handicap bowlers with scores have an average/),
+        ).toBeVisible()
+        await user.click(within(confirmDialog).getByRole('button', { name: 'Complete anyway' }))
+
+        await completedNotice()
+        expect(requests).toHaveLength(1)
+        expect(bodies).toEqual([JSON.stringify({ confirmWarnings: true })])
+      })
+
+      it('sends no confirm when nothing is unchecked, so the API still guards a stale dialog', async () => {
+        const user = userEvent.setup()
+        const row = session()
+        serve(row, { info: withUnchecked(0) })
+        open(row)
+
+        await user.click(await trigger())
+        await user.click(
+          await within(await dialog()).findByRole('button', { name: `Complete ${word}` }),
+        )
+
+        await completedNotice()
+        expect(bodies).toEqual([''])
+      })
+
+      it('keeps the dialog open and says why when the API wants a confirm the dialog did not know about', async () => {
+        const user = userEvent.setup()
+        const row = session()
+        serve(row, {
+          info: withUnchecked(0),
+          complete: () =>
+            HttpResponse.json(
+              {
+                message: '1 handicap bowler with scores has an average that is not verified.',
+                warnings: [{ field: 'average', message: 'x' }],
+              },
+              { status: 409 },
+            ),
+        })
+        open(row)
+
+        await user.click(await trigger())
+        await user.click(
+          await within(await dialog()).findByRole('button', { name: `Complete ${word}` }),
+        )
+
+        expect(
+          await within(await dialog()).findByText(
+            '1 handicap bowler with scores has an average that is not verified.',
+          ),
+        ).toBeVisible()
+      })
+    })
+
+    it('confirms on the next click after the API asked, even when the dialog never read the count (AVG-18)', async () => {
+      const user = userEvent.setup()
+      const row = session()
+      let tries = 0
+      serve(row, {
+        // The count could not be read (a stale dialog gives the same answer): no warning shows first.
+        info: () => HttpResponse.json({ message: 'down' }, { status: 500 }),
+        complete: () => {
+          tries += 1
+          return tries === 1
+            ? HttpResponse.json(
+                {
+                  message: '1 handicap bowler with scores has an average that is not verified.',
+                  warnings: [{ field: 'average', message: 'x' }],
+                },
+                { status: 409 },
+              )
+            : undefined
+        },
+      })
+      open(row)
+
+      await user.click(await trigger())
+      await user.click(
+        await within(await dialog()).findByRole('button', { name: `Complete ${word}` }),
+      )
+      await within(await dialog()).findByText(
+        '1 handicap bowler with scores has an average that is not verified.',
+      )
+      await user.click(within(await dialog()).getByRole('button', { name: 'Complete anyway' }))
+
+      await completedNotice()
+      expect(bodies).toEqual(['', JSON.stringify({ confirmWarnings: true })])
+    })
 
     describe('who sees Complete (D-193, D-195)', () => {
       it.each(['director', 'admin'] as const)(

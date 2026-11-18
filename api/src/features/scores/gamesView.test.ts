@@ -54,6 +54,45 @@ const labels = (built: ReturnType<typeof view>, game: number) =>
     bowlers: pair.bowlers.map((bowler) => `${bowler.lane} ${bowler.name}`),
   }))
 
+describe('the unverified flag (AVG-13, D-293)', () => {
+  it('flags only a handicap bowler on an average no director checked', () => {
+    const handicapped = createDivision({
+      number: 2,
+      name: 'Handicap',
+      handicapBase: 220,
+      handicapPercentage: 90,
+    })
+    const flagged = createLaneEntry({
+      divisionId: handicapped.id,
+      position: '1A',
+      averageStatus: 'unverified',
+    })
+    const checked = createLaneEntry({
+      divisionId: handicapped.id,
+      position: '2A',
+      averageStatus: 'verified',
+    })
+    const scratch = createLaneEntry({
+      divisionId: open.id,
+      position: '3A',
+      averageStatus: 'unverified',
+    })
+    const entries = [flagged, checked, scratch]
+    const { page } = buildLanePage(session, entries, [open, handicapped])
+
+    const built = buildGamesView(page, entries, [], 3, 'staggered')
+
+    const bowlers = built.games[0]?.pairs.flatMap((pair) => pair.bowlers) ?? []
+    expect(bowlers.map((bowler) => [bowler.registrationId, bowler.unverified])).toEqual(
+      expect.arrayContaining([
+        [flagged.registrationId, true],
+        [checked.registrationId, false],
+        [scratch.registrationId, false],
+      ]),
+    )
+  })
+})
+
 describe('buildGamesView and the DNF flag (SCR-24)', () => {
   it('marks a flagged bowler and no one else', () => {
     const built = view({ flagged: new Set([ann.registrationId, 'someone-else']) })

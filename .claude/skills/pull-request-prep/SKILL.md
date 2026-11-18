@@ -62,6 +62,8 @@ Flag as Blockers:
 
 ### 5. Review the changes
 
+Start the reviewers in parallel, each in its own context: `react-reviewer` when `web/` changed, `api-reviewer` when `api/` changed. Fold their findings into the review below; check each one yourself before you report it. They report only, and they do not replace the checks in step 2.
+
 Load these before reviewing:
 
 - `CLAUDE.md`

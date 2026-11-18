@@ -56,6 +56,7 @@ const squad = createSquadResults({
           games: 2,
           handicap: 0,
           scores: [230, 215],
+          unverified: false,
         },
       ],
       noShows: [{ registrationId: 'r3', name: 'Mike' }],

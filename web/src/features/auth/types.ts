@@ -14,6 +14,7 @@ export type KnownPermission =
   | 'bowlers.ssn'
   | 'payouts.read'
   | 'payouts.write'
+  | 'averages.verify'
   | 'users.manage'
 
 export interface SignedInUser {

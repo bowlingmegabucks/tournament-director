@@ -191,13 +191,13 @@ describe(`GET ${infoUrl}`, () => {
     const response = await request(setup().app).get(infoUrl)
 
     expect(response.status).toBe(200)
-    expect(response.body).toEqual({ completeInfo: { entryCount: 3 } })
+    expect(response.body).toEqual({ completeInfo: { entryCount: 3, unverifiedBowlers: 0 } })
   })
 
   it('answers 0 for a sweeper nobody is in', async () => {
     const response = await request(setup({ entries: {} }).app).get(infoUrl)
 
-    expect(response.body).toEqual({ completeInfo: { entryCount: 0 } })
+    expect(response.body).toEqual({ completeInfo: { entryCount: 0, unverifiedBowlers: 0 } })
   })
 
   it('answers 400 for a bad id and 404 for an unknown tournament or sweeper', async () => {

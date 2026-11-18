@@ -4,6 +4,7 @@
  * on purpose. The lines that lint flags for it carry their own disable (a `td` counts as
  * interactive for a grid, but here it is a plain cell).
  */
+import { AverageMarker } from '../../shared/AverageMarker'
 import styles from './ScoreTable.module.css'
 import type { ScoreBowler } from './types'
 
@@ -72,6 +73,11 @@ export function ScoreTable({ bowlers, games, label, fresh = [] }: Readonly<Score
             </td>
             <th role="rowheader" scope="row" className={styles.who}>
               <span className={styles.name}>{bowler.name}</span>
+              {bowler.unverified && (
+                <span className={styles.chip}>
+                  <AverageMarker />
+                </span>
+              )}
               <span className={styles.division}>{bowler.divisionName}</span>
             </th>
             {columns.map((game) => (

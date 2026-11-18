@@ -10,7 +10,8 @@ import type { RecapSheets } from './types.ts'
  * sheets do too. Every cross works from the lanes in use across the whole session, whichever
  * sheets the desk later prints (D-64). `withoutDivision` counts entries `buildLanePage` left out
  * because their division is not one of the tournament's (D-51): they have a lane but no sheet,
- * and they are missing from the lanes in use too, so the page says so.
+ * and they are missing from the lanes in use too, so the page says so. `withoutVerifiedAverage` counts
+ * the sheets of handicap bowlers on an average no director checked (AVG-14, D-293).
  */
 export function buildRecapSheets(
   page: LanePage,
@@ -52,5 +53,10 @@ export function buildRecapSheets(
     sheets,
     withoutLane: page.unassigned.length + page.other.length,
     withoutDivision,
+    withoutVerifiedAverage: page.pairs.reduce(
+      (count, pair) =>
+        count + pair.bowlers.filter((bowler) => bowler.averageStatus === 'unverified').length,
+      0,
+    ),
   }
 }

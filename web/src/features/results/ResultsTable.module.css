@@ -429,3 +429,7 @@
     font-weight: 400;
   }
 }
+
+.chip {
+  margin-inline-start: var(--space-2);
+}

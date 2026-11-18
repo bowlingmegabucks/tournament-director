@@ -18,6 +18,7 @@ export function createGameBowler(overrides: Partial<GameBowler> = {}): GameBowle
     scores,
     total: scores.reduce<number>((sum, score) => sum + (score ?? 0), 0),
     dnf: false,
+    unverified: false,
     ...overrides,
   }
 }

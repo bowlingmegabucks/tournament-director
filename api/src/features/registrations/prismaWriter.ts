@@ -140,6 +140,11 @@ export function createPrismaRegistrationWriter(
               })
             } else {
               await tx.registration.update({ where: { id: registration.id }, data: columns })
+              if (registration.clearAverageCheck) {
+                await tx.averageVerification.deleteMany({
+                  where: { registrationId: registration.id },
+                })
+              }
             }
 
             if (removeSessionIds.length > 0) {
@@ -179,6 +184,8 @@ export function createPrismaRegistrationWriter(
         client.$transaction([
           client.payment.deleteMany({ where: { registrationId } }),
           client.squadRegistration.deleteMany({ where: { registrationId } }),
+          // The check table has no foreign key (D-287), so clear it in code.
+          client.averageVerification.deleteMany({ where: { registrationId } }),
           client.registration.delete({ where: { id: registrationId } }),
         ]),
       )
@@ -203,6 +210,8 @@ export function createPrismaRegistrationWriter(
               // No cascade on `SquadRegistration` (database.md, quirk 9), so clear it in code.
               await tx.squadRegistration.deleteMany({ where: { registrationId } })
               await tx.payment.deleteMany({ where: { registrationId } })
+              // The check table has no foreign key (D-287), so clear it in code.
+              await tx.averageVerification.deleteMany({ where: { registrationId } })
               await tx.registration.delete({ where: { id: registrationId } })
             }
             return plan

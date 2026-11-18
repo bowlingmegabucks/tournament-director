@@ -77,6 +77,7 @@ describe('DivisionBody', () => {
           games: 1,
           handicap: 0,
           scores: [200, null, null],
+          unverified: false,
         },
       ],
       noShows: [{ registrationId: 'n', name: 'Ned Shaw' }],
@@ -147,5 +148,37 @@ describe('DivisionSummary', () => {
       within(screen.getByRole('row', { name: /Bea Moss/ })).getByText('Payout $100.00'),
     ).toBeInTheDocument()
     expect(screen.getAllByText(/^Payout /)).toHaveLength(1)
+  })
+})
+
+describe('DivisionResults and the average chip (AVG-13, D-293)', () => {
+  it('marks a handicap bowler on an unchecked average, in the results and the did-not-finish list', () => {
+    const division = createDivisionResult({
+      name: 'Handicap A',
+      rows: [
+        createSquadRow({ registrationId: 'a', name: 'Carla Mendes', unverified: true }),
+        createSquadRow({ registrationId: 'b', name: 'Bill Tran', place: 2, unverified: false }),
+      ],
+      didNotFinish: [
+        {
+          registrationId: 'd',
+          name: 'Dee Park',
+          total: 200,
+          games: 1,
+          handicap: 10,
+          scores: [200, null, null],
+          unverified: true,
+        },
+      ],
+    })
+
+    render(<DivisionResults division={division} games={3} />)
+
+    const results = screen.getByRole('table', { name: 'Results for the Handicap A division' })
+    expect(within(results).getAllByText('Avg not verified')).toHaveLength(1)
+    const carla = within(results).getByRole('rowheader', { name: /Carla Mendes/ })
+    expect(within(carla).getByText('Avg not verified')).toBeVisible()
+    const quit = screen.getByRole('table', { name: 'Handicap A division, did not finish' })
+    expect(within(quit).getByText('Avg not verified')).toBeVisible()
   })
 })

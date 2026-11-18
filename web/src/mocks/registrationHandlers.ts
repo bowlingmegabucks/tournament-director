@@ -186,6 +186,8 @@ export function createRegistrationHandlers({
   const tournamentExists = (id: unknown) => tournaments.some((candidate) => candidate.id === id)
   const registrationOf = (bowlerId: string) => stored.find((entry) => entry.bowlerId === bowlerId)
   const divisionName = (id: string) => divisions.find((division) => division.id === id)?.name ?? ''
+  const handicapDivision = (id: string) =>
+    divisions.find((division) => division.id === id)?.handicapPercentage != null
 
   function toSearchResult(candidate: MockBowler): BowlerSearchResult {
     const registration = registrationOf(candidate.id)
@@ -295,6 +297,11 @@ export function createRegistrationHandlers({
       squadIds: [...entry.squadIds],
       sweeperIds: [...entry.sweeperIds],
       superSweeper: entry.superSweeper,
+      average: entry.average,
+      // A new or edited registration has no check (D-290); a scratch division has nothing to check.
+      averageStatus: handicapDivision(entry.divisionId)
+        ? ('unverified' as const)
+        : ('none' as const),
     }
     if (row) Object.assign(row, next)
     else registrations.registrations.push(next)

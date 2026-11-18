@@ -1,3 +1,4 @@
+import { isUnverified } from '../averages/inUse.ts'
 import type { Division } from '../divisions/types.ts'
 import type { LaneEntry } from '../lanes/types.ts'
 import type { ScoreRow } from '../scores/types.ts'
@@ -144,6 +145,7 @@ function buildEntry(
     divisionName: division.name,
     games,
     pins: 0,
+    unverified: isUnverified(registrant.averageStatus, division.handicapPercentage !== null),
   })
   // The pins differ by sweeper, so the total and high game are set here, not by `toResultEntry`.
   return {

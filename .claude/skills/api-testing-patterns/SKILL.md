@@ -80,3 +80,7 @@ Some survivors are equivalent: the change cannot alter behavior (for example, `r
 ## Check current docs
 
 Vitest is pinned to 4.x (see `CLAUDE.md`). Check Context7 before you use a Supertest, Vitest, or Stryker API from memory.
+
+## Agents
+
+Hand test writing to the `api-test-writer` agent (it writes test files only). `api-reviewer` flags routes and repositories that have no test.

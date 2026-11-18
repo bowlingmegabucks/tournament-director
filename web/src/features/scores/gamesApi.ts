@@ -23,7 +23,8 @@ const isBowler = (value: unknown): value is GameBowler =>
   isScore(field(value, 'score')) &&
   isEvery(field(value, 'scores'), isScore) &&
   isNumber(field(value, 'total')) &&
-  typeof field(value, 'dnf') === 'boolean'
+  typeof field(value, 'dnf') === 'boolean' &&
+  typeof field(value, 'unverified') === 'boolean'
 
 const isPair = (value: unknown): value is GamePair =>
   isNumber(field(value, 'firstLane')) &&

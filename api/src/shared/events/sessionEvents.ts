@@ -7,10 +7,19 @@ import type { Logger } from '../logger.ts'
  * `game-full` and `reopened` (a division's counted games moved, with the game), `scored` (a bowler's
  * row changed in a division that shows, with no game), and `complete` (a session completed).
  * `payouts` says a director saved payouts of a squad or sweeper (to its stream) or of any event (to the
- * tournament stream, PAY-21, D-285); it never carries an amount.
+ * tournament stream, PAY-21, D-285); it never carries an amount. `averages` says a director checked, adjusted,
+ * or cleared a bowler's average (AVG-19, D-298); it never carries an average or a note.
  */
 export type ChangeKind =
-  'lanes' | 'entries' | 'scores' | 'game-full' | 'reopened' | 'scored' | 'complete' | 'payouts'
+  | 'lanes'
+  | 'entries'
+  | 'scores'
+  | 'game-full'
+  | 'reopened'
+  | 'scored'
+  | 'complete'
+  | 'payouts'
+  | 'averages'
 
 /**
  * Where a live-results message points (D-243): ids and a number, never a score. Only the tournament

@@ -111,3 +111,7 @@ Do not put a click handler on a `div` or `span`. The lint rule `jsx-a11y` fails 
 - `web/e2e/accessibility.spec.ts` runs axe (WCAG 2.2 AA) in a real browser, in dark and light mode, which also checks contrast. For a new page or route, add its path to that file. Open any state the page hides (an error, a dialog) before the scan.
 - Unit tests query by role and name (`getByRole('button', { name: 'Save' })`). If a query is hard to write, the markup is probably not accessible.
 - Automated checks find about a third of the issues. Tab through the screen and read it at 200% zoom as well.
+
+## Agents
+
+Start a new screen with the `ui-designer` agent: it returns the layout spec and states in these standards, and writes mockups when asked. After the build, `react-reviewer` checks the result against this skill.

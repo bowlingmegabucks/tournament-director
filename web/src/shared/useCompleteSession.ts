@@ -13,7 +13,8 @@ import { tournamentKeys } from './tournamentQuery'
 export function useCompleteSession(kind: SessionKind, tournamentId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (sessionId: string) => completeSession(kind, tournamentId, sessionId),
+    mutationFn: ({ sessionId, confirmWarnings }: { sessionId: string; confirmWarnings: boolean }) =>
+      completeSession(kind, tournamentId, sessionId, confirmWarnings),
     // Not returned: the page need not wait for the refetches.
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: tournamentKeys.detail(tournamentId) })

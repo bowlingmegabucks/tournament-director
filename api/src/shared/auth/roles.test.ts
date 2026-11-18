@@ -84,6 +84,13 @@ describe('roles (D-97)', () => {
     }
   })
 
+  it('lets a director and an admin verify averages, not a score keeper (D-292, AVG-10)', () => {
+    expect(permissionsOf('scoreKeeper')).not.toContain('averages.verify')
+    for (const role of ['director', 'admin']) {
+      expect(permissionsOf(role)).toContain('averages.verify')
+    }
+  })
+
   it('lets no one but the admin manage users or check SSNs', () => {
     for (const role of ['scoreKeeper', 'director']) {
       expect(permissionsOf(role)).not.toContain('users.manage')

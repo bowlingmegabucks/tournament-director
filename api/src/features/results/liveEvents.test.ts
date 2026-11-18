@@ -253,6 +253,15 @@ describe('live notifier (RES-49, D-243)', () => {
     expect(dropped).toHaveBeenCalledWith(tournamentId)
   })
 
+  it('says an average changed, with no session and no number, and drops the feed (AVG-19, D-298)', () => {
+    const { notifier, seen, dropped } = setup()
+
+    notifier().averagesChanged(tournamentId)
+
+    expect(seen).toEqual([{ kind: 'averages', detail: undefined, version: 1 }])
+    expect(dropped).toHaveBeenCalledWith(tournamentId)
+  })
+
   it('publishes a rise once when two saves fill the same game together', async () => {
     const a = bowler()
     const b = bowler()

@@ -5,6 +5,7 @@ import {
   completeSession,
   fetchSessionCompleteInfo,
   SessionCompleteRefusedError,
+  SessionCompleteWarningError,
 } from './sessionCompleteApi'
 
 describe.each([
@@ -111,6 +112,45 @@ describe.each([
   })
 })
 
+describe('completeSession and the unchecked averages warning (AVG-18, D-297)', () => {
+  const path = '/v1/tournaments/:id/squads/:sessionId/complete'
+
+  it('sends no body unless it confirms', async () => {
+    const bodies: string[] = []
+    server.use(
+      http.post(path, async ({ request }) => {
+        bodies.push(await request.text())
+        return HttpResponse.json({ squad: {}, noShowCount: 0 })
+      }),
+    )
+
+    await completeSession('squads', 't1', 's1')
+    await completeSession('squads', 't1', 's1', true)
+
+    expect(bodies).toEqual(['', JSON.stringify({ confirmWarnings: true })])
+  })
+
+  it('throws a warning, not a refusal, for a 409 that waits for a confirm', async () => {
+    server.use(
+      http.post(path, () =>
+        HttpResponse.json(
+          {
+            message: '2 handicap bowlers with scores have an average that is not verified.',
+            warnings: [{ field: 'average', message: 'x' }],
+          },
+          { status: 409 },
+        ),
+      ),
+    )
+
+    const failure = await completeSession('squads', 't1', 's1').catch((error: unknown) => error)
+
+    expect(failure).toBeInstanceOf(SessionCompleteWarningError)
+    expect(failure).not.toBeInstanceOf(SessionCompleteRefusedError)
+    expect((failure as Error).message).toContain('2 handicap bowlers')
+  })
+})
+
 describe('fetchSessionCompleteInfo (D-194)', () => {
   const squadPath = '/v1/tournaments/:id/squads/:sessionId/complete-info'
   const sweeperPath = '/v1/tournaments/:id/sweepers/:sessionId/complete-info'
@@ -131,6 +171,7 @@ describe('fetchSessionCompleteInfo (D-194)', () => {
       noScoreCount: 3,
       partialCount: 1,
       games: 5,
+      unverifiedBowlers: 0,
     })
     expect(asked).toEqual({ id: 't1', sessionId: 's1' })
   })
@@ -140,6 +181,33 @@ describe('fetchSessionCompleteInfo (D-194)', () => {
 
     await expect(fetchSessionCompleteInfo('sweepers', 't1', 's1')).resolves.toEqual({
       entryCount: 9,
+      unverifiedBowlers: 0,
+    })
+  })
+
+  it('reads how many handicap bowlers with scores are on an unchecked average (AVG-18, D-297)', async () => {
+    server.use(
+      http.get(squadPath, () =>
+        HttpResponse.json({
+          completeInfo: {
+            entryCount: 12,
+            noScoreCount: 0,
+            partialCount: 0,
+            games: 3,
+            unverifiedBowlers: 2,
+          },
+        }),
+      ),
+      http.get(sweeperPath, () =>
+        HttpResponse.json({ completeInfo: { entryCount: 9, unverifiedBowlers: 1 } }),
+      ),
+    )
+
+    await expect(fetchSessionCompleteInfo('squads', 't1', 's1')).resolves.toMatchObject({
+      unverifiedBowlers: 2,
+    })
+    await expect(fetchSessionCompleteInfo('sweepers', 't1', 's1')).resolves.toMatchObject({
+      unverifiedBowlers: 1,
     })
   })
 

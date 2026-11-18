@@ -153,6 +153,45 @@ describe('handicap divisions (REG-05)', () => {
   })
 })
 
+describe('a handicap division needs an average (AVG-16, D-289)', () => {
+  const handicap = { handicapPercentage: 90 }
+
+  it('fails with no average, as a division with an average limit does (REG-04a)', () => {
+    expect(check({ division: handicap, average: null })).toEqual([
+      'Average is required for selected division',
+    ])
+    expect(check({ division: handicap })).toEqual([])
+  })
+
+  it('does not ask a scratch division for an average', () => {
+    expect(check({ average: null })).toEqual([])
+  })
+
+  it('lets a request that changes neither the division nor the average skip it (D-289)', () => {
+    const failures = checkEligibility({
+      division: createDivision(handicap),
+      average: null,
+      bowler: { dateOfBirth: '1980-06-15', gender: 'Male', usbcId: '1234-56789' },
+      tournamentStart: '2026-10-23',
+      requireHandicapAverage: false,
+    })
+    expect(failures).toEqual([])
+  })
+
+  it('still asks for an average a division limit needs when the request skips it (REG-04a)', () => {
+    const failures = checkEligibility({
+      division: createDivision({ ...handicap, minimumAverage: 150 }),
+      average: null,
+      bowler: { dateOfBirth: '1980-06-15', gender: 'Male', usbcId: '1234-56789' },
+      tournamentStart: '2026-10-23',
+      requireHandicapAverage: false,
+    })
+    expect(failures.map((failure) => failure.description)).toEqual([
+      'Average is required for selected division',
+    ])
+  })
+})
+
 it('marks every failure as a validation error, a 400 for everyone (D-107)', () => {
   const failures = checkEligibility({
     division: createDivision({ minimumAverage: 150 }),

@@ -53,6 +53,29 @@ describe('seedRegistrations', () => {
     expect(records()).toEqual([])
   })
 
+  it('verifies one handicap average and adjusts another, and leaves the rest unverified (AVG-01, AVG-11)', async () => {
+    await seedRegistrations(client)
+    const { logger } = createCapturedLogger()
+    const listed = await createPrismaRegistrationRepository(client, logger).listByTournament(
+      samples[0]?.id ?? '',
+    )
+
+    const statusOf = (name: string) => listed.find((row) => row.bowler.name === name)
+    expect(statusOf('Dana Abbott')).toMatchObject({ average: 212, averageStatus: 'verified' })
+    expect(statusOf('Maria Chen')).toMatchObject({ average: 172, averageStatus: 'adjusted' })
+    expect(statusOf('Ray Baptiste, Jr')).toMatchObject({
+      average: 190,
+      averageStatus: 'unverified',
+    })
+  })
+
+  it('adds no second check when it runs twice (AVG-01)', async () => {
+    await seedRegistrations(client)
+    await seedRegistrations(client)
+
+    expect(await client.averageVerification.count()).toBe(samples.length * 2)
+  })
+
   it('leaves one squad with no entries and a complete squad with some (REG-24)', async () => {
     await seedRegistrations(client)
     const { logger } = createCapturedLogger()

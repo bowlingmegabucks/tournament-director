@@ -8,7 +8,8 @@ import { samples as sampleTournaments } from './seedTournaments.ts'
 // bowlers share a name and one has no USBC ID, so the list shows a stable order and a blank ID.
 // A super sweeper bowler is in both sweepers (REG-06); three are, so the super sweeper shows a
 // bowler who bowled everything, one who did not finish the complete sweeper, and one who missed it. No row ever holds an SSN.
-// `average` drives handicap (SCR-07); one bowler has none. `lanes` maps a session key (`a1` is
+// `average` drives handicap (SCR-07); one bowler has none. Dana's average is verified and Maria's adjusted,
+// so the Averages page and the Registrations page show every status (AVG-02, AVG-11); the rest are unverified. `lanes` maps a session key (`a1` is
 // squad 1, `b1` is sweeper 1) to the stored position: '' is not assigned (LAN-01, D-58). The open
 // squad 2 has bowlers on one pair and others waiting; the complete squad 1 is all placed but one.
 interface Sample {
@@ -24,6 +25,8 @@ interface Sample {
   superSweeper: number
   average: number | null
   lanes: Record<string, string>
+  /** A director's check (AVG-01): `note` null verifies the average as it is, a note adjusts it to `average`. */
+  check?: { average: number; note: string | null }
 }
 
 const samples: Sample[] = [
@@ -40,6 +43,7 @@ const samples: Sample[] = [
     superSweeper: 1,
     average: 212,
     lanes: { a1: '1A', a2: '1A', b1: '1A', b2: '' },
+    check: { average: 212, note: null },
   },
   {
     n: 2,
@@ -68,6 +72,7 @@ const samples: Sample[] = [
     superSweeper: 1,
     average: 168,
     lanes: { a1: '2C', a2: '2C', b1: '', b2: '' },
+    check: { average: 172, note: 'USBC book average, checked at the desk' },
   },
   {
     n: 4,
@@ -190,6 +195,22 @@ export async function seedRegistrations(client: PrismaClient): Promise<number> {
         ),
       ),
     ]),
+  )
+  await Promise.all(
+    rows.flatMap(({ tournamentId, n, average, check }) =>
+      check
+        ? [
+            client.$executeRaw`
+              INSERT INTO AverageVerifications
+                (RegistrationId, ProvidedAverage, VerifiedAverage, Note, VerifiedBy, VerifiedAt)
+              VALUES (${rowId(tournamentId, 'f', n)}, ${average}, ${check.average}, ${check.note},
+                      'seed', NOW(3))
+              ON DUPLICATE KEY UPDATE
+                ProvidedAverage = VALUES(ProvidedAverage), VerifiedAverage = VALUES(VerifiedAverage),
+                Note = VALUES(Note)`,
+          ]
+        : [],
+    ),
   )
   return rows.length
 }

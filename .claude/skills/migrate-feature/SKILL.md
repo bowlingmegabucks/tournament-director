@@ -27,7 +27,7 @@ Use a short kebab-case slug for `<feature>`, matching the migration file when th
 ## Phase 0: Set up
 
 1. Check git. If on `main`, make a branch: `git checkout -b migrate-<feature>`. If the working tree has changes not part of this work, tell the owner and ask before you go on.
-2. Read, in this order:
+2. Hand the lookup to the `legacy-researcher` agent: it returns the rules, open questions, decisions, and what is built, and keeps the reading out of this session. Then read the files it names that you need. The list it follows:
    - `docs/migration/README.md`, `glossary.md`, `domain-model.md`
    - The feature file(s) the description points to
    - `decisions-and-questions.md` (all of it: decisions apply everywhere)
@@ -123,7 +123,7 @@ Anything the owner might expect that is out of scope, and why.
 
 If the feature adds or changes any screen, form, dialog, or list, make HTML mockups before the owner approves the plan.
 
-1. Load the `ui-standards` skill and follow it: semantic HTML, the layout recipes, labels, and the states every data view needs.
+1. Have the `ui-designer` agent draft the layout and states, or load the `ui-standards` skill and follow it: semantic HTML, the layout recipes, labels, and the states every data view needs.
 2. Write one static HTML file per screen in `docs/plans/<feature>-mockups/`, such as `list.html` and `create-form.html`. Link the real styles so the mockup matches the app: `<link rel="stylesheet" href="../../../web/src/styles/tokens.css">` and `base.css`. No raw colors; use the tokens.
 3. Show each state on the page, one after another with a heading: filled, loading, empty, error, and form validation errors with the real messages from the rules.
 4. Use mock data that looks real (bowling center names, plausible fees and ratios).
@@ -144,7 +144,7 @@ git commit -m "Plan <feature> migration"
 ## Phase 4: Build
 
 1. Follow the plan's steps. Load the skills that fit: `api-patterns` and `api-testing-patterns` for `api/`; `react-patterns`, `typescript-standards`, `testing-patterns`, `ui-standards` for `web/`.
-2. Cite the rule ID in each test name: `it("rejects an empty name (TRN-01)")`.
+2. For routes, ask `api-designer` for the design first. Delegate tests to `web-test-writer` or `api-test-writer`, and run `react-reviewer` or `api-reviewer` on the diff before you commit. Cite the rule ID in each test name: `it("rejects an empty name (TRN-01)")`.
 3. If the build shows the plan is wrong, stop. Tell the owner, agree a change, and update the plan file (and decisions, if it is a new choice) before you go on.
 4. Before you call it done, run lint, typecheck, test, and `format:check` in each folder you changed (`npm run check` at the root does both). Run `npm run test:e2e` in `web/` if the UI flow changed. Run `npm run test:mutation:fast` (skips the slow static mutants; CI runs the full `test:mutation`) for new logic and fix survivors.
 5. Commit in small steps with imperative messages that cite rules: `Add tournament create route (TRN-01 to TRN-09)`.

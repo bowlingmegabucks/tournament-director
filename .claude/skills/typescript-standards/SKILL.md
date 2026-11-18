@@ -78,3 +78,7 @@ In `catch (error)`, `error` is `unknown`. Narrow with `instanceof Error` before 
 ## Check current docs
 
 TypeScript here is 6.x. Before you use a newer compiler option or feature from memory, check the docs with Context7.
+
+## Agents
+
+The `react-reviewer` (web/) and `api-reviewer` (api/) agents check these rules in review. Run the one that matches the folder you changed.

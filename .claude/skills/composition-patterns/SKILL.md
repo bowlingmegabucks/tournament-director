@@ -87,3 +87,7 @@ Each rule file contains:
 ## Full Compiled Document
 
 For the complete guide with all rules expanded: `AGENTS.md`
+
+## Agents
+
+The `react-reviewer` and `ui-designer` agents load this skill. Use `react-reviewer` after you refactor a component API.

@@ -87,3 +87,7 @@ What to log, at which level, and when to add a metric: see `api-observability`.
 - Is a response shape change mirrored in `web/`?
 - Is `server.ts` still free of logic?
 - Does the new file use `.ts` import extensions and erasable syntax only?
+
+## Agents
+
+Start a new route with the `api-designer` agent: it returns paths, access labels, Zod shapes, and status codes. After you build, hand the diff to `api-reviewer`. For tests, use `api-test-writer`.

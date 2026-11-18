@@ -174,6 +174,20 @@ Claude loads a skill when the task matches its description. The rules above stay
 | `release-notes`                 | Write GitHub release notes for a new version (`release-notes.md`); marks 0.x as pre-release              |
 | `migrate-feature`               | Port a legacy feature: settle questions, plan, build, record in `docs/requirements/`                     |
 
+## Agents (`.claude/agents/`)
+
+An agent is a separate Claude session with its own context, one job, and a short tool list. Skills hold the rules; agents apply them. Each agent preloads the skills it needs. The skills point to the agents.
+
+| Agent                                | Job                                                   | Edits files?    |
+| ------------------------------------ | ----------------------------------------------------- | --------------- |
+| `react-reviewer`, `api-reviewer`     | Review a diff in `web/` or `api/` against the rules   | No              |
+| `ui-designer`                        | Layout spec and states for a screen (optional mockup) | Mockups only    |
+| `api-designer`                       | Routes, access labels, Zod shapes, status codes       | No              |
+| `web-test-writer`, `api-test-writer` | Write tests in the repo's conventions                 | Test files only |
+| `legacy-researcher`                  | Look up legacy rules, questions, decisions            | No              |
+
+Use an agent for work that reads many files or needs a second opinion; use a skill for steps you do in the main session.
+
 Read any third-party skill before you add it. A skill steers Claude like code. Do not add skills that fetch their instructions from a URL at run time.
 
 ## Git and CI

@@ -104,3 +104,7 @@ URL state (selected tournament, filters) belongs in the URL, not `useState`.
 ## Check current docs
 
 React 19 and TanStack Query 5 APIs change. Check Context7 before you use an API from memory.
+
+## Agents
+
+After you build or change a component, hook, or data view, hand the diff to the `react-reviewer` agent. For a missing or weak test, use `web-test-writer`. For a new screen, start with `ui-designer`.

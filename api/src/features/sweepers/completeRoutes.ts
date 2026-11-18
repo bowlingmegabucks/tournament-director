@@ -5,6 +5,7 @@ import type { LiveNotifier } from '../results/liveEvents.ts'
 import {
   createSessionCompleteInfoRouter,
   createSessionCompleteRouter,
+  type UnverifiedCounter,
 } from '../../shared/sessionCompleteRoutes.ts'
 import type { SweeperWriter } from './writer.ts'
 
@@ -14,11 +15,15 @@ export function createSweeperCompleteRouter(
   logger: Logger,
   events: SessionEvents,
   live?: LiveNotifier,
+  unverified?: UnverifiedCounter,
 ): Router {
-  return createSessionCompleteRouter(writer, logger, 'sweeper', events, live)
+  return createSessionCompleteRouter(writer, logger, 'sweeper', events, live, unverified)
 }
 
 /** `GET /:sessionId/complete-info` of a sweeper (D-194), behind `squads.write`. */
-export function createSweeperCompleteInfoRouter(writer: SweeperWriter): Router {
-  return createSessionCompleteInfoRouter(writer, 'sweeper')
+export function createSweeperCompleteInfoRouter(
+  writer: SweeperWriter,
+  unverified?: UnverifiedCounter,
+): Router {
+  return createSessionCompleteInfoRouter(writer, 'sweeper', unverified)
 }

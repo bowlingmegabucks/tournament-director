@@ -55,6 +55,8 @@ import type { DnfStore } from './features/dnf/store.ts'
 import { createTtlCache, LIVE_CACHE_MS } from './shared/ttlCache.ts'
 import { createAverageReadRouter, createAverageWriteRouter } from './features/averages/routes.ts'
 import type { AverageStore } from './features/averages/store.ts'
+import { countUnverifiedBowlers } from './features/averages/unverifiedCount.ts'
+import type { UnverifiedCounter } from './shared/sessionCompleteRoutes.ts'
 import { createPayoutReadRouter, createPayoutWriteRouter } from './features/payouts/routes.ts'
 import type { PayoutStore } from './features/payouts/store.ts'
 import { createSquadRouter } from './features/squads/routes.ts'
@@ -297,6 +299,13 @@ export function createApp({
     },
   }
   const averageDeps = { averages: averageStore, logger }
+  // Handicap bowlers with scores on an average no director checked, for the complete warning (AVG-18, D-297).
+  const unverifiedIn: UnverifiedCounter = async (tournamentId, sessionId) =>
+    countUnverifiedBowlers(
+      await lanes.listEntries(sessionId),
+      await scores.listScores(sessionId),
+      await divisions.listByTournament(tournamentId),
+    )
 
   // One router serves every method; the two groups below give each its own access.
   const vendorRegistrations = createVendorRegistrationRouter({
@@ -401,13 +410,13 @@ export function createApp({
         path: '/v1/tournaments/:id/squads',
         access: { permission: 'squads.write' }, // SQD-15, D-193: complete; no API key
         methods: ['POST'],
-        router: createSquadCompleteRouter(squadWriter, logger, events, liveNotifier),
+        router: createSquadCompleteRouter(squadWriter, logger, events, liveNotifier, unverifiedIn),
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/complete-info',
         access: { permission: 'squads.write' }, // D-194: no API key
         methods: ['GET'],
-        router: createSquadCompleteInfoRouter(squadWriter),
+        router: createSquadCompleteInfoRouter(squadWriter, unverifiedIn),
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/delete-info',
@@ -448,13 +457,19 @@ export function createApp({
         path: '/v1/tournaments/:id/sweepers',
         access: { permission: 'squads.write' }, // SQD-16, D-193: complete; no API key
         methods: ['POST'],
-        router: createSweeperCompleteRouter(sweeperWriter, logger, events, liveNotifier),
+        router: createSweeperCompleteRouter(
+          sweeperWriter,
+          logger,
+          events,
+          liveNotifier,
+          unverifiedIn,
+        ),
       },
       {
         path: '/v1/tournaments/:id/sweepers/:sessionId/complete-info',
         access: { permission: 'squads.write' }, // D-194: no API key
         methods: ['GET'],
-        router: createSweeperCompleteInfoRouter(sweeperWriter),
+        router: createSweeperCompleteInfoRouter(sweeperWriter, unverifiedIn),
       },
       {
         path: '/v1/tournaments/:id/sweepers/:sessionId/delete-info',

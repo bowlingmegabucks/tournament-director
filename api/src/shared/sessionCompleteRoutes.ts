@@ -1,7 +1,8 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { callerOf } from './auth/caller.ts'
-import { FieldErrorsError, HttpError } from './errors.ts'
+import { FieldErrorsError, HttpError, WarningsError } from './errors.ts'
+import { jsonBodyUpTo } from './jsonBody.ts'
 import type { SessionEvents } from './events/sessionEvents.ts'
 import type { LiveNotifier } from '../features/results/liveEvents.ts'
 import type { Logger } from './logger.ts'
@@ -11,6 +12,14 @@ import type { SessionKind } from './sessionDelete.ts'
 import type { SessionNotFound } from './sessionEdit.ts'
 
 const idParams = z.object({ id: z.uuid(), sessionId: z.uuid() })
+// Sent only to confirm a warning (D-297). No body at all is the same as not confirming.
+const confirmBody = z.object({ confirmWarnings: z.boolean().optional() }).optional()
+
+/**
+ * How many handicap bowlers with scores have an average no director checked (AVG-18, D-297). The
+ * routes ask before they complete and in the info the dialog reads.
+ */
+export type UnverifiedCounter = (tournamentId: string, sessionId: string) => Promise<number>
 
 /** "Squad" or "Sweeper". */
 const sessionName = (kind: SessionKind) => (kind === 'squad' ? 'Squad' : 'Sweeper')
@@ -36,6 +45,8 @@ const firstOf = (errors: Record<string, string>) => Object.values(errors)[0] ?? 
  * `squads.write` (D-193). Web only: the legacy API has no such route, so the vendor sees no change
  * (D-09). What may be completed is `planSessionComplete` (D-192); this router only turns its
  * answer into HTTP. A squad answers `{ squad, noShowCount }`, a sweeper `{ sweeper }` (D-190, D-191).
+ * With `unverified`, a session whose handicap bowlers bowled on unchecked averages answers `409` with
+ * `warnings` until the caller sends `confirmWarnings: true` (AVG-18, D-297).
  */
 export function createSessionCompleteRouter<Session>(
   completer: SessionCompleter<Session, unknown>,
@@ -43,11 +54,28 @@ export function createSessionCompleteRouter<Session>(
   kind: SessionKind,
   events: SessionEvents,
   live?: LiveNotifier,
+  unverified?: UnverifiedCounter,
 ): Router {
   const router = Router({ mergeParams: true })
 
-  router.post('/:sessionId/complete', async (req, res) => {
+  router.post('/:sessionId/complete', jsonBodyUpTo('1kb'), async (req, res) => {
     const { id, sessionId } = idParams.parse(req.params)
+    const body = confirmBody.parse(req.body)
+    const unchecked = (await unverified?.(id, sessionId)) ?? 0
+    if (unchecked > 0 && body?.confirmWarnings !== true) {
+      const noun =
+        unchecked === 1
+          ? 'bowler with scores has an average'
+          : 'bowlers with scores have an average'
+      const message = `${unchecked} handicap ${noun} that is not verified. Once the ${kind} is complete, a later change to an average changes finished results and payouts.`
+      requestLogger(res, logger).warn(
+        { actorId: callerOf(res).user?.id, tournamentId: id, [`${kind}Id`]: sessionId, unchecked },
+        `${sessionName(kind)} complete needs a confirm`,
+      )
+      throw new WarningsError(409, message, [{ field: 'average', message }], {
+        unverifiedBowlers: unchecked,
+      })
+    }
     const outcome = await completer.complete(id, sessionId)
     if ('notFound' in outcome) throw notFound(outcome, kind)
     const ids = { actorId: callerOf(res).user?.id, tournamentId: id, [`${kind}Id`]: sessionId }
@@ -86,6 +114,7 @@ export function createSessionCompleteRouter<Session>(
 export function createSessionCompleteInfoRouter<Info>(
   completer: SessionCompleter<unknown, Info>,
   kind: SessionKind,
+  unverified?: UnverifiedCounter,
 ): Router {
   const router = Router({ mergeParams: true })
 
@@ -94,7 +123,9 @@ export function createSessionCompleteInfoRouter<Info>(
     const { id, sessionId } = idParams.parse(req.params)
     const info = await completer.getCompleteInfo(id, sessionId)
     if (isNotFound(info)) throw notFound(info, kind)
-    res.json({ completeInfo: info })
+    // How many handicap bowlers with scores are on an unchecked average, so the dialog says so (D-297).
+    const unverifiedBowlers = (await unverified?.(id, sessionId)) ?? 0
+    res.json({ completeInfo: { ...info, unverifiedBowlers } })
   })
 
   return router

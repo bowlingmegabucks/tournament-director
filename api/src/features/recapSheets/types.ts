@@ -42,6 +42,11 @@ export const recapSheetsSchema = z.object({
   withoutLane: z.number().int().nonnegative(),
   /** Bowlers with a lane whose division is not one of the tournament's, so they have no sheet (D-51). */
   withoutDivision: z.number().int().nonnegative(),
+  /**
+   * Bowlers with a sheet, in a handicap division, whose average no director checked (AVG-14, D-293). Their
+   * handicap on the sheet comes from the average they gave.
+   */
+  withoutVerifiedAverage: z.number().int().nonnegative(),
 })
 
 export type RecapSheets = z.infer<typeof recapSheetsSchema>

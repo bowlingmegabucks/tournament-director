@@ -111,6 +111,8 @@ export function createRegistration(overrides: Partial<Registration> = {}): Regis
     divisionId: faker.string.uuid(),
     divisionName: 'Open',
     superSweeper: false,
+    average: 200,
+    averageStatus: 'none',
     squadIds: [],
     sweeperIds: [],
     ...overrides,

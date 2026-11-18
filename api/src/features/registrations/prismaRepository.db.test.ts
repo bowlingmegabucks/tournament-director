@@ -135,9 +135,38 @@ describe('Prisma registration repository', () => {
         divisionId,
         divisionName: 'Women / Senior',
         superSweeper: true,
+        average: 190,
+        averageStatus: 'none',
         squadIds: [squadId],
         sweeperIds: [sweeperId],
       },
+    ])
+  })
+
+  it('reads the average in use and the check of a handicap registration (AVG-09, AVG-11)', async () => {
+    const tournamentId = await insertTournament()
+    const divisionId = await insertDivision(tournamentId, 'Handicap A')
+    await client.$executeRawUnsafe(
+      'UPDATE Divisions SET HandicapPercentage = 0.90, HandicapBase = 220 WHERE Id = ?',
+      divisionId,
+    )
+    const adjusted = await insertRegistration(await insertBowler({ last: 'Adams' }), divisionId)
+    const verified = await insertRegistration(await insertBowler({ last: 'Brown' }), divisionId)
+    await insertRegistration(await insertBowler({ last: 'Cole' }), divisionId)
+    await client.$executeRawUnsafe(
+      `INSERT INTO AverageVerifications (RegistrationId, ProvidedAverage, VerifiedAverage, Note, VerifiedBy, VerifiedAt)
+       VALUES (?, 190, 182, 'USBC book', 'user-1', NOW(3)), (?, 190, 190, NULL, 'user-1', NOW(3))`,
+      adjusted,
+      verified,
+    )
+    const { repository } = setup()
+
+    const listed = await repository.listByTournament(tournamentId)
+
+    expect(listed.map((row) => [row.bowler.lastName, row.average, row.averageStatus])).toEqual([
+      ['Adams', 182, 'adjusted'],
+      ['Brown', 190, 'verified'],
+      ['Cole', 190, 'unverified'],
     ])
   })
 

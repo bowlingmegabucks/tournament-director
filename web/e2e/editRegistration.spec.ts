@@ -246,7 +246,7 @@ test('turning super sweeper off says so on Review and saves (REG-18, D-204)', as
   await save(page).click()
 
   await expect(page.getByText('Dana Abbott: Registration updated.')).toBeVisible()
-  await expect((await rowOf(page, 'Dana Abbott')).getByText('No')).toBeVisible()
+  await expect((await rowOf(page, 'Dana Abbott')).getByText('No', { exact: true })).toBeVisible()
 })
 
 test('a bowler detail can change and an emptied box clears (BWL-16, D-206)', async ({ page }) => {

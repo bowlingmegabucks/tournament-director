@@ -12,11 +12,11 @@ Built so far (full record per branch: [docs/status-history.md](docs/status-histo
 - **Security.** API key, Better Auth sign-in, roles `scoreKeeper`, `director`, `admin` mapped to permissions, route lock-down, user management (add, list, edit, disable, reset, self-service), SSN encryption. User-management production setup is not built (see [docs/plans/user-management-followups.md](docs/plans/user-management-followups.md)).
 - **Read views.** Tournaments, divisions, squads, sweepers, registrations, lane assignments, recap sheets (with QR code), check-in sheet, scores, squad, sweeper, super sweeper, at-large and seeding results, TV page (`liveResults`).
 - **Commands.** Create, edit, delete for tournaments, divisions, squads, sweepers, and registrations (desk and vendor routes); complete squad, sweeper, and tournament; lane move; score entry; payouts (data only; the 1099 report comes later).
+- **Average verification.** An Averages page where a director verifies or adjusts each handicap bowler's average (`averages.verify`, AVG-01 to AVG-19); handicap works from the average in use, and results, scores, lanes, and TV mark unverified bowlers. Completing a session with unchecked averages asks first. Run `api/prisma/average-tables.sql` once per database before deploying. Plan: [docs/plans/average-verification.md](docs/plans/average-verification.md).
 - **Live updates.** Server-sent events from an in-process hub: run **one instance**. Turn on HTTP/2 in Azure.
 - **Tests.** `npm run test:lifecycle` in `web/` plays a whole tournament (Docker and `python3` needed; about 5 minutes); see [docs/plans/lifecycle-e2e.md](docs/plans/lifecycle-e2e.md).
-- **Database scripts to run once per database before deploying:** `api/prisma/auth-tables.sql`, `score-tables.sql`, `payout-tables.sql` (`npm run db:tables` makes them all locally).
+- **Database scripts to run once per database before deploying:** `api/prisma/auth-tables.sql`, `score-tables.sql`, `payout-tables.sql`, `average-tables.sql` (`npm run db:tables` makes them all locally).
 - **Rules to keep in mind.** Complete tournaments are frozen (D-130). Deletes are red outline buttons in a `DangerZone` (D-215). Edits sort a field into free, confirm (`409` with `warnings`, resend with `confirmWarnings: true`), or refused (`409` with `errors`). Web-only routes sit beside the vendor routes, which stay untouched.
-
 
 Also done on branch `claudeSkills`: project skills in `.claude/skills/` (React, TypeScript, testing, composition) and stricter ESLint rules.
 
@@ -120,6 +120,7 @@ Details in [docs/api-standards.md](docs/api-standards.md).
 - Test with Vitest + Supertest through `createApp`. Mutation: Stryker, same thresholds as `web/`.
 - `qs` override in `api/package.json`: same Stryker advisory as `web/`. Remove it in both places together.
 - `minimatch` and `glob` overrides in `api/package.json`: moderate advisories (GHSA-g3hv-75wg-m249, GHSA-3g3m-2fjr-6pw4) through Testcontainers' `archiver`, and Stryker and ESLint. Dev-only. Remove them once those packages ship fixed ranges, then run `npm audit`.
+- **`picomatch` high advisory (GHSA-fc5q-39xc-vjpf, ReDoS), dev-only, in `api/` and `web/`.** It covers every release (`<=4.0.7`, the newest), so no override or upgrade clears it; Vite, Vitest, `tinyglobby`, and `typescript-eslint` pull it in. `npm audit --omit=dev` (the pull request gate) is clean for `web/`. In `api/` it fails, because `better-auth` lists `vitest` as an optional peer and npm installs it (with Vite and `picomatch`) even without dev dependencies; `npm ci --omit=dev --omit=peer` would skip it. Do not run `npm audit fix --force`: it downgrades Vitest and Vite. Revisit when `picomatch` ships a fix, then run `npm audit`.
 - `web/` keeps moderate `minimatch` advisories (dev-only). `eslint-plugin-jsx-a11y` needs `minimatch` 3 and breaks on 11, so an override cannot clear them. `npm audit fix --force` would downgrade ESLint to 4.0.0; do not run it. Revisit when the plugin supports ESLint 10.
 
 ## Code standards (summary)

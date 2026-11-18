@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Registrations mockup</title>
+<link rel="stylesheet" href="../../../web/src/styles/tokens.css" /><link rel="stylesheet" href="mockups.css" /></head>
+<body><main>
+<p><a href="index.html">All mockups</a></p>
+<h1>Registrations page (AVG-11)</h1>
+<p class="note">One new column, "Average". A scratch division shows the provided average as plain text with no status. A handicap division shows the status. Clicking the adjusted number opens the Details popup (see the Averages mockup).</p>
+<div class="frame"><p class="cap">Registrations, filled</p><div class="body">
+<table class="stack">
+<thead><tr><th scope="col">Bowler</th><th scope="col">Division</th><th scope="col">Average</th><th scope="col" class="num">Squads</th><th scope="col" class="num">Sweepers</th></tr></thead>
+<tbody>
+<tr><td data-label="Bowler">Anita Brooks</td><td data-label="Division">Handicap A</td><td data-label="Average">178 <span class="ok" aria-hidden="true">✓</span><span class="sr"> verified</span></td><td data-label="Squads" class="num">2</td><td data-label="Sweepers" class="num">1</td></tr>
+<tr><td data-label="Bowler">Bill Tran</td><td data-label="Division">Handicap A</td><td data-label="Average"><button type="button" class="link adj" aria-label="Average 182, adjusted from 175. Show details">182 adjusted</button></td><td data-label="Squads" class="num">1</td><td data-label="Sweepers" class="num">0</td></tr>
+<tr><td data-label="Bowler">Carla Mendes</td><td data-label="Division">Handicap A</td><td data-label="Average">187 <span class="mark">Not verified</span></td><td data-label="Squads" class="num">2</td><td data-label="Sweepers" class="num">2</td></tr>
+<tr><td data-label="Bowler">Priya Natarajan</td><td data-label="Division">Handicap B</td><td data-label="Average">— <span class="mark">No average</span></td><td data-label="Squads" class="num">1</td><td data-label="Sweepers" class="num">1</td></tr>
+<tr><td data-label="Bowler">Frank Dorsey</td><td data-label="Division">Open (scratch)</td><td data-label="Average">214</td><td data-label="Squads" class="num">3</td><td data-label="Sweepers" class="num">2</td></tr>
+</tbody></table></div></div>
+<h3>The popup after clicking "182 adjusted"</h3>
+<div class="frame"><div class="body"><div class="dialog" role="dialog" aria-labelledby="t">
+<h3 id="t">Average: Bill Tran</h3>
+<dl style="display:grid;grid-template-columns:auto 1fr;gap:var(--space-1) var(--space-4);margin:0">
+<dt>Provided</dt><dd style="margin:0">175</dd><dt>Verified</dt><dd style="margin:0">182</dd>
+<dt>Why</dt><dd style="margin:0">USBC book average for 2025-26 season, checked on the league site, 11/17.</dd>
+<dt>By</dt><dd style="margin:0">Dana Reyes, 11/17/2026 4:12 PM</dd></dl>
+<div class="actions"><button type="button">Close</button></div></div></div></div>
+</main></body></html>

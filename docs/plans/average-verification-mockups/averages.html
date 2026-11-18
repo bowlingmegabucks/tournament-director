@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Averages page mockup</title>
+<link rel="stylesheet" href="../../../web/src/styles/tokens.css" />
+<link rel="stylesheet" href="mockups.css" />
+</head>
+<body><main>
+<p><a href="index.html">All mockups</a></p>
+<h1>Averages page (AVG-02 to AVG-07, AVG-15)</h1>
+<p class="note">Route <code>/tournaments/{id}/averages</code>, new "Averages" item in the tournament menu. Handicap divisions only. Status is a word plus a mark, never color alone.</p>
+
+<h2>1. Unverified filter (the default)</h2>
+<div class="frame">
+<p class="cap">Signed in as a director. Sidebar shows the new item.</p>
+<div class="shell">
+<nav class="side" aria-label="Tournament"><ul>
+<li><a href="#">Overview</a></li><li><a href="#">Divisions</a></li><li><a href="#">Squads</a></li><li><a href="#">Sweepers</a></li><li><a href="#">Registrations</a></li><li><a href="#" aria-current="page" class="new">Averages</a></li><li><a href="#">Payouts</a></li></ul></nav>
+<div class="body">
+<h2 style="margin-block-start:0">Averages</h2>
+<p class="note">Check each bowler's average before handicap counts on it. Showing 4 of 52 registrations in handicap divisions.</p>
+<div class="toolbar">
+<div class="seg" role="group" aria-label="Show"><button type="button" aria-pressed="true">Unverified (4)</button><button type="button" aria-pressed="false">All (52)</button></div>
+<div class="field" style="margin:0"><label for="f1">Find a bowler</label><input id="f1" type="search" /></div>
+</div>
+<table class="stack">
+<thead><tr><th scope="col">Bowler</th><th scope="col">Division</th><th scope="col">USBC ID</th><th scope="col" class="num">Provided</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
+<tbody>
+<tr><td data-label="Bowler">Carla Mendes</td><td data-label="Division">Handicap A</td><td data-label="USBC ID">412-8830</td><td data-label="Provided" class="num">187</td><td data-label="Status"><span class="mark">Not verified</span></td><td><button type="button">Verify</button> <button type="button" class="secondary">Adjust</button></td></tr>
+<tr><td data-label="Bowler">Dennis O'Rourke</td><td data-label="Division">Handicap B</td><td data-label="USBC ID">390-1142</td><td data-label="Provided" class="num">162</td><td data-label="Status"><span class="mark">Not verified</span></td><td><button type="button">Verify</button> <button type="button" class="secondary">Adjust</button></td></tr>
+<tr><td data-label="Bowler">Priya Natarajan</td><td data-label="Division">Handicap B</td><td data-label="USBC ID">455-0921</td><td data-label="Provided" class="num">—</td><td data-label="Status"><span class="mark">No average</span></td><td><button type="button" class="secondary">Adjust</button> <span class="note">enter an average to verify</span></td></tr>
+<tr><td data-label="Bowler">Walt Kowalczyk</td><td data-label="Division">Handicap A</td><td data-label="USBC ID">287-6610</td><td data-label="Provided" class="num">201</td><td data-label="Status"><span class="mark">Not verified</span></td><td><button type="button">Verify</button> <button type="button" class="secondary">Adjust</button></td></tr>
+</tbody></table>
+</div></div></div>
+
+<h2>2. All filter: verified, adjusted, and unverified rows</h2>
+<div class="frame"><p class="cap">Verified shows a check mark. Adjusted shows the number in use, the provided number, and a Details button. Adjust stays on every row so a director can change it again (AVG-07). A verified or adjusted row also gets "Remove check".</p>
+<div class="body"><table class="stack">
+<thead><tr><th scope="col">Bowler</th><th scope="col">Division</th><th scope="col" class="num">Provided</th><th scope="col" class="num">In use</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
+<tbody>
+<tr><td data-label="Bowler">Anita Brooks</td><td data-label="Division">Handicap A</td><td data-label="Provided" class="num">178</td><td data-label="In use" class="num">178</td><td data-label="Status"><span class="ok" aria-hidden="true">✓</span> Verified</td><td><button type="button" class="secondary">Adjust</button> <button type="button" class="link">Remove check</button></td></tr>
+<tr><td data-label="Bowler">Bill Tran</td><td data-label="Division">Handicap A</td><td data-label="Provided" class="num">175</td><td data-label="In use" class="num"><span class="adj">182</span></td><td data-label="Status"><span class="pill good">Adjusted</span> <button type="button" class="link">Details</button></td><td><button type="button" class="secondary">Adjust</button> <button type="button" class="link">Remove check</button></td></tr>
+<tr><td data-label="Bowler">Carla Mendes</td><td data-label="Division">Handicap A</td><td data-label="Provided" class="num">187</td><td data-label="In use" class="num">187</td><td data-label="Status"><span class="mark">Not verified</span></td><td><button type="button">Verify</button> <button type="button" class="secondary">Adjust</button></td></tr>
+</tbody></table></div></div>
+
+<h2>3. Adjust form (AVG-04, AVG-05)</h2>
+<div class="frame"><p class="cap">A dialog opened by Adjust. Average is whole, 1 to 300. The note is required (at most 500 characters).</p>
+<div class="body">
+<div class="dialog" role="dialog" aria-labelledby="t3">
+<h3 id="t3">Adjust average: Bill Tran</h3>
+<p class="note">Handicap A · provided 175 · division limits: maximum 190</p>
+<div class="field"><label for="a3">Verified average</label><input id="a3" inputmode="numeric" value="182" /></div>
+<div class="field"><label for="n3">Why was it adjusted, or where did the new average come from?</label><textarea id="n3">USBC book average for 2025-26 season, checked on the league site, 11/17.</textarea><span class="hint">Required. 71 of 500 characters.</span></div>
+<div class="actions"><button type="button" class="secondary">Cancel</button><button type="button">Save adjusted average</button></div>
+</div></div></div>
+
+<h3>Validation errors</h3>
+<div class="frame"><div class="body"><div class="dialog">
+<h3>Adjust average: Walt Kowalczyk</h3>
+<p class="note">Handicap A · provided 201 · division limits: maximum 190</p>
+<div class="field"><label for="a4">Verified average</label><input id="a4" inputmode="numeric" value="204" aria-invalid="true" aria-describedby="e4" /><p id="e4" class="err" role="alert">The verified average is above the division limit. Move the bowler to another division.</p></div>
+<div class="field"><label for="n4">Why was it adjusted, or where did the new average come from?</label><textarea id="n4" aria-invalid="true" aria-describedby="e5"></textarea><p id="e5" class="err" role="alert">Say why the average changed, or where it came from.</p></div>
+<div class="actions"><button type="button" class="secondary">Cancel</button><button type="button">Save adjusted average</button></div></div></div></div>
+
+<h3>Warning when the bowler has scores (AVG-06, D-294)</h3>
+<div class="frame"><div class="body"><div class="dialog">
+<h3>Change results?</h3>
+<div class="warn"><p style="margin:0">Bill Tran already has scores. A new average changes handicap, so results change.</p>
+<p>Squad Saturday 9:00 AM is complete. Payouts already made may now be wrong.</p></div>
+<div class="actions"><button type="button" class="secondary">Cancel</button><button type="button">Adjust anyway</button></div></div></div></div>
+
+<h2>4. Other states</h2>
+<h3>Loading</h3>
+<div class="frame"><div class="body"><p class="dots" role="status">Loading averages …</p>
+<table class="skeleton"><tbody><tr><td><span></span></td><td><span></span></td><td><span></span></td></tr><tr><td><span></span></td><td><span></span></td><td><span></span></td></tr></tbody></table></div></div>
+<h3>Empty: nothing left to check</h3>
+<div class="frame"><div class="body"><p class="empty">Every handicap bowler has a checked average. Choose All to review them.</p></div></div>
+<h3>Empty: no handicap divisions</h3>
+<div class="frame"><div class="body"><p class="empty">This tournament has no handicap divisions, so there are no averages to check.</p></div></div>
+<h3>Error</h3>
+<div class="frame"><div class="body"><div class="alert" role="alert"><p style="margin-block:0 var(--space-3)">Could not load the averages.</p><button type="button">Try again</button></div></div></div>
+
+<h3>Read only: a score keeper, or a complete tournament (AVG-10, AVG-15)</h3>
+<div class="frame"><p class="cap">No Verify, Adjust, or Remove buttons. A complete tournament says why.</p><div class="body">
+<p class="warn">This tournament is complete. Averages cannot change.</p>
+<table class="stack" style="margin-block-start:var(--space-3)"><thead><tr><th scope="col">Bowler</th><th scope="col">Division</th><th scope="col" class="num">Provided</th><th scope="col" class="num">In use</th><th scope="col">Status</th></tr></thead>
+<tbody><tr><td data-label="Bowler">Bill Tran</td><td data-label="Division">Handicap A</td><td data-label="Provided" class="num">175</td><td data-label="In use" class="num"><span class="adj">182</span></td><td data-label="Status"><span class="pill good">Adjusted</span> <button type="button" class="link">Details</button></td></tr></tbody></table></div></div>
+
+<h3>The Details popup (also used on the Registrations page)</h3>
+<div class="frame"><div class="body"><div class="dialog" role="dialog" aria-labelledby="t9">
+<h3 id="t9">Average: Bill Tran</h3>
+<dl style="display:grid;grid-template-columns:auto 1fr;gap:var(--space-1) var(--space-4);margin:0">
+<dt>Provided</dt><dd style="margin:0">175</dd><dt>Verified</dt><dd style="margin:0">182</dd>
+<dt>Why</dt><dd style="margin:0">USBC book average for 2025-26 season, checked on the league site, 11/17.</dd>
+<dt>By</dt><dd style="margin:0">Dana Reyes, 11/17/2026 4:12 PM</dd></dl>
+<div class="actions"><button type="button">Close</button></div></div></div></div>
+</main></body></html>

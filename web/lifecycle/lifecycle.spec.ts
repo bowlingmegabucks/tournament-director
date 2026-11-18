@@ -96,6 +96,7 @@ import {
   superSweeperFor,
   sweepersFor,
 } from './data/registrationPlan'
+import { verifyAllAverages } from './support/averages'
 import { leaveForm, openTournamentPage } from './support/navigate'
 import { inviteLinkIn, waitForMail } from './support/mail'
 import { mainMenu, signIn } from './support/signIn'
@@ -495,6 +496,8 @@ for (const batch of deskBatches) {
   }) => {
     const entered = Object.values(afterDeskExpected.squadEntries)[batch] ?? 0
     await signIn(page, director)
+    // Every handicap bowler's average is checked before the squad bowls, so it completes with no warning (AVG-18).
+    await verifyAllAverages(page)
     const path = await openSquad(page, squad)
     await assignAllLanes(page, squad, entered)
     const letter = 'ABCD'[batch] ?? ''
@@ -570,6 +573,7 @@ for (const [number, sweeper, entered] of [
   }) => {
     const key = `S${number}`
     await signIn(page, director)
+    await verifyAllAverages(page)
     const path = await openSession(page, sweeper, 'sweeper')
     await assignAllLanes(page, sweeper, entered)
     await enterAllScores(page, path, Number(sweeper.games), (name, game) =>

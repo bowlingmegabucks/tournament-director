@@ -421,3 +421,176 @@ describe('who can change an average (AVG-10, AVG-15, D-294)', () => {
     expect(screen.queryByText('Carla Mendes')).not.toBeInTheDocument()
   })
 })
+
+describe('the Averages page in detail (AVG-02, AVG-03, AVG-07, D-295)', () => {
+  it('marks the pressed filter, and moves the address with each choice', async () => {
+    const user = userEvent.setup()
+    serve()
+    open()
+
+    const unverified = await screen.findByRole('button', { name: /^Unverified/ })
+    const all = screen.getByRole('button', { name: /^All/ })
+    expect(unverified).toHaveAttribute('aria-pressed', 'true')
+    expect(all).toHaveAttribute('aria-pressed', 'false')
+
+    await user.click(all)
+    expect(all).toHaveAttribute('aria-pressed', 'true')
+    expect(unverified).toHaveAttribute('aria-pressed', 'false')
+
+    await user.click(unverified)
+    expect(unverified).toHaveAttribute('aria-pressed', 'true')
+    expect(all).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('counts one registration in the singular, and says "No bowler matches" for a search that finds none', async () => {
+    const user = userEvent.setup()
+    serve({ rows: [carla] })
+    open()
+
+    expect(
+      await screen.findByText(/Showing 1 of 1 registration in handicap divisions/),
+    ).toBeVisible()
+    await user.type(screen.getByLabelText('Find a bowler'), 'zzz')
+    expect(screen.getByText('No bowler matches.')).toBeVisible()
+    await user.clear(screen.getByLabelText('Find a bowler'))
+    await user.click(screen.getByRole('button', { name: 'All (1)' }))
+    await user.type(screen.getByLabelText('Find a bowler'), 'zzz')
+    expect(screen.getByText('No bowler matches.')).toBeVisible()
+  })
+
+  it('shows an Actions column only to a director on an open tournament', async () => {
+    serve()
+    open()
+    expect(await screen.findByRole('columnheader', { name: 'Actions' })).toBeVisible()
+  })
+
+  it('has no Actions column for a score keeper', async () => {
+    setMockUser(createSignedInUser({ roles: ['scoreKeeper'] }))
+    serve()
+    open()
+
+    await screen.findByText('Carla Mendes')
+    expect(screen.queryByRole('columnheader', { name: 'Actions' })).not.toBeInTheDocument()
+  })
+
+  it('shows a dash for a missing average and the adjusted number apart', async () => {
+    serve()
+    open('?show=all')
+
+    const priyaRow = (await screen.findByRole('rowheader', { name: 'Priya Natarajan' })).closest(
+      'tr',
+    )
+    expect(within(priyaRow as HTMLElement).getAllByText('—')).toHaveLength(2)
+    const billRow = screen.getByRole('rowheader', { name: 'Bill Tran' }).closest('tr')
+    expect(within(billRow as HTMLElement).getByText('182')).toBeVisible()
+  })
+
+  it('offers Remove check only where there is a check, and Verify only where there is none', async () => {
+    serve()
+    open('?show=all')
+
+    await screen.findByText('Carla Mendes')
+    expect(screen.getByRole('button', { name: 'Verify Carla Mendes' })).toBeVisible()
+    expect(
+      screen.queryByRole('button', { name: 'Remove check for Carla Mendes' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Verify Anita Brooks' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove check for Anita Brooks' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Verify Bill Tran' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Remove check for Priya Natarajan' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('asks to confirm a verify that would change results, then sends it with the confirm (AVG-06)', async () => {
+    const user = userEvent.setup()
+    const calls = serve({
+      rows: [bill],
+      putStatus: (call) =>
+        (call.body as { confirmWarnings?: boolean } | undefined)?.confirmWarnings
+          ? undefined
+          : {
+              status: 409,
+              body: {
+                message: 'Bill Tran already has scores.',
+                warnings: [{ field: 'average', message: 'Bill Tran already has scores.' }],
+              },
+            },
+    })
+    open('?show=all')
+    // Bill is adjusted, so a director takes the check away to verify the average as given: use Adjust's twin, Verify.
+    server.use(
+      http.get(`${base}/averages`, () =>
+        HttpResponse.json({
+          rows: [{ ...bill, status: 'unverified', note: null }],
+          tournamentComplete: false,
+        }),
+      ),
+    )
+    await user.click(await screen.findByRole('button', { name: 'Verify Bill Tran' }))
+
+    const confirm = await screen.findByRole('dialog', { name: 'Change results?' })
+    await user.click(within(confirm).getByRole('button', { name: 'Change anyway' }))
+
+    await waitFor(() => {
+      expect(calls).toHaveLength(2)
+    })
+    expect(calls[0]?.body).toEqual({ action: 'verify' })
+    expect(calls[1]?.body).toEqual({ action: 'verify', confirmWarnings: true })
+  })
+
+  it('shows a failure as an error toast that stays until dismissed, and a success that goes by itself', async () => {
+    const user = userEvent.setup()
+    serve({
+      putStatus: () => ({ status: 409, body: { message: 'This tournament is complete.' } }),
+    })
+    open()
+
+    await user.click(await screen.findByRole('button', { name: 'Verify Carla Mendes' }))
+
+    const toast = await screen.findByRole('alert')
+    expect(toast).toHaveTextContent('This tournament is complete.')
+    await user.click(within(toast).getByRole('button', { name: 'Dismiss' }))
+    expect(screen.queryByText('This tournament is complete.')).not.toBeInTheDocument()
+  })
+
+  it('says the tournament does not exist when the API says so', async () => {
+    server.use(
+      http.get('/v1/tournaments/:id', () => HttpResponse.json({ tournament })),
+      http.get(`${base}/averages`, () =>
+        HttpResponse.json({ message: 'Tournament not found' }, { status: 404 }),
+      ),
+    )
+
+    open()
+
+    expect(await screen.findByText('This tournament does not exist.')).toBeVisible()
+  })
+
+  it('loads again when Try again is pressed', async () => {
+    const user = userEvent.setup()
+    let calls = 0
+    server.use(
+      http.get('/v1/tournaments/:id', () => HttpResponse.json({ tournament })),
+      http.get(`${base}/averages`, () => {
+        calls += 1
+        return calls <= 2
+          ? new HttpResponse(null, { status: 500 })
+          : HttpResponse.json({ rows: [carla], tournamentComplete: false })
+      }),
+    )
+    open()
+
+    await user.click(await screen.findByRole('button', { name: 'Try again' }, { timeout: 4000 }))
+
+    expect(await screen.findByText('Carla Mendes')).toBeVisible()
+  })
+
+  it('names the loading state', async () => {
+    serve()
+    open()
+
+    expect(await screen.findByText('Loading averages…')).toBeVisible()
+    await screen.findByText('Carla Mendes')
+  })
+})

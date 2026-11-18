@@ -112,6 +112,13 @@ export function TournamentLayout() {
                 </NavLink>
               </li>
             </Can>
+            <Can permission="registrations.read">
+              <li>
+                <NavLink onClick={closeMenu} to={`/tournaments/${data.id}/averages`}>
+                  Averages
+                </NavLink>
+              </li>
+            </Can>
             <li>
               <NavLink onClick={closeMenu} to={`/tournaments/${data.id}/at-large`}>
                 At-large

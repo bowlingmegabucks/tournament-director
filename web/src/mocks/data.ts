@@ -3,6 +3,7 @@ import type { SignedInUser } from '../features/auth/types'
 import type { Division } from '../features/divisions/types'
 import type { LaneBowler, LanePage, LanePair } from '../features/lanes/types'
 import type { SessionKind } from '../shared/session'
+import type { AverageRow } from '../features/averages/types'
 import type { RecapSheet, RecapSheets } from '../features/recapSheets/types'
 import type {
   DeleteInfo,
@@ -1534,6 +1535,23 @@ export function createSheet(overrides: Partial<PayoutSheet> = {}): PayoutSheet {
     payees: [],
     others: [],
     tournamentComplete: false,
+    ...overrides,
+  }
+}
+
+/** A registration in a handicap division that no director has checked (AVG-02). */
+export function createAverageRow(overrides: Partial<AverageRow> = {}): AverageRow {
+  return {
+    registrationId: faker.string.uuid(),
+    bowlerName: faker.person.fullName(),
+    divisionName: 'Handicap A',
+    usbcId: `${faker.string.numeric(4)}-${faker.string.numeric(4)}`,
+    providedAverage: 187,
+    status: 'unverified',
+    averageInUse: 187,
+    note: null,
+    verifiedBy: null,
+    verifiedAt: null,
     ...overrides,
   }
 }

@@ -164,6 +164,7 @@ export async function register(
     superSweeper: input.superSweeper,
     average: input.average ?? null,
     payment,
+    fromVendor: true,
     now,
     newId,
   })
@@ -190,6 +191,8 @@ export interface CompleteRegistrationInput {
   /** `null` keeps the old average on an append (REG-12). */
   average: number | null
   payment: NewPayment | null
+  /** The registration site, not the desk: a changed average keeps the average check (D-299). */
+  fromVendor?: boolean
   now: Date
   newId: () => string
 }
@@ -268,15 +271,38 @@ export async function completeRegistration(
       divisionId: input.divisionId,
       average,
       superSweeper: input.superSweeper,
-      // A new average or division is unverified again (AVG-08, D-290).
-      clearAverageCheck:
-        existing !== undefined &&
-        (average !== existing.average || input.divisionId !== existing.divisionId),
+      // A new division or a desk change of the average is unverified again (AVG-08, D-290). The
+      // registration site's new average keeps the check (D-299).
+      ...averageCheckChange({
+        existing,
+        divisionId: input.divisionId,
+        average,
+        fromVendor: input.fromVendor === true,
+      }),
     },
     addSessionIds: [...squadIds, ...sweeperIds],
     payment: input.payment,
   })
   return { ok: true, registrationId, mode }
+}
+
+/** What a save does to the average check: clear it, keep it with the new average, or nothing (AVG-08). */
+export function averageCheckChange({
+  existing,
+  divisionId,
+  average,
+  fromVendor,
+}: {
+  existing: { average: number | null; divisionId: string } | undefined
+  divisionId: string
+  average: number | null
+  fromVendor: boolean
+}): { clearAverageCheck?: boolean; keepAverageCheckAs?: number } {
+  if (existing === undefined) return {}
+  if (divisionId !== existing.divisionId) return { clearAverageCheck: true }
+  if (average === existing.average) return {}
+  if (fromVendor && average !== null) return { keepAverageCheckAs: average }
+  return { clearAverageCheck: true }
 }
 
 function fail(mode: 'create' | 'append', failures: Failure[]): RegisterResult {

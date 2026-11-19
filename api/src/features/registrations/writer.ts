@@ -62,6 +62,12 @@ export interface SaveRegistration {
      * division changed, so the old check no longer says anything.
      */
     clearAverageCheck?: boolean
+    /**
+     * The registration site sent a new average and the division stayed (AVG-08, D-299): keep the
+     * average check, but copy the new provided average into it (`afterVendorAverage`). Ignored when
+     * `clearAverageCheck` is set.
+     */
+    keepAverageCheckAs?: number
   }
   addSessionIds: string[]
   /** Squads and sweepers taken off the registration (REG-31). */
@@ -142,6 +148,7 @@ export function createInMemoryRegistrationWriter(seed: InMemoryWriterSeed = {}) 
     completedTournamentIds: [...(seed.completedTournamentIds ?? [])],
     /** The registrations whose average check a save or a delete cleared (AVG-08, D-287, D-290). */
     clearedAverageChecks: [] as string[],
+    keptAverageChecks: [] as { registrationId: string; average: number }[],
   }
 
   function deskFacts(registrationId: string, tournamentId: string): DeskDeleteFacts | undefined {
@@ -251,6 +258,12 @@ export function createInMemoryRegistrationWriter(seed: InMemoryWriterSeed = {}) 
         }
       }
       if (registration.clearAverageCheck) state.clearedAverageChecks.push(registration.id)
+      else if (registration.keepAverageCheckAs !== undefined) {
+        state.keptAverageChecks.push({
+          registrationId: registration.id,
+          average: registration.keepAverageCheckAs,
+        })
+      }
       if (payment) {
         state.payments.push({
           registrationId: registration.id,

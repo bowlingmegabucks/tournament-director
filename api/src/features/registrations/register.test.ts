@@ -552,12 +552,13 @@ describe('appending to an existing registration (REG-10 to REG-14)', () => {
     expect(result).toMatchObject({ ok: true, mode: 'append' })
   })
 
-  it('clears the average check when an append changes the average (AVG-08, D-290)', async () => {
+  it('keeps the average check, with the new number, when the registration site appends a new average (AVG-08, D-299)', async () => {
     const { deps, state, input, squads, registration } = withRegistration()
 
     await register(deps, input({ average: 199, squads: [squads[1]?.id] }))
 
-    expect(state.clearedAverageChecks).toEqual([registration.id])
+    expect(state.clearedAverageChecks).toEqual([])
+    expect(state.keptAverageChecks).toEqual([{ registrationId: registration.id, average: 199 }])
   })
 
   it('keeps the average check when an append leaves the average and division alone (AVG-08, D-290)', async () => {

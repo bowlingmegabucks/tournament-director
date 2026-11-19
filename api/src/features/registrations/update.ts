@@ -5,7 +5,7 @@ import type { TournamentRepository } from '../tournaments/repository.ts'
 import { checkEligibility, type EligibilityInput } from './eligibility.ts'
 import { isPaidRequest, toNewPayment } from './payment.ts'
 import { other, validation, type Failure } from './problem.ts'
-import { checkNewSessions, unique } from './register.ts'
+import { averageCheckChange, checkNewSessions, unique } from './register.ts'
 import type { UpdateInput } from './updateRequest.ts'
 import type { RegistrationWriter, StoredSession } from './writer.ts'
 
@@ -289,8 +289,14 @@ export async function updateRegistration(
       divisionId,
       average,
       superSweeper,
-      // A new average or division is unverified again (AVG-08, D-290).
-      clearAverageCheck: divisionChanged || average !== stored.average,
+      // A new division is unverified again (AVG-08, D-290); a new average from the registration
+      // site keeps the check and copies the number into it (D-299).
+      ...averageCheckChange({
+        existing: stored,
+        divisionId,
+        average,
+        fromVendor: true,
+      }),
     },
     addSessionIds: [...addSquads, ...addSweepers],
     removeSessionIds: removeIds,

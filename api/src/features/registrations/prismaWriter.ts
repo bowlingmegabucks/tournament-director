@@ -1,6 +1,7 @@
 import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { newColumns, patchColumns, toStoredBowler } from './bowlerRow.ts'
+import { afterVendorAverage } from '../averages/inUse.ts'
 import { withRetry } from '../../shared/serializableRetry.ts'
 import { loadDeskDeleteFacts } from './prismaDeskDelete.ts'
 import { StaleRegistrationError, type RegistrationWriter, type StoredSession } from './writer.ts'
@@ -144,6 +145,21 @@ export function createPrismaRegistrationWriter(
                 await tx.averageVerification.deleteMany({
                   where: { registrationId: registration.id },
                 })
+              } else if (registration.keepAverageCheckAs !== undefined) {
+                // D-299: the registration site sent a new average; the check stays.
+                const check = await tx.averageVerification.findUnique({
+                  where: { registrationId: registration.id },
+                })
+                if (check) {
+                  const { providedAverage, note } = afterVendorAverage(
+                    check,
+                    registration.keepAverageCheckAs,
+                  )
+                  await tx.averageVerification.update({
+                    where: { registrationId: registration.id },
+                    data: { providedAverage, note },
+                  })
+                }
               }
             }
 

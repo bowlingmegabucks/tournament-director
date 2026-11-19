@@ -665,6 +665,51 @@ describe('Prisma registration writer', () => {
     expect(await client.averageVerification.count()).toBe(0)
   })
 
+  it('keeps the average check with the new provided number when the registration site changes the average (AVG-08, D-299)', async () => {
+    const { writer } = setup()
+    const tournamentId = await insertTournament()
+    const divisionId = await insertDivision(tournamentId)
+    const bowlerId = await insertLegacyBowler('1234-56789')
+    const registrationId = crypto.randomUUID()
+    await client.$executeRawUnsafe(
+      `INSERT INTO Registrations (Id, BowlerId, DivisionId, Average, SuperSweeper) VALUES (?, ?, ?, 200, 0)`,
+      registrationId,
+      bowlerId,
+      divisionId,
+    )
+    await client.$executeRawUnsafe(
+      `INSERT INTO AverageVerifications (RegistrationId, ProvidedAverage, VerifiedAverage, Note, VerifiedBy, VerifiedAt)
+       VALUES (?, 200, 210, 'USBC book', 'user-1', NOW(3))`,
+      registrationId,
+    )
+    const save = (average: number) =>
+      writer.save({
+        bowler: { id: bowlerId, isNew: false, patch: {} },
+        registration: {
+          id: registrationId,
+          isNew: false,
+          divisionId,
+          average,
+          superSweeper: false,
+          keepAverageCheckAs: average,
+        },
+        addSessionIds: [],
+        payment: null,
+      })
+    const row = () => client.averageVerification.findUniqueOrThrow({ where: { registrationId } })
+
+    await save(205)
+    expect(await row()).toMatchObject({
+      providedAverage: 205,
+      verifiedAverage: 210,
+      note: 'USBC book',
+      verifiedBy: 'user-1',
+    })
+
+    await save(210)
+    expect(await row()).toMatchObject({ providedAverage: 210, verifiedAverage: 210, note: null })
+  })
+
   it('refuses a delete once the bowler has scores in the tournament (REG-19)', async () => {
     const { writer, logger } = setup()
     const tournamentId = await insertTournament()

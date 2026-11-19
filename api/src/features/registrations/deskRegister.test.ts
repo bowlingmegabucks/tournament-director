@@ -523,6 +523,24 @@ describe('a bowler already registered here (REG-01, REG-10 to REG-14, D-159, D-1
     expect(state.payments).toHaveLength(1)
   })
 
+  it('clears the average check when the desk appends a new average (AVG-08, D-290, D-299)', async () => {
+    const { deps, state, tournament, request, bowler, stored, squads } = registered()
+
+    await deskRegister(
+      deps,
+      tournament.id,
+      request({
+        bowlerId: bowler.id,
+        appendToExisting: true,
+        average: 199,
+        squadIds: [squads[1]?.id],
+      }),
+    )
+
+    expect(state.clearedAverageChecks).toEqual([stored.id])
+    expect(state.keptAverageChecks).toEqual([])
+  })
+
   it('refuses a squad already on the registration (REG-11)', async () => {
     const { deps, tournament, request, bowler, squads } = registered()
 

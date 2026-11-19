@@ -1,7 +1,7 @@
 import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { newColumns, patchColumns, toStoredBowler } from './bowlerRow.ts'
-import { afterVendorAverage } from '../averages/inUse.ts'
+import { afterVendorAverage, liveCheck } from '../averages/inUse.ts'
 import { withRetry } from '../../shared/serializableRetry.ts'
 import { loadDeskDeleteFacts } from './prismaDeskDelete.ts'
 import { StaleRegistrationError, type RegistrationWriter, type StoredSession } from './writer.ts'
@@ -140,17 +140,25 @@ export function createPrismaRegistrationWriter(
                 data: { id: registration.id, bowlerId: bowler.id, ...columns },
               })
             } else {
+              // D-299 keeps a check only while it counts: it must still match the stored average
+              // (a WinForms write breaks that, AVG-08), so read the old average before the update.
+              const before =
+                registration.keepAverageCheckAs === undefined
+                  ? null
+                  : await tx.registration.findUnique({
+                      where: { id: registration.id },
+                      select: { average: true },
+                    })
               await tx.registration.update({ where: { id: registration.id }, data: columns })
               if (registration.clearAverageCheck) {
                 await tx.averageVerification.deleteMany({
                   where: { registrationId: registration.id },
                 })
-              } else if (registration.keepAverageCheckAs !== undefined) {
-                // D-299: the registration site sent a new average; the check stays.
+              } else if (registration.keepAverageCheckAs !== undefined && before) {
                 const check = await tx.averageVerification.findUnique({
                   where: { registrationId: registration.id },
                 })
-                if (check) {
+                if (check && liveCheck(before.average, check)) {
                   const { providedAverage, note } = afterVendorAverage(
                     check,
                     registration.keepAverageCheckAs,

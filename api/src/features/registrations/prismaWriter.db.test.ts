@@ -710,6 +710,92 @@ describe('Prisma registration writer', () => {
     expect(await row()).toMatchObject({ providedAverage: 210, verifiedAverage: 210, note: null })
   })
 
+  describe('a vendor average change beside the check (AVG-08, D-299)', () => {
+    async function seed(
+      stored: number,
+      check: { provided: number; verified: number; note: string | null } | null,
+    ) {
+      const tournamentId = await insertTournament()
+      const divisionId = await insertDivision(tournamentId)
+      const bowlerId = await insertLegacyBowler('1234-56789')
+      const registrationId = crypto.randomUUID()
+      await client.$executeRawUnsafe(
+        `INSERT INTO Registrations (Id, BowlerId, DivisionId, Average, SuperSweeper) VALUES (?, ?, ?, ?, 0)`,
+        registrationId,
+        bowlerId,
+        divisionId,
+        stored,
+      )
+      if (check) {
+        await client.$executeRawUnsafe(
+          `INSERT INTO AverageVerifications (RegistrationId, ProvidedAverage, VerifiedAverage, Note, VerifiedBy, VerifiedAt)
+           VALUES (?, ?, ?, ?, 'user-1', NOW(3))`,
+          registrationId,
+          check.provided,
+          check.verified,
+          check.note,
+        )
+      }
+      const { writer } = setup()
+      const save = (flags: { clearAverageCheck?: boolean; keepAverageCheckAs?: number }) =>
+        writer.save({
+          bowler: { id: bowlerId, isNew: false, patch: {} },
+          registration: {
+            id: registrationId,
+            isNew: false,
+            divisionId,
+            average: 205,
+            superSweeper: false,
+            ...flags,
+          },
+          addSessionIds: [],
+          payment: null,
+        })
+      const rows = () => client.averageVerification.findMany({ where: { registrationId } })
+      return { save, rows }
+    }
+
+    it('makes a verified row adjusted, with a note that says why', async () => {
+      const { save, rows } = await seed(200, { provided: 200, verified: 200, note: null })
+
+      await save({ keepAverageCheckAs: 205 })
+
+      expect(await rows()).toMatchObject([
+        {
+          providedAverage: 205,
+          verifiedAverage: 200,
+          note: 'Adjusted to 200 based on previous verification. Vendor sent 205.',
+        },
+      ])
+    })
+
+    it('adds no row when the registration has no check', async () => {
+      const { save, rows } = await seed(200, null)
+
+      await save({ keepAverageCheckAs: 205 })
+
+      expect(await rows()).toEqual([])
+    })
+
+    it('clears the check when the save asks to clear and to keep', async () => {
+      const { save, rows } = await seed(200, { provided: 200, verified: 210, note: 'USBC book' })
+
+      await save({ clearAverageCheck: true, keepAverageCheckAs: 205 })
+
+      expect(await rows()).toEqual([])
+    })
+
+    it('leaves a stale check alone: WinForms changed the average since it was checked', async () => {
+      const { save, rows } = await seed(200, { provided: 190, verified: 190, note: null })
+
+      await save({ keepAverageCheckAs: 205 })
+
+      expect(await rows()).toMatchObject([
+        { providedAverage: 190, verifiedAverage: 190, note: null },
+      ])
+    })
+  })
+
   it('refuses a delete once the bowler has scores in the tournament (REG-19)', async () => {
     const { writer, logger } = setup()
     const tournamentId = await insertTournament()

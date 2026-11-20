@@ -38,6 +38,34 @@ describe('GET /reference', () => {
     expect(response.text).toContain(`src="${scalarBundle}"`)
   })
 
+  it('sets exactly the sources Scalar needs for scripts, styles, fonts, images, and calls', async () => {
+    const response = await request(createTestApp()).get('/reference')
+    const policy = String(response.headers['content-security-policy'])
+    const sourcesOf = (directive: string) =>
+      policy
+        .split(';')
+        .map((part) => part.trim().split(' '))
+        .find(([name]) => name === directive)
+        ?.slice(1)
+    const nonce = /'nonce-([^']+)'/.exec(policy)?.[1]
+
+    expect(sourcesOf('script-src')).toEqual(["'self'", `'nonce-${nonce}'`, scalarBundle])
+    expect(sourcesOf('style-src')).toEqual([
+      "'self'",
+      "'unsafe-inline'",
+      'https://cdn.jsdelivr.net',
+    ])
+    expect(sourcesOf('font-src')).toEqual(["'self'", 'data:', 'https://cdn.jsdelivr.net'])
+    expect(sourcesOf('img-src')).toEqual(["'self'", 'data:', 'https:'])
+    expect(sourcesOf('connect-src')).toEqual(["'self'"])
+  })
+
+  it('titles the page with the tournament name', async () => {
+    const response = await request(createTestApp()).get('/reference')
+
+    expect(response.text).toContain('<title>Northeast Megabuck Tournament API</title>')
+  })
+
   it('turns telemetry off and sets no proxy', async () => {
     const response = await request(createTestApp()).get('/reference')
 

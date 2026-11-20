@@ -572,13 +572,27 @@ describe('a handicap division needs an average (AVG-16, D-289, VC-08)', () => {
   })
 })
 
-describe('the average check clears with a new average or division (AVG-08, D-290)', () => {
-  it('clears it when the average changes', async () => {
+describe('the average check after a vendor change (AVG-08, D-290, D-299)', () => {
+  it('keeps it, with the new number, when the average changes', async () => {
     const { deps, input, registrationId, state } = setup()
 
     await updateRegistration(deps, registrationId, input({ average: 201 }))
 
+    expect(state.clearedAverageChecks).toEqual([])
+    expect(state.keptAverageChecks).toEqual([{ registrationId, average: 201 }])
+  })
+
+  it('clears it when the average and the division change together', async () => {
+    const { deps, input, registrationId, otherDivision, state } = setup()
+
+    await updateRegistration(
+      deps,
+      registrationId,
+      input({ average: 201, divisionId: otherDivision.id }),
+    )
+
     expect(state.clearedAverageChecks).toEqual([registrationId])
+    expect(state.keptAverageChecks).toEqual([])
   })
 
   it('clears it when the division changes', async () => {
@@ -595,6 +609,7 @@ describe('the average check clears with a new average or division (AVG-08, D-290
     await updateRegistration(deps, registrationId, input({ average: 185 }))
 
     expect(state.clearedAverageChecks).toEqual([])
+    expect(state.keptAverageChecks).toEqual([])
   })
 })
 

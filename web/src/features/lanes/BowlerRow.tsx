@@ -27,13 +27,12 @@ function Details({
   return (
     <div>
       <span className={styles.who}>{bowler.name}</span>
-      {bowler.averageStatus === 'unverified' && (
-        <>
-          {' '}
-          <AverageMarker />
-        </>
-      )}
       <p className={styles.meta}>{formatBowler(bowler, kind, compact)}</p>
+      {bowler.averageStatus === 'unverified' && (
+        <p className={styles.flag}>
+          <AverageMarker quiet />
+        </p>
+      )}
     </div>
   )
 }

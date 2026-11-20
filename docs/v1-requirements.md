@@ -119,6 +119,7 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
 - [ ] User guide.
 - [ ] Walkthrough for the people who run tournaments.
 - [ ] Interactive API reference, in the style of [Scalar](https://scalar.com/): a page the API serves from its own OpenAPI document, where a developer reads each route and tries it with the API key. The registration site's developer is the first reader. Settle these when we build it:
+  - **Built so far (branch `scalar`):** the page lives at `/reference`, is public, and shows the vendor document from `/openapi/v1.json`. See [api-standards.md](api-standards.md#rules) for its policy. Still open: the items below, from tags on.
   - Where it lives (for example `/docs`), and who may open it. The vendor document at `/openapi/v1.json` is public today (D-114); a page that lists the web-only routes (tournament, division, squad, and sweeper commands) may need sign-in.
   - Tags on every route, so the reference can filter by them as Scalar does. One tag marks the routes the registration site calls (the vendor routes, D-09, such as `Registration site`); the others group the web-only routes by area (`Tournaments`, `Divisions`, `Squads`, `Sweepers`, `Users`). The vendor tag comes from the same list `openapi.ts` already keeps, so a route cannot carry it by mistake, and a test fails when a route has no tag.
   - Whether the document grows to cover the web-only routes, or a second document holds them. Today `openapi.ts` lists only the vendor routes, and a test keeps that list in step with the routes.

@@ -7,7 +7,7 @@ import type { Division } from '../divisions/types.ts'
 import { createInMemorySweeperRepository } from '../sweepers/repository.ts'
 import { createInMemoryTournamentRepository } from '../tournaments/repository.ts'
 import { createCommonBowler } from './bowler.testData.ts'
-import { register } from './register.ts'
+import { averageCheckChange, register } from './register.ts'
 import { parseCreateRequest, type RegistrationInput } from './request.ts'
 import {
   createInMemoryRegistrationWriter,
@@ -552,12 +552,13 @@ describe('appending to an existing registration (REG-10 to REG-14)', () => {
     expect(result).toMatchObject({ ok: true, mode: 'append' })
   })
 
-  it('clears the average check when an append changes the average (AVG-08, D-290)', async () => {
+  it('keeps the average check, with the new number, when the registration site appends a new average (AVG-08, D-299)', async () => {
     const { deps, state, input, squads, registration } = withRegistration()
 
     await register(deps, input({ average: 199, squads: [squads[1]?.id] }))
 
-    expect(state.clearedAverageChecks).toEqual([registration.id])
+    expect(state.clearedAverageChecks).toEqual([])
+    expect(state.keptAverageChecks).toEqual([{ registrationId: registration.id, average: 199 }])
   })
 
   it('keeps the average check when an append leaves the average and division alone (AVG-08, D-290)', async () => {
@@ -648,5 +649,25 @@ describe('a repeated payment code is a retry (PAY-03, D-109)', () => {
     expect(state.bowlers).toEqual([])
     expect(state.registrations).toEqual([])
     expect(state.payments).toHaveLength(1)
+  })
+})
+
+describe('averageCheckChange (AVG-08, D-290, D-299)', () => {
+  const existing = { average: 170, divisionId: 'd1' }
+
+  it.each([
+    ['a new registration', undefined, 'd1', 170, true, {}],
+    ['a new division, from the site', existing, 'd2', 170, true, { clearAverageCheck: true }],
+    ['a new division, from the desk', existing, 'd2', 170, false, { clearAverageCheck: true }],
+    ['the same average, from the site', existing, 'd1', 170, true, {}],
+    ['the same average, from the desk', existing, 'd1', 170, false, {}],
+    ['a new average, from the site', existing, 'd1', 199, true, { keepAverageCheckAs: 199 }],
+    ['a new average, from the desk', existing, 'd1', 199, false, { clearAverageCheck: true }],
+    ['no average, from the site', existing, 'd1', null, true, { clearAverageCheck: true }],
+    ['no average, from the desk', existing, 'd1', null, false, { clearAverageCheck: true }],
+  ])('%s', (_name, stored, divisionId, average, fromVendor, expected) => {
+    expect(averageCheckChange({ existing: stored, divisionId, average, fromVendor })).toEqual(
+      expected,
+    )
   })
 })

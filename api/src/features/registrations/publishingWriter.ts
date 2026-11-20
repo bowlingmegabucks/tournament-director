@@ -75,7 +75,12 @@ export function createPublishingRegistrationWriter(
         ...(command.removeSessionIds ?? []),
       ]
       tell(touched)
-      if (command.registration.clearAverageCheck) tellAverages(before.tournamentId, touched)
+      if (
+        command.registration.clearAverageCheck ||
+        command.registration.keepAverageCheckAs !== undefined
+      ) {
+        tellAverages(before.tournamentId, touched)
+      }
     },
 
     async deleteRegistration(registrationId) {

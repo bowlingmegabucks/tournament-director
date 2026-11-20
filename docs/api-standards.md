@@ -33,6 +33,7 @@ api/src/
 - **Contract with `web/`.** The `Tournament` shape is in `api/src/features/tournaments/types.ts` and `web/src/features/tournaments/types.ts`. Change both together. (No shared package: two folders, no workspaces.)
 - **Config:** every setting is an env var, validated at startup. The app refuses to start on bad config. Add new vars to `.env.example`.
 - **Security defaults stay on:** `helmet()` and an explicit CORS allow-list (`CORS_ORIGIN`). No `*`.
+- **`GET /reference` (public) is the one page with its own policy.** It shows the OpenAPI document with Scalar (`@scalar/express-api-reference`; the other choice was to write the page by hand and track Scalar's script ourselves). Scalar's page needs an inline start script, so the route builds its Content-Security-Policy from helmet's defaults and changes only `script-src` (a fresh nonce per response and one pinned bundle file on `cdn.jsdelivr.net`), `style-src`, `font-src`, and `img-src`. `connect-src` stays `'self'`. The bundle version is an exact pin in `api/src/openapi/reference.ts`; bump it on purpose. Telemetry is off and no proxy is set, so a "Try it" call with the `x-api-key` goes only to this API. The spec URL is relative so the page works behind the Vite proxy.
 - **No secrets in the repo.** Use env vars and GitHub Actions secrets.
 
 ## Telemetry

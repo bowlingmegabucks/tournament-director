@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { averageInUse, averageStatus, liveCheck, type AverageCheck } from './inUse.ts'
+import {
+  afterVendorAverage,
+  averageInUse,
+  averageStatus,
+  liveCheck,
+  type AverageCheck,
+} from './inUse.ts'
 
 const verified: AverageCheck = { providedAverage: 175, verifiedAverage: 175, note: null }
 const adjusted: AverageCheck = { providedAverage: 175, verifiedAverage: 182, note: 'USBC book' }
@@ -60,5 +66,35 @@ describe('averageStatus (D-287)', () => {
 
   it('is adjusted when the check has a note', () => {
     expect(averageStatus(adjusted)).toBe('adjusted')
+  })
+})
+
+describe('afterVendorAverage (AVG-08, D-299)', () => {
+  it('turns a verified check into an adjusted one that says why, and keeps the verified number', () => {
+    expect(afterVendorAverage(verified, 180)).toEqual({
+      providedAverage: 180,
+      verifiedAverage: 175,
+      note: 'Adjusted to 175 based on previous verification. Vendor sent 180.',
+    })
+  })
+
+  it("keeps a director's note when the vendor sends another number", () => {
+    expect(afterVendorAverage(adjusted, 190)).toEqual({
+      providedAverage: 190,
+      verifiedAverage: 182,
+      note: 'USBC book',
+    })
+  })
+
+  it('makes an adjusted check plain verified when the vendor sends the verified number', () => {
+    expect(afterVendorAverage(adjusted, 182)).toEqual({
+      providedAverage: 182,
+      verifiedAverage: 182,
+      note: null,
+    })
+  })
+
+  it('keeps the check counting: it matches the new provided number', () => {
+    expect(liveCheck(180, afterVendorAverage(verified, 180))).toBeDefined()
   })
 })

@@ -107,6 +107,7 @@ import { createHealthRouter } from './shared/healthRoutes.ts'
 import { createReadyRouter } from './shared/readyRoutes.ts'
 import { createRootRouter } from './shared/rootRoutes.ts'
 import { createOpenApiRouter } from './openapi/openapi.ts'
+import { createReferenceRouter } from './openapi/reference.ts'
 import { createAuthRouter } from './features/auth/routes.ts'
 import type { InviteMailer } from './features/users/inviteMail.ts'
 import { createAccountRouter } from './features/account/routes.ts'
@@ -344,6 +345,7 @@ export function createApp({
       // Stryker disable next-line StringLiteral: '' and '/' match the same path.
       { path: '/', access: 'public', router: createRootRouter() },
       { path: '/openapi/v1.json', access: 'public', router: createOpenApiRouter() },
+      { path: '/reference', access: 'public', router: createReferenceRouter() },
       { path: '/health', access: 'public', router: createHealthRouter() },
       { path: '/ready', access: 'public', router: createReadyRouter(checkDatabase) },
       // Public: a caller with no key learns it is anonymous (D-95).

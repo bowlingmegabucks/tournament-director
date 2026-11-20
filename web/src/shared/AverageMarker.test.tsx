@@ -14,4 +14,10 @@ describe('AverageMarker (AVG-12, D-293)', () => {
 
     expect(screen.getByText('No average')).toBeInTheDocument()
   })
+
+  it('keeps the words in the quiet form', () => {
+    render(<AverageMarker quiet />)
+
+    expect(screen.getByText('Avg not verified')).toBeInTheDocument()
+  })
 })

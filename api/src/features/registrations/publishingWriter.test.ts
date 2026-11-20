@@ -281,6 +281,36 @@ describe('createPublishingRegistrationWriter', () => {
     expect(cleared).toEqual([tournamentId])
   })
 
+  it('tells the sessions and the tournament when a save keeps a check with a new number (AVG-08, AVG-19, D-299)', async () => {
+    const { hub, published } = recordingHub()
+    const cleared: string[] = []
+    const writer = createPublishingRegistrationWriter(
+      storage().writer,
+      hub,
+      createCapturedLogger().logger,
+      (tournament) => cleared.push(tournament),
+    )
+
+    await writer.save(
+      edit({
+        registration: {
+          id: registrationId,
+          isNew: false,
+          divisionId,
+          average: 205,
+          superSweeper: false,
+          keepAverageCheckAs: 205,
+        },
+      }),
+    )
+
+    expect(published).toEqual([
+      { sessionId: a, kind: 'entries' },
+      { sessionId: a, kind: 'averages' },
+    ])
+    expect(cleared).toEqual([tournamentId])
+  })
+
   it('sends no averages message when the save keeps the average (AVG-08)', async () => {
     const { hub, published } = recordingHub()
     const cleared: string[] = []

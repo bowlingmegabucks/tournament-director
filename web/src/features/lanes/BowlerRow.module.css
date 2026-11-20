@@ -21,7 +21,11 @@
     grid-template-columns: auto auto minmax(0, 1fr) auto;
   }
 
-  .placed .actions {
+  .placed .flag {
+    margin: var(--space-1) 0 0;
+  }
+
+  .actions {
     grid-column: auto;
   }
 }

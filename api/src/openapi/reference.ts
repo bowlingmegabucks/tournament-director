@@ -54,7 +54,8 @@ export function createReferenceRouter(): Router {
  * at `/api/reference` (the proxy strips the prefix, so the API cannot see it).
  */
 export function specUrl(req: Pick<Request, 'originalUrl'>): string {
-  const path = req.originalUrl.replace(/\?.*$/, '')
+  const query = req.originalUrl.indexOf('?')
+  const path = query === -1 ? req.originalUrl : req.originalUrl.slice(0, query)
   return path.endsWith('/') ? '../openapi/v1.json' : 'openapi/v1.json'
 }
 

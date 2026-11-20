@@ -20,6 +20,103 @@ function toSession(row: {
   return [{ id: row.id, tournamentId: row.tournamentId, kind, complete: row.complete }]
 }
 
+type Tx = Parameters<
+  Parameters<PrismaClient['$transaction']>[0] extends infer F
+    ? F extends (tx: infer T) => unknown
+      ? (tx: T) => unknown
+      : never
+    : never
+>[0]
+type Save = Parameters<RegistrationWriter['save']>[0]
+
+/** D-199: the desk read the registration earlier; check it still reads the same. */
+async function checkExpected(
+  tx: Tx,
+  registrationId: string,
+  expect: { present: string[]; absent: string[] },
+): Promise<void> {
+  const rows = await tx.squadRegistration.findMany({
+    where: { registrationId, squadId: { in: [...expect.present, ...expect.absent] } },
+    select: { squadId: true },
+  })
+  const held = new Set(rows.map((row) => row.squadId))
+  if (!expect.present.every((id) => held.has(id)) || expect.absent.some((id) => held.has(id))) {
+    throw new StaleRegistrationError()
+  }
+}
+
+async function writeBowler(tx: Tx, bowler: Save['bowler']): Promise<void> {
+  if (bowler.isNew) {
+    await tx.bowler.create({ data: { id: bowler.id, ...newColumns(bowler.data) } })
+  } else if (Object.keys(bowler.patch).length > 0) {
+    await tx.bowler.update({ where: { id: bowler.id }, data: patchColumns(bowler.patch) })
+  }
+}
+
+async function writeRegistration(
+  tx: Tx,
+  bowlerId: string,
+  registration: Save['registration'],
+): Promise<void> {
+  const columns = {
+    divisionId: registration.divisionId,
+    average: registration.average,
+    superSweeper: registration.superSweeper,
+  }
+  if (registration.isNew) {
+    await tx.registration.create({ data: { id: registration.id, bowlerId, ...columns } })
+    return
+  }
+  // D-299 keeps a check only while it counts: it must still match the stored average
+  // (a WinForms write breaks that, AVG-08), so read the old average before the update.
+  const before =
+    registration.keepAverageCheckAs === undefined
+      ? null
+      : await tx.registration.findUnique({
+          where: { id: registration.id },
+          select: { average: true },
+        })
+  await tx.registration.update({ where: { id: registration.id }, data: columns })
+  if (registration.clearAverageCheck) {
+    await tx.averageVerification.deleteMany({ where: { registrationId: registration.id } })
+  } else if (registration.keepAverageCheckAs !== undefined && before) {
+    await keepCheck(tx, registration.id, before.average, registration.keepAverageCheckAs)
+  }
+}
+
+async function keepCheck(
+  tx: Tx,
+  registrationId: string,
+  storedAverage: number | null,
+  keepAs: Parameters<typeof afterVendorAverage>[1],
+): Promise<void> {
+  const check = await tx.averageVerification.findUnique({ where: { registrationId } })
+  if (!check || !liveCheck(storedAverage, check)) return
+  const { providedAverage, note } = afterVendorAverage(check, keepAs)
+  await tx.averageVerification.update({
+    where: { registrationId },
+    data: { providedAverage, note },
+  })
+}
+
+async function writeSessions(
+  tx: Tx,
+  registrationId: string,
+  addSessionIds: string[],
+  removeSessionIds: string[],
+): Promise<void> {
+  if (removeSessionIds.length > 0) {
+    await tx.squadRegistration.deleteMany({
+      where: { registrationId, squadId: { in: removeSessionIds } },
+    })
+  }
+  if (addSessionIds.length > 0) {
+    await tx.squadRegistration.createMany({
+      data: addSessionIds.map((squadId) => ({ registrationId, squadId, laneAssignment: '' })),
+    })
+  }
+}
+
 /**
  * Writes registrations to the legacy `Bowlers`, `Registrations`, `SquadRegistration`, and
  * `Payments` tables (API-05). One save is one transaction, so a failure leaves nothing behind.
@@ -107,84 +204,10 @@ export function createPrismaRegistrationWriter(
       const run = () =>
         client.$transaction(
           async (tx) => {
-            if (expect) {
-              // D-199: the desk read the registration earlier; check it still reads the same.
-              const rows = await tx.squadRegistration.findMany({
-                where: {
-                  registrationId: registration.id,
-                  squadId: { in: [...expect.present, ...expect.absent] },
-                },
-                select: { squadId: true },
-              })
-              const held = new Set(rows.map((row) => row.squadId))
-              if (
-                !expect.present.every((id) => held.has(id)) ||
-                expect.absent.some((id) => held.has(id))
-              ) {
-                throw new StaleRegistrationError()
-              }
-            }
-            if (bowler.isNew) {
-              await tx.bowler.create({ data: { id: bowler.id, ...newColumns(bowler.data) } })
-            } else if (Object.keys(bowler.patch).length > 0) {
-              await tx.bowler.update({ where: { id: bowler.id }, data: patchColumns(bowler.patch) })
-            }
-
-            const columns = {
-              divisionId: registration.divisionId,
-              average: registration.average,
-              superSweeper: registration.superSweeper,
-            }
-            if (registration.isNew) {
-              await tx.registration.create({
-                data: { id: registration.id, bowlerId: bowler.id, ...columns },
-              })
-            } else {
-              // D-299 keeps a check only while it counts: it must still match the stored average
-              // (a WinForms write breaks that, AVG-08), so read the old average before the update.
-              const before =
-                registration.keepAverageCheckAs === undefined
-                  ? null
-                  : await tx.registration.findUnique({
-                      where: { id: registration.id },
-                      select: { average: true },
-                    })
-              await tx.registration.update({ where: { id: registration.id }, data: columns })
-              if (registration.clearAverageCheck) {
-                await tx.averageVerification.deleteMany({
-                  where: { registrationId: registration.id },
-                })
-              } else if (registration.keepAverageCheckAs !== undefined && before) {
-                const check = await tx.averageVerification.findUnique({
-                  where: { registrationId: registration.id },
-                })
-                if (check && liveCheck(before.average, check)) {
-                  const { providedAverage, note } = afterVendorAverage(
-                    check,
-                    registration.keepAverageCheckAs,
-                  )
-                  await tx.averageVerification.update({
-                    where: { registrationId: registration.id },
-                    data: { providedAverage, note },
-                  })
-                }
-              }
-            }
-
-            if (removeSessionIds.length > 0) {
-              await tx.squadRegistration.deleteMany({
-                where: { registrationId: registration.id, squadId: { in: removeSessionIds } },
-              })
-            }
-            if (addSessionIds.length > 0) {
-              await tx.squadRegistration.createMany({
-                data: addSessionIds.map((squadId) => ({
-                  registrationId: registration.id,
-                  squadId,
-                  laneAssignment: '',
-                })),
-              })
-            }
+            if (expect) await checkExpected(tx, registration.id, expect)
+            await writeBowler(tx, bowler)
+            await writeRegistration(tx, bowler.id, registration)
+            await writeSessions(tx, registration.id, addSessionIds, removeSessionIds)
             if (payment) {
               await tx.payment.create({
                 data: {

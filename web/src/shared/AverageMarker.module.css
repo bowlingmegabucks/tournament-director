@@ -11,3 +11,21 @@
   line-height: var(--line-height);
   white-space: nowrap;
 }
+
+/* The same warning as plain text with a leading dot, for a row that already holds buttons. */
+.quiet {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-accent);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+.quiet::before {
+  content: '';
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: 50%;
+  background: var(--color-accent);
+}

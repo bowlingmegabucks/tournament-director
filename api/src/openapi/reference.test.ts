@@ -86,5 +86,6 @@ describe('specUrl', () => {
     expect(specUrl({ originalUrl: '/reference' })).toBe('openapi/v1.json')
     expect(specUrl({ originalUrl: '/reference?x=/' })).toBe('openapi/v1.json')
     expect(specUrl({ originalUrl: '/reference/' })).toBe('../openapi/v1.json')
+    expect(specUrl({ originalUrl: '/reference/?x=1' })).toBe('../openapi/v1.json')
   })
 })

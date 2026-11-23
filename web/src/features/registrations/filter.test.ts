@@ -27,6 +27,17 @@ describe('filterRegistrations (REG-23, D-49)', () => {
     }
   })
 
+  it('treats every apostrophe form the API search treats as one', () => {
+    // Keep in step with `apostrophes` in api/src/features/bowlers/types.ts.
+    for (const mark of ["'", '\u2018', '\u2019', '\u02BC', '`', '\u00B4']) {
+      expect(filterRegistrations([michael], `d${mark}ant`)).toEqual([michael])
+    }
+  })
+
+  it('returns everyone for text that is only apostrophes', () => {
+    expect(filterRegistrations(all, "'")).toEqual(all)
+  })
+
   it('returns everyone for empty text', () => {
     expect(filterRegistrations(all, '')).toEqual(all)
   })

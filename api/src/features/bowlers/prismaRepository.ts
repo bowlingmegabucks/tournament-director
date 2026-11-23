@@ -13,13 +13,33 @@ export function escapeLike(text: string): string {
   return text.replace(/[\\%_]/g, (character) => `\\${character}`)
 }
 
+/** Most apostrophes that get every straight/curly mix (2^4 = 16 forms); more get two forms. */
+const mixLimit = 4
+
 /**
- * The desk types a straight apostrophe, but legacy names hold a curly one (`D’Antonio`). Match the
- * text with every apostrophe straight, and again with every one curly. Text with none has one form.
+ * The desk types a straight apostrophe, but legacy names hold a curly one (`D’Antonio`), and one
+ * name can mix both (`O’Neil-D'Antonio`). Each apostrophe is tried straight and curly on its own.
+ * Text with more than `mixLimit` apostrophes gets only all-straight and all-curly. Text with none
+ * has one form. A name stored with a grave or acute accent as its apostrophe still does not match.
  */
 export function apostropheForms(text: string): string[] {
-  const forms = new Set([text.replace(apostrophes, "'"), text.replace(apostrophes, '\u2019')])
-  return [...forms]
+  const parts = text.split(apostrophes)
+  if (parts.length === 1) return [text]
+  const marks = parts.length - 1
+  if (marks > mixLimit) {
+    return [...new Set([parts.join("'"), parts.join('\u2019')])]
+  }
+  const forms: string[] = []
+  for (let mask = 0; mask < 2 ** marks; mask++) {
+    forms.push(
+      parts.reduce(
+        (form, part, index) =>
+          index === 0 ? part : form + (mask & (1 << (index - 1)) ? '\u2019' : "'") + part,
+        '',
+      ),
+    )
+  }
+  return forms
 }
 
 function nameStartsWith(column: 'lastName' | 'firstName', text: string) {

@@ -7,6 +7,7 @@ import type { Registration } from './types'
  * value, so empty text matches everyone. Apostrophes (straight or curly) are dropped from both
  * sides, so `d'an`, `dan`, and `d’an` all find D'Antonio however the name was stored.
  */
+// Same set as `api/src/features/bowlers/types.ts`; `filter.test.ts` pins it. Keep them in step.
 const apostrophes = /['\u2018\u2019\u02BC`\u00B4]/g
 const plain = (value: string) => value.toLowerCase().replace(apostrophes, '')
 

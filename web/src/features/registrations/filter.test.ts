@@ -12,9 +12,21 @@ const joeA = bowler('Joe', 'Fontaine', '2045-88123')
 const joeB = bowler('Joe', 'Fontaine', '5560-11902')
 const dana = bowler('Dana', 'Abbott', '4821-10394')
 const tom = bowler('Tom', 'Delgado')
+const michael = bowler('Michael', "D'Antonio")
+const curly = bowler('Mary', 'O’Neil')
 const all = [dana, joeA, joeB, tom]
 
 describe('filterRegistrations (REG-23, D-49)', () => {
+  it('finds a name with an apostrophe however it is typed or stored', () => {
+    const names = [...all, michael, curly]
+    for (const text of ["d'ant", 'dant', 'd’ant']) {
+      expect(filterRegistrations(names, text)).toEqual([michael])
+    }
+    for (const text of ["o'n", 'o’n', 'on']) {
+      expect(filterRegistrations(names, text)).toEqual([curly])
+    }
+  })
+
   it('returns everyone for empty text', () => {
     expect(filterRegistrations(all, '')).toEqual(all)
   })

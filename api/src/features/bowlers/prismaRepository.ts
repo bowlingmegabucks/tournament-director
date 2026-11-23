@@ -13,6 +13,23 @@ export function escapeLike(text: string): string {
   return text.replace(/[\\%_]/g, (character) => `\\${character}`)
 }
 
+const apostrophes = /['\u2018\u2019\u02BC`\u00B4]/g
+
+/**
+ * The desk types a straight apostrophe, but legacy names hold a curly one (`D’Antonio`). Match the
+ * text with every apostrophe straight, and again with every one curly. Text with none has one form.
+ */
+export function apostropheForms(text: string): string[] {
+  const forms = new Set([text.replace(apostrophes, "'"), text.replace(apostrophes, '\u2019')])
+  return [...forms]
+}
+
+function nameStartsWith(column: 'lastName' | 'firstName', text: string) {
+  return {
+    OR: apostropheForms(text).map((form) => ({ [column]: { startsWith: escapeLike(form) } })),
+  }
+}
+
 /**
  * Searches the legacy `Bowlers` table (BWL-14, D-157). Names are read by named columns only: the
  * SSN, birth date, email, phone, and street are never selected (BWL-17). Text compares follow the
@@ -27,12 +44,14 @@ export function createPrismaBowlerRepository(
       const rows = await withDatabaseErrors(logger, () =>
         client.bowler.findMany({
           where: {
-            ...(filter.lastName === undefined
-              ? {}
-              : { lastName: { startsWith: escapeLike(filter.lastName) } }),
-            ...(filter.firstName === undefined
-              ? {}
-              : { firstName: { startsWith: escapeLike(filter.firstName) } }),
+            AND: [
+              ...(filter.lastName === undefined
+                ? []
+                : [nameStartsWith('lastName', filter.lastName)]),
+              ...(filter.firstName === undefined
+                ? []
+                : [nameStartsWith('firstName', filter.firstName)]),
+            ],
             ...(filter.email === undefined ? {} : { email: filter.email }),
             ...(filter.usbcId === undefined ? {} : { usbcId: filter.usbcId }),
           },

@@ -42,8 +42,12 @@ export interface InMemoryBowler {
 }
 
 const same = (a: string, b: string) => compareText(a, b) === 0
+// A straight and a curly apostrophe match, as the real repository does (D’Antonio).
+const straight = (text: string) => text.replace(/['\u2018\u2019\u02BC`\u00B4]/g, "'")
 const startsWith = (value: string, prefix: string) =>
-  value.slice(0, prefix.length).localeCompare(prefix, 'en', { sensitivity: 'base' }) === 0
+  straight(value).slice(0, prefix.length).localeCompare(straight(prefix), 'en', {
+    sensitivity: 'base',
+  }) === 0
 
 export function createInMemoryBowlerRepository(
   bowlers: InMemoryBowler[],

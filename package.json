@@ -20,7 +20,7 @@
     "check": "npm run test:scripts && npm run format:scripts:check && npm --prefix api run lint && npm --prefix api run format:check && npm --prefix api run typecheck && npm --prefix api test && npm --prefix web run lint && npm --prefix web run format:check && npm --prefix web run typecheck && npm --prefix web test"
   },
   "devDependencies": {
-    "concurrently": "^10.0.6",
-    "prettier": "^3.9.10"
+    "concurrently": "^10.0.7",
+    "prettier": "^3.10.1"
   }
 }

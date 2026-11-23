@@ -27,7 +27,7 @@ services:
   database:
     container_name: tournament-director-db
     # The version the legacy repo pins (D-34). Check production with SELECT VERSION().
-    image: mariadb:11.4.7
+    image: mariadb:11.4.13
     restart: unless-stopped
     environment:
       MARIADB_DATABASE: bowling_megabucks

@@ -2,7 +2,7 @@ import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { displayName } from '../registrations/registrationRow.ts'
 import { compareBowlers, toOutcome, type BowlerRepository } from './repository.ts'
-import { searchLimit, type BowlerSearchResult } from './types.ts'
+import { apostrophes, searchLimit, type BowlerSearchResult } from './types.ts'
 
 /**
  * Prisma passes a `startsWith` value into `LIKE` as it is, so a typed `%` or `_` would match
@@ -11,6 +11,41 @@ import { searchLimit, type BowlerSearchResult } from './types.ts'
  */
 export function escapeLike(text: string): string {
   return text.replace(/[\\%_]/g, (character) => `\\${character}`)
+}
+
+/** Most apostrophes that get every straight/curly mix (2^4 = 16 forms); more get two forms. */
+const mixLimit = 4
+
+/**
+ * The desk types a straight apostrophe, but legacy names hold a curly one (`D’Antonio`), and one
+ * name can mix both (`O’Neil-D'Antonio`). Each apostrophe is tried straight and curly on its own.
+ * Text with more than `mixLimit` apostrophes gets only all-straight and all-curly. Text with none
+ * has one form. A name stored with a grave or acute accent as its apostrophe still does not match.
+ */
+export function apostropheForms(text: string): string[] {
+  const parts = text.split(apostrophes)
+  if (parts.length === 1) return [text]
+  const marks = parts.length - 1
+  if (marks > mixLimit) {
+    return [...new Set([parts.join("'"), parts.join('\u2019')])]
+  }
+  const forms: string[] = []
+  for (let mask = 0; mask < 2 ** marks; mask++) {
+    forms.push(
+      parts.reduce((form, part, index) => {
+        if (index === 0) return part
+        const mark = mask & (1 << (index - 1)) ? '\u2019' : "'"
+        return form + mark + part
+      }, ''),
+    )
+  }
+  return forms
+}
+
+function nameStartsWith(column: 'lastName' | 'firstName', text: string) {
+  return {
+    OR: apostropheForms(text).map((form) => ({ [column]: { startsWith: escapeLike(form) } })),
+  }
 }
 
 /**
@@ -27,12 +62,14 @@ export function createPrismaBowlerRepository(
       const rows = await withDatabaseErrors(logger, () =>
         client.bowler.findMany({
           where: {
-            ...(filter.lastName === undefined
-              ? {}
-              : { lastName: { startsWith: escapeLike(filter.lastName) } }),
-            ...(filter.firstName === undefined
-              ? {}
-              : { firstName: { startsWith: escapeLike(filter.firstName) } }),
+            AND: [
+              ...(filter.lastName === undefined
+                ? []
+                : [nameStartsWith('lastName', filter.lastName)]),
+              ...(filter.firstName === undefined
+                ? []
+                : [nameStartsWith('firstName', filter.firstName)]),
+            ],
             ...(filter.email === undefined ? {} : { email: filter.email }),
             ...(filter.usbcId === undefined ? {} : { usbcId: filter.usbcId }),
           },

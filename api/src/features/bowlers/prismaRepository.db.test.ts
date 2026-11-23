@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from 'v
 import { createDatabaseClient, type PrismaClient } from '../../shared/database.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { resetDatabase } from '../../test/resetDatabase.ts'
-import { createPrismaBowlerRepository, escapeLike } from './prismaRepository.ts'
+import { apostropheForms, createPrismaBowlerRepository, escapeLike } from './prismaRepository.ts'
 import { searchLimit } from './types.ts'
 
 describe('Prisma bowler repository (BWL-14, BWL-17, D-157)', () => {
@@ -97,6 +97,38 @@ describe('Prisma bowler repository (BWL-14, BWL-17, D-157)', () => {
 
     expect((await repository().search({ lastName: '%' })).bowlers).toHaveLength(0)
     expect((await repository().search({ lastName: 'Gonzale_' })).bowlers).toHaveLength(0)
+  })
+
+  it('finds D’Antonio by a straight or a curly apostrophe', async () => {
+    const id = await insertBowler({ last: 'D’Antonio' })
+
+    for (const typed of ["D'A", 'D’A', 'D’Antonio']) {
+      const found = await repository().search({ lastName: typed })
+      expect(found.bowlers.map((b) => b.id)).toEqual([id])
+    }
+    expect((await repository().search({ lastName: 'DA' })).bowlers).toHaveLength(0)
+  })
+
+  it('finds a name that mixes straight and curly apostrophes', async () => {
+    const id = await insertBowler({ last: "O’Neil-D'Antonio" })
+
+    for (const typed of ["O'Neil-D'A", 'O’Neil-D’A', "O’Neil-D'A", "O'Neil-D’A"]) {
+      const found = await repository().search({ lastName: typed })
+      expect(found.bowlers.map((b) => b.id)).toEqual([id])
+    }
+  })
+
+  it('lists the straight and curly forms of typed text', () => {
+    expect(apostropheForms("D'A")).toEqual(["D'A", 'D’A'])
+    expect(apostropheForms('D’A')).toEqual(["D'A", 'D’A'])
+    expect(apostropheForms('Dan')).toEqual(['Dan'])
+  })
+
+  it('lists every straight and curly mix for several apostrophes', () => {
+    expect(apostropheForms("O'N-D'A").toSorted()).toEqual(
+      ["O'N-D'A", "O'N-D’A", "O’N-D'A", 'O’N-D’A'].toSorted(),
+    )
+    expect(apostropheForms("a'b'c'd'e'f")).toEqual(["a'b'c'd'e'f", 'a’b’c’d’e’f'])
   })
 
   it('escapes the characters LIKE treats as wildcards', () => {

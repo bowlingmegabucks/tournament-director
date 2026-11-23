@@ -29,6 +29,17 @@ function searchable(overrides: Partial<InMemoryBowler> = {}): InMemoryBowler {
 }
 
 describe('GET /v1/bowlers (BWL-14, D-157)', () => {
+  it('finds a curly-apostrophe name by a straight apostrophe', async () => {
+    const michael = searchable({ firstName: 'Michael', lastName: 'D’Antonio' })
+    const app = createSignedInTestApp({
+      bowlers: createInMemoryBowlerRepository([michael, searchable()]),
+    })
+
+    const response = await request(app).get('/v1/bowlers').query({ lastName: "D'A" })
+
+    expect(bowlerSearchSchema.parse(response.body).bowlers.map((b) => b.id)).toEqual([michael.id])
+  })
+
   it('finds by last name prefix and first name prefix, ignoring case, with the contract shape', async () => {
     const maria = searchable()
     const mario = searchable({ firstName: 'Mario', lastName: 'Gonzalez', usbcId: '' })

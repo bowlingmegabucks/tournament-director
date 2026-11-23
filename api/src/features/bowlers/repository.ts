@@ -1,6 +1,6 @@
 import { displayName } from '../registrations/registrationRow.ts'
 import type { BowlerFilter, BowlerSearchResult } from './types.ts'
-import { searchLimit } from './types.ts'
+import { apostrophes, searchLimit } from './types.ts'
 
 export interface BowlerSearchOutcome {
   bowlers: BowlerSearchResult[]
@@ -43,7 +43,7 @@ export interface InMemoryBowler {
 
 const same = (a: string, b: string) => compareText(a, b) === 0
 // A straight and a curly apostrophe match, as the real repository does (D’Antonio).
-const straight = (text: string) => text.replace(/['\u2018\u2019\u02BC`\u00B4]/g, "'")
+const straight = (text: string) => text.replace(apostrophes, "'")
 const startsWith = (value: string, prefix: string) =>
   straight(value).slice(0, prefix.length).localeCompare(straight(prefix), 'en', {
     sensitivity: 'base',

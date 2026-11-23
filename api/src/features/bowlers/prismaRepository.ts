@@ -2,7 +2,7 @@ import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { displayName } from '../registrations/registrationRow.ts'
 import { compareBowlers, toOutcome, type BowlerRepository } from './repository.ts'
-import { searchLimit, type BowlerSearchResult } from './types.ts'
+import { apostrophes, searchLimit, type BowlerSearchResult } from './types.ts'
 
 /**
  * Prisma passes a `startsWith` value into `LIKE` as it is, so a typed `%` or `_` would match
@@ -12,8 +12,6 @@ import { searchLimit, type BowlerSearchResult } from './types.ts'
 export function escapeLike(text: string): string {
   return text.replace(/[\\%_]/g, (character) => `\\${character}`)
 }
-
-const apostrophes = /['\u2018\u2019\u02BC`\u00B4]/g
 
 /**
  * The desk types a straight apostrophe, but legacy names hold a curly one (`D’Antonio`). Match the

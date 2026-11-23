@@ -84,3 +84,6 @@ export interface BowlerFilter {
 }
 
 export const searchLimit = 25
+
+/** Straight, curly, modifier, grave, and acute apostrophes. Search treats them as one character. */
+export const apostrophes = /['\u2018\u2019\u02BC`\u00B4]/g

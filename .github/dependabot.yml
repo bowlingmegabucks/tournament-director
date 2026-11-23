@@ -5,143 +5,146 @@ version: 2
 
 updates:
   # api/ (Express, Prisma, Better Auth, OpenTelemetry)
-  - package-ecosystem: "npm"
-    directory: "/api"
+  - package-ecosystem: 'npm'
+    directory: '/api'
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: 'weekly'
+      day: 'monday'
     open-pull-requests-limit: 5
     labels:
-      - "dependencies"
+      - 'dependencies'
+      - 'api'
     groups:
       prisma:
         patterns:
-          - "prisma"
-          - "@prisma/*"
+          - 'prisma'
+          - '@prisma/*'
       opentelemetry:
         patterns:
-          - "@opentelemetry/*"
+          - '@opentelemetry/*'
         exclude-patterns:
           # Pinned on purpose (see CLAUDE.md). Bump by hand and run telemetryExport.test.ts.
-          - "@azure/monitor-opentelemetry-exporter"
+          - '@azure/monitor-opentelemetry-exporter'
       testing:
         patterns:
-          - "vitest"
-          - "@vitest/*"
-          - "@stryker-mutator/*"
-          - "supertest"
-          - "testcontainers"
-          - "@testcontainers/*"
+          - 'vitest'
+          - '@vitest/*'
+          - '@stryker-mutator/*'
+          - 'supertest'
+          - 'testcontainers'
+          - '@testcontainers/*'
       lint-and-format:
         patterns:
-          - "eslint"
-          - "@eslint/*"
-          - "typescript-eslint"
-          - "eslint-plugin-*"
-          - "prettier"
+          - 'eslint'
+          - '@eslint/*'
+          - 'typescript-eslint'
+          - 'eslint-plugin-*'
+          - 'prettier'
       minor-and-patch:
         update-types:
-          - "minor"
-          - "patch"
+          - 'minor'
+          - 'patch'
     ignore:
       # Stryker's vitest runner runs zero tests per mutant on Vitest 5 (see CLAUDE.md).
-      - dependency-name: "vitest"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "@vitest/*"
-        update-types: ["version-update:semver-major"]
+      - dependency-name: 'vitest'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@vitest/*'
+        update-types: ['version-update:semver-major']
       # Pinned beta, no caret.
-      - dependency-name: "@azure/monitor-opentelemetry-exporter"
+      - dependency-name: '@azure/monitor-opentelemetry-exporter'
 
   # web/ (Vite, React, TanStack Query, MSW, Playwright)
-  - package-ecosystem: "npm"
-    directory: "/web"
+  - package-ecosystem: 'npm'
+    directory: '/web'
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: 'weekly'
+      day: 'monday'
     open-pull-requests-limit: 5
     labels:
-      - "dependencies"
+      - 'dependencies'
+      - 'web'
     groups:
       react:
         patterns:
-          - "react"
-          - "react-dom"
-          - "react-router*"
-          - "@types/react"
-          - "@types/react-dom"
+          - 'react'
+          - 'react-dom'
+          - 'react-router*'
+          - '@types/react'
+          - '@types/react-dom'
       testing:
         patterns:
-          - "vitest"
-          - "@vitest/*"
-          - "@testing-library/*"
-          - "msw"
-          - "@playwright/*"
-          - "@axe-core/*"
-          - "@stryker-mutator/*"
+          - 'vitest'
+          - '@vitest/*'
+          - '@testing-library/*'
+          - 'msw'
+          - '@playwright/*'
+          - '@axe-core/*'
+          - '@stryker-mutator/*'
       lint-and-format:
         patterns:
-          - "eslint"
-          - "@eslint/*"
-          - "typescript-eslint"
-          - "eslint-plugin-*"
-          - "prettier"
+          - 'eslint'
+          - '@eslint/*'
+          - 'typescript-eslint'
+          - 'eslint-plugin-*'
+          - 'prettier'
       minor-and-patch:
         update-types:
-          - "minor"
-          - "patch"
+          - 'minor'
+          - 'patch'
     ignore:
-      - dependency-name: "vitest"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "@vitest/*"
-        update-types: ["version-update:semver-major"]
+      - dependency-name: 'vitest'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@vitest/*'
+        update-types: ['version-update:semver-major']
 
   # Repo root (shortcut scripts only)
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: 'weekly'
+      day: 'monday'
     open-pull-requests-limit: 3
     labels:
-      - "dependencies"
+      - 'dependencies'
     groups:
       minor-and-patch:
         update-types:
-          - "minor"
-          - "patch"
+          - 'minor'
+          - 'patch'
 
   # Workflows in .github/workflows
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: 'github-actions'
+    directory: '/'
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: 'weekly'
+      day: 'monday'
     labels:
-      - "dependencies"
+      - 'dependencies'
+      - 'ci'
     groups:
       actions:
         patterns:
-          - "*"
+          - '*'
 
   # Local services (Seq, MariaDB, Mailpit)
-  - package-ecosystem: "docker-compose"
-    directory: "/"
+  - package-ecosystem: 'docker-compose'
+    directory: '/'
     schedule:
-      interval: "monthly"
+      interval: 'monthly'
     labels:
-      - "dependencies"
+      - 'dependencies'
     ignore:
       # Production runs MariaDB 11.4.7 (legacy). Keep the local image on it.
-      - dependency-name: "mariadb"
-        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: 'mariadb'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
 
   # Lifecycle test services
-  - package-ecosystem: "docker-compose"
-    directory: "/web/lifecycle"
+  - package-ecosystem: 'docker-compose'
+    directory: '/web/lifecycle'
     schedule:
-      interval: "monthly"
+      interval: 'monthly'
     labels:
-      - "dependencies"
+      - 'dependencies'
     ignore:
-      - dependency-name: "mariadb"
-        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: 'mariadb'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']

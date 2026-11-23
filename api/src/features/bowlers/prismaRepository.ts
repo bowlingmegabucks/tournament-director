@@ -32,11 +32,11 @@ export function apostropheForms(text: string): string[] {
   const forms: string[] = []
   for (let mask = 0; mask < 2 ** marks; mask++) {
     forms.push(
-      parts.reduce(
-        (form, part, index) =>
-          index === 0 ? part : form + (mask & (1 << (index - 1)) ? '\u2019' : "'") + part,
-        '',
-      ),
+      parts.reduce((form, part, index) => {
+        if (index === 0) return part
+        const mark = mask & (1 << (index - 1)) ? '\u2019' : "'"
+        return form + mark + part
+      }, ''),
     )
   }
   return forms

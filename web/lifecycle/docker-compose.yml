@@ -5,7 +5,7 @@ name: tournament-director-lifecycle
 
 services:
   database:
-    image: mariadb:11.4.7
+    image: mariadb:11.4.13
     environment:
       MARIADB_DATABASE: lifecycle
       MARIADB_USER: lifecycle
@@ -22,7 +22,7 @@ services:
       retries: 20
 
   mail:
-    image: axllent/mailpit:v1.32
+    image: axllent/mailpit:v1.34
     environment:
       MP_SMTP_TLS_CERT: 'sans:localhost'
       MP_SMTP_TLS_KEY: 'sans:localhost'

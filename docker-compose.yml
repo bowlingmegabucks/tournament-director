@@ -27,7 +27,7 @@ services:
   database:
     container_name: tournament-director-db
     # The version the legacy repo pins (D-34). Check production with SELECT VERSION().
-    image: mariadb:11.4.7
+    image: mariadb:11.4.13
     restart: unless-stopped
     environment:
       MARIADB_DATABASE: bowling_megabucks
@@ -50,7 +50,7 @@ services:
     container_name: tournament-director-mail
     # Mailpit catches every email the API sends, so local runs mail no one. It plays the part of
     # the .NET MailKit/smtp4dev tools: a fake SMTP server with an inbox in the browser.
-    image: axllent/mailpit:v1.32
+    image: axllent/mailpit:v1.34
     restart: unless-stopped
     environment:
       # Local only. STARTTLS is required with a self-signed certificate, like a real mail host, so

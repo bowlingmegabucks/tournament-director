@@ -5,7 +5,7 @@ name: tournament-director-lifecycle
 
 services:
   database:
-    image: mariadb:11.4.7
+    image: mariadb:11.4.13
     environment:
       MARIADB_DATABASE: lifecycle
       MARIADB_USER: lifecycle

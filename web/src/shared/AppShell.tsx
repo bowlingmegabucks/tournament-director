@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router'
 import { Can } from '../features/auth/Can'
 import { AuthMenu } from '../features/auth/AuthMenu'
 import logo from '../assets/logo.png'
+import { ThemeToggle } from './ThemeToggle'
 import styles from './AppShell.module.css'
 
 /** The logo header and the main menu, on every page (NAV-01). */
@@ -11,6 +12,7 @@ export function AppShell() {
       <header className={styles.header}>
         <div className={styles.inner}>
           <img className={styles.logo} src={logo} alt="Northeast MegaBuck$ Tournament" />
+          <ThemeToggle />
         </div>
       </header>
       <nav aria-label="Main" className={styles.nav}>

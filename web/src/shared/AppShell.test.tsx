@@ -14,6 +14,7 @@ describe('AppShell', () => {
     renderApp('/')
 
     expect(screen.getByRole('img', { name: 'Northeast MegaBuck$ Tournament' })).toBeVisible()
+    expect(screen.getByRole('switch', { name: 'Dark mode' })).toBeVisible()
     expect(
       within(mainMenu())
         .getAllByRole('link')

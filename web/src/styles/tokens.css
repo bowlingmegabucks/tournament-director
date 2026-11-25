@@ -66,6 +66,11 @@
   }
 }
 
+/*
+ * The light palette appears twice on purpose: here, when the user follows the
+ * system and it is light, and below, when the user picks light. A CSS media query
+ * cannot share a block with an attribute selector, so keep the two lists identical.
+ */
 @media (prefers-color-scheme: light) {
   :root[data-theme='system'] {
     --color-bg: #fbf9f3;

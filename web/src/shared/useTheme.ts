@@ -1,10 +1,5 @@
-import { useEffect, useLayoutEffect, useState } from 'react'
-import {
-  applyThemePreference,
-  getThemePreference,
-  saveThemePreference,
-  type ThemePreference,
-} from './theme'
+import { useEffect, useState } from 'react'
+import { getThemePreference, saveThemePreference, type ThemePreference } from './theme'
 
 export function useTheme() {
   const [preference, setPreference] = useState<ThemePreference>(getThemePreference)
@@ -16,10 +11,7 @@ export function useTheme() {
   const [systemIsDark, setSystemIsDark] = useState(() => systemThemeQuery?.matches ?? false)
   const isDark = preference === 'system' ? systemIsDark : preference === 'dark'
 
-  useLayoutEffect(() => {
-    applyThemePreference(preference)
-  }, [preference])
-
+  // Stryker disable ArrayDeclaration: the query is made once, so [] and [systemThemeQuery] behave the same.
   useEffect(() => {
     if (!systemThemeQuery) return
 
@@ -30,6 +22,7 @@ export function useTheme() {
     systemThemeQuery.addEventListener('change', updateSystemTheme)
     return () => systemThemeQuery.removeEventListener('change', updateSystemTheme)
   }, [systemThemeQuery])
+  // Stryker restore ArrayDeclaration
 
   function toggleTheme() {
     const nextPreference = isDark ? 'light' : 'dark'

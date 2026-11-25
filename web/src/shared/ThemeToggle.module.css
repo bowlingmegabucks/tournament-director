@@ -1,0 +1,48 @@
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-inline-size: 8.5rem;
+  padding: var(--space-2) var(--space-3);
+  border-color: var(--color-brand-text);
+  background: var(--color-brand-bg);
+  color: var(--color-brand-text);
+  font-size: var(--font-size-sm);
+}
+
+.toggle:focus-visible {
+  outline-color: var(--color-brand-text);
+}
+
+.track {
+  display: flex;
+  align-items: center;
+  inline-size: 2.5rem;
+  block-size: 1.5rem;
+  padding: 0.125rem;
+  border-radius: 999px;
+  background: var(--color-border);
+}
+
+.thumb {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  border-radius: 50%;
+  background: var(--color-brand-text);
+}
+
+.toggle[aria-checked='true'] .track {
+  background: var(--color-brand-text);
+}
+
+.toggle[aria-checked='true'] .thumb {
+  background: var(--color-brand-bg);
+  transform: translateX(1rem);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .thumb {
+    transition: transform 150ms ease;
+  }
+}

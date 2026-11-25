@@ -2,8 +2,11 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createBrowserRouter, RouterProvider } from 'react-router'
+import { initializeTheme } from './shared/theme'
 import './index.css'
 import App from './App.tsx'
+
+initializeTheme()
 
 // One retry keeps a failed request from showing "Loading…" for several seconds.
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1 } } })

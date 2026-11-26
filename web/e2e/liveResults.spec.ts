@@ -94,7 +94,9 @@ test('the scroll speed slider moves by keyboard and is kept after a reload (RES-
   await slider.press('ArrowRight')
   await expect(slider).toHaveValue('1.5')
 
-  await page.reload()
+  // A full load starts the app again; the mock data gets new ids, so go back in through the menu.
+  await openTournament(page)
+  await menuLink(page, 'Live results')
   await expect(slider).toHaveValue('1.5')
 })
 

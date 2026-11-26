@@ -40,7 +40,14 @@ function TieMarks({ row }: Readonly<{ row: SquadRow }>) {
  * The two lines over a division's table: the counts, and the games it is ranked through (RES-46).
  * The TV page pins them with the heading (D-254), so they are a part of their own.
  */
-export function DivisionSummary({ division }: Readonly<{ division: DivisionResult }>) {
+export function DivisionSummary({
+  division,
+  note = true,
+}: Readonly<{
+  division: DivisionResult
+  /** Draw the "Ranked through game N" line (the default). The TV drops it once official. */
+  note?: boolean
+}>) {
   const pending = pendingGame(
     division.rows.map((row) => row.scores),
     division.throughGame,
@@ -49,7 +56,7 @@ export function DivisionSummary({ division }: Readonly<{ division: DivisionResul
   return (
     <>
       <p className={styles.sub}>{formatSummary(division)}</p>
-      {throughNote && <p className={styles.sub}>{throughNote}</p>}
+      {note && throughNote && <p className={styles.sub}>{throughNote}</p>}
     </>
   )
 }

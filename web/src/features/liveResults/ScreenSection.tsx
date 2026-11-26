@@ -83,7 +83,7 @@ export function ScreenSection({
         <div className={styles.lead}>
           {screen.kind === 'squad' && (
             <>
-              <DivisionSummary division={screen.division} />
+              <DivisionSummary division={screen.division} note={unofficial} />
               <p className={styles.lines}>Squad: {formatLines(screen.division)}</p>
               {atLarge && <AtLargeLine figure={atLarge} />}
             </>
@@ -91,7 +91,9 @@ export function ScreenSection({
           {screen.kind === 'sweeper' && (
             <>
               <p className={styles.sub}>{counts(screen.results)}</p>
-              <SweeperNote rows={screen.results.rows} throughGame={screen.results.throughGame} />
+              {unofficial && (
+                <SweeperNote rows={screen.results.rows} throughGame={screen.results.throughGame} />
+              )}
               <p className={styles.lines}>{formatCashLine(screen.results.rows)}</p>
             </>
           )}

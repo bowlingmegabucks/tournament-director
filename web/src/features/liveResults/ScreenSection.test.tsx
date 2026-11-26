@@ -42,6 +42,41 @@ const superScreen: LiveScreen = {
 }
 
 describe('ScreenSection (D-242, D-254)', () => {
+  it('says what games are ranked only while the session is open (RES-51)', () => {
+    const rows = [createSquadRow({ scores: [200, 200, null] })]
+    const sweeperRows = [createSweeperRow({ scores: [200, 200, null] })]
+    const open = createSquadResults().session
+    const done = { ...open, complete: true }
+    const squad = (session: typeof open): LiveScreen => {
+      const ranked = { ...division, rows }
+      return {
+        key: 'sq1:d1',
+        kind: 'squad',
+        results: createSquadResults({ session, divisions: [ranked] }),
+        division: ranked,
+      }
+    }
+    const sweeper = (complete: boolean): LiveScreen => {
+      const results = createSweeperResults({ rows: sweeperRows, throughGame: 2 })
+      return {
+        key: 'sw1',
+        kind: 'sweeper',
+        results: { ...results, session: { ...results.session, complete } },
+      }
+    }
+    const { rerender } = render(<ScreenSection screen={squad(open)} highlighted={false} />)
+    expect(screen.getByText(/Ranked through game 2/)).toBeVisible()
+
+    rerender(<ScreenSection screen={squad(done)} highlighted={false} />)
+    expect(screen.queryByText(/Ranked through game/)).not.toBeInTheDocument()
+
+    rerender(<ScreenSection screen={sweeper(false)} highlighted={false} />)
+    expect(screen.getByText(/Ranked through game 2/)).toBeVisible()
+
+    rerender(<ScreenSection screen={sweeper(true)} highlighted={false} />)
+    expect(screen.queryByText(/Ranked through game/)).not.toBeInTheDocument()
+  })
+
   it('shows a squad division under a heading with Unofficial and the games counted', () => {
     render(<ScreenSection screen={squadScreen} highlighted={false} />)
 

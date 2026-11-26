@@ -196,3 +196,33 @@ for (const colorScheme of ['dark', 'light'] as const) {
     })
   })
 }
+
+test('a squad screen shows its division’s at-large figure beside the lines (RES-58)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 })
+  await openTournament(page)
+  await menuLink(page, 'Live results')
+
+  await expect(page.getByText(/^At Large: 4 spots - \+87 HG 242/).first()).toBeVisible()
+})
+
+test('on a phone the at-large figure wraps with no sideways scroll (RES-58, D-73)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await openTournament(page)
+  await menuLink(page, 'Live results')
+  await expect(page.getByText(/^At Large: 4 spots/).first()).toBeVisible()
+  await holdStill(page)
+
+  const heading = page.getByRole('heading', { level: 2 }).first()
+  const pinned = await heading.evaluate(
+    (node) => node.parentElement?.getBoundingClientRect().height,
+  )
+  expect(pinned).toBeLessThan(844 / 3)
+  const sideways = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  )
+  expect(sideways).toBe(false)
+})

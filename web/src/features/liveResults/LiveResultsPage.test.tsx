@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { server } from '../../mocks/server'
 import {
   createDivisionResult,
+  createLiveAtLarge,
   createLiveResults,
   createSquadResults,
   createSquadRow,
@@ -16,6 +17,7 @@ import {
 import { FakeEventSource } from '../../test/fakeEventSource'
 import { renderApp } from '../../test/renderApp'
 import type { DivisionResult, LiveResults } from '../results/types'
+import { AT_LARGE_NOTICE_MS } from './liveLogic'
 import { NOTICE_MS } from './useNotices'
 import { HIGHLIGHT_MS, LIVE_REFRESH_MS } from './useLiveResults'
 
@@ -757,5 +759,77 @@ describe('LiveResultsPage with reduced motion (RES-53)', () => {
     expect(
       screen.getByText(/Screen 1 of 4: Squad · Sat 10\/24\/2026 9:00 AM · Open/),
     ).toBeInTheDocument()
+  })
+})
+
+describe('LiveResultsPage at-large figure (RES-58, RES-62)', () => {
+  const atLarge = (spots: number, projected = true) => [
+    createLiveAtLarge({ divisionId: openId, divisionName: 'Open', spots, projected }),
+  ]
+  const table = () =>
+    screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
+
+  it('shows the figure on the screens of its division only', async () => {
+    serve(feedOf({ atLarge: atLarge(4, false) }))
+    open_()
+    await table()
+
+    // By role, so the hidden copy the scroll draws does not count.
+    const [open, senior] = screen.getAllByRole('heading', { level: 2 })
+    expect(open?.closest('div')).toHaveTextContent('At Large: 4 spots - +87 HG 242')
+    expect(senior?.closest('div')).not.toHaveTextContent('At Large')
+  })
+
+  it('flashes the new spots when an entries message changes them, for ten seconds', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const calls = serve(feedOf({ atLarge: atLarge(5) }))
+    open_()
+    await table()
+    expect(screen.queryByText(/projected At Large now/)).not.toBeInTheDocument()
+
+    calls.set(feedOf({ atLarge: atLarge(6) }))
+    act(() => {
+      FakeEventSource.latest().message(JSON.stringify({ kind: 'entries', version: 1 }))
+    })
+
+    const text = 'Open: projected At Large now 6 spots (was 5) - +87 HG 242'
+    expect(await screen.findByText(text)).toBeInTheDocument()
+    expect(screen.getByText('Projected At Large · now 6 spots (was 5)')).toBeInTheDocument()
+    const [open] = screen.getAllByRole('heading', { level: 2 })
+    expect(open?.closest('div')).toHaveTextContent('Projected At Large: 6 spots - +87 HG 242')
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(NOTICE_MS + 1000)
+    })
+    expect(screen.getByText(text)).toBeInTheDocument()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(AT_LARGE_NOTICE_MS)
+    })
+    expect(screen.queryByText(text)).not.toBeInTheDocument()
+  })
+
+  it('loads everything for a score change on a complete squad, so the figure follows', async () => {
+    const feed = feedOf({ atLarge: atLarge(4, false) })
+    const squad = feed.sessions[0]
+    if (squad?.kind !== 'squad') throw new Error('fixture')
+    squad.results.session.complete = true
+    const { calls } = serve(feed)
+    open_()
+    await table()
+
+    act(() => {
+      FakeEventSource.latest().message(
+        JSON.stringify({
+          kind: 'scored',
+          version: 1,
+          detail: { sessionId: squadId, sessionKind: 'squad', divisionId: openId },
+        }),
+      )
+    })
+
+    await waitFor(() => {
+      expect(calls.feed).toBe(2)
+    })
+    expect(calls.division).toEqual([])
   })
 })

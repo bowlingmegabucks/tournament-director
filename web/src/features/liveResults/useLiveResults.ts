@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { tournamentKeys } from '../../shared/tournamentQuery'
 import { useEventStream, type LiveState } from '../../shared/useEventStream'
 import { fetchLiveResults, fetchSquadResults } from '../results/api'
@@ -10,6 +10,7 @@ import {
   noticeText,
   parseLiveEvent,
   replaceDivision,
+  spotChanges,
   type Announcement,
 } from './liveLogic'
 import { useNotices } from './useNotices'
@@ -49,7 +50,7 @@ export interface LiveFeed {
  * that names a division in the feed loads only that division and swaps it in; anything else (a
  * sweeper, a complete, a division or session not in the feed, a message it cannot read) loads
  * everything again. Each game that fills posts a line on the strip and outlines its table for a few
- * seconds. A failed refresh keeps the last answer on screen and marks it stale.
+ * seconds. A change of the projected at-large spots posts a line of its own (RES-62). A failed refresh keeps the last answer on screen and marks it stale.
  */
 export function useLiveResults(tournamentId: string): LiveFeed {
   const queryClient = useQueryClient()
@@ -68,6 +69,19 @@ export function useLiveResults(tournamentId: string): LiveFeed {
   const everything = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: key })
   }, [queryClient, key])
+
+  // A change of the projected spots flashes, however the new answer got here: a message, the
+  // minute's refresh, or a reconnect (RES-62). An effect is right here: it reacts to the server's
+  // answer changing by pushing a timed message, and nothing renders from it directly.
+  const previous = useRef<LiveResults>(undefined)
+  const { push } = notices
+  useEffect(() => {
+    if (!query.data) return
+    for (const change of spotChanges(previous.current, query.data)) {
+      push(change.text, change.announcement, { replaces: `at-large-${change.divisionId}` })
+    }
+    previous.current = query.data
+  }, [query.data, push])
 
   // The outline goes away on its own. An effect is right here: a timer is outside React.
   useEffect(() => {
@@ -95,7 +109,18 @@ export function useLiveResults(tournamentId: string): LiveFeed {
         if (text) notices.push(text, announcementOf(event, current))
 
         const { sessionId, sessionKind, divisionId } = event.detail
-        if (event.kind === 'complete' || sessionKind === 'sweeper' || !divisionId || !current) {
+        // A correction to a complete squad can move the at-large figures, which one division's
+        // answer does not carry (RES-57).
+        const official = current?.sessions.some(
+          (session) => session.results.session.id === sessionId && session.results.session.complete,
+        )
+        if (
+          event.kind === 'complete' ||
+          sessionKind === 'sweeper' ||
+          !divisionId ||
+          !current ||
+          official
+        ) {
           everything()
           if (event.kind === 'game-full')
             setHighlight(sessionKind === 'squad' ? undefined : sessionId)

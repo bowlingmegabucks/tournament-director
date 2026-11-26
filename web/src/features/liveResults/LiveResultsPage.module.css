@@ -93,6 +93,13 @@
   font-weight: 700;
 }
 
+/* The cut and cash lines, with the at-large figure to their right, or under them when narrow. */
+.figures {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--space-6);
+}
+
 .tag {
   display: inline-block;
   margin-inline-start: var(--space-3);

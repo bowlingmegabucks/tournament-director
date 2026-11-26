@@ -4,6 +4,7 @@ import type {
   AtLargeDivision,
   Decider,
   DivisionResult,
+  LiveAtLarge,
   SeedingDivision,
   SeedingRow,
   SquadRow,
@@ -253,4 +254,38 @@ export function formatLines(division: DivisionResult): string {
 export function formatCashLine(rows: readonly (Figure & { group: 'casher' | 'other' })[]): string {
   const figure = lineFigure(lowest(rows, 'casher'))
   return figure === null ? '' : `Cash line ${figure}`
+}
+
+const atLargeName = (figure: LiveAtLarge) => (figure.projected ? 'Projected At Large' : 'At Large')
+
+const spotsText = (spots: number) => (spots === 0 ? 'no spots' : plural(spots, 'spot', 'spots'))
+
+/**
+ * "+87 HG 242" for the last bowler in (RES-60): their "+/−" and the high game a tie must beat. A
+ * handicap division says the high game holds handicap, and that a later tie-break game does not.
+ * `null` when no one holds the last spot.
+ */
+export function formatAtLargeLine({ line, handicap }: LiveAtLarge): string | null {
+  if (!line) return null
+  const total = formatPlusMinus(line.total, line.games)
+  if (line.fullTie) return `${total} full tie`
+  const high = `HG ${line.highGame}${handicap ? ' w/HDCP' : ''}`
+  if (!line.tieBreaker) return `${total} ${high}`
+  const { rank, score } = line.tieBreaker
+  return `${total} ${high}, ${ordinal(rank)} ${score}${handicap ? ' scratch' : ''}`
+}
+
+/** "At Large: 4 spots - +87 HG 242" beside the cut and cash lines of the TV page (RES-58). */
+export function formatAtLarge(figure: LiveAtLarge): string {
+  if (figure.spots === 0) return `${atLargeName(figure)}: no spots yet`
+  const line = formatAtLargeLine(figure)
+  const spots = `${atLargeName(figure)}: ${spotsText(figure.spots)}`
+  return line ? `${spots} - ${line}` : spots
+}
+
+/** "Open: projected At Large now 6 spots (was 5) - +74 HG 231", for a change of spots (RES-62). */
+export function formatAtLargeChange(figure: LiveAtLarge, was: number): string {
+  const change = `${figure.divisionName}: projected At Large now ${spotsText(figure.spots)} (was ${was === 0 ? 'none' : was})`
+  const line = formatAtLargeLine(figure)
+  return line ? `${change} - ${line}` : change
 }

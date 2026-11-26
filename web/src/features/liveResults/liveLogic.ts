@@ -1,6 +1,9 @@
+import { plural } from '../../shared/plural'
 import { formatSessionDate } from '../../shared/sessionFormat'
+import { formatAtLargeChange, formatAtLargeLine } from '../results/format'
 import type {
   DivisionResult,
+  LiveAtLarge,
   LiveEvent,
   LiveResults,
   SquadResults,
@@ -10,13 +13,16 @@ import type {
 
 /** What the overlay draws for a message (D-255): a lower third, the flash for a last game, or the official mark. */
 export interface Announcement {
-  variant: 'game' | 'last' | 'official'
+  /** `at-large`: the projected spots changed (RES-62). */
+  variant: 'game' | 'last' | 'official' | 'at-large'
   /** "Game 2 complete", "Final game complete", or "Results are official". */
   kicker: string
   /** "Open Division", "Sweeper", or "Squad · Sat 9:00 am" for an official one. */
   title: string
-  /** The game that filled. An official announcement has none: it draws a check mark. */
+  /** The game that filled, or the new spots of `at-large`. An official one has none: it draws a check mark. */
   game?: number
+  /** How long it shows, in milliseconds, when not the usual time. */
+  duration?: number
 }
 
 /** One screen of the TV page: a squad division, a sweeper, or the super sweeper (D-242). */
@@ -198,6 +204,48 @@ export function replaceDivision(
   })
   if (hidden) return found ? { ...feed, sessions } : feed
   return found ? { ...feed, sessions } : undefined
+}
+
+/** How long a change of the projected at-large spots shows (RES-62). */
+export const AT_LARGE_NOTICE_MS = 10_000
+
+export interface SpotChange {
+  divisionId: string
+  text: string
+  announcement: Announcement
+}
+
+/**
+ * RES-62: the divisions whose projected at-large spots differ between two loads, up or down. Nothing
+ * on the first load, or on the move into or out of projected. A division missing from the older
+ * projected load had no spot.
+ */
+export function spotChanges(before: LiveResults | undefined, after: LiveResults): SpotChange[] {
+  if (!before?.atLarge.some((figure) => figure.projected)) return []
+  const had = new Map(before.atLarge.map((figure) => [figure.divisionId, figure.spots]))
+  return after.atLarge.flatMap((figure) => {
+    const was = had.get(figure.divisionId) ?? 0
+    if (!figure.projected || figure.spots === was) return []
+    return [
+      {
+        divisionId: figure.divisionId,
+        text: formatAtLargeChange(figure, was),
+        announcement: spotAnnouncement(figure, was),
+      },
+    ]
+  })
+}
+
+function spotAnnouncement(figure: LiveAtLarge, was: number): Announcement {
+  const line = formatAtLargeLine(figure)
+  const now = figure.spots === 0 ? 'no spots' : plural(figure.spots, 'spot', 'spots')
+  return {
+    variant: 'at-large',
+    kicker: `Projected At Large · now ${now} (was ${was === 0 ? 'none' : was})`,
+    title: line ? `${figure.divisionName}: ${line}` : figure.divisionName,
+    game: figure.spots,
+    duration: AT_LARGE_NOTICE_MS,
+  }
 }
 
 /** "3:41 pm" for an ISO time, in the viewer's own zone (the TV sits at the center). */

@@ -2,9 +2,10 @@ import { useEffect, useId, useRef } from 'react'
 import { plural } from '../../shared/plural'
 import { formatRatio } from '../../shared/sessionFormat'
 import { DivisionBody, DivisionSummary } from '../results/DivisionResults'
-import { formatCashLine, formatLines } from '../results/format'
+import { formatAtLarge, formatCashLine, formatLines } from '../results/format'
 import { SuperSweeperTable } from '../results/SuperSweeperTable'
 import { SweeperNote, SweeperTable } from '../results/SweeperTable'
+import type { LiveAtLarge } from '../results/types'
 import { isUnofficial, screenHeading, screenThrough, type LiveScreen } from './liveLogic'
 import styles from './LiveResultsPage.module.css'
 
@@ -15,12 +16,13 @@ import styles from './LiveResultsPage.module.css'
  * lines, then the table the Results tab draws, at TV size. The heading block and the table's column
  * heads stay pinned at the top of the screen while the rows scroll, until the next screen pushes
  * them away (D-254), so a row far down still shows its division and where the lines are.
- * `highlighted` outlines the table that just changed (D-245).
+ * A squad screen adds its division's at-large figure beside the lines (RES-58). `highlighted` outlines the table that just changed (D-245).
  */
 export function ScreenSection({
   screen,
   highlighted,
-}: Readonly<{ screen: LiveScreen; highlighted: boolean }>) {
+  atLarge,
+}: Readonly<{ screen: LiveScreen; highlighted: boolean; atLarge?: LiveAtLarge }>) {
   const headingId = useId()
   const through = screenThrough(screen)
   const section = useRef<HTMLElement>(null)
@@ -65,7 +67,10 @@ export function ScreenSection({
           {screen.kind === 'squad' && (
             <>
               <DivisionSummary division={screen.division} />
-              <p className={styles.lines}>{formatLines(screen.division)}</p>
+              <div className={styles.figures}>
+                <p className={styles.lines}>{formatLines(screen.division)}</p>
+                {atLarge && <p className={styles.lines}>{formatAtLarge(atLarge)}</p>}
+              </div>
             </>
           )}
           {screen.kind === 'sweeper' && (

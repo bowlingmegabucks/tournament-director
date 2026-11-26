@@ -376,6 +376,30 @@ function isLiveSession(value: unknown): boolean {
   return kind === 'sweeper' && isSweeperResults(results)
 }
 
+function isAtLargeLine(value: unknown): boolean {
+  if (value === null) return true
+  const tieBreaker = field(value, 'tieBreaker')
+  return (
+    isNumber(field(value, 'total')) &&
+    isNumber(field(value, 'games')) &&
+    isNumber(field(value, 'highGame')) &&
+    typeof field(value, 'fullTie') === 'boolean' &&
+    (tieBreaker === null ||
+      (isNumber(field(tieBreaker, 'rank')) && isNumber(field(tieBreaker, 'score'))))
+  )
+}
+
+function isLiveAtLarge(value: unknown): boolean {
+  return (
+    isText(field(value, 'divisionId')) &&
+    isText(field(value, 'divisionName')) &&
+    isNumber(field(value, 'spots')) &&
+    typeof field(value, 'projected') === 'boolean' &&
+    typeof field(value, 'handicap') === 'boolean' &&
+    isAtLargeLine(field(value, 'line'))
+  )
+}
+
 function isLiveResults(value: unknown): value is LiveResults {
   const superSweeper = field(value, 'superSweeper')
   const tournament = field(value, 'tournament')
@@ -384,6 +408,7 @@ function isLiveResults(value: unknown): value is LiveResults {
     isText(field(tournament, 'name')) &&
     isText(field(value, 'generatedAt')) &&
     isEvery(field(value, 'sessions'), isLiveSession) &&
+    isEvery(field(value, 'atLarge'), isLiveAtLarge) &&
     (superSweeper === null || isSuperSweeperResults(superSweeper))
   )
 }

@@ -265,6 +265,28 @@ export interface LiveResults {
   /** Squads in date order, then sweepers in date order (D-242). */
   sessions: LiveSession[]
   superSweeper: SuperSweeperResults | null
+  /** By division name. Empty until a squad is complete. */
+  atLarge: LiveAtLarge[]
+}
+
+/** RES-57 to RES-60: one division's at-large figure on the TV page. */
+export interface LiveAtLarge {
+  divisionId: string
+  divisionName: string
+  spots: number
+  /** Only the last squad is open, so its lane assignments count toward the spots (RES-59). */
+  projected: boolean
+  handicap: boolean
+  /** The last bowler in. `null` when there is no spot, or not every spot has a bowler. */
+  line: {
+    total: number
+    games: number
+    /** With handicap (SCR-11). */
+    highGame: number
+    /** The 2nd-best or a later scratch game, when it decided the last spot. */
+    tieBreaker: { rank: number; score: number } | null
+    fullTie: boolean
+  } | null
 }
 
 /** What a message on the tournament stream says (RES-49, D-243): ids and a game, never a score. */

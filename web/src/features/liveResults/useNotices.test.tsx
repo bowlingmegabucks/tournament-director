@@ -151,4 +151,41 @@ describe('useNotices (RES-51, D-245)', () => {
 
     expect(vi.getTimerCount()).toBe(0)
   })
+
+  it('shows a message with its own duration that long (RES-62)', () => {
+    const { result } = renderHook(() => useNotices())
+    act(() => {
+      result.current.push('x', {
+        variant: 'at-large',
+        kicker: 'k',
+        title: 't',
+        duration: NOTICE_MS * 2,
+      })
+    })
+
+    act(() => {
+      vi.advanceTimersByTime(NOTICE_MS * 2 - 1)
+    })
+    expect(result.current.current).toBe('x')
+    act(() => {
+      vi.advanceTimersByTime(1)
+    })
+    expect(result.current.current).toBeUndefined()
+  })
+
+  it('puts a newer message in the place of the one it replaces (RES-62)', () => {
+    const { result } = renderHook(() => useNotices())
+    act(() => {
+      result.current.push('game')
+      result.current.push('6 spots', undefined, { replaces: 'open' })
+      result.current.push('other')
+      result.current.push('5 spots', undefined, { replaces: 'open' })
+    })
+    expect(result.current.waiting).toBe(2)
+
+    act(() => {
+      vi.advanceTimersByTime(NOTICE_MS)
+    })
+    expect(result.current.current).toBe('5 spots')
+  })
 })

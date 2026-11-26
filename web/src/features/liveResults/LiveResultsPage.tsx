@@ -2,7 +2,7 @@ import { useParams } from 'react-router'
 import { Loading } from '../../shared/Loading'
 import { AutoScroll } from './AutoScroll'
 import { GameAnnouncement } from './GameAnnouncement'
-import { formatClock, screenHeading, screensOf } from './liveLogic'
+import { formatClock, screenHeading, screensOf, type LiveScreen } from './liveLogic'
 import styles from './LiveResultsPage.module.css'
 import { PageFlip } from './PageFlip'
 import { ScreenSection } from './ScreenSection'
@@ -26,6 +26,10 @@ export function LiveResultsPage() {
 
   const { data } = feed
   const screens = data ? screensOf(data) : []
+  const atLargeOf = (screen: LiveScreen) =>
+    screen.kind === 'squad'
+      ? data?.atLarge.find((figure) => figure.divisionId === screen.division.id)
+      : undefined
   const idle = data ? `Updated ${formatClock(new Date(feed.loadedAt).toISOString())}` : ' '
 
   let body
@@ -53,7 +57,13 @@ export function LiveResultsPage() {
         screens={screens.map((screen) => ({
           key: screen.key,
           label: screenHeading(screen),
-          node: <ScreenSection screen={screen} highlighted={feed.highlighted === screen.key} />,
+          node: (
+            <ScreenSection
+              screen={screen}
+              highlighted={feed.highlighted === screen.key}
+              atLarge={atLargeOf(screen)}
+            />
+          ),
         }))}
       />
     )
@@ -65,6 +75,7 @@ export function LiveResultsPage() {
             key={screen.key}
             screen={screen}
             highlighted={feed.highlighted === screen.key}
+            atLarge={atLargeOf(screen)}
           />
         ))}
       </AutoScroll>

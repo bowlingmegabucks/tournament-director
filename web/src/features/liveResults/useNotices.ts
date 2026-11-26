@@ -11,6 +11,12 @@ interface Notice {
   id: number
   text: string
   announcement?: Announcement
+  replaces?: string
+}
+
+export interface NoticeOptions {
+  /** A newer message with the same text here takes the place of an older one, showing or waiting. */
+  replaces?: string
 }
 
 /**
@@ -18,7 +24,8 @@ interface Notice {
  * each. `current` is the one showing, `undefined` when none waits. A message may carry an
  * `announcement` for the overlay. An effect is right here: a
  * timer is outside React. The timer is keyed on the message's id, so a second message does not
- * restart the one showing and two equal messages in a row each get their time.
+ * restart the one showing and two equal messages in a row each get their time. A message whose
+ * announcement names its own `duration` shows that long (RES-62).
  */
 export function useNotices(duration = NOTICE_MS) {
   const [queue, setQueue] = useState<Notice[]>([])
@@ -26,23 +33,31 @@ export function useNotices(duration = NOTICE_MS) {
   const current = queue[0]
 
   // Stryker disable next-line ArrayDeclaration: `setQueue` never changes, so the list of what it depends on is moot.
-  const push = useCallback((text: string, announcement?: Announcement) => {
-    // Stryker disable next-line AssignmentOperator: ids only need to differ, up or down.
-    next.current += 1
-    const notice = { id: next.current, text, announcement }
-    setQueue((waiting) => [...waiting, notice].slice(-MAX_WAITING))
-  }, [])
+  const push = useCallback(
+    (text: string, announcement?: Announcement, { replaces }: NoticeOptions = {}) => {
+      // Stryker disable next-line AssignmentOperator: ids only need to differ, up or down.
+      next.current += 1
+      const notice = { id: next.current, text, announcement, replaces }
+      setQueue((waiting) => {
+        const stale = replaces ? waiting.findIndex((each) => each.replaces === replaces) : -1
+        if (stale >= 0) return waiting.with(stale, notice)
+        return [...waiting, notice].slice(-MAX_WAITING)
+      })
+    },
+    [],
+  )
 
   const currentId = current?.id
+  const showFor = current?.announcement?.duration ?? duration
   useEffect(() => {
     if (currentId === undefined) return
     const timer = setTimeout(() => {
       setQueue((waiting) => waiting.filter((notice) => notice.id !== currentId))
-    }, duration)
+    }, showFor)
     return () => {
       clearTimeout(timer)
     }
-  }, [currentId, duration])
+  }, [currentId, showFor])
 
   return {
     current: current?.text,

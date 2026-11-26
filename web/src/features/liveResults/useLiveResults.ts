@@ -73,15 +73,18 @@ export function useLiveResults(tournamentId: string): LiveFeed {
   // A change of the projected spots flashes, however the new answer got here: a message, the
   // minute's refresh, or a reconnect (RES-62). An effect is right here: it reacts to the server's
   // answer changing by pushing a timed message, and nothing renders from it directly.
-  const previous = useRef<LiveResults>(undefined)
+  // Kept with its tournament: another tournament's first load is a first load, not a change.
+  const previous = useRef<{ tournamentId: string; data: LiveResults }>(undefined)
   const { push } = notices
   useEffect(() => {
     if (!query.data) return
-    for (const change of spotChanges(previous.current, query.data)) {
+    const last = previous.current
+    const before = last?.tournamentId === tournamentId ? last.data : undefined
+    for (const change of spotChanges(before, query.data)) {
       push(change.text, change.announcement, { replaces: `at-large-${change.divisionId}` })
     }
-    previous.current = query.data
-  }, [query.data, push])
+    previous.current = { tournamentId, data: query.data }
+  }, [query.data, tournamentId, push])
 
   // The outline goes away on its own. An effect is right here: a timer is outside React.
   useEffect(() => {

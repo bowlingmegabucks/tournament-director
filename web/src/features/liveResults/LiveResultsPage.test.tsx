@@ -741,8 +741,15 @@ describe('LiveResultsPage offline and keeping alive (RES-52, D-246)', () => {
 })
 
 describe('LiveResultsPage scroll speed (RES-63)', () => {
+  const realFrame = globalThis.requestAnimationFrame
+  const realCancel = globalThis.cancelAnimationFrame
+
+  // Put back here, not at the end of a test, so a failed one cannot leak into the next.
   afterEach(() => {
     localStorage.clear()
+    vi.restoreAllMocks()
+    vi.stubGlobal('requestAnimationFrame', realFrame)
+    vi.stubGlobal('cancelAnimationFrame', realCancel)
   })
 
   it('offers 1x to 2x in steps of 0.25 in the bar, and shows the one chosen', async () => {
@@ -765,8 +772,6 @@ describe('LiveResultsPage scroll speed (RES-63)', () => {
 
   it('scrolls at the chosen multiple of 40 pixels a second', async () => {
     let pending: FrameRequestCallback[] = []
-    const realFrame = globalThis.requestAnimationFrame
-    const realCancel = globalThis.cancelAnimationFrame
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
       pending.push(callback)
       return pending.length
@@ -787,17 +792,27 @@ describe('LiveResultsPage scroll speed (RES-63)', () => {
     }
     localStorage.setItem('tv-scroll-speed', '2')
     serve()
-    const { unmount } = open_()
+    open_()
     await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
 
     frame(0)
     frame(1000)
 
     expect(position).toBe(80)
-    unmount()
-    vi.restoreAllMocks()
-    vi.stubGlobal('requestAnimationFrame', realFrame)
-    vi.stubGlobal('cancelAnimationFrame', realCancel)
+  })
+
+  it('lets go of the focus when the mouse or finger is lifted from the slider', async () => {
+    serve()
+    open_()
+    const slider = await screen.findByRole('slider', { name: /Scroll speed/ })
+    act(() => {
+      slider.focus()
+    })
+    expect(slider).toHaveFocus()
+
+    fireEvent.pointerUp(slider)
+
+    expect(slider).not.toHaveFocus()
   })
 
   it('shows the slider only once a viewer takes over', async () => {

@@ -113,10 +113,17 @@ test('the scroll speed slider shows on a click and hides when the scroll goes on
   await page.clock.runFor(100)
   await expect(speed).toHaveCSS('opacity', '1')
 
-  // A mouse click leaves focus on the slider; that alone must not hold it on screen.
-  await page.getByRole('slider', { name: /Scroll speed/ }).click()
+  // A click on the slider gives up the focus, so a later arrow key is not a change of speed.
+  const slider = page.getByRole('slider', { name: /Scroll speed/ })
+  await slider.click()
+  await expect(slider).not.toBeFocused()
+  const chosen = await slider.inputValue()
   await page.clock.runFor(11_000)
   await expect(speed).toHaveCSS('opacity', '0')
+
+  await page.keyboard.press('ArrowDown')
+  await page.clock.runFor(100)
+  await expect(slider).toHaveValue(chosen)
 })
 
 test('keyboard focus alone shows the hidden speed slider (RES-63)', async ({ page }) => {

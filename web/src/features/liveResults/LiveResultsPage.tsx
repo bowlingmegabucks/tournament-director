@@ -102,6 +102,11 @@ export function LiveResultsPage() {
               step={SPEED_STEP}
               value={speed}
               aria-valuetext={`${speed}x`}
+              // A mouse or finger lets go of the focus too. Kept, the next arrow key would change the
+              // speed instead of scrolling, and hold the slider on screen (RES-63).
+              onPointerUp={(event) => {
+                event.currentTarget.blur()
+              }}
               onChange={(event) => {
                 setSpeed(Number(event.target.value))
               }}

@@ -302,6 +302,29 @@ describe('AutoScroll (RES-50, D-242)', () => {
       }
     })
 
+    it('counts the idle time from the release of the mouse, not the press (RES-50)', () => {
+      for (const release of [
+        () => fireEvent.pointerUp(document.body),
+        () => fireEvent.pointerCancel(document.body),
+      ]) {
+        pending = []
+        scrolled.length = 0
+        size(1000, 400)
+        const { unmount } = render(<AutoScroll>{content}</AutoScroll>)
+        frames.at(0)
+        frames.at(1000)
+        fireEvent.pointerDown(document.body)
+        frames.at(2000)
+        release()
+        frames.at(9000)
+
+        frames.at(9000 + IDLE_RESUME_MS - 1)
+
+        expect(position()).toBe(40)
+        unmount()
+      }
+    })
+
     it('says when the pause starts and ends, once each', () => {
       size(1000, 400)
       const onPauseChange = vi.fn()
@@ -348,7 +371,15 @@ describe('AutoScroll (RES-50, D-242)', () => {
       const remove = vi.spyOn(document, 'removeEventListener')
       size(1000, 400)
       const { unmount } = render(<AutoScroll>{content}</AutoScroll>)
-      const types = ['pointerdown', 'input', 'wheel', 'keydown', 'touchstart']
+      const types = [
+        'pointerdown',
+        'pointerup',
+        'pointercancel',
+        'input',
+        'wheel',
+        'keydown',
+        'touchstart',
+      ]
       const added = add.mock.calls.filter(([type]) => types.includes(type))
 
       unmount()

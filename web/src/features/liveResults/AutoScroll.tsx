@@ -26,6 +26,9 @@ function watchViewerInput() {
   }
   const listeners: [string, (event: Event) => void][] = [
     ['pointerdown', touch],
+    // The release too, so the idle time counts from the end of a click or a drag.
+    ['pointerup', touch],
+    ['pointercancel', touch],
     ['input', touch],
     ['touchstart', touch],
     ['touchmove', touch],

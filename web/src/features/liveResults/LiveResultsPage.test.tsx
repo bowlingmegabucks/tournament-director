@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { server } from '../../mocks/server'
@@ -738,6 +738,43 @@ describe('LiveResultsPage offline and keeping alive (RES-52, D-246)', () => {
       expect(request).toHaveBeenCalledWith('screen')
     })
     Reflect.deleteProperty(navigator, 'wakeLock')
+  })
+})
+
+describe('LiveResultsPage scroll speed (RES-63)', () => {
+  afterEach(() => {
+    localStorage.clear()
+  })
+
+  it('offers 1x to 2x in steps of 0.25 in the bar, and shows the one chosen', async () => {
+    serve()
+    open_()
+
+    const slider = await screen.findByRole('slider', { name: /Scroll speed/ })
+    expect(screen.getByRole('banner')).toContainElement(slider)
+    expect(slider).toHaveAttribute('min', '1')
+    expect(slider).toHaveAttribute('max', '2')
+    expect(slider).toHaveAttribute('step', '0.25')
+    expect(slider).toHaveValue('1')
+
+    fireEvent.change(slider, { target: { value: '1.25' } })
+
+    expect(slider).toHaveValue('1.25')
+    expect(slider).toHaveAttribute('aria-valuetext', '1.25x')
+    expect(screen.getByText('1.25x')).toBeVisible()
+  })
+
+  it('has no slider when the page flips instead of scrolling', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('reduce'),
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }))
+    serve()
+    open_()
+    await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
+
+    expect(screen.queryByRole('slider')).not.toBeInTheDocument()
   })
 })
 

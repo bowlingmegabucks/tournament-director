@@ -77,6 +77,12 @@ export function AutoScroll({
   const view = useRef<HTMLDivElement>(null)
   const first = useRef<HTMLDivElement>(null)
   const copy = useRef<HTMLDivElement>(null)
+  // The frame reads the speed from a ref, so a new speed does not restart the scroll from the top.
+  const pace = useRef(speed)
+
+  useEffect(() => {
+    pace.current = speed
+  }, [speed])
 
   useEffect(() => {
     const input = watchViewerInput(view.current)
@@ -99,7 +105,7 @@ export function AutoScroll({
       else if (paused)
         offset = element?.scrollTop ?? offset // follow the viewer, write nothing
       else if (moving)
-        offset = nextOffset(offset, last === undefined ? 0 : now - last, speed, listHeight)
+        offset = nextOffset(offset, last === undefined ? 0 : now - last, pace.current, listHeight)
       // Write only when we drive the view: a fit list sits at the top, a moving one follows `offset`.
       if (element && (fits || moving)) element.scrollTop = offset
       // A hidden tab ends the span, so the first frame back does not jump.
@@ -110,7 +116,7 @@ export function AutoScroll({
       cancelAnimationFrame(frame)
       input.stop()
     }
-  }, [speed])
+  }, [])
 
   return (
     // Focusable so the arrow keys scroll it (WCAG 2.1.1); a key press then pauses the scroll.

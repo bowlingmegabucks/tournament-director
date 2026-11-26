@@ -33,6 +33,31 @@
   font-size: var(--font-size-tv-head);
 }
 
+/* The scroll speed (RES-63). */
+.speed {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-tv-small);
+}
+
+.speed input {
+  inline-size: 12rem;
+  min-block-size: var(--target-min);
+  accent-color: var(--color-brand-text);
+}
+
+/* The bar is black in both themes, so the focus ring takes the bar's text color. */
+.speed input:focus-visible {
+  outline-color: var(--color-brand-text);
+}
+
+/* Room for "1.25x", so the slider does not shift under the finger. */
+.speedValue {
+  min-inline-size: 5ch;
+}
+
 /* When the board last updated, at the right of the bar. */
 .updated {
   margin: 0;

@@ -83,6 +83,21 @@ test('the TV page scrolls on its own, and the heading stays pinned at the top (R
   expect(Math.abs(headingTop - mainTop)).toBeLessThan(2)
 })
 
+test('the scroll speed slider moves by keyboard and is kept after a reload (RES-63)', async ({
+  page,
+}) => {
+  await openTournament(page)
+  await menuLink(page, 'Live results')
+  const slider = page.getByRole('slider', { name: /Scroll speed/ })
+
+  await slider.press('ArrowRight')
+  await slider.press('ArrowRight')
+  await expect(slider).toHaveValue('1.5')
+
+  await page.reload()
+  await expect(slider).toHaveValue('1.5')
+})
+
 test('on a phone the pinned heading leaves room for rows, and the page does not scroll sideways (RES-50, D-73)', async ({
   page,
 }) => {

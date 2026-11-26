@@ -314,6 +314,31 @@ export type SuperSweeperResults = z.infer<typeof superSweeperResultsSchema>
  * super sweeper, all ranked through the last full game. Only sessions with scores are listed. Web
  * only, public, never vendor-visible (D-09). It carries no more personal data than its parts (BWL-17).
  */
+/** RES-57 to RES-60: one division's at-large figure on the TV page. No names and no bowler ids. */
+export const liveAtLargeSchema = z.object({
+  divisionId: z.uuid(),
+  divisionName: z.string(),
+  spots: z.number().int().nonnegative(),
+  /** Only the last squad is open, so its lane assignments count toward the spots (RES-59). */
+  projected: z.boolean(),
+  handicap: z.boolean(),
+  /** The last bowler in. `null` when there is no spot, or not every spot has a bowler. */
+  line: z
+    .object({
+      total: z.number().int(),
+      games: z.number().int(),
+      /** With handicap (SCR-11). */
+      highGame: z.number().int(),
+      /** The 2nd-best or a later scratch game, when it decided the last spot. */
+      tieBreaker: z.object({ rank: z.number().int().min(2), score: z.number().int() }).nullable(),
+      /** Every tie-breaker is equal across the last spot: the director picks (D-16). */
+      fullTie: z.boolean(),
+    })
+    .nullable(),
+})
+
+export type LiveAtLarge = z.infer<typeof liveAtLargeSchema>
+
 export const liveResultsSchema = z.object({
   tournament: z.object({ id: z.uuid(), name: z.string() }),
   /** When the answer was worked out, for the "Updated 3:41 pm" line. */
@@ -327,6 +352,8 @@ export const liveResultsSchema = z.object({
   ),
   /** `null` when no one has a sweeper score in the super sweeper. */
   superSweeper: superSweeperResultsSchema.nullable(),
+  /** By division name. Empty until a squad is complete. */
+  atLarge: z.array(liveAtLargeSchema),
 })
 
 export type LiveResults = z.infer<typeof liveResultsSchema>

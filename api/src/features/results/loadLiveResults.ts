@@ -1,10 +1,32 @@
+import type { Division } from '../divisions/types.ts'
 import { amountsFor } from '../payouts/amounts.ts'
 import { HttpError } from '../../shared/errors.ts'
+import { projectedSquad, workOutLiveAtLarge } from './liveAtLarge.ts'
 import { loadSuperSweeper } from './loadFinals.ts'
 import { loadSweeperResults, toSquadResults, type ResultsDeps } from './loadResults.ts'
 import { reportSkipped, requireRatios, type Reporting } from './resultHelpers.ts'
-import { workOutSquads } from './squadFlow.ts'
-import type { LiveResults } from './types.ts'
+import { workOutSquads, type WorkedSquad } from './squadFlow.ts'
+import type { LiveAtLarge, LiveResults } from './types.ts'
+
+/**
+ * RES-57 to RES-60: the at-large figures. A ratio that cannot work leaves them out with a warning, so
+ * it does not blank the screen.
+ */
+async function atLargeOf(
+  deps: ResultsDeps,
+  reporting: Reporting,
+  tournamentId: string,
+  worked: readonly WorkedSquad[],
+  divisions: readonly Division[],
+): Promise<LiveAtLarge[]> {
+  const ratios = await deps.tournaments.getRatios(tournamentId)
+  const last = projectedSquad(worked)
+  if (!ratios || ratios.finalsRatio <= 0 || (last && last.squad.finalsRatio <= 0)) {
+    reporting.logger.warn({ tournamentId }, 'The at-large figures are left out of the live results')
+    return []
+  }
+  return workOutLiveAtLarge(worked, last?.entries ?? [], divisions, ratios.finalsRatio)
+}
 
 /**
  * RES-47, D-242, D-244: what the TV page loads once. Every squad of the tournament is worked out in
@@ -88,5 +110,6 @@ export async function loadLiveResults(
     generatedAt: new Date().toISOString(),
     sessions: [...squadSessions, ...sweeperSessions],
     superSweeper,
+    atLarge: await atLargeOf(deps, reporting, tournamentId, worked, divisions),
   }
 }

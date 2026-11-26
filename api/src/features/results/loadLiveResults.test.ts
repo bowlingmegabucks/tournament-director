@@ -438,6 +438,54 @@ describe('loadLiveResults (RES-47, D-242, D-244)', () => {
     expect(result.superSweeper).toBeNull()
   })
 
+  it('gives the at-large figure from the complete squads only (RES-57)', async () => {
+    const done = squadAt('2026-10-24T09:00:00', { complete: true, finalsRatio: 8 })
+    const running = squadAt('2026-10-24T13:00:00', { finalsRatio: 8 })
+    // Tournament ratio 8: 7 entries give no spot until the last squad's 1 lane adds the eighth.
+    const seats = Array.from({ length: 7 }, (_, index) => ({
+      sessionId: done.id,
+      entry: bowler(),
+      games: [200 - index, 200, 200],
+    }))
+    const { deps, tournament, reporting } = setup({
+      squads: [done, running],
+      seats: [...seats, { sessionId: running.id, entry: bowler(), games: [300] }],
+    })
+
+    const result = await loadLiveResults(deps, reporting, tournament.id)
+
+    expect(liveResultsSchema.safeParse(result).success).toBe(true)
+    expect(result.atLarge).toEqual([
+      {
+        divisionId: open.id,
+        divisionName: 'Open',
+        spots: 1,
+        projected: true,
+        handicap: false,
+        line: { total: 600, games: 3, highGame: 200, tieBreaker: null, fullTie: false },
+      },
+    ])
+  })
+
+  it('leaves the at-large figures out, with a warning, for a ratio that cannot work (RES-57)', async () => {
+    const done = squadAt('2026-10-24T09:00:00', { complete: true })
+    const running = squadAt('2026-10-24T13:00:00', { finalsRatio: 0 })
+    const { deps, tournament, reporting, captured } = setup({
+      squads: [done, running],
+      seats: [{ sessionId: done.id, entry: bowler(), games: [200, 200, 200] }],
+    })
+
+    const result = await loadLiveResults(deps, reporting, tournament.id)
+
+    expect(result.atLarge).toEqual([])
+    expect(result.sessions).toHaveLength(1)
+    expect(
+      captured
+        .records()
+        .find((line) => line['msg'] === 'The at-large figures are left out of the live results'),
+    ).toMatchObject({ level: 40, tournamentId: tournament.id })
+  })
+
   it('sends no personal data (BWL-17)', async () => {
     const squad = squadAt('2026-10-24T09:00:00')
     const { deps, tournament, reporting } = setup({

@@ -42,7 +42,7 @@ const superScreen: LiveScreen = {
 }
 
 describe('ScreenSection (D-242, D-254)', () => {
-  it('says what games are ranked only while the session is open (RES-51)', () => {
+  it('says what games are ranked only while the session is open (RES-64)', () => {
     const rows = [createSquadRow({ scores: [200, 200, null] })]
     const sweeperRows = [createSweeperRow({ scores: [200, 200, null] })]
     const open = createSquadResults().session
@@ -111,7 +111,7 @@ describe('ScreenSection (D-242, D-254)', () => {
     render(<ScreenSection screen={{ ...squadScreen, division: full }} highlighted={false} />)
 
     const heading = screen.getByRole('heading', { level: 2 })
-    expect(heading).toHaveTextContent(/^Unofficial/)
+    expect(heading).toHaveTextContent(/ Unofficial$/)
     expect(heading).not.toHaveTextContent(/In progress|game/)
     expect(screen.queryByText(/Ranked through game/)).not.toBeInTheDocument()
   })
@@ -123,15 +123,53 @@ describe('ScreenSection (D-242, D-254)', () => {
     }
     const { rerender } = render(<ScreenSection screen={done} highlighted={false} />)
     const plain = screen.getByRole('region').className
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(/^Super sweeperOfficial$/)
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(/^Super sweeper Official$/)
 
     const open: LiveScreen = {
       ...superScreen,
       results: { ...createSuperSweeperResults(), complete: false },
     }
     rerender(<ScreenSection screen={open} highlighted={false} />)
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(/^Super sweeperUnofficial$/)
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(
+      /^Super sweeper Unofficial$/,
+    )
     expect(screen.getByRole('region').className).toBe(plain)
+  })
+
+  it('says In progress with no game count before a game is counted (RES-64)', () => {
+    const none = { ...division, throughGame: 0 }
+    render(<ScreenSection screen={{ ...squadScreen, division: none }} highlighted={false} />)
+
+    const heading = screen.getByRole('heading', { level: 2 })
+    expect(heading).toHaveTextContent('In progress')
+    expect(heading).not.toHaveTextContent('Thru game')
+  })
+
+  it('names the screen before its state, for a list of headings (RES-64)', () => {
+    render(<ScreenSection screen={squadScreen} highlighted={false} />)
+
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(
+      /^Squad · .* Open ● In progress · Thru game 2$/,
+    )
+  })
+
+  it('checks an official sweeper, and not an official super sweeper (RES-64)', () => {
+    const results = createSweeperResults()
+    const done: LiveScreen = {
+      key: 'sw1',
+      kind: 'sweeper',
+      results: { ...results, session: { ...results.session, complete: true } },
+    }
+    const { rerender } = render(<ScreenSection screen={done} highlighted={false} />)
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(/ ✓ Official$/)
+
+    rerender(
+      <ScreenSection
+        screen={{ ...superScreen, results: { ...createSuperSweeperResults(), complete: true } }}
+        highlighted={false}
+      />,
+    )
+    expect(screen.getByRole('heading', { level: 2 })).not.toHaveTextContent('✓')
   })
 
   it('shows a sweeper with its counts and cash line', () => {

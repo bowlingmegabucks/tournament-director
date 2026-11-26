@@ -319,6 +319,46 @@ describe('AutoScroll (RES-50, D-242)', () => {
       expect(onPauseChange.mock.calls).toEqual([[true], [false]])
     })
 
+    it('says the pause ended when it goes while paused (RES-63)', () => {
+      size(1000, 400)
+      const onPauseChange = vi.fn()
+      const { unmount } = render(<AutoScroll onPauseChange={onPauseChange}>{content}</AutoScroll>)
+      frames.at(0)
+      fireEvent.wheel(viewOf())
+      frames.at(1000)
+
+      unmount()
+
+      expect(onPauseChange.mock.calls).toEqual([[true], [false]])
+    })
+
+    it('says nothing when it goes while not paused', () => {
+      size(1000, 400)
+      const onPauseChange = vi.fn()
+      const { unmount } = render(<AutoScroll onPauseChange={onPauseChange}>{content}</AutoScroll>)
+      frames.at(0)
+
+      unmount()
+
+      expect(onPauseChange).not.toHaveBeenCalled()
+    })
+
+    it('takes every listener off the page when it goes', () => {
+      const add = vi.spyOn(document, 'addEventListener')
+      const remove = vi.spyOn(document, 'removeEventListener')
+      size(1000, 400)
+      const { unmount } = render(<AutoScroll>{content}</AutoScroll>)
+      const types = ['pointerdown', 'input', 'wheel', 'keydown', 'touchstart']
+      const added = add.mock.calls.filter(([type]) => types.includes(type))
+
+      unmount()
+
+      expect(added.map(([type]) => type)).toEqual(expect.arrayContaining(types))
+      for (const [type, handler] of added) {
+        expect(remove).toHaveBeenCalledWith(type, handler)
+      }
+    })
+
     it('does not pause for Tab or other keys that only move focus', () => {
       start()
 

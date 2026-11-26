@@ -127,6 +127,8 @@ export function AutoScroll({
     return () => {
       cancelAnimationFrame(frame)
       input.stop()
+      // The pause goes with the view: a new one starts unpaused and would never say so.
+      if (wasPaused) report.current?.(false)
     }
   }, [])
 

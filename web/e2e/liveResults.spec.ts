@@ -119,6 +119,35 @@ test('the scroll speed slider shows on a click and hides when the scroll goes on
   await expect(speed).toHaveCSS('opacity', '0')
 })
 
+test('keyboard focus alone shows the hidden speed slider (RES-63)', async ({ page }) => {
+  await openTournament(page)
+  await menuLink(page, 'Live results')
+  const slider = page.getByRole('slider', { name: /Scroll speed/ })
+  const speed = page.locator('label', { hasText: 'Scroll speed' })
+  await expect(speed).toHaveCSS('opacity', '0')
+
+  // Tab moves focus and does not pause the scroll, so only the focus can show it.
+  await page.keyboard.press('Tab')
+  await expect(slider).toBeFocused()
+
+  await expect(speed).toHaveCSS('opacity', '1')
+  await expect(speed).not.toHaveAttribute('data-shown')
+})
+
+test('only an open squad or sweeper has the bar beside it (RES-64)', async ({ page }) => {
+  await openTournament(page)
+  await menuLink(page, 'Live results')
+  // The first copy of the list; the second is the hidden one that closes the loop.
+  const sections = page.locator('main > section > div').first().getByRole('region')
+  const open = sections.filter({
+    has: page.getByRole('heading', { name: /^(?!Super).*(In progress|Unofficial)/ }),
+  })
+  const official = sections.filter({ has: page.getByRole('heading', { name: /\bOfficial$/ }) })
+
+  await expect(open.first()).toHaveCSS('border-left-width', '12px')
+  await expect(official.first()).toHaveCSS('border-left-width', '0px')
+})
+
 test('on a phone the pinned heading leaves room for rows, and the page does not scroll sideways (RES-50, D-73)', async ({
   page,
 }) => {

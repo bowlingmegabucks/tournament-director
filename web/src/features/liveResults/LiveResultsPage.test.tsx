@@ -763,6 +763,43 @@ describe('LiveResultsPage scroll speed (RES-63)', () => {
     expect(screen.getByText('1.25x')).toBeVisible()
   })
 
+  it('scrolls at the chosen multiple of 40 pixels a second', async () => {
+    let pending: FrameRequestCallback[] = []
+    const realFrame = globalThis.requestAnimationFrame
+    const realCancel = globalThis.cancelAnimationFrame
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      pending.push(callback)
+      return pending.length
+    })
+    vi.stubGlobal('cancelAnimationFrame', () => undefined)
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(1000)
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(400)
+    let position = 0
+    vi.spyOn(Element.prototype, 'scrollTop', 'set').mockImplementation((value: number) => {
+      position = value
+    })
+    const frame = (now: number) => {
+      const run = pending
+      pending = []
+      act(() => {
+        for (const callback of run) callback(now)
+      })
+    }
+    localStorage.setItem('tv-scroll-speed', '2')
+    serve()
+    const { unmount } = open_()
+    await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
+
+    frame(0)
+    frame(1000)
+
+    expect(position).toBe(80)
+    unmount()
+    vi.restoreAllMocks()
+    vi.stubGlobal('requestAnimationFrame', realFrame)
+    vi.stubGlobal('cancelAnimationFrame', realCancel)
+  })
+
   it('shows the slider only once a viewer takes over', async () => {
     serve()
     open_()

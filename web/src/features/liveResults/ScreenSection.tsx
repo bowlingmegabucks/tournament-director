@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef } from 'react'
 import { plural } from '../../shared/plural'
 import { formatRatio } from '../../shared/sessionFormat'
-import { DivisionBody, DivisionSummary } from '../results/DivisionResults'
+import { DivisionBody, DivisionCounts, DivisionThroughNote } from '../results/DivisionResults'
 import { formatAtLarge, formatCashLine, formatLines } from '../results/format'
 import { SuperSweeperTable } from '../results/SuperSweeperTable'
 import { SweeperNote, SweeperTable } from '../results/SweeperTable'
@@ -31,7 +31,7 @@ function AtLargeLine({ figure }: Readonly<{ figure: LiveAtLarge }>) {
  * heads stay pinned at the top of the screen while the rows scroll, until the next screen pushes
  * them away (D-254), so a row far down still shows its division and where the lines are.
  * An open squad or sweeper has a blue band and bar, with an "In progress" or "Unofficial" badge
- * before the title; an official one has a "✓ Official" tag. The super sweeper only has its tag.
+ * drawn before the title; an official one has a "✓ Official" tag. The super sweeper only has its tag.
  * A squad screen names its cut and cash lines "Squad:" and puts its division's at-large figure on the line below (RES-58). `highlighted` outlines the table that just changed (D-245).
  */
 export function ScreenSection({
@@ -79,8 +79,11 @@ export function ScreenSection({
     >
       <div ref={pinned} className={styles.pinned}>
         <h2 id={headingId} className={styles.heading}>
+          {screenHeading(screen)}
           {open && (
             <>
+              {' '}
+              {/* After the title, so a heading list names the screen first; CSS draws it before. */}
               <span className={styles.badge}>
                 {inProgress ? (
                   <>
@@ -90,21 +93,29 @@ export function ScreenSection({
                 ) : (
                   'Unofficial'
                 )}
-              </span>{' '}
+              </span>
             </>
           )}
-          {screenHeading(screen)}
           {state === 'official' && (
-            <span className={styles.tag}>
-              {!superSweeper && <span aria-hidden="true">✓ </span>}Official
-            </span>
+            <>
+              {' '}
+              <span className={styles.tag}>
+                {!superSweeper && <span aria-hidden="true">✓ </span>}Official
+              </span>
+            </>
           )}
-          {superSweeper && state !== 'official' && <span className={styles.tag}>Unofficial</span>}
+          {superSweeper && state !== 'official' && (
+            <>
+              {' '}
+              <span className={styles.tag}>Unofficial</span>
+            </>
+          )}
         </h2>
         <div className={styles.lead}>
           {screen.kind === 'squad' && (
             <>
-              <DivisionSummary division={screen.division} note={inProgress} />
+              <DivisionCounts division={screen.division} />
+              {inProgress && <DivisionThroughNote division={screen.division} />}
               <p className={styles.lines}>Squad: {formatLines(screen.division)}</p>
               {atLarge && <AtLargeLine figure={atLarge} />}
             </>

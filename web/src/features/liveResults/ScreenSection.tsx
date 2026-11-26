@@ -73,7 +73,7 @@ export function ScreenSection({
     <section
       ref={section}
       aria-labelledby={headingId}
-      className={[styles.block, open && styles.open, highlighted && styles.updated]
+      className={[styles.block, open && styles.open, highlighted && styles.justChanged]
         .filter(Boolean)
         .join(' ')}
     >

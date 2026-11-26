@@ -490,13 +490,13 @@ describe('LiveResultsPage follows the stream (RES-49, RES-50, D-243 to D-245)', 
       )
 
     await waitFor(async () => {
-      expect((await section())?.className).toMatch(/updated/)
+      expect((await section())?.className).toMatch(/justChanged/)
     })
     await act(async () => {
       await vi.advanceTimersByTimeAsync(HIGHLIGHT_MS + 100)
     })
 
-    expect((await section())?.className).not.toMatch(/updated/)
+    expect((await section())?.className).not.toMatch(/justChanged/)
   })
 
   it('shows the messages one at a time, in order, each for about 8 seconds (D-245)', async () => {

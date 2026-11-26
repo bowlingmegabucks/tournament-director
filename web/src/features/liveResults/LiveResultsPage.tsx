@@ -91,7 +91,7 @@ export function LiveResultsPage() {
         <h1>Live results{data ? ` · ${data.tournament.name}` : ''}</h1>
         {!reduced && screens.length > 0 && (
           <label className={styles.speed}>
-            Scroll speed
+            <span>Scroll speed</span>
             <input
               type="range"
               min={MIN_SPEED}

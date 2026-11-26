@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { GameAnnouncement } from './GameAnnouncement'
-import type { Announcement } from './liveLogic'
+import { AT_LARGE_NOTICE_MS, type Announcement } from './liveLogic'
 
 const game: Announcement = {
   variant: 'game',
@@ -66,6 +66,22 @@ describe('GameAnnouncement (D-255)', () => {
 
     expect((container.firstElementChild as HTMLElement).style.getPropertyValue('--duration')).toBe(
       '5000ms',
+    )
+  })
+
+  it('shows an at-large change for its own time, with the new spots as its number (RES-62)', () => {
+    const change: Announcement = {
+      variant: 'at-large',
+      kicker: 'Projected At Large · now No Spots (was 1)',
+      title: 'Open',
+      game: 0,
+      duration: AT_LARGE_NOTICE_MS,
+    }
+    const { container } = render(<GameAnnouncement announcement={change} id={1} waiting={0} />)
+
+    expect(screen.getByText('0')).toBeInTheDocument()
+    expect((container.firstElementChild as HTMLElement).style.getPropertyValue('--duration')).toBe(
+      `${AT_LARGE_NOTICE_MS}ms`,
     )
   })
 

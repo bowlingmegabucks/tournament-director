@@ -9,6 +9,22 @@ import type { LiveAtLarge } from '../results/types'
 import { isUnofficial, screenHeading, screenThrough, type LiveScreen } from './liveLogic'
 import styles from './LiveResultsPage.module.css'
 
+/** The at-large line (RES-58). The bar between its parts is for the eye: a screen reader skips it. */
+function AtLargeLine({ figure }: Readonly<{ figure: LiveAtLarge }>) {
+  const [score, spots] = formatAtLarge(figure).split(' | ')
+  return (
+    <p className={styles.lines}>
+      {score}
+      {spots !== undefined && (
+        <>
+          {' '}
+          <span aria-hidden="true">|</span> {spots}
+        </>
+      )}
+    </p>
+  )
+}
+
 /**
  * One screen of the TV page (D-242): a heading with its tags ("Unofficial" while the session is
  * open, "Official" once it is complete, and "Through game 3" for the games counted), the counts, and
@@ -68,7 +84,7 @@ export function ScreenSection({
             <>
               <DivisionSummary division={screen.division} />
               <p className={styles.lines}>Squad: {formatLines(screen.division)}</p>
-              {atLarge && <p className={styles.lines}>{formatAtLarge(atLarge)}</p>}
+              {atLarge && <AtLargeLine figure={atLarge} />}
             </>
           )}
           {screen.kind === 'sweeper' && (

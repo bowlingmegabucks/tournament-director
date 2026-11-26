@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   createDivisionResult,
+  createLiveAtLarge,
   createSquadResults,
   createSquadRow,
   createSuperSweeperResults,
@@ -128,5 +129,23 @@ describe('ScreenSection (D-242, D-254)', () => {
 
     unmount()
     expect(disconnect).toHaveBeenCalled()
+  })
+})
+
+describe('ScreenSection at-large line (RES-58)', () => {
+  it('hides the bar between the parts from a screen reader', () => {
+    render(<ScreenSection screen={squadScreen} highlighted={false} atLarge={createLiveAtLarge()} />)
+
+    const bar = screen.getByText('|')
+    expect(bar).toHaveAttribute('aria-hidden', 'true')
+    expect(bar.closest('p')).toHaveTextContent('At Large: +87 (HG 242) | 4 Spots')
+  })
+
+  it('draws no bar when there is no spot', () => {
+    const none = createLiveAtLarge({ spots: 0, line: null })
+    render(<ScreenSection screen={squadScreen} highlighted={false} atLarge={none} />)
+
+    expect(screen.getByText('At Large: no spots yet')).toBeInTheDocument()
+    expect(screen.queryByText('|')).not.toBeInTheDocument()
   })
 })

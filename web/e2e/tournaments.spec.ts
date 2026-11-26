@@ -498,6 +498,20 @@ test('the Scores tab of a complete squad says it cannot change and shows a no-sh
   await expect(page.getByRole('table', { name: 'Scores for lanes 1-2' })).toBeVisible()
 })
 
+test('the Scores tab lines up its columns from one lane pair to the next', async ({ page }) => {
+  await openSquad(page, '1:00 PM')
+  await page.getByRole('link', { name: 'Scores', exact: true }).click()
+
+  const edges = (name: string) =>
+    page
+      .getByRole('table', { name })
+      .getByRole('columnheader')
+      .evaluateAll((cells) => cells.map((cell) => Math.round(cell.getBoundingClientRect().x)))
+
+  await expect(page.getByRole('table', { name: 'Scores for lanes 3-4' })).toBeVisible()
+  expect(await edges('Scores for lanes 3-4')).toEqual(await edges('Scores for lanes 1-2'))
+})
+
 test('the Scores tab does not scroll sideways on a phone (D-73)', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 800 })
   await openSquad(page, '1:00 PM')

@@ -177,8 +177,7 @@ describe('LiveResultsPage (RES-50, D-242)', () => {
 
     const first = screen.getAllByRole('heading', { level: 2 })[0]
     expect(first).toHaveTextContent('Squad · Sat 10/24/2026 9:00 AM · Open')
-    expect(first).toHaveTextContent('Unofficial')
-    expect(first).toHaveTextContent('Through game 2')
+    expect(first).toHaveTextContent('In progress · Thru game 2')
     expect(headings().some((text) => text?.startsWith('Super sweeper'))).toBe(true)
   })
 
@@ -191,7 +190,7 @@ describe('LiveResultsPage (RES-50, D-242)', () => {
     open_()
     await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
 
-    expect(screen.getAllByRole('heading', { level: 2 })[0]).not.toHaveTextContent('Unofficial')
+    expect(screen.getAllByRole('heading', { level: 2 })[0]).not.toHaveTextContent('In progress')
   })
 
   it('has no header, main menu, or tournament sidebar: the page is the screen (D-242)', async () => {
@@ -262,7 +261,7 @@ describe('LiveResultsPage pinned heading (D-254)', () => {
 
     const sweeper = screen
       .getAllByRole('heading', { level: 2 })
-      .find((heading) => heading.textContent?.startsWith('Sweeper'))
+      .find((heading) => heading.textContent?.includes('Sweeper ·'))
     expect(sweeper?.closest('div')).toHaveTextContent('Cash line +30')
     const superSweeper = screen
       .getAllByRole('heading', { level: 2 })

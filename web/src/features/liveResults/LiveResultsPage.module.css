@@ -139,6 +139,33 @@
   vertical-align: middle;
 }
 
+/*
+ * An open squad or sweeper (RES-64): a bar down the whole section and a band behind its pinned
+ * heading and column heads, so it never reads as official, however far the rows have scrolled.
+ */
+.open {
+  border-inline-start: var(--live-bar-width) solid var(--color-live);
+}
+
+.open .pinned,
+.open .table table thead th {
+  background: var(--color-live-tint);
+}
+
+.badge {
+  display: inline-block;
+  margin-inline-end: var(--space-3);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius);
+  background: var(--color-live);
+  color: var(--color-on-status);
+  font-size: var(--font-size-tv-small);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
 .table {
   margin-inline: var(--space-6);
   font-size: var(--font-size-tv-body);

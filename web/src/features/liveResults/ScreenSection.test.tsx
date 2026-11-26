@@ -77,17 +77,16 @@ describe('ScreenSection (D-242, D-254)', () => {
     expect(screen.queryByText(/Ranked through game/)).not.toBeInTheDocument()
   })
 
-  it('shows a squad division under a heading with Unofficial and the games counted', () => {
+  it('shows a squad division under a heading with In progress and the games counted', () => {
     render(<ScreenSection screen={squadScreen} highlighted={false} />)
 
     const section = screen.getByRole('region')
     const heading = within(section).getByRole('heading', { level: 2 })
-    expect(heading).toHaveTextContent('Unofficial')
-    expect(heading).toHaveTextContent('Through game 2')
+    expect(heading).toHaveTextContent('In progress · Thru game 2')
     expect(within(section).getByRole('rowheader', { name: 'Ann Lee' })).toBeVisible()
   })
 
-  it('tags a complete session Official and an open one Unofficial', () => {
+  it('tags a complete session Official and drops the open cues (RES-64)', () => {
     const complete: LiveScreen = {
       ...squadScreen,
       results: createSquadResults({
@@ -99,10 +98,40 @@ describe('ScreenSection (D-242, D-254)', () => {
     const heading = within(screen.getByRole('region')).getByRole('heading', { level: 2 })
     expect(heading).toHaveTextContent('Official')
     expect(heading).not.toHaveTextContent('Unofficial')
-    expect(heading).not.toHaveTextContent('Through game')
+    expect(heading).not.toHaveTextContent('Thru game')
+    const official = screen.getByRole('region').className
 
     rerender(<ScreenSection screen={squadScreen} highlighted={false} />)
-    expect(heading).toHaveTextContent('Unofficial')
+    expect(heading).toHaveTextContent('In progress')
+    expect(screen.getByRole('region').className).not.toBe(official)
+  })
+
+  it('says Unofficial, with no game count, once every game is in (RES-64)', () => {
+    const full = { ...division, throughGame: squadScreen.results.session.games }
+    render(<ScreenSection screen={{ ...squadScreen, division: full }} highlighted={false} />)
+
+    const heading = screen.getByRole('heading', { level: 2 })
+    expect(heading).toHaveTextContent(/^Unofficial/)
+    expect(heading).not.toHaveTextContent(/In progress|game/)
+    expect(screen.queryByText(/Ranked through game/)).not.toBeInTheDocument()
+  })
+
+  it('gives an open super sweeper only the Unofficial tag (RES-64)', () => {
+    const done: LiveScreen = {
+      ...superScreen,
+      results: { ...createSuperSweeperResults(), complete: true },
+    }
+    const { rerender } = render(<ScreenSection screen={done} highlighted={false} />)
+    const plain = screen.getByRole('region').className
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(/^Super sweeperOfficial$/)
+
+    const open: LiveScreen = {
+      ...superScreen,
+      results: { ...createSuperSweeperResults(), complete: false },
+    }
+    rerender(<ScreenSection screen={open} highlighted={false} />)
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(/^Super sweeperUnofficial$/)
+    expect(screen.getByRole('region').className).toBe(plain)
   })
 
   it('shows a sweeper with its counts and cash line', () => {

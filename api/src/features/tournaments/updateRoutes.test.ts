@@ -14,7 +14,11 @@ import {
   type UpdateTournamentOutcome,
 } from './writer.ts'
 
-const first = { id: crypto.randomUUID(), ...createNewTournament({ name: 'Spring Classic' }) }
+// The fee is fixed: a random one can equal the new fee a test sends, which is then no change.
+const first = {
+  id: crypto.randomUUID(),
+  ...createNewTournament({ name: 'Spring Classic', entryFee: 60 }),
+}
 const second = {
   id: crypto.randomUUID(),
   ...createNewTournament({ name: 'Fall Classic', startDate: '2027-10-01', endDate: '2027-10-03' }),

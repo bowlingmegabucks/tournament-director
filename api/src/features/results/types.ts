@@ -309,11 +309,6 @@ export const superSweeperResultsSchema = z.object({
 
 export type SuperSweeperResults = z.infer<typeof superSweeperResultsSchema>
 
-/**
- * What the TV page loads once (RES-47, D-244): every squad (by division), every sweeper, and the
- * super sweeper, all ranked through the last full game. Only sessions with scores are listed. Web
- * only, public, never vendor-visible (D-09). It carries no more personal data than its parts (BWL-17).
- */
 /** RES-57 to RES-60: one division's at-large figure on the TV page. No names and no bowler ids. */
 export const liveAtLargeSchema = z.object({
   divisionId: z.uuid(),
@@ -339,6 +334,11 @@ export const liveAtLargeSchema = z.object({
 
 export type LiveAtLarge = z.infer<typeof liveAtLargeSchema>
 
+/**
+ * What the TV page loads once (RES-47, D-244): every squad (by division), every sweeper, and the
+ * super sweeper, all ranked through the last full game. Only sessions with scores are listed. Web
+ * only, public, never vendor-visible (D-09). It carries no more personal data than its parts (BWL-17).
+ */
 export const liveResultsSchema = z.object({
   tournament: z.object({ id: z.uuid(), name: z.string() }),
   /** When the answer was worked out, for the "Updated 3:41 pm" line. */

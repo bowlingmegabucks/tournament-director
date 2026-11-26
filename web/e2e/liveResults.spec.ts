@@ -100,6 +100,25 @@ test('the scroll speed slider moves by keyboard and is kept after a reload (RES-
   await expect(slider).toHaveValue('1.5')
 })
 
+test('the scroll speed slider shows on a click and hides when the scroll goes on (RES-63)', async ({
+  page,
+}) => {
+  await page.clock.install()
+  await openTournament(page)
+  await menuLink(page, 'Live results')
+  const speed = page.locator('label', { hasText: 'Scroll speed' })
+  await expect(speed).toHaveCSS('opacity', '0')
+
+  await page.getByRole('main').click()
+  await page.clock.runFor(100)
+  await expect(speed).toHaveCSS('opacity', '1')
+
+  // A mouse click leaves focus on the slider; that alone must not hold it on screen.
+  await page.getByRole('slider', { name: /Scroll speed/ }).click()
+  await page.clock.runFor(11_000)
+  await expect(speed).toHaveCSS('opacity', '0')
+})
+
 test('on a phone the pinned heading leaves room for rows, and the page does not scroll sideways (RES-50, D-73)', async ({
   page,
 }) => {

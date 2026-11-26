@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useParams } from 'react-router'
 import { Loading } from '../../shared/Loading'
 import { AutoScroll, SCROLL_PX_PER_SECOND } from './AutoScroll'
@@ -14,7 +15,7 @@ import { useWakeLock } from './useWakeLock'
 /**
  * The TV page (RES-50 to RES-54, D-242 to D-246): every squad division, each sweeper, and the super
  * sweeper, scrolling on their own and updating as games fill. Its one control is the scroll speed in the
- * bar (RES-63), and it needs no sign-in. An overlay announces each game that fills (D-255); the bar says when the board last
+ * bar, shown while a viewer has the scroll paused (RES-63), and it needs no sign-in. An overlay announces each game that fills (D-255); the bar says when the board last
  * updated, and a corner line says when it went out of date. The screen is kept awake. With "reduce
  * motion" on it flips one screen at a time instead of scrolling.
  */
@@ -25,6 +26,8 @@ export function LiveResultsPage() {
   const reduced = useReducedMotion()
   useWakeLock()
   const [speed, setSpeed] = useScrollSpeed()
+  // The slider shows only while a viewer has the page (RES-63).
+  const [paused, setPaused] = useState(false)
 
   const { data } = feed
   const screens = data ? screensOf(data) : []
@@ -71,7 +74,7 @@ export function LiveResultsPage() {
     )
   } else {
     body = (
-      <AutoScroll speed={speed * SCROLL_PX_PER_SECOND}>
+      <AutoScroll speed={speed * SCROLL_PX_PER_SECOND} onPauseChange={setPaused}>
         {screens.map((screen) => (
           <ScreenSection
             key={screen.key}
@@ -90,7 +93,7 @@ export function LiveResultsPage() {
       <header className={styles.bar}>
         <h1>Live results{data ? ` · ${data.tournament.name}` : ''}</h1>
         {!reduced && screens.length > 0 && (
-          <label className={styles.speed}>
+          <label className={styles.speed} data-shown={paused || undefined}>
             <span>Scroll speed</span>
             <input
               type="range"

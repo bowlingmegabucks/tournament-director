@@ -764,6 +764,20 @@ describe('LiveResultsPage scroll speed (RES-63)', () => {
     expect(screen.getByText('1.25x')).toBeVisible()
   })
 
+  it('shows the slider only once a viewer takes over', async () => {
+    serve()
+    open_()
+    const slider = await screen.findByRole('slider', { name: /Scroll speed/ })
+    const label = slider.closest('label')
+    expect(label).not.toHaveAttribute('data-shown')
+
+    fireEvent.pointerDown(document.body)
+
+    await waitFor(() => {
+      expect(label).toHaveAttribute('data-shown', 'true')
+    })
+  })
+
   it('has no slider when the page flips instead of scrolling', async () => {
     vi.stubGlobal('matchMedia', (query: string) => ({
       matches: query.includes('reduce'),

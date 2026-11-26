@@ -282,6 +282,43 @@ describe('AutoScroll (RES-50, D-242)', () => {
       }
     })
 
+    it('pauses for a click, or a control change, anywhere on the page', () => {
+      for (const interact of [
+        () => fireEvent.pointerDown(document.body),
+        () => fireEvent.input(document.body),
+      ]) {
+        pending = []
+        scrolled.length = 0
+        size(1000, 400)
+        const { unmount } = render(<AutoScroll>{content}</AutoScroll>)
+        frames.at(0)
+        frames.at(1000)
+        interact()
+        frames.at(2000)
+        frames.at(3000)
+
+        expect(position()).toBe(40)
+        unmount()
+      }
+    })
+
+    it('says when the pause starts and ends, once each', () => {
+      size(1000, 400)
+      const onPauseChange = vi.fn()
+      render(<AutoScroll onPauseChange={onPauseChange}>{content}</AutoScroll>)
+      frames.at(0)
+      expect(onPauseChange).not.toHaveBeenCalled()
+
+      fireEvent.wheel(viewOf())
+      frames.at(1000)
+      frames.at(2000)
+      expect(onPauseChange.mock.calls).toEqual([[true]])
+
+      frames.at(1000 + IDLE_RESUME_MS)
+      frames.at(2000 + IDLE_RESUME_MS)
+      expect(onPauseChange.mock.calls).toEqual([[true], [false]])
+    })
+
     it('does not pause for Tab or other keys that only move focus', () => {
       start()
 

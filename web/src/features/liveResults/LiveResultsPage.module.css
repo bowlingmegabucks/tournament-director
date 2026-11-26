@@ -42,6 +42,15 @@
   font-size: var(--font-size-tv-small);
 }
 
+/*
+ * Out of sight while the page scrolls itself. It keeps its room, so the bar does not jump, and stays
+ * in the tab order: keyboard focus shows it.
+ */
+.speed:not([data-shown], :has(:focus-visible)) {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .speed input {
   inline-size: 12rem;
   min-block-size: var(--target-min);

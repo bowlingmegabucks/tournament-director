@@ -58,6 +58,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
   vi.restoreAllMocks()
   delete document.body.dataset.recapPrinting
 })
@@ -865,19 +866,23 @@ describe('RecapDialog QR code (RPT-10, D-225, D-226)', () => {
     expect(screen.getAllByText('Squad scores')).toHaveLength(2)
   })
 
-  it("encodes this squad's Scores address on this site", async () => {
-    await loaded(createRecapSheets({ sheets: [joey] }))
+  it.each(['/', '/tournament-director/'])(
+    "encodes this squad's Scores address on this site, with the app in %s",
+    async (base) => {
+      vi.stubEnv('BASE_URL', base)
+      await loaded(createRecapSheets({ sheets: [joey] }))
 
-    const { container } = render(
-      <QRCodeSVG
-        value={`${window.location.origin}/tournaments/t1/squads/s1/scores`}
-        level="M"
-        marginSize={4}
-        fgColor="#000000"
-        bgColor="#ffffff"
-      />,
-    )
-    const shown = screen.getByRole('article').querySelector('svg')
-    expect(shown?.innerHTML).toBe(container.querySelector('svg')?.innerHTML)
-  })
+      const { container } = render(
+        <QRCodeSVG
+          value={`${window.location.origin}${base}tournaments/t1/squads/s1/scores`}
+          level="M"
+          marginSize={4}
+          fgColor="#000000"
+          bgColor="#ffffff"
+        />,
+      )
+      const shown = screen.getByRole('article').querySelector('svg')
+      expect(shown?.innerHTML).toBe(container.querySelector('svg')?.innerHTML)
+    },
+  )
 })

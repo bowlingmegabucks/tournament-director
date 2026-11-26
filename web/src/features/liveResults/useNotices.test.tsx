@@ -188,4 +188,18 @@ describe('useNotices (RES-51, D-245)', () => {
     })
     expect(result.current.current).toBe('5 spots')
   })
+
+  it('replaces the message showing, not only one that waits (RES-62)', () => {
+    const { result } = renderHook(() => useNotices())
+    act(() => {
+      result.current.push('6 spots', undefined, { replaces: 'open' })
+    })
+
+    act(() => {
+      result.current.push('5 spots', undefined, { replaces: 'open' })
+    })
+
+    expect(result.current.current).toBe('5 spots')
+    expect(result.current.waiting).toBe(0)
+  })
 })

@@ -808,6 +808,28 @@ describe('LiveResultsPage at-large figure (RES-58, RES-62)', () => {
     expect(screen.queryByText(text)).not.toBeInTheDocument()
   })
 
+  it("puts a newer change in place of the division's older message (RES-62)", async () => {
+    const calls = serve(feedOf({ atLarge: atLarge(5) }))
+    open_()
+    await table()
+    const entries = (spots: number) => {
+      calls.set(feedOf({ atLarge: atLarge(spots) }))
+      act(() => {
+        FakeEventSource.latest().message(JSON.stringify({ kind: 'entries', version: 1 }))
+      })
+    }
+
+    const said = (now: number, was: number) =>
+      `Open: Projected At Large: +87 (HG 242) | ${now} Spots (was ${was})`
+
+    entries(6)
+    expect(await screen.findByText(said(6, 5))).toBeInTheDocument()
+    entries(7)
+
+    expect(await screen.findByText(said(7, 6))).toBeInTheDocument()
+    expect(screen.queryByText(said(6, 5))).not.toBeInTheDocument()
+  })
+
   it('loads everything for a score change on a complete squad, so the figure follows', async () => {
     const feed = feedOf({ atLarge: atLarge(4, false) })
     const squad = feed.sessions[0]

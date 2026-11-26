@@ -46,6 +46,16 @@ describe('spotChanges (RES-62)', () => {
     ])
   })
 
+  it('words one spot that was none before', () => {
+    const none = createLiveResults({
+      atLarge: [createLiveAtLarge({ divisionId, spots: 0, projected: true, line: null })],
+    })
+
+    expect(spotChanges(none, feed(1))[0]?.announcement.kicker).toBe(
+      'Projected At Large · now 1 Spot (was none)',
+    )
+  })
+
   it('words a change down to no spot', () => {
     const after = createLiveResults({
       atLarge: [createLiveAtLarge({ divisionId, spots: 0, projected: true, line: null })],

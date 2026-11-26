@@ -400,7 +400,7 @@ export function createApp({
         path: '/v1/tournaments/:id/squads',
         access: { permission: 'squads.write' }, // SQD-01 to SQD-08, D-167: the API key cannot reach it
         methods: ['POST'],
-        router: createSquadCreateRouter(squadWriter, logger),
+        router: createSquadCreateRouter(squadWriter, logger, liveNotifier),
       },
       {
         path: '/v1/tournaments/:id/squads',
@@ -412,7 +412,7 @@ export function createApp({
         path: '/v1/tournaments/:id/squads',
         access: { permission: 'squads.write' }, // SQD-14, D-187: delete; no API key
         methods: ['DELETE'],
-        router: createSquadDeleteRouter(squadWriter, logger),
+        router: createSquadDeleteRouter(squadWriter, logger, liveNotifier),
       },
       {
         path: '/v1/tournaments/:id/squads',
@@ -821,7 +821,7 @@ export function createApp({
         path: '/v1/tournaments',
         access: { permission: 'tournaments.write' }, // TRN-24, D-127: the API key cannot reach it
         methods: ['PATCH'],
-        router: createTournamentUpdateRouter(tournamentWriter, logger),
+        router: createTournamentUpdateRouter(tournamentWriter, logger, liveNotifier),
       },
       {
         path: '/v1/tournaments',

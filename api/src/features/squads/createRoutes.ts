@@ -5,6 +5,7 @@ import { FieldErrorsError, HttpError } from '../../shared/errors.ts'
 import { jsonBody } from '../../shared/jsonBody.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { requestLogger } from '../../shared/requestLogging.ts'
+import type { LiveNotifier } from '../results/liveEvents.ts'
 import { parseCreateSquad } from './createRequest.ts'
 import type { SquadWriter } from './writer.ts'
 
@@ -19,7 +20,11 @@ const firstOf = (errors: Record<string, string>) => Object.values(errors)[0] ?? 
  * the legacy API has no such route, so the vendor sees no change (D-09). What a create may do is
  * `planCreate` (D-169, D-171); this route only turns its answer into HTTP.
  */
-export function createSquadCreateRouter(writer: SquadWriter, logger: Logger): Router {
+export function createSquadCreateRouter(
+  writer: SquadWriter,
+  logger: Logger,
+  live?: Pick<LiveNotifier, 'entriesChanged'>,
+): Router {
   const router = Router({ mergeParams: true })
 
   // Stryker disable next-line StringLiteral: '' and '/' match the same path.
@@ -39,6 +44,8 @@ export function createSquadCreateRouter(writer: SquadWriter, logger: Logger): Ro
       { actorId: callerOf(res).user?.id, tournamentId: id, squadId: outcome.created.id },
       'Squad created',
     )
+    // A new squad can change which one the TV projects its at-large figures for (RES-61).
+    live?.entriesChanged(id)
     res.status(201).location(`/v1/tournaments/${id}/squads`).json({ squad: outcome.created })
   })
 

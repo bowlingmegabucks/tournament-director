@@ -2,9 +2,11 @@ import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 import { apiKeyHeader } from '../../shared/auth/caller.ts'
 import { HttpError } from '../../shared/errors.ts'
+import { liveKey } from '../../shared/events/sseRoute.ts'
 import { createSquad, testApiKey } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createSignedInTestApp, createTestApp } from '../../test/testApp.ts'
+import { recordingEvents } from '../../test/recordingEvents.ts'
 import { createInMemorySquadWriter, type SquadWriter } from './writer.ts'
 
 const tournamentId = '11111111-1111-4111-8111-111111111111'
@@ -273,5 +275,26 @@ describe(`GET ${infoUrl}`, () => {
       403,
     )
     expect((await request(createSignedInTestApp({}, 'scoreKeeper')).get(infoUrl)).status).toBe(403)
+  })
+})
+
+describe(`DELETE ${url} and the TV page (RES-61)`, () => {
+  it('tells the tournament stream that a squad is gone', async () => {
+    const { events, published } = recordingEvents()
+    const app = createSignedInTestApp({ squadWriter: setup().writer, events })
+
+    await request(app).delete(url)
+
+    expect(published).toEqual([{ sessionId: liveKey(tournamentId), kind: 'entries' }])
+  })
+
+  it('tells no one when the delete is refused', async () => {
+    const { events, published } = recordingEvents()
+    const { writer } = setup({ deleteInfo: { [sessionId]: { entryCount: 12 } } })
+    const app = createSignedInTestApp({ squadWriter: writer, events })
+
+    await request(app).delete(url)
+
+    expect(published).toEqual([])
   })
 })

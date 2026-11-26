@@ -42,6 +42,15 @@
   font-size: var(--font-size-tv-small);
 }
 
+/*
+ * Out of sight while the page scrolls itself. It keeps its room, so the bar does not jump, and stays
+ * in the tab order: keyboard focus shows it.
+ */
+.speed:not([data-shown], :has(:focus-visible)) {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .speed input {
   inline-size: 12rem;
   min-block-size: var(--target-min);
@@ -127,6 +136,46 @@
   color: var(--color-accent);
   font-size: var(--font-size-tv-small);
   font-weight: 400;
+  vertical-align: middle;
+}
+
+/*
+ * An open squad or sweeper (RES-64): a bar down the whole section and a band behind its pinned
+ * heading and column heads, so it never reads as official, however far the rows have scrolled.
+ */
+.open {
+  border-inline-start: var(--live-bar-width) solid var(--color-live);
+}
+
+.open .pinned,
+.open .table table thead th {
+  background: var(--color-live-tint);
+}
+
+/* The line under the pinned column heads: the border color is too faint on the band. */
+.open .table table thead th {
+  box-shadow: inset 0 calc(var(--border-width) * -2) 0 var(--color-live);
+}
+
+/* The badge follows the title in the page's order and is drawn before it. */
+.open .heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-3);
+}
+
+.badge {
+  order: -1;
+  display: inline-block;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius);
+  background: var(--color-live);
+  color: var(--color-on-status);
+  font-size: var(--font-size-tv-small);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   vertical-align: middle;
 }
 

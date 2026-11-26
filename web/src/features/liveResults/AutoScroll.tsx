@@ -11,11 +11,12 @@ export const IDLE_RESUME_MS = 10_000
 const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '])
 
 /**
- * Listens for a viewer taking over (touch, wheel, scroll key). `takeTouch` says whether one came
+ * Listens anywhere on the page, the bar too, for a viewer taking over (click, touch, wheel, scroll
+ * key, or a change to a control such as the speed slider). `takeTouch` says whether one came
  * since the last call, so the frame can note its time on the frame clock. A touch that never ends
  * (the browser lost it) runs out like any other input, so the page cannot stay stopped for good.
  */
-function watchViewerInput(element: HTMLElement | null) {
+function watchViewerInput() {
   let touched = false
   const touch = () => {
     touched = true
@@ -24,6 +25,11 @@ function watchViewerInput(element: HTMLElement | null) {
     if (event instanceof KeyboardEvent && SCROLL_KEYS.has(event.key)) touched = true
   }
   const listeners: [string, (event: Event) => void][] = [
+    ['pointerdown', touch],
+    // The release too, so the idle time counts from the end of a click or a drag.
+    ['pointerup', touch],
+    ['pointercancel', touch],
+    ['input', touch],
     ['touchstart', touch],
     ['touchmove', touch],
     ['touchend', touch],
@@ -32,7 +38,7 @@ function watchViewerInput(element: HTMLElement | null) {
     ['keydown', key],
   ]
   for (const [type, handler] of listeners) {
-    element?.addEventListener(type, handler, { passive: true })
+    document.addEventListener(type, handler, { passive: true })
   }
   return {
     takeTouch() {
@@ -41,7 +47,7 @@ function watchViewerInput(element: HTMLElement | null) {
       return was
     },
     stop() {
-      for (const [type, handler] of listeners) element?.removeEventListener(type, handler)
+      for (const [type, handler] of listeners) document.removeEventListener(type, handler)
     },
   }
 }
@@ -59,9 +65,9 @@ function nextOffset(offset: number, elapsedMs: number, speed: number, listHeight
  * in where it is: the position is kept, and only wraps when it passes the end (D-244). The frame
  * stops while the tab is hidden.
  *
- * A viewer can take over: a touch, a wheel turn, or a scroll key (arrows, Page Up and Down, Home,
+ * A viewer can take over: a click, a touch, a wheel turn, or a scroll key (arrows, Page Up and Down, Home,
  * End, Space) pauses the scroll for `IDLE_RESUME_MS` after the last one, then the list carries on
- * from where the viewer left it. Each touch event restarts the time, so a drag keeps it paused, and a
+ * from where the viewer left it. `onPauseChange` says when the pause starts and ends. Each touch event restarts the time, so a drag keeps it paused, and a
  * touch the browser never ends cannot hold it forever. The time counts on the frame clock.
  *
  * The view really scrolls (`scrollTop`, with no scroll bar), not a transform, so a heading with
@@ -73,23 +79,28 @@ function nextOffset(offset: number, elapsedMs: number, speed: number, listHeight
 export function AutoScroll({
   children,
   speed = SCROLL_PX_PER_SECOND,
-}: Readonly<{ children: ReactNode; speed?: number }>) {
+  onPauseChange,
+}: Readonly<{ children: ReactNode; speed?: number; onPauseChange?: (paused: boolean) => void }>) {
   const view = useRef<HTMLDivElement>(null)
   const first = useRef<HTMLDivElement>(null)
   const copy = useRef<HTMLDivElement>(null)
   // The frame reads the speed from a ref, so a new speed does not restart the scroll from the top.
   const pace = useRef(speed)
 
-  useEffect(() => {
-    pace.current = speed
-  }, [speed])
+  const report = useRef(onPauseChange)
 
   useEffect(() => {
-    const input = watchViewerInput(view.current)
+    pace.current = speed
+    report.current = onPauseChange
+  }, [speed, onPauseChange])
+
+  useEffect(() => {
+    const input = watchViewerInput()
     let frame = 0
     let last: number | undefined
     let offset = 0
     let touchedAt: number | undefined
+    let wasPaused = false
 
     const tick = (now: number) => {
       frame = requestAnimationFrame(tick)
@@ -100,6 +111,10 @@ export function AutoScroll({
       const fits = listHeight <= viewHeight
       const paused = touchedAt !== undefined && now - touchedAt < IDLE_RESUME_MS
       const moving = !fits && !document.hidden && !paused
+      if (paused !== wasPaused) {
+        wasPaused = paused
+        report.current?.(paused)
+      }
       if (copy.current) copy.current.hidden = fits
       if (fits) offset = 0
       else if (paused)
@@ -115,6 +130,8 @@ export function AutoScroll({
     return () => {
       cancelAnimationFrame(frame)
       input.stop()
+      // The pause goes with the view: a new one starts unpaused and would never say so.
+      if (wasPaused) report.current?.(false)
     }
   }, [])
 

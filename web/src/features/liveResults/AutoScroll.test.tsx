@@ -282,6 +282,114 @@ describe('AutoScroll (RES-50, D-242)', () => {
       }
     })
 
+    it('pauses for a click, or a control change, anywhere on the page', () => {
+      for (const interact of [
+        () => fireEvent.pointerDown(document.body),
+        () => fireEvent.input(document.body),
+      ]) {
+        pending = []
+        scrolled.length = 0
+        size(1000, 400)
+        const { unmount } = render(<AutoScroll>{content}</AutoScroll>)
+        frames.at(0)
+        frames.at(1000)
+        interact()
+        frames.at(2000)
+        frames.at(3000)
+
+        expect(position()).toBe(40)
+        unmount()
+      }
+    })
+
+    it('counts the idle time from the release of the mouse, not the press (RES-50)', () => {
+      for (const release of [
+        () => fireEvent.pointerUp(document.body),
+        () => fireEvent.pointerCancel(document.body),
+      ]) {
+        pending = []
+        scrolled.length = 0
+        size(1000, 400)
+        const { unmount } = render(<AutoScroll>{content}</AutoScroll>)
+        frames.at(0)
+        frames.at(1000)
+        fireEvent.pointerDown(document.body)
+        frames.at(2000)
+        release()
+        frames.at(9000)
+
+        frames.at(9000 + IDLE_RESUME_MS - 1)
+
+        expect(position()).toBe(40)
+        unmount()
+      }
+    })
+
+    it('says when the pause starts and ends, once each', () => {
+      size(1000, 400)
+      const onPauseChange = vi.fn()
+      render(<AutoScroll onPauseChange={onPauseChange}>{content}</AutoScroll>)
+      frames.at(0)
+      expect(onPauseChange).not.toHaveBeenCalled()
+
+      fireEvent.wheel(viewOf())
+      frames.at(1000)
+      frames.at(2000)
+      expect(onPauseChange.mock.calls).toEqual([[true]])
+
+      frames.at(1000 + IDLE_RESUME_MS)
+      frames.at(2000 + IDLE_RESUME_MS)
+      expect(onPauseChange.mock.calls).toEqual([[true], [false]])
+    })
+
+    it('says the pause ended when it goes while paused (RES-63)', () => {
+      size(1000, 400)
+      const onPauseChange = vi.fn()
+      const { unmount } = render(<AutoScroll onPauseChange={onPauseChange}>{content}</AutoScroll>)
+      frames.at(0)
+      fireEvent.wheel(viewOf())
+      frames.at(1000)
+
+      unmount()
+
+      expect(onPauseChange.mock.calls).toEqual([[true], [false]])
+    })
+
+    it('says nothing when it goes while not paused', () => {
+      size(1000, 400)
+      const onPauseChange = vi.fn()
+      const { unmount } = render(<AutoScroll onPauseChange={onPauseChange}>{content}</AutoScroll>)
+      frames.at(0)
+
+      unmount()
+
+      expect(onPauseChange).not.toHaveBeenCalled()
+    })
+
+    it('takes every listener off the page when it goes', () => {
+      const add = vi.spyOn(document, 'addEventListener')
+      const remove = vi.spyOn(document, 'removeEventListener')
+      size(1000, 400)
+      const { unmount } = render(<AutoScroll>{content}</AutoScroll>)
+      const types = [
+        'pointerdown',
+        'pointerup',
+        'pointercancel',
+        'input',
+        'wheel',
+        'keydown',
+        'touchstart',
+      ]
+      const added = add.mock.calls.filter(([type]) => types.includes(type))
+
+      unmount()
+
+      expect(added.map(([type]) => type)).toEqual(expect.arrayContaining(types))
+      for (const [type, handler] of added) {
+        expect(remove).toHaveBeenCalledWith(type, handler)
+      }
+    })
+
     it('does not pause for Tab or other keys that only move focus', () => {
       start()
 

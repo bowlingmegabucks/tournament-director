@@ -30,30 +30,33 @@ function TieMarks({ row }: Readonly<{ row: SquadRow }>) {
 }
 
 /**
+ * The counts line over a division's table. The TV page pins it with the heading (D-254), so it is a
+ * part of its own.
+ */
+export function DivisionCounts({ division }: Readonly<{ division: DivisionResult }>) {
+  return <p className={styles.sub}>{formatSummary(division)}</p>
+}
+
+/**
+ * The games a division is ranked through (RES-46), or nothing. The Results tab always draws it; the
+ * TV page only while the session is in progress (RES-64).
+ */
+export function DivisionThroughNote({ division }: Readonly<{ division: DivisionResult }>) {
+  const pending = pendingGame(
+    division.rows.map((row) => row.scores),
+    division.throughGame,
+  )
+  const note = formatThroughNote(division.throughGame, pending)
+  return note ? <p className={styles.sub}>{note}</p> : null
+}
+
+/**
  * The summary, tables, and sections of one division (RES-10, RES-11, RES-11a, D-75, D-81): a table
  * with the cut and cash lines, the tie marks, and the earlier-advancer tag; then the bowlers who did
  * not finish and the no-shows. The total against 200 a game sits after the name, then one cell for
  * each game. Scratch Total, Total HDCP, and HDCP Total show only when the API says someone has a
  * handicap. Below 64rem on screen each row is a block. The screen and the print copy both draw it.
  */
-/**
- * The two lines over a division's table: the counts, and the games it is ranked through (RES-46).
- * The TV page pins them with the heading (D-254), so they are a part of their own.
- */
-export function DivisionSummary({ division }: Readonly<{ division: DivisionResult }>) {
-  const pending = pendingGame(
-    division.rows.map((row) => row.scores),
-    division.throughGame,
-  )
-  const throughNote = formatThroughNote(division.throughGame, pending)
-  return (
-    <>
-      <p className={styles.sub}>{formatSummary(division)}</p>
-      {throughNote && <p className={styles.sub}>{throughNote}</p>}
-    </>
-  )
-}
-
 export function DivisionBody({
   division,
   games,
@@ -78,7 +81,12 @@ export function DivisionBody({
 
   return (
     <>
-      {summary && <DivisionSummary division={division} />}
+      {summary && (
+        <>
+          <DivisionCounts division={division} />
+          <DivisionThroughNote division={division} />
+        </>
+      )}
 
       {division.rows.length === 0 ? (
         <p>No bowler in this division has finished the squad.</p>

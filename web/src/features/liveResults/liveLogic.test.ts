@@ -11,12 +11,12 @@ import type { LiveEvent } from '../results/types'
 import {
   announcementOf,
   formatClock,
-  isUnofficial,
   noticeText,
   parseLiveEvent,
   replaceDivision,
   screenHeading,
   screensOf,
+  screenState,
   screenThrough,
   AT_LARGE_NOTICE_MS,
   spotChanges,
@@ -78,17 +78,31 @@ describe('screensOf (D-242)', () => {
     ])
   })
 
-  it('says which screens are unofficial and which games each is ranked through (D-84, D-239)', () => {
-    const screens = screensOf(feed)
-    expect(screens.map(isUnofficial)).toEqual([true, true, false, true, true])
-    expect(screens.map(screenThrough)).toEqual([3, 2, 3, 1, null])
-    expect(
-      isUnofficial({
+  it('names the games each screen is ranked through (D-239)', () => {
+    expect(screensOf(feed).map(screenThrough)).toEqual([3, 2, 3, 1, null])
+  })
+
+  it('is in progress until every game is counted, then unofficial, then official (RES-64)', () => {
+    const results = createSweeperResults({ throughGame: 2 })
+    const sweeper = (throughGame: number | null, complete = false) =>
+      screenState({
+        key: 'sw',
+        kind: 'sweeper',
+        results: { ...results, throughGame, session: { ...results.session, games: 3, complete } },
+      })
+    expect(sweeper(null)).toBe('in-progress')
+    expect(sweeper(2)).toBe('in-progress')
+    expect(sweeper(3)).toBe('unofficial')
+    expect(sweeper(2, true)).toBe('official')
+
+    const superSweeper = (complete: boolean) =>
+      screenState({
         key: 's',
         kind: 'super-sweeper',
-        results: createSuperSweeperResults({ complete: true }),
-      }),
-    ).toBe(false)
+        results: createSuperSweeperResults({ complete }),
+      })
+    expect(superSweeper(false)).toBe('unofficial')
+    expect(superSweeper(true)).toBe('official')
   })
 })
 

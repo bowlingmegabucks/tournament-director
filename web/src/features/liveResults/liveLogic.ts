@@ -64,11 +64,21 @@ export function screenHeading(screen: LiveScreen): string {
   }
 }
 
-/** Whether the screen's results are still open: they say "Unofficial" (D-84, D-88, D-242). */
-export function isUnofficial(screen: LiveScreen): boolean {
-  return screen.kind === 'super-sweeper'
-    ? !screen.results.complete
-    : !screen.results.session.complete
+export type ScreenState = 'in-progress' | 'unofficial' | 'official'
+
+/**
+ * RES-64: official once the session is complete; before that, in progress while games are still to
+ * be counted and unofficial once all are in. The super sweeper has no games of its own here, so it
+ * is only unofficial or official.
+ */
+export function screenState(screen: LiveScreen): ScreenState {
+  if (screen.kind === 'super-sweeper') {
+    return screen.results.complete ? 'official' : 'unofficial'
+  }
+  const { complete, games } = screen.results.session
+  if (complete) return 'official'
+  const through = screenThrough(screen)
+  return through !== null && through >= games ? 'unofficial' : 'in-progress'
 }
 
 /** The games a screen is ranked through, `null` when it names none. */

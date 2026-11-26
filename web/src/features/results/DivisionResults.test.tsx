@@ -1,7 +1,12 @@
 import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { createDivisionResult, createSquadRow } from '../../mocks/data'
-import { DivisionBody, DivisionResults, DivisionSummary } from './DivisionResults'
+import {
+  DivisionBody,
+  DivisionCounts,
+  DivisionResults,
+  DivisionThroughNote,
+} from './DivisionResults'
 
 const open = createDivisionResult({
   name: 'Open',
@@ -122,11 +127,23 @@ describe('DivisionBody', () => {
   })
 })
 
-describe('DivisionSummary', () => {
+describe('DivisionCounts and DivisionThroughNote', () => {
   it('draws the counts line', () => {
-    const { container } = render(<DivisionSummary division={open} />)
+    const { container } = render(<DivisionCounts division={open} />)
 
-    expect(container.querySelectorAll('p').length).toBeGreaterThan(0)
+    expect(container.querySelectorAll('p')).toHaveLength(1)
+  })
+
+  it('says what games are ranked, and draws nothing with none to name (RES-46)', () => {
+    const ranked = createDivisionResult({
+      throughGame: 2,
+      rows: [createSquadRow({ scores: [200, 200, null] })],
+    })
+    const { container, rerender } = render(<DivisionThroughNote division={ranked} />)
+    expect(screen.getByText(/Ranked through game 2/)).toBeVisible()
+
+    rerender(<DivisionThroughNote division={{ ...ranked, throughGame: null }} />)
+    expect(container).toBeEmptyDOMElement()
   })
 
   it('shows the amount a casher won under the name, and on no other row (PAY-20, D-284)', () => {

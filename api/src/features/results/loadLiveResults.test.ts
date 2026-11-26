@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { HttpError } from '../../shared/errors.ts'
 import {
   createDivision,
@@ -484,6 +484,21 @@ describe('loadLiveResults (RES-47, D-242, D-244)', () => {
         .records()
         .find((line) => line['msg'] === 'The at-large figures are left out of the live results'),
     ).toMatchObject({ level: 40, tournamentId: tournament.id })
+  })
+
+  it('leaves the at-large figures out for a tournament finals ratio of 0 (RES-57)', async () => {
+    const done = squadAt('2026-10-24T09:00:00', { complete: true })
+    const { deps, tournament, reporting } = setup({
+      squads: [done],
+      seats: [{ sessionId: done.id, entry: bowler(), games: [200, 200, 200] }],
+    })
+    const ratios = await deps.tournaments.getRatios(tournament.id)
+    if (!ratios) throw new Error('The tournament has no ratios')
+    vi.spyOn(deps.tournaments, 'getRatios').mockResolvedValue({ ...ratios, finalsRatio: 0 })
+
+    const result = await loadLiveResults(deps, reporting, tournament.id)
+
+    expect(result.atLarge).toEqual([])
   })
 
   it('sends no personal data (BWL-17)', async () => {

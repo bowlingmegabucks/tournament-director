@@ -39,6 +39,13 @@ export function RecapSheet({ sheet, session, scoresAddress, pattern }: Readonly<
       </div>
       <div className={styles.right}>
         <table className={styles.table}>
+          {/* Score and Total are written by hand, so they get the most room. */}
+          <colgroup>
+            <col className={styles.laneColumn} />
+            <col className={styles.writtenColumn} />
+            <col className={styles.handicapColumn} />
+            <col className={styles.writtenColumn} />
+          </colgroup>
           <thead>
             <tr>
               <th scope="col" className={styles.headCell}>

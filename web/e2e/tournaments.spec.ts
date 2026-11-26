@@ -400,6 +400,32 @@ test('the QR code sits inside the sheet, under the table, clear of Office Check 
   expect(figure.x + figure.width).toBeLessThanOrEqual(office.x)
 })
 
+test('Score and Total, written by hand, are wider than Handicap and Lane (RPT-05a)', async ({
+  page,
+}) => {
+  await openSquad(page, '1:00 PM')
+  await page.getByRole('button', { name: 'Recap sheets' }).click()
+  const table = page
+    .getByRole('dialog', { name: /^Recap sheets/ })
+    .getByRole('article')
+    .first()
+    .getByRole('table')
+
+  const width = async (name: string) => {
+    const found = await table.getByRole('columnheader', { name, exact: true }).boundingBox()
+    if (!found) throw new Error('not on the page')
+    return found.width
+  }
+  const handicap = await width('Handicap')
+
+  expect(await width('Score')).toBeGreaterThan(handicap * 1.3)
+  expect(await width('Total')).toBeGreaterThan(handicap * 1.3)
+  expect(await width('Lane')).toBeLessThan(handicap)
+  const heading = table.getByRole('columnheader', { name: 'Handicap' })
+  // The narrower column still holds its heading.
+  expect(await heading.evaluate((cell) => cell.scrollWidth <= cell.clientWidth)).toBe(true)
+})
+
 test('Print all lays out one half sheet per page, 8.5 by 5.5 inches (RPT-05b, D-62)', async ({
   page,
 }) => {

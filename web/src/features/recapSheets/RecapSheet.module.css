@@ -76,6 +76,19 @@
   inline-size: 100%;
   block-size: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.laneColumn {
+  inline-size: 17%;
+}
+
+.handicapColumn {
+  inline-size: 21%;
+}
+
+.writtenColumn {
+  inline-size: 31%;
 }
 
 .cell {

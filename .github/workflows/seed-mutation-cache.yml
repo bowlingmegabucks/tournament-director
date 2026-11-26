@@ -1,0 +1,54 @@
+name: Seed mutation cache
+
+# Puts an incremental mutation result made on a developer's machine into the Actions cache, where the
+# mutation job on `main` finds it. Use it when a full run no longer fits in a job (see
+# docs/testing.md). Started by hand, from `main` only: a cache saved from another branch is not
+# visible to `main`.
+on:
+  workflow_dispatch:
+    inputs:
+      folder:
+        description: web or api
+        required: true
+        type: choice
+        options: [api, web]
+      source-branch:
+        description: Branch that holds <folder>/reports/stryker-incremental.json
+        required: true
+        default: stryker-seed
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  seed:
+    name: Seed the ${{ inputs.folder }} cache
+    if: ${{ github.ref == 'refs/heads/main' }}
+    # The same runner image as the mutation job, so the cache entry matches.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.source-branch }}
+          persist-credentials: false
+
+      # Fails here, not an hour into the next run, if the file is missing or cut short.
+      - name: Check the result file
+        env:
+          FILE: ${{ inputs.folder }}/reports/stryker-incremental.json
+        run: |
+          node -e '
+            const report = JSON.parse(require("node:fs").readFileSync(process.env.FILE, "utf8"))
+            const mutants = Object.values(report.files).reduce((sum, file) => sum + file.mutants.length, 0)
+            console.log(`StrykerJS ${report.framework.version}: ${mutants} mutants`)
+            if (mutants === 0) process.exit(1)
+          '
+
+      # The path and the key prefix must match the restore step in mutation.yml.
+      - name: Save the incremental mutation result
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ inputs.folder }}/reports/stryker-incremental.json
+          key: stryker-${{ inputs.folder }}-${{ github.run_id }}

@@ -260,6 +260,8 @@ const atLargeName = (figure: LiveAtLarge) => (figure.projected ? 'Projected At L
 
 const spotsText = (spots: number) => (spots === 0 ? 'No Spots' : plural(spots, 'Spot', 'Spots'))
 
+const withLine = (line: string | null, spots: string) => (line ? `${line} | ${spots}` : spots)
+
 /**
  * "+87 (HG 242)" for the last bowler in (RES-60): their "+/−" and the high game a tie must beat. A
  * handicap division says the high game holds handicap, and that a later tie-break game does not.
@@ -282,13 +284,12 @@ export function formatAtLargeLine({ line, handicap }: LiveAtLarge): string | nul
 export function formatAtLarge(figure: LiveAtLarge): string {
   if (figure.spots === 0) return `${atLargeName(figure)}: no spots yet`
   const line = formatAtLargeLine(figure)
-  const spots = spotsText(figure.spots)
-  return `${atLargeName(figure)}: ${line ? `${line} | ${spots}` : spots}`
+  return `${atLargeName(figure)}: ${withLine(line, spotsText(figure.spots))}`
 }
 
 /** "Open: Projected At Large: +74 (HG 231) | 6 Spots (was 5)", for a change of spots (RES-62). */
 export function formatAtLargeChange(figure: LiveAtLarge, was: number): string {
   const line = formatAtLargeLine(figure)
   const spots = `${spotsText(figure.spots)} (was ${was === 0 ? 'none' : was})`
-  return `${figure.divisionName}: Projected At Large: ${line ? `${line} | ${spots}` : spots}`
+  return `${figure.divisionName}: Projected At Large: ${withLine(line, spots)}`
 }

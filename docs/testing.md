@@ -32,6 +32,11 @@
 - The 10 "errors" in a run are mutants that fail TypeScript checks. They are normal.
 - Run it before a PR for changed features. A full run is slow, so add `-- --incremental` (`npm run test:mutation -- --incremental`): the first run writes `reports/stryker-incremental.json`, and later runs test again only the mutants whose code or covering tests changed (13 seconds instead of 80 in `api/` after a one-file change). The score still covers the whole project. Delete the file to force a full run.
 - Pull requests no longer run mutation tests. `/create-pr` runs them locally first (see the skill). `main` runs them with `--incremental`, with the file kept in the Actions cache, mutates every file, and sends the result to the [Stryker Dashboard](https://dashboard.stryker-mutator.io/reports/github.com/bowlingmegabucks/tournament-director/main) as modules `web` and `api` (set in each `stryker.config.json`), using the `STRYKER_DASHBOARD_API_KEY` Actions secret. Only the workflow adds the `dashboard` reporter (a command-line flag), so local runs never report.
+- A job stops at 6 hours and a killed run keeps no progress. A change that makes most results stale (a Stryker update can) then needs a baseline from your machine:
+  1. On an up-to-date `main`, in `api/` or `web/`: `npm ci --ignore-scripts` (in `api/` also `npm run db:generate`), then `npm run test:mutation -- --incremental --force`. Let it finish.
+  2. Put `reports/stryker-incremental.json` on a throwaway branch (`git add -f`, since Git ignores it) and push it. Never merge that branch.
+  3. In GitHub Actions, run **Seed mutation cache** from `main` with the folder and that branch. Do this while no mutation job is running.
+  4. Delete the branch. On the next `main` run, the log line `mutant result(s) are reused` shows whether the baseline took.
 
 ## API (`api/`)
 

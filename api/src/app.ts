@@ -212,6 +212,7 @@ export function createApp({
     events,
     logger,
     (tournamentId) => tellAveragesChanged(tournamentId),
+    (tournamentId) => liveNotifier.entriesChanged(tournamentId),
   )
   // The tournament-wide half of an average change: the finals pages and the TV feed (AVG-19, D-298).
   // A function declaration, so the registration writer above can call it once the pages exist.
@@ -405,7 +406,7 @@ export function createApp({
         path: '/v1/tournaments/:id/squads',
         access: { permission: 'squads.write' }, // SQD-23, D-184: edit; no API key
         methods: ['PATCH'],
-        router: createSquadUpdateRouter(squadWriter, logger, events),
+        router: createSquadUpdateRouter(squadWriter, logger, events, liveNotifier),
       },
       {
         path: '/v1/tournaments/:id/squads',
@@ -494,7 +495,12 @@ export function createApp({
         path: '/v1/tournaments/:id/squads/:sessionId/lanes',
         access: { permission: 'lanes.assign' }, // LAN-20, D-216: director and admin; no API key
         methods: ['PUT'],
-        router: createLaneMoveRouter('squad', { writer: laneWriter, events, logger }),
+        router: createLaneMoveRouter('squad', {
+          writer: laneWriter,
+          events,
+          logger,
+          live: liveNotifier,
+        }),
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/events',

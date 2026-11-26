@@ -6,6 +6,7 @@ import type { SessionEvents } from '../../shared/events/sessionEvents.ts'
 import { jsonBody } from '../../shared/jsonBody.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { requestLogger } from '../../shared/requestLogging.ts'
+import type { LiveNotifier } from '../results/liveEvents.ts'
 import type { LaneWriter, SessionKind } from './writer.ts'
 
 const params = z.object({ id: z.uuid(), sessionId: z.uuid(), registrationId: z.uuid() })
@@ -23,6 +24,8 @@ export interface LaneMoveDeps {
   writer: LaneWriter
   events: SessionEvents
   logger: Logger
+  /** The TV page, for a squad only: a lane changes the projected at-large spots (RES-61). */
+  live?: Pick<LiveNotifier, 'entriesChanged'>
 }
 
 /**
@@ -34,7 +37,7 @@ export interface LaneMoveDeps {
  */
 export function createLaneMoveRouter(
   kind: SessionKind,
-  { writer, events, logger }: LaneMoveDeps,
+  { writer, events, logger, live }: LaneMoveDeps,
 ): Router {
   const router = Router({ mergeParams: true })
   const label = sessionName(kind)
@@ -85,6 +88,7 @@ export function createLaneMoveRouter(
         log.info({ ...ids, lane }, 'Lane assignment saved')
         // After the commit; a failed send is logged by the hub and never fails the save (D-219).
         events.publish(sessionId, 'lanes')
+        live?.entriesChanged(id)
         res.json({ position: outcome.position })
     }
   })

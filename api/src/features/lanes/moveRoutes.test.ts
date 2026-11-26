@@ -3,6 +3,7 @@ import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 import { apiKeyHeader } from '../../shared/auth/caller.ts'
 import { createSessionEvents, type ChangeEvent } from '../../shared/events/sessionEvents.ts'
+import { liveKey } from '../../shared/events/sseRoute.ts'
 import { createSquad, createSweeper, createTournament, testApiKey } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createSignedInTestApp, createTestApp } from '../../test/testApp.ts'
@@ -34,6 +35,11 @@ function setup(
       end: () => undefined,
     })
   }
+  const live: ChangeEvent[] = []
+  events.subscribe(liveKey(tournament.id), {
+    send: (event) => live.push(event),
+    end: () => undefined,
+  })
   const { writer, state } = createInMemoryLaneWriter({
     tournaments: [{ id: tournament.id }],
     sessions: [
@@ -80,10 +86,22 @@ function setup(
   const app = createSignedInTestApp(overrides, options.role ?? 'director')
   const url = (registrationId = mine, session = squad.id, plural = 'squads') =>
     `/v1/tournaments/${tournament.id}/${plural}/${session}/lanes/${registrationId}`
-  return { app, overrides, url, tournament, squad, sweeper, state, seen, captured }
+  return { app, overrides, url, tournament, squad, sweeper, state, seen, live, captured }
 }
 
 describe('PUT /v1/tournaments/:id/squads/:sessionId/lanes/:registrationId', () => {
+  it('tells the TV page when a squad lane changes, and not for a sweeper (RES-61)', async () => {
+    const { app, url, sweeper, live } = setup()
+
+    await request(app)
+      .put(url(mine, sweeper.id, 'sweepers'))
+      .send({ lane: 11 })
+    expect(live).toEqual([])
+
+    await request(app).put(url()).send({ lane: 1 })
+    expect(live.map((event) => event.kind)).toEqual(['entries'])
+  })
+
   it('saves the seat the API picks and returns it (LAN-20, D-56, D-57)', async () => {
     const { app, url, state } = setup()
 

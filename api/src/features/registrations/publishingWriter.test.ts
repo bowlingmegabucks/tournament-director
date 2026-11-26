@@ -251,6 +251,74 @@ describe('createPublishingRegistrationWriter', () => {
     ).toMatchObject({ level: 40, sessionId: a })
   })
 
+  it('tells the tournament after each write that touches a session (RES-61)', async () => {
+    const changed: string[] = []
+    const writer = createPublishingRegistrationWriter(
+      storage().writer,
+      recordingHub().hub,
+      createCapturedLogger().logger,
+      undefined,
+      (tournament) => changed.push(tournament),
+    )
+
+    await writer.save(edit({ addSessionIds: [b] }))
+    expect(changed).toEqual([tournamentId])
+    await writer.removeForDesk(registrationId, tournamentId, () => ({
+      kind: 'warn',
+      message: 'm',
+      paid: 5,
+    }))
+    expect(changed).toHaveLength(1)
+    await writer.removeForDesk(registrationId, tournamentId, () => ({ kind: 'delete' }))
+    expect(changed).toEqual([tournamentId, tournamentId])
+  })
+
+  it('tells the tournament of a new registration and of a deleted one (RES-61)', async () => {
+    const changed: string[] = []
+    const writer = createPublishingRegistrationWriter(
+      storage().writer,
+      recordingHub().hub,
+      createCapturedLogger().logger,
+      undefined,
+      (tournament) => changed.push(tournament),
+    )
+
+    await writer.save(
+      edit({
+        registration: {
+          id: 'r0000000-0000-4000-8000-000000000002',
+          isNew: true,
+          divisionId,
+          average: 170,
+          superSweeper: false,
+        },
+        addSessionIds: [b],
+      }),
+    )
+    await writer.deleteRegistration(registrationId)
+
+    expect(changed).toEqual([tournamentId, tournamentId])
+  })
+
+  it('does not fail the write when telling the tournament throws, and logs it (RES-61)', async () => {
+    const captured = createCapturedLogger()
+    const writer = createPublishingRegistrationWriter(
+      storage().writer,
+      recordingHub().hub,
+      captured.logger,
+      undefined,
+      () => {
+        throw new Error('hub down')
+      },
+    )
+
+    await expect(writer.save(edit({ addSessionIds: [b] }))).resolves.toBeUndefined()
+
+    expect(
+      captured.records().find((line) => line['msg'] === 'Could not publish an entry change'),
+    ).toMatchObject({ level: 40, tournamentId })
+  })
+
   it('tells the sessions and the tournament when a save clears an average check (AVG-08, AVG-19, D-290)', async () => {
     const { hub, published } = recordingHub()
     const cleared: string[] = []

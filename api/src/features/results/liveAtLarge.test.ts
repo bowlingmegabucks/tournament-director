@@ -173,3 +173,46 @@ describe('workOutLiveAtLarge (RES-57 to RES-60)', () => {
     expect(run([worked(games)])).toMatchObject([{ spots: 1, line: null }])
   })
 })
+
+describe('workOutLiveAtLarge with several divisions (RES-57)', () => {
+  const senior = createDivision({ number: 2, name: 'Senior' })
+
+  /** One complete squad: the Open field of `worked`, and a Senior field of its own beside it. */
+  function both(openGames: number[][], seniorGames: number[][]): WorkedSquad {
+    const squad = worked(openGames)
+    return {
+      ...squad,
+      outcomes: [
+        ...squad.outcomes,
+        ...worked(seniorGames).outcomes.map((each) => ({ ...each, divisionId: senior.id })),
+      ],
+    }
+  }
+
+  it("works out each division from its own bowlers only, in the order of the divisions' names", () => {
+    const squad = () => both(field(13), field(6, 240))
+
+    const result = workOutLiveAtLarge([squad(), squad()], [], [senior, open], 7)
+
+    expect(result).toMatchObject([
+      { divisionName: 'Open', spots: 1, line: { highGame: 279 } },
+      // 12 entries of 7: one spot, no advancer, so the best Senior total takes it.
+      { divisionName: 'Senior', spots: 1, line: { highGame: 240 } },
+    ])
+  })
+
+  it('leaves out a division with no scores and no one waiting on a lane', () => {
+    const result = workOutLiveAtLarge([worked(field(13))], [], [open, senior], 7)
+
+    expect(result.map((figure) => figure.divisionName)).toEqual(['Open'])
+  })
+
+  it('orders divisions of the same name by number', () => {
+    const second = { ...senior, name: 'Open' }
+    const squad = both(field(13), field(6, 240))
+
+    const result = workOutLiveAtLarge([squad], [], [second, open], 7)
+
+    expect(result.map((figure) => figure.divisionId)).toEqual([open.id, second.id])
+  })
+})

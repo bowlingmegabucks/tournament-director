@@ -238,7 +238,7 @@ export function spotChanges(before: LiveResults | undefined, after: LiveResults)
 
 function spotAnnouncement(figure: LiveAtLarge, was: number): Announcement {
   const line = formatAtLargeLine(figure)
-  const now = figure.spots === 0 ? 'no spots' : plural(figure.spots, 'spot', 'spots')
+  const now = figure.spots === 0 ? 'No Spots' : plural(figure.spots, 'Spot', 'Spots')
   return {
     variant: 'at-large',
     kicker: `Projected At Large · now ${now} (was ${was === 0 ? 'none' : was})`,

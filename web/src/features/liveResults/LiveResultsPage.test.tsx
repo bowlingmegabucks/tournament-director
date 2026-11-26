@@ -249,7 +249,7 @@ describe('LiveResultsPage pinned heading (D-254)', () => {
 
     const heading = screen.getAllByRole('heading', { level: 2 })[0]
     const block = heading?.closest('div')
-    expect(block).toHaveTextContent('Cut line +227 · Cash line +209')
+    expect(block).toHaveTextContent('Squad: Cut line +227 · Cash line +209')
     expect(block).toHaveTextContent('Ranked through game 2.')
     // The table below holds the rows, not the lines.
     expect(block?.querySelector('table')).toBeNull()
@@ -776,7 +776,7 @@ describe('LiveResultsPage at-large figure (RES-58, RES-62)', () => {
 
     // By role, so the hidden copy the scroll draws does not count.
     const [open, senior] = screen.getAllByRole('heading', { level: 2 })
-    expect(open?.closest('div')).toHaveTextContent('At Large: 4 spots - +87 HG 242')
+    expect(open?.closest('div')).toHaveTextContent('At Large: +87 (HG 242) | 4 Spots')
     expect(senior?.closest('div')).not.toHaveTextContent('At Large')
   })
 
@@ -785,18 +785,18 @@ describe('LiveResultsPage at-large figure (RES-58, RES-62)', () => {
     const calls = serve(feedOf({ atLarge: atLarge(5) }))
     open_()
     await table()
-    expect(screen.queryByText(/projected At Large now/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/\(was 5\)/)).not.toBeInTheDocument()
 
     calls.set(feedOf({ atLarge: atLarge(6) }))
     act(() => {
       FakeEventSource.latest().message(JSON.stringify({ kind: 'entries', version: 1 }))
     })
 
-    const text = 'Open: projected At Large now 6 spots (was 5) - +87 HG 242'
+    const text = 'Open: Projected At Large: +87 (HG 242) | 6 Spots (was 5)'
     expect(await screen.findByText(text)).toBeInTheDocument()
-    expect(screen.getByText('Projected At Large · now 6 spots (was 5)')).toBeInTheDocument()
+    expect(screen.getByText('Projected At Large · now 6 Spots (was 5)')).toBeInTheDocument()
     const [open] = screen.getAllByRole('heading', { level: 2 })
-    expect(open?.closest('div')).toHaveTextContent('Projected At Large: 6 spots - +87 HG 242')
+    expect(open?.closest('div')).toHaveTextContent('Projected At Large: +87 (HG 242) | 6 Spots')
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(NOTICE_MS + 1000)

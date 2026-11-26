@@ -14,11 +14,11 @@ describe('spotChanges (RES-62)', () => {
     expect(spotChanges(feed(was), feed(now))).toEqual([
       {
         divisionId,
-        text: `Open: projected At Large now ${now} spots (was ${was}) - +87 HG 242`,
+        text: `Open: Projected At Large: +87 (HG 242) | ${now} Spots (was ${was})`,
         announcement: {
           variant: 'at-large',
-          kicker: `Projected At Large · now ${now} spots (was ${was})`,
-          title: 'Open: +87 HG 242',
+          kicker: `Projected At Large · now ${now} Spots (was ${was})`,
+          title: 'Open: +87 (HG 242)',
           game: now,
           duration: AT_LARGE_NOTICE_MS,
         },
@@ -52,7 +52,7 @@ describe('spotChanges (RES-62)', () => {
     })
 
     expect(spotChanges(feed(1), after)[0]?.announcement).toMatchObject({
-      kicker: 'Projected At Large · now no spots (was 1)',
+      kicker: 'Projected At Large · now No Spots (was 1)',
       title: 'Open',
       game: 0,
     })

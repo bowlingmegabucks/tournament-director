@@ -16,7 +16,7 @@ import styles from './LiveResultsPage.module.css'
  * lines, then the table the Results tab draws, at TV size. The heading block and the table's column
  * heads stay pinned at the top of the screen while the rows scroll, until the next screen pushes
  * them away (D-254), so a row far down still shows its division and where the lines are.
- * A squad screen adds its division's at-large figure beside the lines (RES-58). `highlighted` outlines the table that just changed (D-245).
+ * A squad screen names its cut and cash lines "Squad:" and puts its division's at-large figure on the line below (RES-58). `highlighted` outlines the table that just changed (D-245).
  */
 export function ScreenSection({
   screen,
@@ -67,10 +67,8 @@ export function ScreenSection({
           {screen.kind === 'squad' && (
             <>
               <DivisionSummary division={screen.division} />
-              <div className={styles.figures}>
-                <p className={styles.lines}>{formatLines(screen.division)}</p>
-                {atLarge && <p className={styles.lines}>{formatAtLarge(atLarge)}</p>}
-              </div>
+              <p className={styles.lines}>Squad: {formatLines(screen.division)}</p>
+              {atLarge && <p className={styles.lines}>{formatAtLarge(atLarge)}</p>}
             </>
           )}
           {screen.kind === 'sweeper' && (

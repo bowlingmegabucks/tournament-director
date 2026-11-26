@@ -197,14 +197,20 @@ for (const colorScheme of ['dark', 'light'] as const) {
   })
 }
 
-test('a squad screen shows its division’s at-large figure beside the lines (RES-58)', async ({
+test('a squad screen shows its division’s at-large figure under the squad lines (RES-58)', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1920, height: 1080 })
   await openTournament(page)
   await menuLink(page, 'Live results')
 
-  await expect(page.getByText(/^At Large: 4 spots - \+87 HG 242/).first()).toBeVisible()
+  const squad = page.getByText(/^Squad: Cut line/).first()
+  const atLarge = page.getByText(/^At Large: \+87 \(HG 242\) \| 4 Spots/).first()
+  await expect(atLarge).toBeVisible()
+  await holdStill(page)
+  const above = await squad.boundingBox()
+  const below = await atLarge.boundingBox()
+  expect(below?.y).toBeGreaterThan(above?.y ?? Infinity)
 })
 
 test('on a phone the at-large figure wraps with no sideways scroll (RES-58, D-73)', async ({
@@ -213,7 +219,7 @@ test('on a phone the at-large figure wraps with no sideways scroll (RES-58, D-73
   await page.setViewportSize({ width: 390, height: 844 })
   await openTournament(page)
   await menuLink(page, 'Live results')
-  await expect(page.getByText(/^At Large: 4 spots/).first()).toBeVisible()
+  await expect(page.getByText(/^At Large: \+87/).first()).toBeVisible()
   await holdStill(page)
 
   const heading = page.getByRole('heading', { level: 2 }).first()

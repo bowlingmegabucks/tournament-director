@@ -501,6 +501,24 @@ describe('loadLiveResults (RES-47, D-242, D-244)', () => {
     expect(result.atLarge).toEqual([])
   })
 
+  it('warns about no bad ratio before a squad is complete (RES-57)', async () => {
+    const running = squadAt('2026-10-24T09:00:00')
+    const { deps, tournament, reporting, captured } = setup({
+      squads: [running],
+      seats: [{ sessionId: running.id, entry: bowler(), games: [200] }],
+    })
+    const ratios = await deps.tournaments.getRatios(tournament.id)
+    if (!ratios) throw new Error('The tournament has no ratios')
+    vi.spyOn(deps.tournaments, 'getRatios').mockResolvedValue({ ...ratios, finalsRatio: 0 })
+
+    const result = await loadLiveResults(deps, reporting, tournament.id)
+
+    expect(result.atLarge).toEqual([])
+    expect(captured.records().map((line) => line['msg'])).not.toContain(
+      'The at-large figures are left out of the live results',
+    )
+  })
+
   it('sends no personal data (BWL-17)', async () => {
     const squad = squadAt('2026-10-24T09:00:00')
     const { deps, tournament, reporting } = setup({

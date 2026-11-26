@@ -11,7 +11,7 @@ import type { LiveAtLarge } from './types.ts'
  * open one. A later squad completed out of order waits, because who advances there depends on who
  * advanced before it (RES-06).
  */
-function countedSquads(worked: readonly WorkedSquad[]): readonly WorkedSquad[] {
+export function countedSquads(worked: readonly WorkedSquad[]): readonly WorkedSquad[] {
   const open = worked.findIndex(({ squad }) => !squad.complete)
   return open === -1 ? worked : worked.slice(0, open)
 }

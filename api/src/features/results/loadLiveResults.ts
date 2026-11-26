@@ -1,7 +1,7 @@
 import type { Division } from '../divisions/types.ts'
 import { amountsFor } from '../payouts/amounts.ts'
 import { HttpError } from '../../shared/errors.ts'
-import { projectedSquad, workOutLiveAtLarge } from './liveAtLarge.ts'
+import { countedSquads, projectedSquad, workOutLiveAtLarge } from './liveAtLarge.ts'
 import { loadSuperSweeper } from './loadFinals.ts'
 import { loadSweeperResults, toSquadResults, type ResultsDeps } from './loadResults.ts'
 import { reportSkipped, requireRatios, type Reporting } from './resultHelpers.ts'
@@ -19,6 +19,8 @@ async function atLargeOf(
   worked: readonly WorkedSquad[],
   divisions: readonly Division[],
 ): Promise<LiveAtLarge[]> {
+  // Nothing shows until a squad is complete, so read no ratio and warn about none before then.
+  if (countedSquads(worked).length === 0) return []
   const ratios = await deps.tournaments.getRatios(tournamentId)
   const last = projectedSquad(worked)
   if (!ratios || ratios.finalsRatio <= 0 || (last && last.squad.finalsRatio <= 0)) {

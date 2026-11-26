@@ -64,6 +64,7 @@ describe('ScreenSection (D-242, D-254)', () => {
     const heading = within(screen.getByRole('region')).getByRole('heading', { level: 2 })
     expect(heading).toHaveTextContent('Official')
     expect(heading).not.toHaveTextContent('Unofficial')
+    expect(heading).not.toHaveTextContent('Through game')
 
     rerender(<ScreenSection screen={squadScreen} highlighted={false} />)
     expect(heading).toHaveTextContent('Unofficial')

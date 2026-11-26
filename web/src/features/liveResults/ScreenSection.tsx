@@ -27,8 +27,8 @@ function AtLargeLine({ figure }: Readonly<{ figure: LiveAtLarge }>) {
 
 /**
  * One screen of the TV page (D-242): a heading with its tags ("Unofficial" while the session is
- * open, "Official" once it is complete, and "Through game 3" for the games counted), the counts, and
- * the totals at the cut and cash
+ * open, with "Through game 3" for the games counted, or just "Official" once it is complete), the
+ * counts, and the totals at the cut and cash
  * lines, then the table the Results tab draws, at TV size. The heading block and the table's column
  * heads stay pinned at the top of the screen while the rows scroll, until the next screen pushes
  * them away (D-254), so a row far down still shows its division and where the lines are.
@@ -40,7 +40,8 @@ export function ScreenSection({
   atLarge,
 }: Readonly<{ screen: LiveScreen; highlighted: boolean; atLarge?: LiveAtLarge }>) {
   const headingId = useId()
-  const through = screenThrough(screen)
+  const unofficial = isUnofficial(screen)
+  const through = unofficial ? screenThrough(screen) : null
   const section = useRef<HTMLElement>(null)
   const pinned = useRef<HTMLDivElement>(null)
 
@@ -74,7 +75,7 @@ export function ScreenSection({
       <div ref={pinned} className={styles.pinned}>
         <h2 id={headingId} className={styles.heading}>
           {screenHeading(screen)}
-          <span className={styles.tag}>{isUnofficial(screen) ? 'Unofficial' : 'Official'}</span>
+          <span className={styles.tag}>{unofficial ? 'Unofficial' : 'Official'}</span>
           {through !== null && through > 0 && (
             <span className={styles.tag}>Through game {through}</span>
           )}

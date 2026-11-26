@@ -49,7 +49,13 @@ export function RecapDialog({
   const filterId = useId()
   const { data, error, isPending, refetch } = useRecapSheets(kind, tournamentId, sessionId)
   // Every sheet's QR code opens this session's Scores tab (RPT-10, D-226).
-  const address = scoresAddress(window.location.origin, kind, tournamentId, sessionId)
+  const address = scoresAddress(
+    window.location.origin,
+    import.meta.env.BASE_URL,
+    kind,
+    tournamentId,
+    sessionId,
+  )
   // The skip is stored for the session (D-235), so a printed sheet and the entry screen agree. It
   // shows the pattern being saved while the save runs, then the stored one.
   const canChoose = useCan('scores.write')

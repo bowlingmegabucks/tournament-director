@@ -239,6 +239,15 @@ describe('live notifier (RES-49, D-243)', () => {
     expect(dropped).toHaveBeenCalledWith(tournamentId)
   })
 
+  it('says entries changed, naming no bowler, and drops the feed (RES-61)', () => {
+    const { notifier, seen, dropped } = setup()
+
+    notifier().entriesChanged(tournamentId)
+
+    expect(seen).toEqual([{ kind: 'entries', detail: undefined, version: 1 }])
+    expect(dropped).toHaveBeenCalledWith(tournamentId)
+  })
+
   it('says payouts were saved, with the session when a squad or sweeper has one, and drops the feed (PAY-21, D-285)', () => {
     const { notifier, seen, dropped } = setup()
 

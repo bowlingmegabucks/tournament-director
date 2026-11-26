@@ -39,6 +39,15 @@ export function ScoreTable({ bowlers, games, label, fresh = [] }: Readonly<Score
   const columns = Array.from({ length: games }, (_, index) => index + 1)
   return (
     <table role="table" className={styles.table} aria-label={label}>
+      {/* The same widths in every pair's table, so the columns line up down the page. */}
+      <colgroup>
+        <col className={styles.laneColumn} />
+        <col />
+        {columns.map((game) => (
+          <col key={game} className={styles.gameColumn} />
+        ))}
+        <col className={styles.totalColumn} />
+      </colgroup>
       {/* eslint-disable-next-line jsx-a11y/no-redundant-roles */}
       <thead role="rowgroup" className={styles.head}>
         <tr role="row">

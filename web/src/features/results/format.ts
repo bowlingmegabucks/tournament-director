@@ -4,6 +4,7 @@ import type {
   AtLargeDivision,
   Decider,
   DivisionResult,
+  LiveAtLarge,
   SeedingDivision,
   SeedingRow,
   SquadRow,
@@ -253,4 +254,42 @@ export function formatLines(division: DivisionResult): string {
 export function formatCashLine(rows: readonly (Figure & { group: 'casher' | 'other' })[]): string {
   const figure = lineFigure(lowest(rows, 'casher'))
   return figure === null ? '' : `Cash line ${figure}`
+}
+
+const atLargeName = (figure: LiveAtLarge) => (figure.projected ? 'Projected At Large' : 'At Large')
+
+const spotsText = (spots: number) => (spots === 0 ? 'No Spots' : plural(spots, 'Spot', 'Spots'))
+
+const withLine = (line: string | null, spots: string) => (line ? `${line} | ${spots}` : spots)
+
+/**
+ * "+87 (HG 242)" for the last bowler in (RES-60): their "+/−" and the high game a tie must beat. A
+ * handicap division says the high game holds handicap, and that a later tie-break game does not.
+ * `null` when no one holds the last spot.
+ */
+export function formatAtLargeLine({ line, handicap }: LiveAtLarge): string | null {
+  if (!line) return null
+  const total = formatPlusMinus(line.total, line.games)
+  if (line.fullTie) return `${total} (full tie)`
+  const high = `HG ${line.highGame}${handicap ? ' w/HDCP' : ''}`
+  if (!line.tieBreaker) return `${total} (${high})`
+  const { rank, score } = line.tieBreaker
+  return `${total} (${high}, ${ordinal(rank)} ${score}${handicap ? ' scratch' : ''})`
+}
+
+/**
+ * "At Large: +87 (HG 242) | 4 Spots" beside the cut and cash lines of the TV page (RES-58). No dash
+ * between the parts: it reads as a minus.
+ */
+export function formatAtLarge(figure: LiveAtLarge): string {
+  if (figure.spots === 0) return `${atLargeName(figure)}: no spots yet`
+  const line = formatAtLargeLine(figure)
+  return `${atLargeName(figure)}: ${withLine(line, spotsText(figure.spots))}`
+}
+
+/** "Open: Projected At Large: +74 (HG 231) | 6 Spots (was 5)", for a change of spots (RES-62). */
+export function formatAtLargeChange(figure: LiveAtLarge, was: number): string {
+  const line = formatAtLargeLine(figure)
+  const spots = `${spotsText(figure.spots)} (was ${was === 0 ? 'none' : was})`
+  return `${figure.divisionName}: Projected At Large: ${withLine(line, spots)}`
 }

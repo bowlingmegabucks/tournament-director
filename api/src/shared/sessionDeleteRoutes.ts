@@ -33,6 +33,7 @@ export function createSessionDeleteRouter(
   deleter: SessionDeleter,
   logger: Logger,
   kind: SessionKind,
+  onDeleted?: (tournamentId: string) => void,
 ): Router {
   const router = Router({ mergeParams: true })
 
@@ -55,6 +56,7 @@ export function createSessionDeleteRouter(
 
     // Who deleted what. The date stays out of the log (D-189).
     requestLogger(res, logger).info(ids, `${sessionName(kind)} deleted`)
+    onDeleted?.(id)
     res.status(204).end()
   })
 

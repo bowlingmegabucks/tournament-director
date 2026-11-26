@@ -75,6 +75,8 @@ function workOutSquad(
 /** One squad worked out, with the bowlers who advanced before it (RES-06). */
 export interface WorkedSquad {
   squad: Squad
+  /** Everyone entered in the squad, with the lane each holds. */
+  entries: readonly LaneEntry[]
   /** Bowlers who advanced in an earlier squad of the tournament. */
   advancedBefore: ReadonlySet<string>
   outcomes: { divisionId: string; throughGame: number | null; outcome: DivisionOutcome }[]
@@ -111,6 +113,6 @@ export async function workOutSquads(
       for (const advancer of outcome.advancers) advanced.add(advancer.bowlerId)
     }
     const flagged = read.squad.complete ? noFlags : (options.flagged?.get(read.squad.id) ?? noFlags)
-    return { squad: read.squad, advancedBefore, outcomes, skipped, flagged }
+    return { squad: read.squad, entries: read.entries, advancedBefore, outcomes, skipped, flagged }
   })
 }

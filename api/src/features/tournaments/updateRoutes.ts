@@ -5,6 +5,7 @@ import { callerOf } from '../../shared/auth/caller.ts'
 import { jsonBody } from '../../shared/jsonBody.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { requestLogger } from '../../shared/requestLogging.ts'
+import type { LiveNotifier } from '../results/liveEvents.ts'
 import { parseUpdateTournament } from './updateRequest.ts'
 import type { TournamentWriter } from './writer.ts'
 
@@ -22,7 +23,11 @@ const firstOf = (errors: Record<string, string>) => Object.values(errors)[0] ?? 
  * legacy API has no such route, so the vendor sees no change (D-09). Which fields may change, and
  * when, is `planEdit` (D-128 to D-130); this route only turns its answer into HTTP.
  */
-export function createTournamentUpdateRouter(writer: TournamentWriter, logger: Logger): Router {
+export function createTournamentUpdateRouter(
+  writer: TournamentWriter,
+  logger: Logger,
+  live?: Pick<LiveNotifier, 'entriesChanged'>,
+): Router {
   const router = Router()
 
   router.patch('/:id', jsonBody, async (req, res) => {
@@ -54,6 +59,8 @@ export function createTournamentUpdateRouter(writer: TournamentWriter, logger: L
         'Tournament updated',
       )
     }
+    // The finals ratio sets the at-large spots on the TV page (RES-61).
+    if (outcome.changed.includes('finalsRatio')) live?.entriesChanged(id)
     res.json({ tournament: outcome.updated })
   })
 

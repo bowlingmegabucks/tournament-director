@@ -6,6 +6,7 @@ import { FieldErrorsError, HttpError, WarningsError } from '../../shared/errors.
 import { jsonBody } from '../../shared/jsonBody.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { requestLogger } from '../../shared/requestLogging.ts'
+import type { LiveNotifier } from '../results/liveEvents.ts'
 import type { SessionNotFound } from '../../shared/sessionEdit.ts'
 import { parseUpdateSquad } from './updateRequest.ts'
 import type { SquadWriter } from './writer.ts'
@@ -34,6 +35,7 @@ export function createSquadUpdateRouter(
   writer: SquadWriter,
   logger: Logger,
   events: SessionEvents,
+  live?: Pick<LiveNotifier, 'entriesChanged'>,
 ): Router {
   const router = Router({ mergeParams: true })
 
@@ -71,7 +73,12 @@ export function createSquadUpdateRouter(
       )
     }
     // A changed date, fee, lane count, or ratio shows on every open lane page of the session (D-219).
-    if (outcome.changed.length > 0) events.publish(sessionId, 'lanes')
+    if (outcome.changed.length > 0) {
+      events.publish(sessionId, 'lanes')
+      // A changed date or ratio changes the TV page's at-large figures. Any change tells it, since
+      // an extra refetch costs little (RES-61).
+      live?.entriesChanged(id)
+    }
     res.json({ squad: outcome.updated })
   })
 

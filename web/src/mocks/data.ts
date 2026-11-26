@@ -19,6 +19,7 @@ import type {
   SeedingDivision,
   SeedingResults,
   SeedingRow,
+  LiveAtLarge,
   LiveResults,
   RankMode,
   SquadResults,
@@ -1500,6 +1501,20 @@ export function createLiveResults(overrides: Partial<LiveResults> = {}): LiveRes
     generatedAt: '2026-10-24T15:41:00.000Z',
     sessions: [],
     superSweeper: null,
+    atLarge: [],
+    ...overrides,
+  }
+}
+
+/** One division's at-large figure on the TV page. Override what a test cares about. */
+export function createLiveAtLarge(overrides: Partial<LiveAtLarge> = {}): LiveAtLarge {
+  return {
+    divisionId: faker.string.uuid(),
+    divisionName: 'Open',
+    spots: 4,
+    projected: false,
+    handicap: false,
+    line: { total: 887, games: 4, highGame: 242, tieBreaker: null, fullTie: false },
     ...overrides,
   }
 }
@@ -1524,6 +1539,14 @@ export function createDemoLiveResults(
       })),
     ],
     superSweeper: createDemoSuperSweeper(sweepers, 'full-game'),
+    atLarge: squads.some((squad) => squad.complete)
+      ? divisions.map((division) =>
+          createLiveAtLarge({
+            divisionId: division.id,
+            divisionName: division.name,
+          }),
+        )
+      : [],
   })
 }
 

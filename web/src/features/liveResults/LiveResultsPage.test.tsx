@@ -1,9 +1,10 @@
-import { act, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { server } from '../../mocks/server'
 import {
   createDivisionResult,
+  createLiveAtLarge,
   createLiveResults,
   createSquadResults,
   createSquadRow,
@@ -16,6 +17,7 @@ import {
 import { FakeEventSource } from '../../test/fakeEventSource'
 import { renderApp } from '../../test/renderApp'
 import type { DivisionResult, LiveResults } from '../results/types'
+import { AT_LARGE_NOTICE_MS } from './liveLogic'
 import { NOTICE_MS } from './useNotices'
 import { HIGHLIGHT_MS, LIVE_REFRESH_MS } from './useLiveResults'
 
@@ -247,7 +249,7 @@ describe('LiveResultsPage pinned heading (D-254)', () => {
 
     const heading = screen.getAllByRole('heading', { level: 2 })[0]
     const block = heading?.closest('div')
-    expect(block).toHaveTextContent('Cut line +227 · Cash line +209')
+    expect(block).toHaveTextContent('Squad: Cut line +227 · Cash line +209')
     expect(block).toHaveTextContent('Ranked through game 2.')
     // The table below holds the rows, not the lines.
     expect(block?.querySelector('table')).toBeNull()
@@ -739,6 +741,43 @@ describe('LiveResultsPage offline and keeping alive (RES-52, D-246)', () => {
   })
 })
 
+describe('LiveResultsPage scroll speed (RES-63)', () => {
+  afterEach(() => {
+    localStorage.clear()
+  })
+
+  it('offers 1x to 2x in steps of 0.25 in the bar, and shows the one chosen', async () => {
+    serve()
+    open_()
+
+    const slider = await screen.findByRole('slider', { name: /Scroll speed/ })
+    expect(screen.getByRole('banner')).toContainElement(slider)
+    expect(slider).toHaveAttribute('min', '1')
+    expect(slider).toHaveAttribute('max', '2')
+    expect(slider).toHaveAttribute('step', '0.25')
+    expect(slider).toHaveValue('1')
+
+    fireEvent.change(slider, { target: { value: '1.25' } })
+
+    expect(slider).toHaveValue('1.25')
+    expect(slider).toHaveAttribute('aria-valuetext', '1.25x')
+    expect(screen.getByText('1.25x')).toBeVisible()
+  })
+
+  it('has no slider when the page flips instead of scrolling', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('reduce'),
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }))
+    serve()
+    open_()
+    await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
+
+    expect(screen.queryByRole('slider')).not.toBeInTheDocument()
+  })
+})
+
 describe('LiveResultsPage with reduced motion (RES-53)', () => {
   it('flips one screen at a time instead of scrolling the list', async () => {
     vi.stubGlobal('matchMedia', (query: string) => ({
@@ -757,5 +796,99 @@ describe('LiveResultsPage with reduced motion (RES-53)', () => {
     expect(
       screen.getByText(/Screen 1 of 4: Squad · Sat 10\/24\/2026 9:00 AM · Open/),
     ).toBeInTheDocument()
+  })
+})
+
+describe('LiveResultsPage at-large figure (RES-58, RES-62)', () => {
+  const atLarge = (spots: number, projected = true) => [
+    createLiveAtLarge({ divisionId: openId, divisionName: 'Open', spots, projected }),
+  ]
+  const table = () =>
+    screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
+
+  it('shows the figure on the screens of its division only', async () => {
+    serve(feedOf({ atLarge: atLarge(4, false) }))
+    open_()
+    await table()
+
+    // By role, so the hidden copy the scroll draws does not count.
+    const [open, senior] = screen.getAllByRole('heading', { level: 2 })
+    expect(open?.closest('div')).toHaveTextContent('At Large: +87 (HG 242) | 4 Spots')
+    expect(senior?.closest('div')).not.toHaveTextContent('At Large')
+  })
+
+  it('flashes the new spots when an entries message changes them, for ten seconds', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const calls = serve(feedOf({ atLarge: atLarge(5) }))
+    open_()
+    await table()
+    expect(screen.queryByText(/\(was 5\)/)).not.toBeInTheDocument()
+
+    calls.set(feedOf({ atLarge: atLarge(6) }))
+    act(() => {
+      FakeEventSource.latest().message(JSON.stringify({ kind: 'entries', version: 1 }))
+    })
+
+    const text = 'Open: Projected At Large: +87 (HG 242) | 6 Spots (was 5)'
+    expect(await screen.findByText(text)).toBeInTheDocument()
+    expect(screen.getByText('Projected At Large · now 6 Spots (was 5)')).toBeInTheDocument()
+    const [open] = screen.getAllByRole('heading', { level: 2 })
+    expect(open?.closest('div')).toHaveTextContent('Projected At Large: +87 (HG 242) | 6 Spots')
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(NOTICE_MS + 1000)
+    })
+    expect(screen.getByText(text)).toBeInTheDocument()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(AT_LARGE_NOTICE_MS)
+    })
+    expect(screen.queryByText(text)).not.toBeInTheDocument()
+  })
+
+  it("puts a newer change in place of the division's older message (RES-62)", async () => {
+    const calls = serve(feedOf({ atLarge: atLarge(5) }))
+    open_()
+    await table()
+    const entries = (spots: number) => {
+      calls.set(feedOf({ atLarge: atLarge(spots) }))
+      act(() => {
+        FakeEventSource.latest().message(JSON.stringify({ kind: 'entries', version: 1 }))
+      })
+    }
+
+    const said = (now: number, was: number) =>
+      `Open: Projected At Large: +87 (HG 242) | ${now} Spots (was ${was})`
+
+    entries(6)
+    expect(await screen.findByText(said(6, 5))).toBeInTheDocument()
+    entries(7)
+
+    expect(await screen.findByText(said(7, 6))).toBeInTheDocument()
+    expect(screen.queryByText(said(6, 5))).not.toBeInTheDocument()
+  })
+
+  it('loads everything for a score change on a complete squad, so the figure follows', async () => {
+    const feed = feedOf({ atLarge: atLarge(4, false) })
+    const squad = feed.sessions[0]
+    if (squad?.kind !== 'squad') throw new Error('fixture')
+    squad.results.session.complete = true
+    const { calls } = serve(feed)
+    open_()
+    await table()
+
+    act(() => {
+      FakeEventSource.latest().message(
+        JSON.stringify({
+          kind: 'scored',
+          version: 1,
+          detail: { sessionId: squadId, sessionKind: 'squad', divisionId: openId },
+        }),
+      )
+    })
+
+    await waitFor(() => {
+      expect(calls.feed).toBe(2)
+    })
+    expect(calls.division).toEqual([])
   })
 })

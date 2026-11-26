@@ -83,6 +83,23 @@ test('the TV page scrolls on its own, and the heading stays pinned at the top (R
   expect(Math.abs(headingTop - mainTop)).toBeLessThan(2)
 })
 
+test('the scroll speed slider moves by keyboard and is kept after a reload (RES-63)', async ({
+  page,
+}) => {
+  await openTournament(page)
+  await menuLink(page, 'Live results')
+  const slider = page.getByRole('slider', { name: /Scroll speed/ })
+
+  await slider.press('ArrowRight')
+  await slider.press('ArrowRight')
+  await expect(slider).toHaveValue('1.5')
+
+  // A full load starts the app again; the mock data gets new ids, so go back in through the menu.
+  await openTournament(page)
+  await menuLink(page, 'Live results')
+  await expect(slider).toHaveValue('1.5')
+})
+
 test('on a phone the pinned heading leaves room for rows, and the page does not scroll sideways (RES-50, D-73)', async ({
   page,
 }) => {
@@ -196,3 +213,39 @@ for (const colorScheme of ['dark', 'light'] as const) {
     })
   })
 }
+
+test('a squad screen shows its division’s at-large figure under the squad lines (RES-58)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 })
+  await openTournament(page)
+  await menuLink(page, 'Live results')
+
+  const squad = page.getByText(/^Squad: Cut line/).first()
+  const atLarge = page.getByText(/^At Large: \+87 \(HG 242\) \| 4 Spots/).first()
+  await expect(atLarge).toBeVisible()
+  await holdStill(page)
+  const above = await squad.boundingBox()
+  const below = await atLarge.boundingBox()
+  expect(below?.y).toBeGreaterThan(above?.y ?? Infinity)
+})
+
+test('on a phone the at-large figure wraps with no sideways scroll (RES-58, D-73)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await openTournament(page)
+  await menuLink(page, 'Live results')
+  await expect(page.getByText(/^At Large: \+87/).first()).toBeVisible()
+  await holdStill(page)
+
+  const heading = page.getByRole('heading', { level: 2 }).first()
+  const pinned = await heading.evaluate(
+    (node) => node.parentElement?.getBoundingClientRect().height,
+  )
+  expect(pinned).toBeLessThan(844 / 3)
+  const sideways = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  )
+  expect(sideways).toBe(false)
+})

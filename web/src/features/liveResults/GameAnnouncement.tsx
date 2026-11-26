@@ -3,7 +3,8 @@ import type { Announcement } from './liveLogic'
 import styles from './GameAnnouncement.module.css'
 
 /**
- * The overlay for a game that filled, or a session that completed (D-255). A lower third slides in
+ * The overlay for a game that filled, a session that completed (D-255), or a change of the projected
+ * at-large spots (RES-62), which draws the new number of spots where a game number goes. A lower third slides in
  * from the left for a game, and for "Results are official" (a check mark in place of the number); for
  * the last game of a squad or sweeper the screen flashes with the game number, then settles into a
  * strip at the top. Drawn for the eye only (`aria-hidden`): a status line with nothing on
@@ -16,7 +17,7 @@ export function GameAnnouncement({
   waiting,
 }: Readonly<{ announcement: Announcement; id: number | undefined; waiting: number }>) {
   const more = waiting > 0 ? `+${waiting} more waiting` : ''
-  const style = { '--duration': `${NOTICE_MS}ms` } as React.CSSProperties
+  const style = { '--duration': `${announcement.duration ?? NOTICE_MS}ms` } as React.CSSProperties
   return announcement.variant === 'last' ? (
     <div key={id} className={`${styles.root} ${styles.last}`} style={style} aria-hidden="true">
       <div className={styles.flash}>

@@ -166,6 +166,18 @@ describe('AutoScroll (RES-50, D-242)', () => {
     expect(position()).toBe(100)
   })
 
+  it('takes up a new speed where it is, not from the top (RES-63)', () => {
+    size(1000, 400)
+    const { rerender } = render(<AutoScroll speed={40}>{content}</AutoScroll>)
+    frames.at(0)
+    frames.at(5000)
+
+    rerender(<AutoScroll speed={80}>{content}</AutoScroll>)
+    frames.at(6000)
+
+    expect(position()).toBe(280)
+  })
+
   it('asks for no more frames once the page goes', () => {
     size(1000, 400)
     const { unmount } = render(<AutoScroll>{content}</AutoScroll>)

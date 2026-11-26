@@ -2,9 +2,11 @@ import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 import { apiKeyHeader } from '../../shared/auth/caller.ts'
 import { HttpError } from '../../shared/errors.ts'
+import { liveKey } from '../../shared/events/sseRoute.ts'
 import { createNewTournament, testApiKey } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createSignedInTestApp, createTestApp } from '../../test/testApp.ts'
+import { recordingEvents } from '../../test/recordingEvents.ts'
 import type { EditFacts } from './editFacts.ts'
 import {
   createInMemoryTournamentWriter,
@@ -294,5 +296,26 @@ describe('PATCH /v1/tournaments/:id', () => {
       expect(response.status).toBe(404)
       expect(response.body).toEqual({ message: 'Tournament not found' })
     })
+  })
+})
+
+describe('PATCH /v1/tournaments/:id and the TV page (RES-61)', () => {
+  async function publishedAfter(changes: object) {
+    const { events, published } = recordingEvents()
+    const { writer } = createInMemoryTournamentWriter([{ ...first }])
+    const app = createSignedInTestApp({ tournamentWriter: writer, events })
+    const response = await request(app).patch(path).send(changes)
+    expect(response.status).toBe(200)
+    return published
+  }
+
+  it('tells the tournament stream that the finals ratio changed', async () => {
+    expect(await publishedAfter({ finalsRatio: first.finalsRatio + 1 })).toEqual([
+      { sessionId: liveKey(first.id), kind: 'entries' },
+    ])
+  })
+
+  it('tells no one about a change that leaves the finals ratio alone', async () => {
+    expect(await publishedAfter({ name: 'Renamed' })).toEqual([])
   })
 })

@@ -4,6 +4,7 @@ import { apiKeyHeader } from '../../shared/auth/caller.ts'
 import { HttpError } from '../../shared/errors.ts'
 import { createSquad, testApiKey } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
+import { liveKey } from '../../shared/events/sseRoute.ts'
 import { createSignedInTestApp, createTestApp } from '../../test/testApp.ts'
 import { recordingEvents } from '../../test/recordingEvents.ts'
 import { createInMemorySquadWriter, type SquadWriter } from './writer.ts'
@@ -353,14 +354,17 @@ describe(`GET ${url}/edit-info`, () => {
 })
 
 describe('live updates after an edit (LAN-22, D-219)', () => {
-  it('tells the open lane pages of the squad when a field changes', async () => {
+  it('tells the open lane pages of the squad, and the TV page, when a field changes (RES-61)', async () => {
     const { events, published } = recordingEvents()
     const made = setup()
     const app = createSignedInTestApp({ squadWriter: made.writer, events })
 
     await request(app).patch(url).send({ maxPerPair: 3 })
 
-    expect(published).toEqual([{ sessionId: squadId, kind: 'lanes' }])
+    expect(published).toEqual([
+      { sessionId: squadId, kind: 'lanes' },
+      { sessionId: liveKey(tournamentId), kind: 'entries' },
+    ])
   })
 
   it('tells no one when nothing changed or the edit is refused', async () => {

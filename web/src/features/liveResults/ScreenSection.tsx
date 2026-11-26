@@ -2,11 +2,28 @@ import { useEffect, useId, useRef } from 'react'
 import { plural } from '../../shared/plural'
 import { formatRatio } from '../../shared/sessionFormat'
 import { DivisionBody, DivisionSummary } from '../results/DivisionResults'
-import { formatCashLine, formatLines } from '../results/format'
+import { formatAtLarge, formatCashLine, formatLines } from '../results/format'
 import { SuperSweeperTable } from '../results/SuperSweeperTable'
 import { SweeperNote, SweeperTable } from '../results/SweeperTable'
+import type { LiveAtLarge } from '../results/types'
 import { isUnofficial, screenHeading, screenThrough, type LiveScreen } from './liveLogic'
 import styles from './LiveResultsPage.module.css'
+
+/** The at-large line (RES-58). The bar between its parts is for the eye: a screen reader skips it. */
+function AtLargeLine({ figure }: Readonly<{ figure: LiveAtLarge }>) {
+  const [score, spots] = formatAtLarge(figure).split(' | ')
+  return (
+    <p className={styles.lines}>
+      {score}
+      {spots !== undefined && (
+        <>
+          {' '}
+          <span aria-hidden="true">|</span> {spots}
+        </>
+      )}
+    </p>
+  )
+}
 
 /**
  * One screen of the TV page (D-242): a heading with its tags ("Unofficial" while the session is
@@ -15,12 +32,13 @@ import styles from './LiveResultsPage.module.css'
  * lines, then the table the Results tab draws, at TV size. The heading block and the table's column
  * heads stay pinned at the top of the screen while the rows scroll, until the next screen pushes
  * them away (D-254), so a row far down still shows its division and where the lines are.
- * `highlighted` outlines the table that just changed (D-245).
+ * A squad screen names its cut and cash lines "Squad:" and puts its division's at-large figure on the line below (RES-58). `highlighted` outlines the table that just changed (D-245).
  */
 export function ScreenSection({
   screen,
   highlighted,
-}: Readonly<{ screen: LiveScreen; highlighted: boolean }>) {
+  atLarge,
+}: Readonly<{ screen: LiveScreen; highlighted: boolean; atLarge?: LiveAtLarge }>) {
   const headingId = useId()
   const through = screenThrough(screen)
   const section = useRef<HTMLElement>(null)
@@ -65,7 +83,8 @@ export function ScreenSection({
           {screen.kind === 'squad' && (
             <>
               <DivisionSummary division={screen.division} />
-              <p className={styles.lines}>{formatLines(screen.division)}</p>
+              <p className={styles.lines}>Squad: {formatLines(screen.division)}</p>
+              {atLarge && <AtLargeLine figure={atLarge} />}
             </>
           )}
           {screen.kind === 'sweeper' && (

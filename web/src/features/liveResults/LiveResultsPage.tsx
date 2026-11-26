@@ -1,19 +1,20 @@
 import { useParams } from 'react-router'
 import { Loading } from '../../shared/Loading'
-import { AutoScroll } from './AutoScroll'
+import { AutoScroll, SCROLL_PX_PER_SECOND } from './AutoScroll'
 import { GameAnnouncement } from './GameAnnouncement'
-import { formatClock, screenHeading, screensOf } from './liveLogic'
+import { formatClock, screenHeading, screensOf, type LiveScreen } from './liveLogic'
 import styles from './LiveResultsPage.module.css'
 import { PageFlip } from './PageFlip'
 import { ScreenSection } from './ScreenSection'
 import { useLiveResults } from './useLiveResults'
 import { useReducedMotion } from './useReducedMotion'
+import { MAX_SPEED, MIN_SPEED, SPEED_STEP, useScrollSpeed } from './useScrollSpeed'
 import { useWakeLock } from './useWakeLock'
 
 /**
  * The TV page (RES-50 to RES-54, D-242 to D-246): every squad division, each sweeper, and the super
- * sweeper, scrolling on their own and updating as games fill. It has no controls and needs no
- * sign-in. An overlay announces each game that fills (D-255); the bar says when the board last
+ * sweeper, scrolling on their own and updating as games fill. Its one control is the scroll speed in the
+ * bar (RES-63), and it needs no sign-in. An overlay announces each game that fills (D-255); the bar says when the board last
  * updated, and a corner line says when it went out of date. The screen is kept awake. With "reduce
  * motion" on it flips one screen at a time instead of scrolling.
  */
@@ -23,9 +24,14 @@ export function LiveResultsPage() {
   const feed = useLiveResults(id)
   const reduced = useReducedMotion()
   useWakeLock()
+  const [speed, setSpeed] = useScrollSpeed()
 
   const { data } = feed
   const screens = data ? screensOf(data) : []
+  const atLargeOf = (screen: LiveScreen) =>
+    screen.kind === 'squad'
+      ? data?.atLarge.find((figure) => figure.divisionId === screen.division.id)
+      : undefined
   const idle = data ? `Updated ${formatClock(new Date(feed.loadedAt).toISOString())}` : ' '
 
   let body
@@ -53,18 +59,25 @@ export function LiveResultsPage() {
         screens={screens.map((screen) => ({
           key: screen.key,
           label: screenHeading(screen),
-          node: <ScreenSection screen={screen} highlighted={feed.highlighted === screen.key} />,
+          node: (
+            <ScreenSection
+              screen={screen}
+              highlighted={feed.highlighted === screen.key}
+              atLarge={atLargeOf(screen)}
+            />
+          ),
         }))}
       />
     )
   } else {
     body = (
-      <AutoScroll>
+      <AutoScroll speed={speed * SCROLL_PX_PER_SECOND}>
         {screens.map((screen) => (
           <ScreenSection
             key={screen.key}
             screen={screen}
             highlighted={feed.highlighted === screen.key}
+            atLarge={atLargeOf(screen)}
           />
         ))}
       </AutoScroll>
@@ -76,6 +89,25 @@ export function LiveResultsPage() {
       <title>{`Live results · ${data?.tournament.name ?? ''} · Tournament Director`}</title>
       <header className={styles.bar}>
         <h1>Live results{data ? ` · ${data.tournament.name}` : ''}</h1>
+        {!reduced && screens.length > 0 && (
+          <label className={styles.speed}>
+            Scroll speed
+            <input
+              type="range"
+              min={MIN_SPEED}
+              max={MAX_SPEED}
+              step={SPEED_STEP}
+              value={speed}
+              aria-valuetext={`${speed}x`}
+              onChange={(event) => {
+                setSpeed(Number(event.target.value))
+              }}
+            />
+            <span className={styles.speedValue} aria-hidden="true">
+              {speed}x
+            </span>
+          </label>
+        )}
         <output className={styles.updated}>{idle}</output>
       </header>
       {/* The overlay is for the eye; this says the same for a screen reader, with nothing on screen. */}

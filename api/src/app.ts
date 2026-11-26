@@ -212,6 +212,7 @@ export function createApp({
     events,
     logger,
     (tournamentId) => tellAveragesChanged(tournamentId),
+    (tournamentId) => liveNotifier.entriesChanged(tournamentId),
   )
   // The tournament-wide half of an average change: the finals pages and the TV feed (AVG-19, D-298).
   // A function declaration, so the registration writer above can call it once the pages exist.
@@ -399,19 +400,19 @@ export function createApp({
         path: '/v1/tournaments/:id/squads',
         access: { permission: 'squads.write' }, // SQD-01 to SQD-08, D-167: the API key cannot reach it
         methods: ['POST'],
-        router: createSquadCreateRouter(squadWriter, logger),
+        router: createSquadCreateRouter(squadWriter, logger, liveNotifier),
       },
       {
         path: '/v1/tournaments/:id/squads',
         access: { permission: 'squads.write' }, // SQD-23, D-184: edit; no API key
         methods: ['PATCH'],
-        router: createSquadUpdateRouter(squadWriter, logger, events),
+        router: createSquadUpdateRouter(squadWriter, logger, events, liveNotifier),
       },
       {
         path: '/v1/tournaments/:id/squads',
         access: { permission: 'squads.write' }, // SQD-14, D-187: delete; no API key
         methods: ['DELETE'],
-        router: createSquadDeleteRouter(squadWriter, logger),
+        router: createSquadDeleteRouter(squadWriter, logger, liveNotifier),
       },
       {
         path: '/v1/tournaments/:id/squads',
@@ -494,7 +495,12 @@ export function createApp({
         path: '/v1/tournaments/:id/squads/:sessionId/lanes',
         access: { permission: 'lanes.assign' }, // LAN-20, D-216: director and admin; no API key
         methods: ['PUT'],
-        router: createLaneMoveRouter('squad', { writer: laneWriter, events, logger }),
+        router: createLaneMoveRouter('squad', {
+          writer: laneWriter,
+          events,
+          logger,
+          live: liveNotifier,
+        }),
       },
       {
         path: '/v1/tournaments/:id/squads/:sessionId/events',
@@ -815,7 +821,7 @@ export function createApp({
         path: '/v1/tournaments',
         access: { permission: 'tournaments.write' }, // TRN-24, D-127: the API key cannot reach it
         methods: ['PATCH'],
-        router: createTournamentUpdateRouter(tournamentWriter, logger),
+        router: createTournamentUpdateRouter(tournamentWriter, logger, liveNotifier),
       },
       {
         path: '/v1/tournaments',

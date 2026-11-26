@@ -51,6 +51,11 @@ export interface LiveNotifier {
    * change, so the TV refetches. The message names no bowler and no number.
    */
   averagesChanged(tournamentId: string): void
+  /**
+   * A lane, a registration, or a squad changed (RES-61): the projected at-large spots may differ, so
+   * the TV refetches. The message names no bowler.
+   */
+  entriesChanged(tournamentId: string): void
 }
 
 export interface LiveNotifierDeps {
@@ -172,6 +177,11 @@ export function createLiveNotifier({
     averagesChanged(tournamentId) {
       cache.dropTournament(tournamentId)
       events.publish(liveKey(tournamentId), 'averages')
+    },
+
+    entriesChanged(tournamentId) {
+      cache.dropTournament(tournamentId)
+      events.publish(liveKey(tournamentId), 'entries')
     },
   }
 

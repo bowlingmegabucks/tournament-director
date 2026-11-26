@@ -6,6 +6,7 @@ import {
   createAtLargeResults,
   createAtLargeRow,
   createDivisionResult,
+  createLiveAtLarge,
   createLiveResults,
   createSeedingDivision,
   createSeedingResults,
@@ -726,6 +727,10 @@ describe('the live results shape checks (RES-47)', () => {
   const good = createLiveResults({
     sessions: [{ kind: 'squad', results: createSquadResults() }],
   })
+  const figure = createLiveAtLarge()
+  const line = { total: 887, games: 4, highGame: 242, fullTie: false, tieBreaker: null }
+  const withFigure = (change: object) => ({ ...good, atLarge: [{ ...figure, ...change }] })
+  const withLine = (change: object) => withFigure({ line: { ...line, ...change } })
 
   it.each([
     ['a tournament with no id', { ...good, tournament: { id: 7, name: 'x' } }],
@@ -744,12 +749,37 @@ describe('the live results shape checks (RES-47)', () => {
     ],
     ['a super sweeper of the wrong shape', { ...good, superSweeper: { rows: [] } }],
     ['a super sweeper that is missing', { ...good, superSweeper: undefined }],
+    ['no at-large list', { ...good, atLarge: undefined }],
+    ['a figure with no division id', withFigure({ divisionId: 7 })],
+    ['a figure with no division name', withFigure({ divisionName: 7 })],
+    ['spots that are not a number', withFigure({ spots: '4' })],
+    ['a projected flag that is not a boolean', withFigure({ projected: 'no' })],
+    ['a handicap flag that is not a boolean', withFigure({ handicap: 'no' })],
+    ['a line that is missing', withFigure({ line: undefined })],
+    ['a line with no total', withLine({ total: '887' })],
+    ['a line with no game count', withLine({ games: '4' })],
+    ['a line with no high game', withLine({ highGame: '242' })],
+    ['a full tie flag that is not a boolean', withLine({ fullTie: 'no' })],
+    ['a tie-breaker that is missing', withLine({ tieBreaker: undefined })],
+    ['a tie-breaker with no rank', withLine({ tieBreaker: { rank: '2', score: 210 } })],
+    ['a tie-breaker with no score', withLine({ tieBreaker: { rank: 2, score: '210' } })],
   ])('rejects %s', async (_label, body) => {
     respondWith('/v1/tournaments/:id/live-results', body)
 
     await expect(fetchLiveResults('t1')).rejects.toThrow(
       'Failed to load results (unexpected response)',
     )
+  })
+
+  it.each([
+    ['with a line', line],
+    ['with a tie-breaker', { ...line, tieBreaker: { rank: 2, score: 210 } }],
+    ['with no line', null],
+  ])('accepts an at-large figure %s (RES-60)', async (_label, shown) => {
+    const body = { ...good, atLarge: [{ ...figure, line: shown }] }
+    respondWith('/v1/tournaments/:id/live-results', body)
+
+    await expect(fetchLiveResults('t1')).resolves.toEqual(body)
   })
 
   it('accepts a sweeper session holding sweeper results', async () => {

@@ -3,6 +3,7 @@ import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 import { apiKeyHeader } from '../../shared/auth/caller.ts'
 import { HttpError } from '../../shared/errors.ts'
+import { liveKey } from '../../shared/events/sseRoute.ts'
 import {
   createDivision,
   createSquad,
@@ -13,6 +14,7 @@ import {
 import { sampleRequest } from '../../test/registrationRequests.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createSignedInTestApp, createTestApp } from '../../test/testApp.ts'
+import { recordingEvents } from '../../test/recordingEvents.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
 import { createInMemorySquadRepository } from '../squads/repository.ts'
@@ -821,5 +823,18 @@ describe('DELETE /v1/registrations/{id} (API-08)', () => {
       expect(director.status).toBe(204)
       expect(state.registrations).toEqual([])
     })
+  })
+})
+
+describe('a vendor registration and the TV page (RES-61)', () => {
+  it('tells the tournament stream, through the app', async () => {
+    const { events, published } = recordingEvents()
+    const { deps, body, tournament } = setup()
+
+    await asVendor(request(createTestApp({ ...deps, events })).post('/v1/registrations')).send(
+      body(),
+    )
+
+    expect(published).toContainEqual({ sessionId: liveKey(tournament.id), kind: 'entries' })
   })
 })

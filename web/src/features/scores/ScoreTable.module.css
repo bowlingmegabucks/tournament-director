@@ -5,6 +5,7 @@
 
 .table {
   inline-size: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
 }
@@ -22,11 +23,25 @@
   font-weight: 600;
 }
 
+/* Fixed widths, not sized to each table's own names. The Bowler column takes what is left. */
+.laneColumn {
+  inline-size: 4rem;
+}
+
+.gameColumn {
+  inline-size: 3.5rem;
+}
+
+.totalColumn {
+  inline-size: 4.5rem;
+}
+
 .fresh {
   background: var(--color-surface);
 }
 
 .who {
+  overflow-wrap: anywhere;
   font-weight: 600;
 }
 

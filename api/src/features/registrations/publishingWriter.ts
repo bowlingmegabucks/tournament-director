@@ -15,6 +15,9 @@ import type { RegistrationWriter } from './writer.ts'
  * refetch handicap and the marker (AVG-19, D-298). A delete needs no such message: the entry
  * change already says the bowler is gone.
  *
+ * Every write that touches a session also calls `entriesChanged` with the tournament, so the TV
+ * page's projected at-large spots follow (RES-61).
+ *
  * `inner` is spread, so it must be a plain object of functions, as both writers are.
  */
 export function createPublishingRegistrationWriter(
@@ -22,6 +25,7 @@ export function createPublishingRegistrationWriter(
   events: SessionEvents,
   logger: Logger,
   averagesCleared: (tournamentId: string) => void = () => undefined,
+  entriesChanged: (tournamentId: string) => void = () => undefined,
 ): RegistrationWriter {
   /** The tournament and the squads and sweepers the registration is in now; empty for an unknown or a new one. */
   async function current(
@@ -51,6 +55,15 @@ export function createPublishingRegistrationWriter(
     }
   }
 
+  function tellEntries(tournamentId: string | undefined, sessionIds: readonly string[]): void {
+    if (tournamentId === undefined || sessionIds.length === 0) return
+    try {
+      entriesChanged(tournamentId)
+    } catch (err) {
+      logger.warn({ err, tournamentId }, 'Could not publish an entry change')
+    }
+  }
+
   function tellAverages(tournamentId: string | undefined, sessionIds: Iterable<string>): void {
     tell(sessionIds, 'averages')
     if (tournamentId === undefined) return
@@ -75,6 +88,10 @@ export function createPublishingRegistrationWriter(
         ...(command.removeSessionIds ?? []),
       ]
       tell(touched)
+      // A new registration has no tournament to read until it is saved.
+      const tournamentId =
+        before.tournamentId ?? (await current(command.registration.id)).tournamentId
+      tellEntries(tournamentId, touched)
       if (
         command.registration.clearAverageCheck ||
         command.registration.keepAverageCheckAs !== undefined
@@ -87,12 +104,16 @@ export function createPublishingRegistrationWriter(
       const before = await current(registrationId)
       await inner.deleteRegistration(registrationId)
       tell(before.sessionIds)
+      tellEntries(before.tournamentId, before.sessionIds)
     },
 
     async removeForDesk(registrationId, tournamentId, decide) {
       const before = await current(registrationId)
       const plan = await inner.removeForDesk(registrationId, tournamentId, decide)
-      if (plan?.kind === 'delete') tell(before.sessionIds)
+      if (plan?.kind === 'delete') {
+        tell(before.sessionIds)
+        tellEntries(tournamentId, before.sessionIds)
+      }
       return plan
     },
   }

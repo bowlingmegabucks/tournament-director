@@ -2,6 +2,8 @@ import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 import { apiKeyHeader } from '../../shared/auth/caller.ts'
 import { HttpError } from '../../shared/errors.ts'
+import { liveKey } from '../../shared/events/sseRoute.ts'
+import { recordingEvents } from '../../test/recordingEvents.ts'
 import { testApiKey } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createSignedInTestApp, createTestApp } from '../../test/testApp.ts'
@@ -286,5 +288,29 @@ describe(`POST ${url}`, () => {
       // No stored tournament here, so the list answers its own 404, not a sign-in demand.
       expect(response.status).toBe(404)
     })
+  })
+})
+
+describe(`POST ${url} and the TV page (RES-61)`, () => {
+  it('tells the tournament stream that a squad was added', async () => {
+    const { events, published } = recordingEvents()
+    const { writer } = createInMemorySquadWriter()
+    const app = createSignedInTestApp({ squadWriter: writer, events })
+
+    await request(app).post(url).send(body)
+
+    expect(published).toEqual([{ sessionId: liveKey(tournamentId), kind: 'entries' }])
+  })
+
+  it('tells no one when the squad is not added', async () => {
+    const { events, published } = recordingEvents()
+    const { writer } = createInMemorySquadWriter()
+    const app = createSignedInTestApp({ squadWriter: writer, events })
+
+    await request(app)
+      .post(url)
+      .send({ ...body, maxPerPair: 99 })
+
+    expect(published).toEqual([])
   })
 })

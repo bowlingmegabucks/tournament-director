@@ -1,9 +1,11 @@
 import request from 'supertest'
 import { describe, expect, it } from 'vitest'
 import { apiKeyHeader } from '../../shared/auth/caller.ts'
+import { liveKey } from '../../shared/events/sseRoute.ts'
 import { createDivision, createTournament, testApiKey } from '../../test/factories.ts'
 import { createCapturedLogger } from '../../test/logger.ts'
 import { createSignedInTestApp, createTestApp } from '../../test/testApp.ts'
+import { recordingEvents } from '../../test/recordingEvents.ts'
 import { createInMemoryDivisionRepository } from '../divisions/repository.ts'
 import { createInMemoryTournamentRepository } from '../tournaments/repository.ts'
 import { createCommonBowler } from './bowler.testData.ts'
@@ -249,5 +251,18 @@ describe('POST /v1/tournaments/{id}/registrations (D-157)', () => {
 
       expect((await request(createTestApp()).get(url)).status).toBe(401)
     })
+  })
+})
+
+describe('a desk registration and the TV page (RES-61)', () => {
+  it('tells the tournament stream, through the app', async () => {
+    const { events, published } = recordingEvents()
+    const { overrides, url, body, tournament } = world()
+
+    await request(createSignedInTestApp({ ...overrides, events }))
+      .post(url)
+      .send(body())
+
+    expect(published).toContainEqual({ sessionId: liveKey(tournament.id), kind: 'entries' })
   })
 })

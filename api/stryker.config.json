@@ -3,6 +3,7 @@
   "testRunner": "vitest",
   "checkers": ["typescript"],
   "tsconfigFile": "tsconfig.json",
+  "dryRunTimeoutMinutes": 15,
   "mutate": [
     "src/**/*.ts",
     "!src/**/*.test.ts",

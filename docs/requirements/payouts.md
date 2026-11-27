@@ -2,6 +2,8 @@
 
 Built on branch `payout`. New in the 1.0.0 work: legacy has no prize amounts and no payout report ([proposed-features.md](../migration/proposed-features.md), Q-22), so the rules are new (`PAY-01` to `PAY-21`). Decisions: D-267 to D-285 in [decisions-and-questions.md](../migration/decisions-and-questions.md). This release stores the data only; the 1099 report, SSN use, a dollar limit, and year totals come later (D-282).
 
+A youth's payouts go to their SMART account: the screens and prints say so ([smart-scholarship.md](smart-scholarship.md), `SMT-03`, `SMT-04`).
+
 ## What a payout is
 
 One row says what one event paid one bowler. The events are a squad, a sweeper, the super sweeper, and the finals of one division. Each row holds only what that event paid, never another event's cash, so a later report adds rows to get a bowler's total (D-267). The finals are a one-game shootout of the division winners across divisions, so a finals payout carries an amount and an optional note and no place (D-277).

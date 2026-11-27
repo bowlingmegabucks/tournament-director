@@ -61,6 +61,7 @@ What the user sees and can do.
 | Results (at-large, seeding, super sweeper)                              | [finals-results.md](finals-results.md)           |
 | Encryption (SSN format, key setting, log redaction, key check)          | [encryption.md](encryption.md)                   |
 | Payouts (per event, entry sheet, full list, amounts in results)         | [payouts.md](payouts.md)                         |
+| SMART scholarship (youth bowlers)                                       | [smart-scholarship.md](smart-scholarship.md)     |
 | Navigation and layout                                                   | [navigation.md](navigation.md)                   |
 | API route access                                                        | [api-access.md](api-access.md)                   |
 | Sign-in (web)                                                           | [sign-in.md](sign-in.md)                         |

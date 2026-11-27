@@ -13,9 +13,10 @@ const context: ListContext = {
     { id: 'd1', number: 1, name: 'Open' },
   ],
   registrations: [
-    { id: 'r1', bowler: { name: 'Dana Whitfield' }, divisionName: 'Open', smartScholarship: false },
-    { id: 'r2', bowler: { name: 'Amy Park' }, divisionName: 'Women', smartScholarship: true },
+    { id: 'r1', bowler: { name: 'Dana Whitfield' }, divisionName: 'Open' },
+    { id: 'r2', bowler: { name: 'Amy Park' }, divisionName: 'Women' },
   ],
+  smartIds: new Set(['r2']),
 }
 
 const record = (over: Partial<PayoutRecord> = {}): PayoutRecord => ({

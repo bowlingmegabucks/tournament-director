@@ -10,8 +10,9 @@ export interface ListContext {
     id: string
     bowler: { name: string }
     divisionName: string
-    smartScholarship: boolean
   }[]
+  /** From the payout store, not the registrations: those skip a row that breaks the read shape. */
+  smartIds: ReadonlySet<string>
 }
 
 /**
@@ -63,7 +64,7 @@ export function buildRows(records: readonly PayoutRecord[], context: ListContext
         amount: formatCents(record.amountCents),
         note: record.note,
         paid: record.paid,
-        smartScholarship: registration?.smartScholarship ?? false,
+        smartScholarship: context.smartIds.has(record.registrationId),
       }
       return { row, event }
     })

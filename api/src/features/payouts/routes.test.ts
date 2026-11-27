@@ -265,6 +265,20 @@ describe('SMART scholarship on the sheet (SMT-03)', () => {
       ['Marcus Lee', true],
     ])
   })
+
+  it('keeps the flag in the list and the totals for a bowler who cannot be read (SMT-04)', async () => {
+    const unreadable = crypto.randomUUID()
+    const { app } = setup({
+      smartIds: [unreadable],
+      seed: [record({ registrationId: unreadable })],
+    })
+
+    const list = await request(app).get(base)
+    const totals = await request(app).get(`${base}/totals`)
+
+    expect(list.body.payouts).toMatchObject([{ name: 'Unknown bowler', smartScholarship: true }])
+    expect(totals.body.bowlers).toMatchObject([{ name: 'Unknown bowler', smartScholarship: true }])
+  })
 })
 
 describe('GET the sheets of the other events (PAY-03 to PAY-05)', () => {

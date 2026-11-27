@@ -97,9 +97,9 @@ export function createPayoutReadRouter(deps: PayoutRouterDeps): Router {
     if (!settings) throw new HttpError(404, 'Tournament not found')
     const records = await deps.payouts.list(id)
     // Nothing to name when no payout is saved: skip the four reads that would name them.
-    const [squads, sweepers, divisions, registrations] =
+    const [squads, sweepers, divisions, registrations, smartIds] =
       records.length === 0
-        ? [[], [], [], []]
+        ? [[], [], [], [], new Set<string>()]
         : await Promise.all([
             deps.squads.listByTournament(id),
             deps.sweepers.listByTournament(id),
@@ -108,9 +108,10 @@ export function createPayoutReadRouter(deps: PayoutRouterDeps): Router {
             deps.registrations.listByTournament(id, [
               ...new Set(records.map((record) => record.registrationId)),
             ]),
+            deps.payouts.smartRegistrationIds(id),
           ])
     res.json({
-      payouts: buildRows(records, { squads, sweepers, divisions, registrations }),
+      payouts: buildRows(records, { squads, sweepers, divisions, registrations, smartIds }),
       summary: summarize(records),
       tournamentComplete: settings.completed,
     })
@@ -126,11 +127,14 @@ export function createPayoutReadRouter(deps: PayoutRouterDeps): Router {
     }
     if (!(await deps.tournaments.getSettings(id))) throw new HttpError(404, 'Tournament not found')
     const records = await deps.payouts.list(id)
-    const registrations =
+    const [registrations, smartIds] =
       records.length === 0
-        ? []
-        : await deps.registrations.listByTournament(id, [
-            ...new Set(records.map((record) => record.registrationId)),
+        ? [[], new Set<string>()]
+        : await Promise.all([
+            deps.registrations.listByTournament(id, [
+              ...new Set(records.map((record) => record.registrationId)),
+            ]),
+            deps.payouts.smartRegistrationIds(id),
           ])
     const registrationBy = new Map(registrations.map((item) => [item.id, item]))
     const bowlers = totalsByBowler(
@@ -140,7 +144,7 @@ export function createPayoutReadRouter(deps: PayoutRouterDeps): Router {
         divisionName: registrationBy.get(record.registrationId)?.divisionName ?? '',
         amountCents: record.amountCents,
         paid: record.paid,
-        smartScholarship: registrationBy.get(record.registrationId)?.smartScholarship ?? false,
+        smartScholarship: smartIds.has(record.registrationId),
       })),
       parsed.kind === 'amount' ? parsed.cents : 0,
     )

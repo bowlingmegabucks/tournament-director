@@ -3,6 +3,7 @@ import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { createSessionCompleter, type ReadCompleted } from '../../shared/sessionCompleteStore.ts'
 import { createSessionDeleter } from '../../shared/sessionDeleteStore.ts'
+import { dropStrandedPairs } from '../../shared/strandedPairs.ts'
 import { withRetry } from '../../shared/serializableRetry.ts'
 import { toSessionEditInfo, type SessionNotFound } from '../../shared/sessionEdit.ts'
 import { loadSessionEditFacts } from '../../shared/sessionFacts.ts'
@@ -231,6 +232,12 @@ export function createPrismaSweeperWriter(client: PrismaClient, logger: Logger):
             if (Object.keys(columns).length > 0) {
               await tx.squad.update({ where: { id: sweeperId }, data: columns })
             }
+            await dropStrandedPairs(
+              tx,
+              sweeperId,
+              saved.startingLane ?? stored.startingLane,
+              saved.numberOfLanes ?? stored.numberOfLanes,
+            )
             // A pin of 0 has no row (D-176); a row with a NULL or 0 is overwritten or removed.
             await Promise.all(
               Object.entries(saved.bonusPins ?? {}).map(([divisionId, bonusPinsPerGame]) =>

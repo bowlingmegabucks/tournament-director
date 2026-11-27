@@ -297,4 +297,20 @@ describe('Prisma sweeper writer: update and edit-info (SQD-23 to SQD-26, SQD-29,
       notFound: 'session',
     })
   })
+
+  it('forgets the pairs out of play that no longer start a pair (OOP-07)', async () => {
+    const { writer } = setup()
+    const tournamentId = await rows.tournament()
+    const id = await sweeperIn(tournamentId)
+    await client.laneOutOfPlay.createMany({
+      data: [
+        { squadId: id, lane: 1 },
+        { squadId: id, lane: 11 },
+      ],
+    })
+
+    await writer.update(tournamentId, id, { numberOfLanes: 8 }, confirmed)
+
+    expect(await client.laneOutOfPlay.findMany()).toEqual([{ squadId: id, lane: 1 }])
+  })
 })

@@ -46,6 +46,22 @@ describe.each<SessionKind>(['squad', 'sweeper'])(
       expect(await exists(kept)).toBe(true)
     })
 
+    it("removes its pairs out of play and no other session's (OOP-07)", async () => {
+      const tournamentId = await rows.tournament()
+      const id = await rows.session(tournamentId, kind, '2026-10-24 09:00:00')
+      const kept = await rows.session(tournamentId, kind, '2026-10-24 12:00:00')
+      await client.laneOutOfPlay.createMany({
+        data: [
+          { squadId: id, lane: 1 },
+          { squadId: kept, lane: 1 },
+        ],
+      })
+
+      await deleter().remove(tournamentId, id)
+
+      expect(await client.laneOutOfPlay.findMany()).toEqual([{ squadId: kept, lane: 1 }])
+    })
+
     it('deletes the last session of a tournament (D-186)', async () => {
       const tournamentId = await rows.tournament()
       const id = await rows.session(tournamentId, kind, '2026-10-24 09:00:00')

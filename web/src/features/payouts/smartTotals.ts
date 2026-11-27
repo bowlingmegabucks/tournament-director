@@ -1,6 +1,14 @@
 import { formatMoney } from '../../shared/formatMoney'
 import { centsOf, formatCents } from './amount'
 
+/**
+ * SMART scholarship money (SMT-03, SMT-04): a youth's winnings go to their SMART account, so every
+ * report names it and keeps it out of the cash total.
+ */
+
+/** What a payout screen or report says beside such a line. */
+export const smartNotice = 'SMART scholarship: do not pay'
+
 /** The part of some payouts that is SMART scholarship money, in cents (SMT-04). */
 export function smartCents(
   lines: readonly { amount: string; smartScholarship: boolean }[],

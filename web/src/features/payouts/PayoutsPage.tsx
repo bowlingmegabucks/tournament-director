@@ -4,7 +4,6 @@ import { formatMoney } from '../../shared/formatMoney'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { formatSessionDate } from '../../shared/sessionFormat'
-import { smartNotice } from '../../shared/smartMoney'
 import { Toast } from '../../shared/Toast'
 import { TournamentNotFoundError } from '../../shared/tournamentQuery'
 import { useCan } from '../auth/useCan'
@@ -12,7 +11,7 @@ import type { Tournament } from '../tournaments/types'
 import { PayoutDisclaimer } from './PayoutDisclaimer'
 import { PrintPayoutsButton } from './PayoutPrint'
 import styles from './Payouts.module.css'
-import { smartCents, splitMoney, totalFigures } from './smartTotals'
+import { smartCents, smartNotice, splitMoney, totalFigures } from './smartTotals'
 import {
   asPaidFilter,
   atLeast,

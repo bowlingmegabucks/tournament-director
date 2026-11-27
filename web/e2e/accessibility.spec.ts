@@ -674,6 +674,15 @@ for (const colorScheme of colorSchemes) {
       await expect(page.getByRole('heading', { name: 'Unassigned (3)' })).toBeVisible()
       await expect(page.getByText(/Live: changes by others/)).toBeVisible()
       await expectNoViolations(page)
+
+      // A pair out of play: the question first, then the pair as it looks (OOP-04).
+      await page.getByRole('checkbox', { name: 'Lanes 1-2 in play' }).click()
+      await expect(page.getByRole('dialog', { name: 'Take lanes 1-2 out of play?' })).toBeVisible()
+      await expectNoViolations(page)
+      await page.getByRole('button', { name: 'Take out of play' }).click()
+      await expect(page.getByText('No one can be put on these lanes.')).toBeVisible()
+      await expect(page.getByText(/^Updated:/)).toHaveCount(0)
+      await expectNoViolations(page)
     })
 
     test('recap sheets dialog has no WCAG 2.2 AA violations', async ({ page }) => {

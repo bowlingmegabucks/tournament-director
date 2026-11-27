@@ -331,6 +331,53 @@ test('the Assign to lanes dialog picks a pair, and Escape closes it (D-58)', asy
   ).toContainText('Pat Nguyen')
 })
 
+test('a pair taken out of play empties, refuses bowlers, and comes back (OOP-02 to OOP-05, OOP-09)', async ({
+  page,
+}) => {
+  await openSquad(page, '1:00 PM')
+  const box = page.getByRole('checkbox', { name: 'Lanes 1-2 in play' })
+  const pair = page.getByRole('heading', { level: 3, name: /^Lanes 1-2/ }).locator('xpath=..')
+  const spots = page.getByText(/spots open|over the \d+ spots/)
+  const before = await spots.textContent()
+
+  // The pair holds bowlers, so it asks first, and going back changes nothing.
+  await box.click()
+  const dialog = page.getByRole('dialog', { name: 'Take lanes 1-2 out of play?' })
+  await dialog.getByRole('button', { name: 'Go back' }).click()
+  await expect(box).toBeChecked()
+  await expect(spots).toHaveText(before ?? '')
+
+  await box.click()
+  await dialog.getByRole('button', { name: 'Take out of play' }).click()
+  await expect(dialog).toBeHidden()
+  await expect(box).not.toBeChecked()
+  await expect(pair).toContainText('Out of play')
+  await expect(page.getByRole('heading', { name: 'Unassigned (8)' })).toBeVisible()
+  await expect(spots).not.toHaveText(before ?? '')
+
+  await dragTo(
+    page,
+    page.getByRole('button', { name: 'Drag Pat Nguyen' }),
+    page.getByRole('heading', { level: 3, name: /^Lanes 1-2/ }),
+  )
+  await expect(page.getByRole('alert')).toContainText(
+    'Lanes 1-2 are out of play. Pick another pair.',
+  )
+
+  await page.getByRole('button', { name: 'Assign to lanes: Pat Nguyen' }).click()
+  await expect(
+    page.getByRole('dialog').getByRole('button', { name: /Lanes 1-2.*Out of play/ }),
+  ).toBeDisabled()
+  await page.keyboard.press('Escape')
+
+  // Back in play: the bowlers who left stay unassigned.
+  await box.click()
+  await expect(box).toBeChecked()
+  await expect(spots).toHaveText(before ?? '')
+  await expect(pair).toContainText('0 of 4')
+  await expect(page.getByRole('heading', { name: 'Unassigned (8)' })).toBeVisible()
+})
+
 test('a complete squad has no handles or buttons (LAN-13, D-10)', async ({ page }) => {
   await openSquad(page, '9:00 AM')
 

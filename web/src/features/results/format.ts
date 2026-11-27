@@ -233,7 +233,13 @@ function lineFigure(row: Figure | null): string | null {
  */
 export function lineFigures(division: DivisionResult): { cut: string | null; cash: string | null } {
   return {
-    cut: lineFigure(lowest(division.rows, 'advancer')),
+    // A ruling does not move the cut (NSH-23): only those who advanced on score set it.
+    cut: lineFigure(
+      lowest(
+        division.rows.filter((row) => !row.byRuling),
+        'advancer',
+      ),
+    ),
     cash: lineFigure(lowest(division.rows, 'casher')),
   }
 }

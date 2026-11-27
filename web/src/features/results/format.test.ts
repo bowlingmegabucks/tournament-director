@@ -451,6 +451,13 @@ describe('the cut and cash lines as +/− (D-254)', () => {
     expect(lineFigures(createDivisionResult({ rows: par })).cash).toBe('EVEN')
   })
 
+  it('leaves a bowler who advances by ruling out of the cut figure (NSH-23)', () => {
+    const ruled = createSquadRow({ group: 'advancer', total: 600, byRuling: true })
+
+    expect(lineFigures(createDivisionResult({ rows: [...rows, ruled] })).cut).toBe('+219')
+    expect(lineFigures(createDivisionResult({ rows: [ruled] })).cut).toBeNull()
+  })
+
   it('has no cut or no cash when no one advances or cashes', () => {
     expect(
       lineFigures(createDivisionResult({ rows: [createSquadRow({ group: 'other', total: 600 })] })),

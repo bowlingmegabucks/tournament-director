@@ -15,6 +15,8 @@ export interface RowState {
   detail: string
   /** False for a bowler a director adds by hand (D-269): the note is then required. */
   inferred: boolean
+  /** The money goes to the bowler's SMART account: do not pay them (SMT-04). */
+  smartScholarship: boolean
   amount: string
   note: string
   paid: boolean
@@ -40,6 +42,7 @@ export function rowsOf(sheet: PayoutSheet): RowState[] {
       divisionName: payee.divisionName,
       detail: payee.detail,
       inferred: payee.inferred,
+      smartScholarship: payee.smartScholarship,
       amount,
       note,
       paid,
@@ -59,6 +62,7 @@ export function addedRow(other: SheetOther): RowState {
     divisionName: other.divisionName,
     detail: 'added by hand',
     inferred: false,
+    smartScholarship: other.smartScholarship,
     amount: '',
     note: '',
     paid: false,

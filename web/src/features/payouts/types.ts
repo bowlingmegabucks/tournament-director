@@ -31,6 +31,7 @@ export interface SheetOther {
   registrationId: string
   name: string
   divisionName: string
+  smartScholarship: boolean
 }
 
 export type SheetStatus = 'open' | 'notReady' | 'locked'

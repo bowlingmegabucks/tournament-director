@@ -85,7 +85,8 @@ function isOther(value: unknown): value is SheetOther {
   return (
     isText(field(value, 'registrationId')) &&
     isText(field(value, 'name')) &&
-    isText(field(value, 'divisionName'))
+    isText(field(value, 'divisionName')) &&
+    isBoolean(field(value, 'smartScholarship'))
   )
 }
 

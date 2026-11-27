@@ -203,6 +203,7 @@ export async function loadSheet(
       registrationId,
       name: bowler.name,
       divisionName: bowler.divisionName,
+      smartScholarship: smart.has(registrationId),
     }))
     .toSorted((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }))
 

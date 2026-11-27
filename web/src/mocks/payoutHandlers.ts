@@ -95,7 +95,11 @@ export function createPayoutHandlers() {
     const listed = new Set(payees.map((payee) => payee.registrationId))
     const rest: SheetOther[] = others
       .filter((bowler) => !listed.has(bowler.registrationId))
-      .map((bowler) => ({ ...bowler, divisionName: 'Open' }))
+      .map((bowler) => ({
+        ...bowler,
+        divisionName: 'Open',
+        smartScholarship: smartIds.has(bowler.registrationId),
+      }))
     return {
       event: {
         source,

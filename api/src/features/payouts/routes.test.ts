@@ -264,6 +264,26 @@ describe('SMART scholarship on the sheet (SMT-03)', () => {
       ['Dana Whitfield', true],
       ['Marcus Lee', true],
     ])
+    expect(
+      sheet.others.map((item: { smartScholarship: boolean }) => item.smartScholarship),
+    ).toEqual([false, false])
+  })
+
+  it('flags a SMART bowler who is not on the sheet yet, for the add dialog (SMT-04)', async () => {
+    const { app } = setup({ smartIds: [other.registrationId] })
+
+    const { sheet } = (await request(app).get(squadUrl)).body
+
+    expect(
+      sheet.others.map((item: { name: string; smartScholarship: boolean }) => [
+        item.name,
+        item.smartScholarship,
+      ]),
+    ).toEqual([
+      ['Lois Park', false],
+      ['Marcus Lee', true],
+      ['Tom Becker', false],
+    ])
   })
 
   it('keeps the flag in the list and the totals for a bowler who cannot be read (SMT-04)', async () => {

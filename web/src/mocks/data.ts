@@ -1579,6 +1579,7 @@ export function createOther(overrides: Partial<SheetOther> = {}): SheetOther {
     registrationId: crypto.randomUUID(),
     name: 'Tom Becker',
     divisionName: 'Open',
+    smartScholarship: false,
     ...overrides,
   }
 }

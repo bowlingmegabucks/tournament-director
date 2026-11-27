@@ -313,6 +313,27 @@ describe('the entry sheet (PAY-07, PAY-12, D-270, D-278)', () => {
     })
   })
 
+  it('says do not pay beside a SMART bowler, inferred or added by hand (SMT-04)', async () => {
+    const user = userEvent.setup()
+    serve(
+      sheet({
+        payees: [{ ...dana, smartScholarship: true }, marcus],
+        others: [{ ...ann, smartScholarship: true }],
+      }),
+    )
+    openPage()
+    const dialog = await openSheet(user)
+
+    expect(within(dialog).getAllByText('SMART scholarship: do not pay')).toHaveLength(1)
+
+    await user.click(within(dialog).getByRole('button', { name: 'Add another bowler' }))
+    const add = await screen.findByRole('dialog', { name: 'Add another bowler' })
+    await user.click(within(add).getByRole('button', { name: 'Add Ann Bell' }))
+    await user.click(within(add).getByRole('button', { name: 'Close' }))
+
+    expect(within(dialog).getAllByText('SMART scholarship: do not pay')).toHaveLength(2)
+  })
+
   it('says when everyone entered is already listed or nothing matches (PAY-06)', async () => {
     const user = userEvent.setup()
     serve(sheet({ others: [] }))

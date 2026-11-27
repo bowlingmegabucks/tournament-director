@@ -23,7 +23,7 @@ export interface PairRequest {
   /** The caller has agreed that the pair's bowlers go to unassigned (OOP-04). */
   confirmWarnings: boolean
   /** The registrations the caller was shown. Anyone else on the pair means ask again (OOP-04). */
-  seen?: readonly string[] | undefined
+  seen?: readonly string[]
 }
 
 export type PairOutcome =

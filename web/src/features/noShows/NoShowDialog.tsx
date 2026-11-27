@@ -184,6 +184,9 @@ export function NoShowDialog({ target, bowlerName, onDone, onClose }: Readonly<N
     }
   }
 
+  let confirmLabel = action === 'refund' ? 'Refund entry' : 'Move entry'
+  if (apply.isPending) confirmLabel = 'Saving…'
+
   const problem = failed ?? preview.error ?? apply.error
   const ready = choice !== undefined && preview.data !== undefined && !preview.isPlaceholderData
 
@@ -292,7 +295,7 @@ export function NoShowDialog({ target, bowlerName, onDone, onClose }: Readonly<N
                 void confirm()
               }}
             >
-              {apply.isPending ? 'Saving…' : action === 'refund' ? 'Refund entry' : 'Move entry'}
+              {confirmLabel}
             </button>
           </div>
         </div>

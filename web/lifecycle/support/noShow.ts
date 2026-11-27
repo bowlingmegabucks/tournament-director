@@ -21,16 +21,15 @@ export async function registerEntries(
   const ids = new Map<string, string>()
   try {
     for (const { bowler, division, squadIds, sweeperIds = [] } of entries) {
-      const id = await site.register(
-        vendorRegistration(bowler, main, {
-          divisionId: idByName(main.divisions, division),
-          squadIds,
-          sweeperIds,
-          superSweeper: false,
-          amount: Number(noShowTournament.entryFee) * squadIds.length,
-          codePrefix: `ch_makeup_${squadIds.length}`,
-        }),
-      )
+      const payload = vendorRegistration(bowler, main, {
+        divisionId: idByName(main.divisions, division),
+        squadIds,
+        sweeperIds,
+        superSweeper: false,
+        amount: Number(noShowTournament.entryFee) * squadIds.length,
+        codePrefix: `ch_makeup_${squadIds.length}`,
+      })
+      const id = await site.register(payload) // NOSONAR: entry order matters
       ids.set(fullName(bowler), id)
     }
   } finally {
@@ -53,13 +52,10 @@ export async function saveScores(
 ) {
   for (const { registrationId, score } of scores) {
     for (const game of [1, 2, 3]) {
-      const response = await page.request.put(
-        `${apiUrl}${squadUrl}/scores/${registrationId}/${game}`,
-        {
-          data: { score },
-        },
-      )
-      expect(response.ok(), await response.text()).toBe(true)
+      const url = `${apiUrl}${squadUrl}/scores/${registrationId}/${game}`
+      const response = await page.request.put(url, { data: { score } }) // NOSONAR: one save at a time
+      const body = await response.text() // NOSONAR: one save at a time
+      expect(response.ok(), body).toBe(true)
     }
   }
 }
@@ -99,7 +95,7 @@ export async function openNoShowDialog(
   const chooser = page.getByRole('combobox', { name: 'Division' })
   await chooser.selectOption(
     await chooser
-      .getByRole('option', { name: new RegExp(`^${division} \\(`) })
+      .getByRole('option', { name: new RegExp(String.raw`^${division} \(`) })
       .getAttribute('value'),
   )
   await page.getByRole('button', { name: `Move or refund ${name}` }).click()

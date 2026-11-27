@@ -163,7 +163,8 @@ export async function workOutFallout(
   let kept = new Set(
     requested.map(keyOf).filter((key) => before.advancers.get(key)?.complete === true),
   )
-  for (const key of [...kept]) {
+  // `kept` is replaced, never changed, so the loop walks the first set to the end.
+  for (const key of kept) {
     const without = new Set([...kept].filter((other) => other !== key))
     if ((await run(without)).advancers.has(key)) kept = without // NOSONAR: each tick depends on the last
   }

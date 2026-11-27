@@ -35,6 +35,21 @@ function everyBowler(page: LanePage): LaneBowler[] {
   return [...page.pairs.flatMap((pair) => pair.bowlers), ...page.unassigned, ...page.other]
 }
 
+/** The bowler and place of a finished drag; nothing for a canceled one or a drop outside. */
+function dropOf(
+  sourceId: string | undefined,
+  targetId: string | undefined,
+  bowlers: readonly LaneBowler[],
+  pairs: LanePage['pairs'],
+): { bowler: LaneBowler; target: DropTarget } | undefined {
+  const bowler = bowlers.find((candidate) => candidate.registrationId === sourceId)
+  const target =
+    targetId === unassignedDropId
+      ? 'unassigned'
+      : pairs.find((candidate) => pairDropId(candidate) === targetId)
+  return bowler && target ? { bowler, target } : undefined
+}
+
 /**
  * The lane assignments of one squad or sweeper (LAN-10, D-58, D-60): the bowlers who need a lane
  * beside one drop zone per lane pair. A drop on a pair with room, or a placed bowler dropped on the
@@ -222,7 +237,7 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
                     readOnly={readOnly}
                     savingIds={savingIds}
                     fresh={live.updated?.pairs.includes(pair.firstLane)}
-                    onSetInPlay={readOnly ? undefined : pairPlay.setInPlay}
+                    play={readOnly ? undefined : pairPlay}
                     savingInPlay={pairPlay.saving.get(pair.firstLane)}
                     onAssign={setAssigning}
                     onManage={canManage ? setManaging : undefined}
@@ -244,17 +259,15 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
       }}
       onDragEnd={({ operation, canceled }) => {
         setDraggingId(undefined)
-        const source = operation.source
-        const target = operation.target
-        if (canceled || !source || !target) return
-        const bowler = bowlers.find((candidate) => candidate.registrationId === String(source.id))
-        if (!bowler) return
-        if (String(target.id) === unassignedDropId) {
-          attempt(bowler, 'unassigned')
-          return
-        }
-        const pair = view.pairs.find((candidate) => pairDropId(candidate) === String(target.id))
-        if (pair) attempt(bowler, pair)
+        if (canceled) return
+        const { source, target } = operation
+        const drop = dropOf(
+          source ? String(source.id) : undefined,
+          target ? String(target.id) : undefined,
+          bowlers,
+          view.pairs,
+        )
+        if (drop) attempt(drop.bowler, drop.target)
       }}
     >
       <title>{`Lane assignments · ${formatSessionDate(session.date)} · ${tournament.name} · Tournament Director`}</title>

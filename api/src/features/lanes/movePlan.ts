@@ -47,6 +47,8 @@ export function pairText(pair: Pair): string {
   return pair.lanes.length === 1 ? `Lane ${first}` : `Lanes ${first}-${last}`
 }
 
+const isOrAre = (pair: Pair) => (pair.lanes.length === 1 ? 'is' : 'are')
+
 /** The lane a seat is on: A and B on the pair's first lane, C to E on its second (D-56). */
 function seatLane(pair: Pair, letter: string): number {
   const onFirst = letter === 'A' || letter === 'B'
@@ -101,10 +103,9 @@ export function planLaneMove(
   if (stored && pairOf(stored.lane, [pair])) return { type: 'unchanged', position: mine.position }
 
   if (facts.outOfPlay.includes(pair.firstLane)) {
-    const verb = pair.lanes.length === 1 ? 'is' : 'are'
     return {
       type: 'outOfPlay',
-      message: `${pairText(pair)} ${verb} out of play. Pick another pair.`,
+      message: `${pairText(pair)} ${isOrAre(pair)} out of play. Pick another pair.`,
     }
   }
 
@@ -115,10 +116,9 @@ export function planLaneMove(
     return position !== undefined && pairOf(position.lane, [pair]) !== undefined
   })
   if (others.length >= facts.maxPerPair) {
-    const verb = pair.lanes.length === 1 ? 'is' : 'are'
     return {
       type: 'full',
-      message: `${pairText(pair)} ${verb} full (${others.length} of ${facts.maxPerPair}). Pick another pair.`,
+      message: `${pairText(pair)} ${isOrAre(pair)} full (${others.length} of ${facts.maxPerPair}). Pick another pair.`,
     }
   }
 

@@ -56,7 +56,7 @@ describe('usePairPlay (OOP-03 to OOP-05)', () => {
     const { result, pairAt } = setup()
 
     act(() => {
-      result.current.setInPlay(first ?? empty, false)
+      result.current.takeOut(first ?? empty)
     })
     expect(result.current.asking).toBe(1)
     expect(pairAt(1)?.outOfPlay).toBe(false)
@@ -125,7 +125,7 @@ describe('usePairPlay (OOP-03 to OOP-05)', () => {
     server.use(http.put(putPath, () => HttpResponse.json(refusal, { status: 409 })))
     const refused = setup()
     act(() => {
-      refused.result.current.setInPlay(empty, false)
+      refused.result.current.takeOut(empty)
     })
     await waitFor(() => {
       expect(refused.onError).toHaveBeenCalledWith('No.')
@@ -148,13 +148,13 @@ describe('usePairPlay (OOP-03 to OOP-05)', () => {
     const invalidate = vi.spyOn(client, 'invalidateQueries')
 
     act(() => {
-      result.current.setInPlay(createLanePair(7), false)
+      result.current.takeOut(createLanePair(7))
     })
     await waitFor(() => {
       expect(pairAt(7)?.outOfPlay).toBe(true)
     })
     act(() => {
-      result.current.setInPlay(empty, false)
+      result.current.takeOut(empty)
     })
     await waitFor(() => {
       expect(onError).toHaveBeenCalled()

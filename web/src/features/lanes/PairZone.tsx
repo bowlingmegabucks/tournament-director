@@ -16,11 +16,32 @@ interface PairZoneProps {
   /** Another desk just changed this pair (LAN-21): an accent edge while the status line says so. */
   fresh?: boolean
   /** Takes the pair out of play or brings it back (OOP-03). Without it there is no checkbox. */
-  onSetInPlay?: (pair: LanePair, inPlay: boolean) => void
+  play?: {
+    takeOut: (pair: LanePair) => void
+    bringBack: (pair: LanePair) => void
+  }
   /** What was asked for while the save is out. */
   savingInPlay?: boolean
   onAssign: (bowler: LaneBowler) => void
   onManage?: (bowler: LaneBowler) => void
+}
+
+/** What a drag would do here: the words in the header and the outline (D-58). */
+function dropCue(pair: LanePair, dragging: LaneBowler | undefined) {
+  if (!dragging) return { cue: undefined, zone: '' }
+  const outcome = dropOutcome(pair, dragging.registrationId)
+  if (outcome === 'room') {
+    const left = seatsLeft(pair)
+    const cue = `Drop here: ${left} ${left === 1 ? 'seat' : 'seats'} left`
+    return { cue, zone: styles.canDrop ?? '' }
+  }
+  if (outcome === 'full') {
+    return { cue: 'Full: cannot drop here', zone: styles.cannotDrop ?? '' }
+  }
+  if (outcome === 'out') {
+    return { cue: 'Out of play: cannot drop here', zone: styles.cannotDrop ?? '' }
+  }
+  return { cue: undefined, zone: '' }
 }
 
 /** One lane pair as a drop zone, with its bowlers sorted lane then letter (LAN-03, LAN-04). */
@@ -31,21 +52,13 @@ export function PairZone({
   readOnly,
   savingIds,
   fresh = false,
-  onSetInPlay,
+  play,
   savingInPlay,
   onAssign,
   onManage,
 }: Readonly<PairZoneProps>) {
   const { ref } = useDroppable({ id: pairDropId(pair), disabled: readOnly })
-  const outcome = dragging ? dropOutcome(pair, dragging.registrationId) : undefined
-  const left = seatsLeft(pair)
-  let cue: string | undefined
-  if (outcome === 'room') cue = `Drop here: ${left} ${left === 1 ? 'seat' : 'seats'} left`
-  if (outcome === 'full') cue = 'Full: cannot drop here'
-  if (outcome === 'out') cue = 'Out of play: cannot drop here'
-  let zone = ''
-  if (outcome === 'room') zone = styles.canDrop ?? ''
-  if (outcome === 'full' || outcome === 'out') zone = styles.cannotDrop ?? ''
+  const { cue, zone } = dropCue(pair, dragging)
   let empty = 'No one yet.'
   if (pair.outOfPlay) empty = 'No one can be put on these lanes.'
 
@@ -66,7 +79,7 @@ export function PairZone({
             </span>
           )}
         </h3>
-        {onSetInPlay && (
+        {play && (
           <div className={styles.inPlay}>
             <label className={styles.inPlayLabel}>
               {/* Not `disabled` while saving: that would drop keyboard focus to the page. */}
@@ -76,10 +89,12 @@ export function PairZone({
                 aria-disabled={savingInPlay !== undefined || undefined}
                 checked={savingInPlay ?? !pair.outOfPlay}
                 onChange={(event) => {
-                  if (savingInPlay === undefined) onSetInPlay(pair, event.target.checked)
+                  if (savingInPlay !== undefined) return
+                  if (event.target.checked) play.bringBack(pair)
+                  else play.takeOut(pair)
                 }}
               />
-              In play
+              {'In play'}
             </label>
             <span aria-live="polite" className={styles.savingText}>
               {savingInPlay === undefined ? '' : 'Saving…'}

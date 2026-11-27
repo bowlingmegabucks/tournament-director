@@ -122,6 +122,82 @@ export interface Planned {
   sessionIds: string[]
 }
 
+/** What the checks read about the entry being moved or refunded. */
+interface Entry {
+  squads: readonly Squad[]
+  sweepers: readonly { id: string }[]
+  source: Squad
+  detail: NonNullable<Awaited<ReturnType<RegistrationWriter['getDetail']>>>
+  records: readonly PayoutRecord[]
+  deletesRegistration: boolean
+}
+
+/** NSH-05: why the move's squad cannot take the bowler, if it cannot. */
+function targetError(entry: Entry, target: Squad | undefined): string | undefined {
+  if (!target) return messages.targetUnknown
+  if (entry.detail.sessionIds.includes(target.id)) return messages.targetHeld
+  return target.complete ? messages.targetComplete : undefined
+}
+
+/** NSH-08: a payout that blocks the write. */
+function payoutError(entry: Entry, registrationId: string): string | undefined {
+  const mine = entry.records.filter((record) => record.registrationId === registrationId)
+  if (mine.some((record) => record.source === 'squad' && record.eventId === entry.source.id)) {
+    return messages.squadPayout
+  }
+  return entry.deletesRegistration && mine.length > 0 ? messages.anyPayout : undefined
+}
+
+/** NSH-07: the zeros of this squad do not count; any other score in the tournament does. */
+async function scoredElsewhere(deps: NoShowDeps, entry: Entry): Promise<boolean> {
+  const others = new Set(
+    [...entry.squads, ...entry.sweepers]
+      .map((session) => session.id)
+      .filter((id) => id !== entry.source.id),
+  )
+  const scored = await deps.writer.findScoredSessionIds(entry.detail.bowlerId)
+  return scored.some((id) => others.has(id))
+}
+
+/** NSH-01 to NSH-08: throws 409 with every refusal, the first as the message. */
+async function refuse(
+  deps: NoShowDeps,
+  request: Request,
+  entry: Entry,
+  target: Squad | undefined,
+  completed: boolean,
+): Promise<void> {
+  const errors: Record<string, string> = {}
+  if (completed) errors.tournament = messages.tournament
+  if (!entry.source.complete) errors.squad = messages.squad
+  const sourceScores = await deps.scores.listScores(entry.source.id)
+  if (sourceScores.some((row) => row.bowlerId === entry.detail.bowlerId && row.score > 0)) {
+    errors.noShow = messages.noShow
+  }
+  if (request.choice.action === 'move') {
+    const error = targetError(entry, target)
+    if (error) errors.target = error
+  }
+  const payout = payoutError(entry, request.registrationId)
+  if (payout) errors.payout = payout
+  if (entry.deletesRegistration && (await scoredElsewhere(deps, entry))) {
+    errors.scores = messages.scores
+  }
+  const first = Object.values(errors)[0]
+  if (first !== undefined) throw new FieldErrorsError(409, first, errors)
+}
+
+/** NSH-06: what the admin must know before a delete. */
+function deleteWarnings(sweeperIds: readonly string[], paidCents: number): string[] {
+  const warnings = [sweeperIds.length > 0 ? messages.sweepers : messages.noSweepers]
+  if (paidCents > 0) {
+    warnings.push(
+      `This bowler paid ${dollars(paidCents)} outside this system. Deleting the registration removes the payment records.`,
+    )
+  }
+  return warnings
+}
+
 /**
  * Check one move or refund (NSH-01 to NSH-08) and work out what it would change (NSH-09). Throws
  * 404 for an unknown tournament, squad, or entry, and 409 with `errors` for a refusal.
@@ -143,42 +219,14 @@ export async function planNoShow(deps: NoShowDeps, request: Request): Promise<Pl
     throw new HttpError(404, 'This bowler is not entered in this squad')
   }
 
-  const errors: Record<string, string> = {}
-  if (settings.completed) errors.tournament = messages.tournament
-  if (!source.complete) errors.squad = messages.squad
-  const sourceScores = await deps.scores.listScores(squadId)
-  if (sourceScores.some((row) => row.bowlerId === detail.bowlerId && row.score > 0)) {
-    errors.noShow = messages.noShow
-  }
-
-  let target: Squad | undefined
-  if (choice.action === 'move') {
-    target = squads.find((squad) => squad.id === choice.targetSquadId)
-    if (!target) errors.target = messages.targetUnknown
-    else if (detail.sessionIds.includes(target.id)) errors.target = messages.targetHeld
-    else if (target.complete) errors.target = messages.targetComplete
-  }
-
+  const target =
+    choice.action === 'move' ? squads.find((squad) => squad.id === choice.targetSquadId) : undefined
   const otherSquads = squads.filter(
     (squad) => squad.id !== squadId && detail.sessionIds.includes(squad.id),
   )
   const deletesRegistration = choice.action === 'refund' && otherSquads.length === 0
-  const mine = records.filter((record) => record.registrationId === registrationId)
-  if (mine.some((record) => record.source === 'squad' && record.eventId === squadId)) {
-    errors.payout = messages.squadPayout
-  } else if (deletesRegistration && mine.length > 0) {
-    errors.payout = messages.anyPayout
-  }
-  if (deletesRegistration) {
-    // NSH-07: the zeros of this squad do not count; any other score in the tournament does.
-    const others = new Set(
-      [...squads, ...sweepers].map((session) => session.id).filter((id) => id !== squadId),
-    )
-    const scored = await deps.writer.findScoredSessionIds(detail.bowlerId)
-    if (scored.some((id) => others.has(id))) errors.scores = messages.scores
-  }
-  const first = Object.values(errors)[0]
-  if (first !== undefined) throw new FieldErrorsError(409, first, errors)
+  const entry: Entry = { squads, sweepers, source, detail, records, deletesRegistration }
+  await refuse(deps, request, entry, target, settings.completed)
 
   const snapshot = await readSnapshot(deps, tournamentId, squads)
   const fallout = await workOutFallout(snapshot, { squadId, registrationId }, choice.keepAdvancing)
@@ -188,7 +236,6 @@ export async function planNoShow(deps: NoShowDeps, request: Request): Promise<Pl
   const note = systemNote(bowlerName, source.date, target?.date ?? null)
   const payouts = payoutChanges(records, snapshot, fallout, note)
 
-  const warnings: string[] = []
   // The facts hold real payments only (D-106).
   const paidCents = deletesRegistration
     ? facts.payments.reduce((sum, payment) => sum + Math.round(payment.amount * 100), 0)
@@ -196,14 +243,7 @@ export async function planNoShow(deps: NoShowDeps, request: Request): Promise<Pl
   const sweeperIds = sweepers
     .map((sweeper) => sweeper.id)
     .filter((id) => detail.sessionIds.includes(id))
-  if (deletesRegistration) {
-    warnings.push(sweeperIds.length > 0 ? messages.sweepers : messages.noSweepers)
-    if (paidCents > 0) {
-      warnings.push(
-        `This bowler paid ${dollars(paidCents)} outside this system. Deleting the registration removes the payment records.`,
-      )
-    }
-  }
+  const warnings = deletesRegistration ? deleteWarnings(sweeperIds, paidCents) : []
 
   const body: Omit<Preview, 'version'> = {
     action: choice.action,

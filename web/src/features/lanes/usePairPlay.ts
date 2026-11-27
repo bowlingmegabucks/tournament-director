@@ -90,9 +90,12 @@ export function usePairPlay(
   return {
     saving,
     asking,
-    setInPlay(pair: LanePair, inPlay: boolean) {
-      if (!inPlay && pair.bowlers.length > 0) setAsking(pair.firstLane)
-      else mutation.mutate({ lane: pair.firstLane, inPlay })
+    takeOut(pair: LanePair) {
+      if (pair.bowlers.length > 0) setAsking(pair.firstLane)
+      else mutation.mutate({ lane: pair.firstLane, inPlay: false })
+    },
+    bringBack(pair: LanePair) {
+      mutation.mutate({ lane: pair.firstLane, inPlay: true })
     },
     /** `pair` is the one the dialog showed, so the API can tell if someone has joined it since. */
     confirm(pair: LanePair) {

@@ -216,6 +216,47 @@ async function eligibilityFailures(
   })
 }
 
+/** REG-15, D-117, D-205. */
+function divisionFailures(moved: boolean, scored: boolean): Failure[] {
+  if (!moved || !scored) return []
+  return [
+    validation(
+      'Registration.DivisionLocked',
+      'Cannot change bowler division after scores have been recorded.',
+    ),
+  ]
+}
+
+/** What the desk must confirm before the save. */
+async function editWarnings(
+  deps: RegisterDependencies,
+  stored: RegistrationDetail,
+  smartScholarship: boolean,
+  averageWithScores: boolean,
+): Promise<EditWarning[]> {
+  const warnings: EditWarning[] = []
+  // D-201: a later average moves handicap and results once scores exist.
+  if (averageWithScores) {
+    warnings.push({
+      field: 'average',
+      message: 'This bowler has scores. Handicap and results will change.',
+    })
+  }
+  // SMT-05: money already handed out may have been the wrong kind.
+  if (
+    smartScholarship !== (stored.smartScholarship ?? false) &&
+    (await deps.writer.hasPaidPayout(stored.id))
+  ) {
+    warnings.push({
+      field: 'smartScholarship',
+      message: smartScholarship
+        ? 'A payout is already marked paid. It will now show as SMART scholarship, not cash.'
+        : 'A payout is already marked paid. It will now show as cash, not SMART scholarship.',
+    })
+  }
+  return warnings
+}
+
 /**
  * The desk edits a registration (D-197): division, average, super sweeper, bowler details, and the
  * squads and sweepers to add and remove, in one save. Checks are the vendor `PATCH`'s plus D-04, D-10,
@@ -292,15 +333,7 @@ export async function editRegistration(
     (field) => field in bowler.patch && bowler.patch[field] !== stored.bowler[field],
   )
 
-  if (divisionMoved && scoredHere.length > 0) {
-    // REG-15, D-117, D-205.
-    list.push(
-      validation(
-        'Registration.DivisionLocked',
-        'Cannot change bowler division after scores have been recorded.',
-      ),
-    )
-  }
+  list.push(...divisionFailures(divisionMoved, scoredHere.length > 0))
   // REG-04 and REG-05 run when something they read changed (D-205). A bowler who no longer fits
   // after the division was edited (D-12) can still add a squad.
   if (divisionMoved || averageChanged || idsChanged) {
@@ -316,30 +349,15 @@ export async function editRegistration(
   }
   if (list.length > 0) return failures(list)
 
-  const smartScholarship = request.smartScholarship ?? stored.smartScholarship ?? false
-  const warnings: EditWarning[] = []
   if (!request.confirmWarnings) {
-    // D-201: a later average moves handicap and results once scores exist.
-    if (averageChanged && scoredHere.length > 0) {
-      warnings.push({
-        field: 'average',
-        message: 'This bowler has scores. Handicap and results will change.',
-      })
-    }
-    // SMT-05: money already handed out may have been the wrong kind.
-    if (
-      smartScholarship !== (stored.smartScholarship ?? false) &&
-      (await writer.hasPaidPayout(stored.id))
-    ) {
-      warnings.push({
-        field: 'smartScholarship',
-        message: smartScholarship
-          ? 'A payout is already marked paid. It will now show as SMART scholarship, not cash.'
-          : 'A payout is already marked paid. It will now show as cash, not SMART scholarship.',
-      })
-    }
+    const warnings = await editWarnings(
+      deps,
+      stored,
+      request.smartScholarship ?? stored.smartScholarship ?? false,
+      averageChanged && scoredHere.length > 0,
+    )
+    if (warnings.length > 0) return { ok: false, kind: 'warnings', warnings }
   }
-  if (warnings.length > 0) return { ok: false, kind: 'warnings', warnings }
 
   const addSessionIds = [...change.addSquads, ...change.addSweepers]
   const removeSessionIds = [...change.removeSquads, ...change.removeSweepers]

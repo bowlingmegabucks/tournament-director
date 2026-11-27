@@ -128,17 +128,14 @@ async function write(tx: Tx, command: NoShowCommand): Promise<void> {
     }
   }
   for (const key of command.keepAdvancing) {
-    await tx.squadRegistration.updateMany({
-      where: { registrationId: key.registrationId, squadId: key.squadId },
-      data: { forcedAdvancer: true },
-    })
+    const where = { registrationId: key.registrationId, squadId: key.squadId }
+    const data = { forcedAdvancer: true }
+    await tx.squadRegistration.updateMany({ where, data }) // NOSONAR: one connection
   }
   const now = new Date()
   for (const { payoutId, note } of command.notes) {
-    await tx.payout.update({
-      where: { id: payoutId },
-      data: { note, updatedAt: now, updatedBy: actorId },
-    })
+    const data = { note, updatedAt: now, updatedBy: actorId }
+    await tx.payout.update({ where: { id: payoutId }, data }) // NOSONAR: one connection
   }
 }
 

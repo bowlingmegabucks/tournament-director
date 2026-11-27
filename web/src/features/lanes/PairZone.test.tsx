@@ -142,7 +142,7 @@ describe('PairZone in and out of play (OOP-01, OOP-03)', () => {
             dragging={undefined}
             readOnly={false}
             savingInPlay={savingInPlay}
-            onSetInPlay={(_pair, inPlay) => calls.push(inPlay)}
+            play={{ takeOut: () => calls.push(false), bringBack: () => calls.push(true) }}
             onAssign={() => undefined}
           />
         </ul>

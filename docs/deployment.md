@@ -61,6 +61,8 @@ Run `api/prisma/payout-tables.sql` once on the production database **before the 
 
 ### Database script for average checks (D-287)
 
+Run `api/prisma/forced-advancer-column.sql` once on the production database **before the deploy that ships no-show moves**. It adds `SquadRegistration.ForcedAdvancer` if it is missing, so running it again is safe. Unlike the table scripts, it is required for existing pages: without the column, every squad and sweeper entry read fails. Locally: `docker exec -i tournament-director-db mariadb -uroot -p<password> <database> < api/prisma/forced-advancer-column.sql`. The permission `entries.override` needs no setting: the admin holds it from the first request after the deploy.
+
 Run `api/prisma/average-tables.sql` once on the production database **before the deploy that ships average verification**. It creates `AverageVerifications` if it is missing, so running it again is safe, and it touches no legacy table (no foreign key: our delete routes remove the row). Without it the Averages routes answer `503`, and so do the lane page, recap sheets, results, and the registrations list, which read the checks to work out handicap and the "Avg not verified" chip. So run it before the deploy, not after. Same way as the other scripts. Locally: `docker exec -i tournament-director-db mariadb -uroot -p<password> <database> < api/prisma/average-tables.sql`. The new permission `averages.verify` reaches the director and the admin with no role change (D-292). The vendor routes start refusing a handicap-division registration with no average (VC-08, D-289): send the registration site the note in [registration-api.md](requirements/registration-api.md#vendor-notes-to-send) first.
 
 ### Live updates (SSE, D-217)

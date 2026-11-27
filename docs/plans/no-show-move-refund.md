@@ -1,6 +1,6 @@
 # Move or refund a no-show after a squad is completed
 
-Status: approved on 2026-11-27, being built. Only an admin sees the button (the owner's check on approval).
+Status: built on 2026-11-27. The record is [no-shows.md](../requirements/no-shows.md). Only an admin sees the button (the owner's check on approval).
 
 ## Why
 
@@ -8,22 +8,22 @@ A bowler missed a squad, the squad was completed, and they asked to bowl the nex
 
 ## Rules
 
-| ID     | Rule |
-| ------ | ---- |
-| NSH-01 | Admin only. New permission `entries.override`, withheld from the director. Web only; the API key cannot reach it. |
-| NSH-02 | Squads only, never sweepers. The source squad is complete (an open squad uses the normal edit). The tournament is not complete. |
-| NSH-03 | Only a true no-show: no score above 0 in the source squad. |
-| NSH-04 | **Move:** the target is an open squad the bowler has not entered. The source entry, its lane, and its zeros are removed. The new entry has no lane. |
-| NSH-05 | **Refund:** the source entry and its zeros are removed. No refund is recorded. |
+| ID     | Rule                                                                                                                                                                                                                                     |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NSH-01 | Admin only. New permission `entries.override`, withheld from the director. Web only; the API key cannot reach it.                                                                                                                        |
+| NSH-02 | Squads only, never sweepers. The source squad is complete (an open squad uses the normal edit). The tournament is not complete.                                                                                                          |
+| NSH-03 | Only a true no-show: no score above 0 in the source squad.                                                                                                                                                                               |
+| NSH-04 | **Move:** the target is an open squad the bowler has not entered. The source entry, its lane, and its zeros are removed. The new entry has no lane.                                                                                      |
+| NSH-05 | **Refund:** the source entry and its zeros are removed. No refund is recorded.                                                                                                                                                           |
 | NSH-06 | A refund of the only squad entry deletes the registration. The preview warns that the bowler becomes ineligible for sweepers and that their sweeper entries are removed. It also shows any real payment, as desk delete does (`DRG-02`). |
-| NSH-07 | NSH-06 is refused if the bowler has any other score in the tournament (`REG-19`). The source squad's zeros do not count. They can still be moved. |
-| NSH-08 | Refused while the no-show has a payout for the source squad. A refund that deletes the registration is refused while they have any payout. |
-| NSH-09 | Nothing is saved until the admin has seen a preview of what changes and confirmed it. |
-| NSH-10 | Payout amounts and paid ticks never change. |
-| NSH-11 | A saved payout whose bowler stops being a casher (or finalist) gets a system note if it has none, with the admin as last editor. An existing note is left as is, and so is its last editor. |
-| NSH-12 | A bowler who loses a cash spot and has no payout gets no flag. The director adds them by hand (`PAY-06`). |
-| NSH-13 | A payout with a note on a bowler the results do not infer is not shown on public results or the TV (`PAY-20`, unchanged). |
-| NSH-14 | Every move and refund is logged with the admin id, ids, and counts. There is no audit table. |
+| NSH-07 | NSH-06 is refused if the bowler has any other score in the tournament (`REG-19`). The source squad's zeros do not count. They can still be moved.                                                                                        |
+| NSH-08 | Refused while the no-show has a payout for the source squad. A refund that deletes the registration is refused while they have any payout.                                                                                               |
+| NSH-09 | Nothing is saved until the admin has seen a preview of what changes and confirmed it.                                                                                                                                                    |
+| NSH-10 | Payout amounts and paid ticks never change.                                                                                                                                                                                              |
+| NSH-11 | A saved payout whose bowler stops being a casher (or finalist) gets a system note if it has none, with the admin as last editor. An existing note is left as is, and so is its last editor.                                              |
+| NSH-12 | A bowler who loses a cash spot and has no payout gets no flag. The director adds them by hand (`PAY-06`).                                                                                                                                |
+| NSH-13 | A payout with a note on a bowler the results do not infer is not shown on public results or the TV (`PAY-20`, unchanged).                                                                                                                |
+| NSH-14 | Every move and refund is logged with the admin id, ids, and counts. There is no audit table.                                                                                                                                             |
 
 System note (cut to 200 characters):
 
@@ -32,23 +32,23 @@ System note (cut to 200 characters):
 
 ## Forced advancer
 
-| ID     | Rule |
-| ------ | ---- |
-| NSH-20 | The preview lists each bowler who would stop advancing, with a "Keep advancing" checkbox, unticked. This is the only place to set it, and there is no way to unset it. |
+| ID     | Rule                                                                                                                                                                                   |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NSH-20 | The preview lists each bowler who would stop advancing, with a "Keep advancing" checkbox, unticked. This is the only place to set it, and there is no way to unset it.                 |
 | NSH-21 | A forced advancer is an advancer in every way: they take no squad cash, count as "advanced earlier" in later squads (`RES-06`), leave the at-large pool, and are seeded as a finalist. |
-| NSH-22 | They count against the cash spots like any advancer. |
-| NSH-23 | They come out of the at-large spots. With none left, at-large stays at zero and the finals field has one more. |
-| NSH-24 | They show "Advanced by ruling" wherever they show as an advancer. No reason or name is shown or stored. |
+| NSH-22 | They count against the cash spots like any advancer.                                                                                                                                   |
+| NSH-23 | They come out of the at-large spots. With none left, at-large stays at zero and the finals field has one more.                                                                         |
+| NSH-24 | They show "Advanced by ruling" wherever they show as an advancer. No reason or name is shown or stored.                                                                                |
 
 How a division works out: natural advancers are the same top `A = floor(N / finalsRatio)` as today. Advancers are those **plus** any forced bowler not already among them. `T` is the number of advancers. Cash spots are 1 when `T` is 0, else `max(floor(N / cashRatio) - T, 0)`. The cut score stays the last advancer's total.
 
 Example (finals 1 in 7, cash 1 in 5):
 
-| Entries                    | Advance            | Cash    |
-| -------------------------- | ------------------ | ------- |
-| 21, before the move        | A, B, C            | D       |
-| 20, box unticked           | A, B               | C, D    |
-| 20, C ticked               | A, B, C (ruling)   | D       |
+| Entries             | Advance          | Cash |
+| ------------------- | ---------------- | ---- |
+| 21, before the move | A, B, C          | D    |
+| 20, box unticked    | A, B             | C, D |
+| 20, C ticked        | A, B, C (ruling) | D    |
 
 In a later squad, C cannot advance again. C cashes there if the score earns it (`D-81`, unchanged).
 
@@ -65,10 +65,10 @@ One new column: `SquadRegistration.ForcedAdvancer TINYINT(1) NOT NULL DEFAULT 0`
 
 Mounted under `/v1/tournaments/{id}/squads/{sessionId}/no-shows/{registrationId}`, access `entries.override`.
 
-| Route           | Body                                             | Answer |
-| --------------- | ------------------------------------------------ | ------ |
-| `POST /preview` | `{ action: 'move' \| 'refund', targetSquadId?, keepAdvancing: [] }` | `200 { preview }`: warnings, changes, payout notes, `version` |
-| `POST /`        | The same, plus `version`                         | `200` when saved; `409 { errors }` when refused; `409 { preview }` when `version` is out of date |
+| Route           | Body                                                                | Answer                                                                                           |
+| --------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `POST /preview` | `{ action: 'move' \| 'refund', targetSquadId?, keepAdvancing: [] }` | `200 { preview }`: warnings, changes, payout notes, `version`                                    |
+| `POST /`        | The same, plus `version`                                            | `200` when saved; `409 { errors }` when refused; `409 { preview }` when `version` is out of date |
 
 `keepAdvancing` holds `{ squadId, registrationId }` pairs.
 

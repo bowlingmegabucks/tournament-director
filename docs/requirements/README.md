@@ -52,6 +52,7 @@ What the user sees and can do.
 | Edit registration (desk: squads, division, average, move, remove)       | [edit-registration.md](edit-registration.md)     |
 | Delete registration (desk: dialog, refund view, payment warning)        | [delete-registration.md](delete-registration.md) |
 | Average verification (Averages page, verify and adjust, marker)         | [averages.md](averages.md)                       |
+| No-shows after a squad is complete (move, refund, forced advancer)      | [no-shows.md](no-shows.md)                       |
 | Lane assignments (page, drag, portal)                                   | [lane-assignments.md](lane-assignments.md)       |
 | Recap sheets (preview, print, the cross, QR code)                       | [recap-sheets.md](recap-sheets.md)               |
 | Scores (view)                                                           | [scores.md](scores.md)                           |

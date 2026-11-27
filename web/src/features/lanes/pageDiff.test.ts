@@ -74,3 +74,32 @@ describe('describeChange (LAN-21)', () => {
     expect(describeChange(page, { pairs: [], unassigned: false })).toBeUndefined()
   })
 })
+
+describe('a pair going out of play or coming back (OOP-08)', () => {
+  it('counts as a change to that pair', () => {
+    const before = createLanePage()
+    const after = {
+      ...before,
+      pairs: before.pairs.map((pair) => ({ ...pair, outOfPlay: pair.firstLane === 3 })),
+    }
+
+    expect(diffPages(before, after).pairs).toEqual([3])
+    expect(diffPages(after, before).pairs).toEqual([3])
+  })
+})
+
+describe('a pair new to the page', () => {
+  it('is no change when it is empty and in play, and one when it is out', () => {
+    const before = createLanePage({ pairs: [createLanePair(1)] })
+
+    expect(
+      diffPages(before, { ...before, pairs: [createLanePair(1), createLanePair(3)] }).pairs,
+    ).toEqual([])
+    expect(
+      diffPages(before, {
+        ...before,
+        pairs: [createLanePair(1), { ...createLanePair(3), outOfPlay: true }],
+      }).pairs,
+    ).toEqual([3])
+  })
+})

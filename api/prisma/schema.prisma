@@ -133,6 +133,8 @@ model Registration {
   /// Drives handicap (SCR-07). NULL means no average.
   average      Int?                @map("Average")
   superSweeper Boolean             @map("SuperSweeper")
+  /// Winnings go to the bowler's SMART account (SMT-01).
+  smartScholarship Boolean         @default(false) @map("SmartScholarship")
   bowler       Bowler              @relation(fields: [bowlerId], references: [id])
   division     Division            @relation(fields: [divisionId], references: [id])
   squads       SquadRegistration[]
@@ -162,11 +164,23 @@ model SquadRegistration {
   registrationId String       @map("RegistrationId") @db.Char(36)
   squadId        String       @map("SquadId") @db.Char(36)
   laneAssignment String?      @map("LaneAssignment") @db.VarChar(3)
+  /// An admin ruled that this entry advances (NSH-20). Added by prisma/forced-advancer-column.sql.
+  forcedAdvancer Boolean      @default(false) @map("ForcedAdvancer")
   registration   Registration @relation(fields: [registrationId], references: [id])
   squad          Squad        @relation(fields: [squadId], references: [id])
 
   @@id([registrationId, squadId])
   @@map("SquadRegistration")
+}
+
+/// A lane pair taken out of play for one squad or sweeper, by its first lane (OOP-01). Created by
+/// prisma/lanes-out-of-play-table.sql. No relation: the delete routes remove the rows.
+model LaneOutOfPlay {
+  squadId String @map("SquadId") @db.Char(36)
+  lane    Int    @map("Lane") @db.SmallInt
+
+  @@id([squadId, lane])
+  @@map("LanesOutOfPlay")
 }
 
 /// One game score for one bowler in one squad or sweeper, in scratch pins (storage section of

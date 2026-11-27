@@ -168,11 +168,17 @@ export async function loadSheet(
     (record) => record.source === source && record.eventId === eventId,
   )
   const savedBy = new Map(saved.map((record) => [record.registrationId, record]))
+  const smart = await deps.payouts.smartRegistrationIds(tournamentId)
   const inferred = new Set(worked.payees.map((payee) => payee.registrationId))
 
   const payees: SheetPayee[] = worked.payees.map((payee) => {
     const record = savedBy.get(payee.registrationId)
-    return { ...payee, inferred: true, payout: record ? viewOf(record) : null }
+    return {
+      ...payee,
+      inferred: true,
+      smartScholarship: smart.has(payee.registrationId),
+      payout: record ? viewOf(record) : null,
+    }
   })
   // A bowler a director added by hand stays on the sheet (D-269).
   for (const record of saved) {
@@ -186,6 +192,7 @@ export async function loadSheet(
       seed: null,
       previousCasher: false,
       inferred: false,
+      smartScholarship: smart.has(record.registrationId),
       payout: viewOf(record),
     })
   }
@@ -196,6 +203,7 @@ export async function loadSheet(
       registrationId,
       name: bowler.name,
       divisionName: bowler.divisionName,
+      smartScholarship: smart.has(registrationId),
     }))
     .toSorted((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }))
 

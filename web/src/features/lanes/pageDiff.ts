@@ -28,12 +28,20 @@ function sameBowlers(a: readonly Seated[], b: readonly Seated[]): boolean {
 
 /**
  * Which pairs and whether the unassigned list changed between two pages (LAN-21, D-218). Works on
- * who sits where, not on object identity. A pair counts when it gained, lost, or reseated a bowler.
+ * who sits where, not on object identity. A pair counts when it gained, lost, or reseated a bowler, or
+ * went out of play or came back.
  */
 export function diffPages(before: LanePage, after: LanePage): PageChange {
   const old = new Map(before.pairs.map((pair) => [pair.firstLane, pair]))
   const pairs = after.pairs
-    .filter((pair) => !sameBowlers(old.get(pair.firstLane)?.bowlers ?? [], pair.bowlers))
+    .filter((pair) => {
+      const was = old.get(pair.firstLane)
+      // A pair new to the page counts only when it brings bowlers or is out of play.
+      return (
+        (was?.outOfPlay ?? false) !== pair.outOfPlay ||
+        !sameBowlers(was?.bowlers ?? [], pair.bowlers)
+      )
+    })
     .map((pair) => pair.firstLane)
   return { pairs, unassigned: !sameBowlers(before.unassigned, after.unassigned) }
 }

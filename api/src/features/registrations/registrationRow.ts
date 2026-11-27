@@ -13,6 +13,7 @@ const sweeperType = 1
 export interface RegistrationRow {
   id: string
   superSweeper: boolean
+  smartScholarship?: boolean
   /** `Registrations.Average`: what the bowler gave. */
   average: number | null
   /** NULL when the row points at no bowler (no foreign key in MyISAM). The mapper rejects it. */
@@ -71,6 +72,7 @@ export function toRegistration(
     divisionId: row.divisionId,
     divisionName: row.division.name,
     superSweeper: row.superSweeper,
+    smartScholarship: row.smartScholarship ?? false,
     average: averageInUse(row.average, check),
     // A division with no handicap has nothing to check (D-293).
     averageStatus: row.division.handicapPercentage === null ? 'none' : averageStatus(check),

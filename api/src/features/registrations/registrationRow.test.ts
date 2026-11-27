@@ -74,6 +74,7 @@ describe('toRegistration', () => {
       divisionId: '77777777-7777-4777-8777-777777777777',
       divisionName: 'Open',
       superSweeper: true,
+      smartScholarship: false,
       average: 200,
       averageStatus: 'none',
       squadIds: [squadId],

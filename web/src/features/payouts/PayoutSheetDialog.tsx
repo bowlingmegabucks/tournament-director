@@ -13,6 +13,7 @@ import { PayoutDisclaimer } from './PayoutDisclaimer'
 import styles from './PayoutSheet.module.css'
 import shared from './Payouts.module.css'
 import { SameAmountDialog } from './SameAmountDialog'
+import { smartNotice } from './smartTotals'
 import {
   addedRow,
   fillAmount,
@@ -81,6 +82,7 @@ function RowEditor({ row, finals, errors, onChange }: Readonly<RowEditorProps>) 
         <strong>
           {row.name}
           {!row.inferred && <span className={shared.tag}>added by hand</span>}
+          {row.smartScholarship && <span className={shared.tag}>{smartNotice}</span>}
         </strong>
         <span className={shared.muted}>
           {row.divisionName} · {row.detail}

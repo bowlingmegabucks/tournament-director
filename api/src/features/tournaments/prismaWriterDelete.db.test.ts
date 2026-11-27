@@ -97,6 +97,23 @@ describe('Prisma tournament writer: delete (TRN-32 to TRN-35, D-132 to D-135)', 
     expect(await count('Tournaments')).toBe(1)
   })
 
+  it("removes the tournament's pairs out of play and no one else's (OOP-07)", async () => {
+    const id = await rows.tournament()
+    const other = await rows.tournament()
+    const mine = await rows.session(id, 'squad', '2026-10-24 09:00:00')
+    const theirs = await rows.session(other, 'squad', '2026-10-24 09:00:00')
+    await client.laneOutOfPlay.createMany({
+      data: [
+        { squadId: mine, lane: 1 },
+        { squadId: theirs, lane: 3 },
+      ],
+    })
+
+    expect(await remove(id, true)).toMatchObject({ deleted: expect.any(Object) })
+
+    expect(await client.laneOutOfPlay.findMany()).toEqual([{ squadId: theirs, lane: 3 }])
+  })
+
   it('refuses a complete tournament and deletes nothing (TRN-33, D-130)', async () => {
     const id = await rows.tournament({ completed: true })
 

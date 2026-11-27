@@ -19,6 +19,7 @@ const row = (overrides: Partial<RowState> = {}): RowState => ({
   divisionName: 'Open',
   detail: 'cashed, place 9',
   inferred: true,
+  smartScholarship: false,
   amount: '',
   note: '',
   paid: false,
@@ -65,9 +66,15 @@ describe('rowsOf (PAY-02, PAY-06)', () => {
 describe('addedRow (PAY-06, D-269)', () => {
   it('starts blank, not inferred, with the note open', () => {
     expect(
-      addedRow({ registrationId: 'x', name: 'Tom Becker', divisionName: 'Open' }),
+      addedRow({
+        registrationId: 'x',
+        name: 'Tom Becker',
+        divisionName: 'Open',
+        smartScholarship: true,
+      }),
     ).toMatchObject({
       inferred: false,
+      smartScholarship: true,
       amount: '',
       noteOpen: true,
       detail: 'added by hand',

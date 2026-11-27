@@ -35,13 +35,27 @@ describe('startPrint (D-62, D-78)', () => {
     expect(print).toHaveBeenCalledTimes(1)
   })
 
+  it('returns nothing to hold when printing ends before the dialog call returns', () => {
+    const done = vi.fn()
+    print.mockImplementationOnce(() => {
+      window.dispatchEvent(new Event('afterprint'))
+    })
+
+    const end = startPrint('recap', done)
+
+    // A caller keeps what comes back as "a print is running": it must not, or it never prints again.
+    expect(end).toBeUndefined()
+    expect(done).toHaveBeenCalledTimes(1)
+    expect(document.body).not.toHaveAttribute('data-recap-printing')
+  })
+
   it('marks the page with the name it is given, so two features do not clash (D-78)', () => {
     const end = startPrint('results', vi.fn())
 
     expect(document.body).toHaveAttribute('data-results-printing', '')
     expect(document.body).not.toHaveAttribute('data-recap-printing')
 
-    end()
+    end?.()
     expect(document.body).not.toHaveAttribute('data-results-printing')
   })
 
@@ -85,8 +99,8 @@ describe('startPrint (D-62, D-78)', () => {
     const done = vi.fn()
     const end = startPrint('recap', done)
 
-    end()
-    end()
+    end?.()
+    end?.()
     window.dispatchEvent(new Event('afterprint'))
 
     expect(done).toHaveBeenCalledTimes(1)

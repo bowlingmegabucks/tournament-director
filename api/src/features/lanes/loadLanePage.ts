@@ -54,9 +54,10 @@ export async function loadLanePage(
     )
   }
 
-  const [entries, tournamentDivisions] = await Promise.all([
+  const [entries, tournamentDivisions, outOfPlay] = await Promise.all([
     lanes.listEntries(sessionId),
     divisions.listByTournament(tournamentId),
+    lanes.listOutOfPlay(sessionId),
   ])
-  return { session, entries, ...buildLanePage(session, entries, tournamentDivisions) }
+  return { session, entries, ...buildLanePage(session, entries, tournamentDivisions, outOfPlay) }
 }

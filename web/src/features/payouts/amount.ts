@@ -32,6 +32,15 @@ export function parseAmount(input: string): ParsedAmount {
   return { kind: 'amount', cents }
 }
 
+/**
+ * Money text from the API as whole cents; 0 for text that is not an amount. No upper limit: a
+ * tournament total passes the most one payout may be, which `parseAmount` refuses.
+ */
+export function centsOf(amount: string): number {
+  const cents = Math.round(Number(amount) * 100)
+  return Number.isFinite(cents) ? cents : 0
+}
+
 /** `12345` as `"123.45"`. */
 export function formatCents(cents: number): string {
   return `${Math.trunc(cents / 100)}.${String(cents % 100).padStart(2, '0')}`

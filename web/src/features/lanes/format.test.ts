@@ -120,6 +120,24 @@ describe('formatSpots (D-58)', () => {
     expect(formatSpots(page)).toBe('3 of 10 spots open')
   })
 
+  it('leaves out the seats of a pair out of play (OOP-09)', () => {
+    const page = createLanePage({
+      pairs: [createLanePair(1, [], 5), { ...createLanePair(3, [], 5), outOfPlay: true }],
+      unassigned: some(2),
+    })
+
+    expect(formatSpots(page)).toBe('3 of 5 spots open')
+  })
+
+  it('says by how many when every pair is out (OOP-09)', () => {
+    const page = createLanePage({
+      pairs: [{ ...createLanePair(1, [], 5), outOfPlay: true }],
+      unassigned: some(2),
+    })
+
+    expect(formatSpots(page)).toBe('2 over the 0 spots')
+  })
+
   it('counts a bowler without a lane against the spots', () => {
     const page = createLanePage({
       pairs: [createLanePair(1, [], 4)],

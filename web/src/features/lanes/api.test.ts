@@ -3,7 +3,7 @@ import { http, HttpResponse, type JsonBodyType } from 'msw'
 import { server } from '../../mocks/server'
 import { createLaneBowler, createLanePage, createLanePair } from '../../mocks/data'
 import { LaneSetupError, SessionNotFoundError } from '../../shared/session'
-import { fetchLanes, LaneMoveError, moveBowler } from './api'
+import { fetchLanes, LaneMoveError, moveBowler, setPairInPlay } from './api'
 
 const squadPath = '/v1/tournaments/:id/squads/:sessionId/lanes'
 const sweeperPath = '/v1/tournaments/:id/sweepers/:sessionId/lanes'
@@ -21,6 +21,12 @@ const page = createLanePage({
 })
 
 describe('fetchLanes', () => {
+  it('rejects a pair that does not say whether it is in play', async () => {
+    respondWith({ ...page, pairs: [{ firstLane: 1, lanes: [1, 2], capacity: 5, bowlers: [] }] })
+
+    await expect(fetchLanes('squad', 't1', 's1')).rejects.toThrow('unexpected response')
+  })
+
   it('reads the lane page of a squad (LAN-10)', async () => {
     respondWith(page)
 
@@ -344,5 +350,54 @@ describe('moveBowler (LAN-20, D-216)', () => {
     await expect(moveBowler('squad', 't1', 's1', 'r1', 1)).rejects.toThrow(
       'Failed to save the move (response is not JSON)',
     )
+  })
+})
+
+describe('setPairInPlay', () => {
+  const path = '/v1/tournaments/:id/squads/:sessionId/lanes/pairs/:lane'
+  const answer = (status: number, body: JsonBodyType) => {
+    server.use(http.put(path, () => HttpResponse.json(body, { status })))
+  }
+  const send = (seen?: string[]) => setPairInPlay('squad', 't1', 's1', 3, false, seen)
+
+  it.each([
+    [undefined, { inPlay: false }],
+    [['r1'], { inPlay: false, confirmWarnings: true, seen: ['r1'] }],
+  ])('sends who was agreed to only once asked: %j (OOP-04)', async (seen, body) => {
+    let sent: unknown
+    let lane: unknown
+    server.use(
+      http.put(path, async ({ request, params }) => {
+        sent = await request.json()
+        lane = params['lane']
+        return HttpResponse.json({ inPlay: false, unassigned: 0 })
+      }),
+    )
+
+    await expect(send(seen)).resolves.toBe('saved')
+    expect(sent).toEqual(body)
+    expect(lane).toBe('3')
+  })
+
+  it('answers confirm for a 409 with warnings (OOP-04)', async () => {
+    answer(409, { message: 'x', warnings: [{ field: 'inPlay', message: 'x' }] })
+
+    await expect(send()).resolves.toBe('confirm')
+  })
+
+  it.each([
+    [409, { message: 'This squad is complete. Lanes cannot change.' }, /squad is complete/],
+    [500, {}, /Could not save the lanes. Try again./],
+    [403, {}, /not allowed to change lanes/],
+  ])('throws a message to show for a %s', async (status, body, message) => {
+    answer(status, body)
+
+    await expect(send()).rejects.toThrow(message)
+  })
+
+  it('says to check the connection when no answer comes', async () => {
+    server.use(http.put(path, () => HttpResponse.error()))
+
+    await expect(send()).rejects.toThrow('Check your connection')
   })
 })

@@ -221,7 +221,10 @@ describe('GET /v1/tournaments/:id/squads/:sessionId/lanes', () => {
     const app = createSignedInTestApp({
       tournaments: createInMemoryTournamentRepository([tournament]),
       squads: createInMemorySquadRepository([{ tournamentId: tournament.id, squad }]),
-      lanes: { listEntries: () => Promise.reject(new HttpError(503, 'Database unavailable')) },
+      lanes: {
+        listEntries: () => Promise.reject(new HttpError(503, 'Database unavailable')),
+        listOutOfPlay: () => Promise.resolve([]),
+      },
     })
 
     const response = await request(app).get(

@@ -18,6 +18,9 @@ import type { RegistrationWriter } from './writer.ts'
  * Every write that touches a session also calls `entriesChanged` with the tournament, so the TV
  * page's projected at-large spots follow (RES-61).
  *
+ * A save that switches a registration between cash and SMART scholarship (SMT-06) also sends
+ * `payouts` to its sessions and calls `scholarshipChanged`, so results and the TV relabel the money.
+ *
  * `inner` is spread, so it must be a plain object of functions, as both writers are.
  */
 export function createPublishingRegistrationWriter(
@@ -26,31 +29,39 @@ export function createPublishingRegistrationWriter(
   logger: Logger,
   averagesCleared: (tournamentId: string) => void = () => undefined,
   entriesChanged: (tournamentId: string) => void = () => undefined,
+  scholarshipChanged: (tournamentId: string) => void = () => undefined,
 ): RegistrationWriter {
   /** The tournament and the squads and sweepers the registration is in now; empty for an unknown or a new one. */
-  async function current(
-    registrationId: string,
-  ): Promise<{ tournamentId: string | undefined; sessionIds: string[] }> {
+  async function current(registrationId: string): Promise<{
+    tournamentId: string | undefined
+    sessionIds: string[]
+    smartScholarship?: boolean
+  }> {
     try {
       const detail = await inner.getDetail(registrationId)
-      return { tournamentId: detail?.tournamentId, sessionIds: detail?.sessionIds ?? [] }
+      return {
+        tournamentId: detail?.tournamentId,
+        sessionIds: detail?.sessionIds ?? [],
+        smartScholarship: detail?.smartScholarship ?? false,
+      }
     } catch (err) {
       logger.warn({ err, registrationId }, 'Could not read the sessions before a write')
       return { tournamentId: undefined, sessionIds: [] }
     }
   }
 
-  function tell(sessionIds: Iterable<string>, kind: 'entries' | 'averages' = 'entries'): void {
+  const failureOf = {
+    entries: 'Could not publish an entry change',
+    averages: 'Could not publish an average change',
+    payouts: 'Could not publish a payout change',
+  }
+
+  function tell(sessionIds: Iterable<string>, kind: keyof typeof failureOf = 'entries'): void {
     for (const sessionId of new Set(sessionIds)) {
       try {
         events.publish(sessionId, kind)
       } catch (err) {
-        logger.warn(
-          { err, sessionId },
-          kind === 'entries'
-            ? 'Could not publish an entry change'
-            : 'Could not publish an average change',
-        )
+        logger.warn({ err, sessionId }, failureOf[kind])
       }
     }
   }
@@ -71,6 +82,15 @@ export function createPublishingRegistrationWriter(
       averagesCleared(tournamentId)
     } catch (err) {
       logger.warn({ err, tournamentId }, 'Could not publish an average change')
+    }
+  }
+
+  function tellScholarship(tournamentId: string, sessionIds: Iterable<string>): void {
+    tell(sessionIds, 'payouts')
+    try {
+      scholarshipChanged(tournamentId)
+    } catch (err) {
+      logger.warn({ err, tournamentId }, failureOf.payouts)
     }
   }
 
@@ -97,6 +117,14 @@ export function createPublishingRegistrationWriter(
         command.registration.keepAverageCheckAs !== undefined
       ) {
         tellAverages(before.tournamentId, touched)
+      }
+      const next = command.registration.smartScholarship
+      if (
+        before.tournamentId !== undefined &&
+        next !== undefined &&
+        next !== before.smartScholarship
+      ) {
+        tellScholarship(before.tournamentId, touched)
       }
     },
 

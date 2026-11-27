@@ -250,6 +250,7 @@ describe.each(['at-large', 'seeding', 'super-sweeper'])(
         ]),
         lanes: {
           listEntries: () => Promise.reject(new HttpError(503, 'Database unavailable')),
+          listOutOfPlay: () => Promise.resolve([]),
         },
       })
 

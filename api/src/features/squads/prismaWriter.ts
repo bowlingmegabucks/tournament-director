@@ -3,6 +3,7 @@ import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { createSessionCompleter, type ReadCompleted } from '../../shared/sessionCompleteStore.ts'
 import { createSessionDeleter } from '../../shared/sessionDeleteStore.ts'
+import { dropStrandedPairs } from '../../shared/strandedPairs.ts'
 import { withRetry } from '../../shared/serializableRetry.ts'
 import { toSessionEditInfo, type SessionNotFound } from '../../shared/sessionEdit.ts'
 import { loadSessionEditFacts } from '../../shared/sessionFacts.ts'
@@ -176,6 +177,12 @@ export function createPrismaSquadWriter(client: PrismaClient, logger: Logger): S
           confirmWarnings,
           async (saved) => {
             await tx.squad.update({ where: { id: squadId }, data: columnsFor(saved) })
+            await dropStrandedPairs(
+              tx,
+              squadId,
+              saved.startingLane ?? stored.startingLane,
+              saved.numberOfLanes ?? stored.numberOfLanes,
+            )
           },
         )
       },

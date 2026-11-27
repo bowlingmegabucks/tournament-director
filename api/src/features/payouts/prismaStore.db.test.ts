@@ -273,9 +273,39 @@ describe('Prisma payout store', () => {
     expect(await store().setPaid(w.tournamentId, good.id, true, 'u')).toEqual({ notFound: true })
   })
 
+  it('flags the amounts of a SMART registration of this tournament only (SMT-03)', async () => {
+    const w = await world()
+    await complete('Squads', w.squadId)
+    await store().save(
+      w.input({
+        rows: [
+          { registrationId: w.first.registrationId, amount: '100' },
+          { registrationId: w.second.registrationId, amount: '25', note: 'Lane breakdown' },
+        ],
+      }),
+    )
+    await client.registration.update({
+      where: { id: w.first.registrationId },
+      data: { smartScholarship: true },
+    })
+
+    expect([...(await store().smartRegistrationIds(w.tournamentId))]).toEqual([
+      w.first.registrationId,
+    ])
+    expect([...(await store().smartRegistrationIds(crypto.randomUUID()))]).toEqual([])
+    const amounts = await store().listAmounts(w.tournamentId)
+    expect(amounts.find((row) => row.registrationId === w.first.registrationId)).toMatchObject({
+      smartScholarship: true,
+    })
+    expect(
+      amounts.find((row) => row.registrationId === w.second.registrationId),
+    ).not.toHaveProperty('smartScholarship')
+  })
+
   it('gives no amounts, and says so in the log, when the table cannot be read (PAY-20)', async () => {
     const captured = createCapturedLogger()
     const broken = {
+      registration: { findMany: () => Promise.resolve([]) },
       payout: { findMany: () => Promise.reject(new Error('Table Payouts does not exist')) },
     } as unknown as PrismaClient
 

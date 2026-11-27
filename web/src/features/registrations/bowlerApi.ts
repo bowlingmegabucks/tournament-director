@@ -64,6 +64,7 @@ function isRegistration(value: unknown): boolean {
     ['id', 'divisionId', 'divisionName'].every((key) => isText(field(value, key))) &&
     (average === null || typeof average === 'number') &&
     typeof field(value, 'superSweeper') === 'boolean' &&
+    typeof field(value, 'smartScholarship') === 'boolean' &&
     typeof field(value, 'hasScores') === 'boolean' &&
     isTextList(field(value, 'squadIds')) &&
     isTextList(field(value, 'sweeperIds'))

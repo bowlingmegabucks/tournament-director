@@ -135,6 +135,7 @@ describe('Prisma registration repository', () => {
         divisionId,
         divisionName: 'Women / Senior',
         superSweeper: true,
+        smartScholarship: false,
         average: 190,
         averageStatus: 'none',
         squadIds: [squadId],

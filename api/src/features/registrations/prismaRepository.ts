@@ -31,6 +31,7 @@ export function createPrismaRegistrationRepository(
           select: {
             id: true,
             superSweeper: true,
+            smartScholarship: true,
             average: true,
             divisionId: true,
             division: { select: { name: true, handicapPercentage: true } },

@@ -12,6 +12,7 @@ import { formatCents, parseAmount } from './amount'
 import { PayoutDisclaimer } from './PayoutDisclaimer'
 import { PrintPayoutsButton } from './PayoutPrint'
 import { PayoutSheetDialog } from './PayoutSheetDialog'
+import { smartCents, smartNotice, splitMoney, totalFigures } from './smartTotals'
 import styles from './Payouts.module.css'
 import type { PayoutSheet, PayoutSource } from './types'
 import { titleOf } from './eventTitle'
@@ -54,7 +55,14 @@ function figuresOf(sheet: PayoutSheet) {
       unpaidCount += 1
     }
   }
-  return { saved, total, unpaid, unpaidCount }
+  const lines = saved.map(({ payee, payout }) => ({
+    amount: payout.amount,
+    smartScholarship: payee.smartScholarship,
+    paid: payout.paid,
+  }))
+  const smart = smartCents(lines)
+  const unpaidSmart = smartCents(lines.filter((line) => !line.paid))
+  return { saved, total, unpaid, unpaidCount, smart, unpaidSmart }
 }
 
 /**
@@ -85,15 +93,15 @@ export function EventPayouts({ source, tournamentId, eventId }: Readonly<EventPa
     )
   }
 
-  const { saved: payouts, total, unpaid, unpaidCount } = figuresOf(data)
+  const { saved: payouts, total, unpaid, unpaidCount, smart, unpaidSmart } = figuresOf(data)
   const emptyMessage =
     data.status === 'notReady' ? null : (
       <p>{`No payouts are recorded for ${eventNoun(data.event.label)}.`}</p>
     )
   // What both printed sheets share. Each sheet picks its own figures from the named parts below.
   const countFigure = `${payouts.length} ${payouts.length === 1 ? 'payout' : 'payouts'}`
-  const totalFigure = `Total ${formatMoney(formatCents(total))}`
-  const unpaidFigure = `Not paid ${formatMoney(formatCents(unpaid))}`
+  const totals = totalFigures(total, smart)
+  const unpaidFigure = `Not paid ${splitMoney(unpaid, unpaidSmart)}`
   const printBase = {
     tournamentName: tournament.name,
     subtitle: data.event.date ? formatSessionDate(data.event.date) : undefined,
@@ -119,10 +127,22 @@ export function EventPayouts({ source, tournamentId, eventId }: Readonly<EventPa
           <dt>Total</dt>
           <dd>{formatMoney(formatCents(total))}</dd>
         </div>
+        {smart > 0 && (
+          <>
+            <div>
+              <dt>Cash</dt>
+              <dd>{formatMoney(formatCents(total - smart))}</dd>
+            </div>
+            <div>
+              <dt>SMART scholarship</dt>
+              <dd>{formatMoney(formatCents(smart))}</dd>
+            </div>
+          </>
+        )}
         <div>
           <dt>Not paid</dt>
           <dd>
-            {unpaidCount} ({formatMoney(formatCents(unpaid))})
+            {unpaidCount} ({splitMoney(unpaid, unpaidSmart)})
           </dd>
         </div>
       </dl>
@@ -153,8 +173,9 @@ export function EventPayouts({ source, tournamentId, eventId }: Readonly<EventPa
             rows={payouts.map(({ payee, payout }) => ({
               key: payee.registrationId,
               cells: [payee.name, payee.divisionName, payee.detail, formatMoney(payout.amount)],
+              signatureText: payee.smartScholarship ? smartNotice : undefined,
             }))}
-            figures={[countFigure, totalFigure]}
+            figures={[countFigure, ...totals]}
             tall
           />
         )}
@@ -163,7 +184,7 @@ export function EventPayouts({ source, tournamentId, eventId }: Readonly<EventPa
             {...printBase}
             label="Print payouts"
             title={printTitleOf(data)}
-            figures={[countFigure, totalFigure, unpaidFigure]}
+            figures={[countFigure, ...totals, unpaidFigure]}
             columns={[
               { id: 'bowler', label: 'Bowler' },
               { id: 'division', label: 'Division' },
@@ -180,6 +201,7 @@ export function EventPayouts({ source, tournamentId, eventId }: Readonly<EventPa
                 payout.note ?? '',
                 payout.paid ? 'Paid' : 'Not paid',
               ],
+              signatureText: payee.smartScholarship ? smartNotice : undefined,
             }))}
           />
         )}
@@ -206,6 +228,7 @@ export function EventPayouts({ source, tournamentId, eventId }: Readonly<EventPa
                 <th scope="row">
                   {payee.name}
                   {!payee.inferred && <span className={styles.tag}>added by hand</span>}
+                  {payee.smartScholarship && <span className={styles.tag}>{smartNotice}</span>}
                 </th>
                 <td>{payee.divisionName}</td>
                 <td className={styles.num}>{formatMoney(payout.amount)}</td>

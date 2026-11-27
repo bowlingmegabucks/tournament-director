@@ -492,3 +492,65 @@ describe('the registration site (D-09, D-219)', () => {
     expect(seen).toEqual([squad.id])
   })
 })
+
+describe('a switch between cash and SMART scholarship (SMT-06)', () => {
+  const relabel = (smartScholarship?: boolean) =>
+    edit({
+      registration: {
+        id: registrationId,
+        isNew: false,
+        divisionId,
+        average: 180,
+        superSweeper: false,
+        smartScholarship,
+      },
+    })
+
+  async function run(smartScholarship?: boolean) {
+    const { hub, published } = recordingHub()
+    const changed = vi.fn()
+    const writer = createPublishingRegistrationWriter(
+      storage().writer,
+      hub,
+      createCapturedLogger().logger,
+      undefined,
+      undefined,
+      changed,
+    )
+    await writer.save(relabel(smartScholarship))
+    return { published, changed }
+  }
+
+  it('tells the sessions and the tournament', async () => {
+    const { published, changed } = await run(true)
+
+    expect(published).toContainEqual({ sessionId: a, kind: 'payouts' })
+    expect(changed).toHaveBeenCalledExactlyOnceWith(tournamentId)
+  })
+
+  it.each([false, undefined])('says nothing when the setting does not move (%s)', async (value) => {
+    const { published, changed } = await run(value)
+
+    expect(published.map((message) => message.kind)).not.toContain('payouts')
+    expect(changed).not.toHaveBeenCalled()
+  })
+
+  it('logs a failure to tell and still saves', async () => {
+    const captured = createCapturedLogger()
+    const writer = createPublishingRegistrationWriter(
+      storage().writer,
+      recordingHub().hub,
+      captured.logger,
+      undefined,
+      undefined,
+      () => {
+        throw new Error('hub down')
+      },
+    )
+
+    await expect(writer.save(relabel(true))).resolves.toBeUndefined()
+    expect(captured.records().map((line) => line.msg)).toContain(
+      'Could not publish a payout change',
+    )
+  })
+})

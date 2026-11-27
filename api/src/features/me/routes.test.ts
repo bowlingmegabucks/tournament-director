@@ -87,7 +87,11 @@ describe('GET /v1/me when someone is signed in', () => {
         name: 'Dee Director',
         roles: ['director'],
         permissions: permissions.filter(
-          (p) => p !== 'users.manage' && p !== 'bowlers.ssn' && p !== 'tournaments.delete',
+          (p) =>
+            p !== 'users.manage' &&
+            p !== 'bowlers.ssn' &&
+            p !== 'tournaments.delete' &&
+            p !== 'entries.override',
         ),
       },
     })

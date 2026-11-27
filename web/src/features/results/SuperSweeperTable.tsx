@@ -97,7 +97,7 @@ export function SuperSweeperTable({ results }: Readonly<{ results: SuperSweeperR
                             {formatTie(tie)}
                           </span>
                         ))}
-                        <PayoutTag amount={row.payout} />
+                        <PayoutTag amount={row.payout} smartScholarship={row.smartScholarship} />
                       </th>
                       <td className={`${styles.plusMinus} ${styles.middle}`} rowSpan={lines}>
                         {formatPlusMinus(row.total, row.games)}

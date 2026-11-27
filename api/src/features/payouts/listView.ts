@@ -6,7 +6,13 @@ export interface ListContext {
   squads: readonly { id: string; date: string }[]
   sweepers: readonly { id: string; date: string }[]
   divisions: readonly { id: string; number: number; name: string }[]
-  registrations: readonly { id: string; bowler: { name: string }; divisionName: string }[]
+  registrations: readonly {
+    id: string
+    bowler: { name: string }
+    divisionName: string
+  }[]
+  /** From the payout store, not the registrations: those skip a row that breaks the read shape. */
+  smartIds: ReadonlySet<string>
 }
 
 /**
@@ -58,6 +64,7 @@ export function buildRows(records: readonly PayoutRecord[], context: ListContext
         amount: formatCents(record.amountCents),
         note: record.note,
         paid: record.paid,
+        smartScholarship: context.smartIds.has(record.registrationId),
       }
       return { row, event }
     })

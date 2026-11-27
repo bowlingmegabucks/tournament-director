@@ -173,3 +173,47 @@ describe('useMoveBowler (LAN-16, LAN-20, D-220)', () => {
     expect(cached()).toBeUndefined()
   })
 })
+
+describe('useMoveBowler with another change still saving', () => {
+  it('does not put an old page back, or refetch, until the last one answers', async () => {
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    server.use(
+      http.put(putPath, async ({ params }) => {
+        if (params['registrationId'] !== pat.registrationId) {
+          return HttpResponse.json({ message: 'No.' }, { status: 409 })
+        }
+        await gate
+        return HttpResponse.json({ position: '5A' })
+      }),
+    )
+    const { result, client, seatOf } = setup()
+    const invalidate = vi.spyOn(client, 'invalidateQueries')
+    const refused = vi.fn()
+
+    act(() => {
+      result.current.move(request)
+    })
+    await waitFor(() => {
+      expect(seatOf('Pat Nguyen')).toBe('5A')
+    })
+    act(() => {
+      result.current.move(
+        { registrationId: 'someone-else', lane: 7, guess: { firstLane: 7, position: '7A' } },
+        { onError: refused },
+      )
+    })
+    await waitFor(() => {
+      expect(refused).toHaveBeenCalled()
+    })
+
+    expect(seatOf('Pat Nguyen')).toBe('5A')
+    expect(invalidate).not.toHaveBeenCalled()
+    release()
+    await waitFor(() => {
+      expect(invalidate).toHaveBeenCalledExactlyOnceWith({ queryKey: key })
+    })
+  })
+})

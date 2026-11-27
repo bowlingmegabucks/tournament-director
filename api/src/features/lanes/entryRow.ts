@@ -13,6 +13,8 @@ export interface LaneEntryRow {
   registrationId: string
   /** NOT NULL in the legacy table, but NULL reads the same as `''` (D-58). */
   laneAssignment: string | null
+  /** NSH-20. Left out by a caller that does not read it. */
+  forcedAdvancer?: boolean
   /** NULL when the legacy row points at no registration or bowler (no foreign key in MyISAM). */
   registration: {
     id: string
@@ -69,6 +71,7 @@ export function toLaneEntry(row: LaneEntryRow, storedCheck?: AverageCheck) {
     name: displayName({ firstName: fields.firstName, lastName: fields.lastName, suffix }),
     superSweeper,
     position: row.laneAssignment ?? '',
+    ...(row.forcedAdvancer ? { forcedAdvancer: true } : {}),
   }
   return { success: true as const, data: entry }
 }

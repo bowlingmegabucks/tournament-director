@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, type Ref } from 'react'
 import {
   formatGamesOf,
   formatSummary,
@@ -61,11 +61,14 @@ export function DivisionBody({
   division,
   games,
   summary = true,
+  onNoShow,
 }: Readonly<{
   division: DivisionResult
   games: number
   /** Draw the summary lines (the default). The TV page draws them in its pinned heading instead. */
   summary?: boolean
+  /** An admin on a completed squad: each no-show gets a "Move or refund" button (NSH-01). */
+  onNoShow?: (row: DivisionResult['noShows'][number]) => void
 }>) {
   const items = squadItems(division.rows)
   const count = gameColumnCount(games, [
@@ -115,11 +118,15 @@ export function DivisionBody({
                     {item.row.name}
                     <UnverifiedChip show={item.row.unverified} />
                     {item.row.dnf && <span className={styles.tag}>DNF</span>}
+                    {item.row.byRuling && <span className={styles.tag}>Advanced by ruling</span>}
                     {item.row.advancedEarlier && (
                       <span className={styles.tag}>Advanced earlier</span>
                     )}
                     <TieMarks row={item.row} />
-                    <PayoutTag amount={item.row.payout} />
+                    <PayoutTag
+                      amount={item.row.payout}
+                      smartScholarship={item.row.smartScholarship}
+                    />
                   </th>
                   <PlusMinusCell total={item.row.total} games={item.row.games} />
                   <GameCells
@@ -201,7 +208,24 @@ export function DivisionBody({
           <p className={styles.sub}>Paid an entry and did not bowl. Not placed. Still one entry.</p>
           <ul>
             {division.noShows.map((row) => (
-              <li key={row.registrationId}>{row.name}</li>
+              <li key={row.registrationId}>
+                {row.name}
+                {onNoShow && (
+                  <>
+                    {' '}
+                    <button
+                      type="button"
+                      className={styles.action}
+                      aria-label={`Move or refund ${row.name}`}
+                      onClick={() => {
+                        onNoShow(row)
+                      }}
+                    >
+                      Move or refund
+                    </button>
+                  </>
+                )}
+              </li>
             ))}
           </ul>
         </>
@@ -214,12 +238,22 @@ export function DivisionBody({
 export function DivisionResults({
   division,
   games,
-}: Readonly<{ division: DivisionResult; games: number }>) {
+  onNoShow,
+  headingRef,
+}: Readonly<{
+  division: DivisionResult
+  games: number
+  onNoShow?: (row: DivisionResult['noShows'][number]) => void
+  /** Lets the page move focus to this division's heading. */
+  headingRef?: Ref<HTMLHeadingElement>
+}>) {
   const headingId = useId()
   return (
     <section aria-labelledby={headingId}>
-      <h2 id={headingId}>{division.name}</h2>
-      <DivisionBody division={division} games={games} />
+      <h2 id={headingId} ref={headingRef} tabIndex={-1}>
+        {division.name}
+      </h2>
+      <DivisionBody division={division} games={games} onNoShow={onNoShow} />
     </section>
   )
 }

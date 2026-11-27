@@ -34,6 +34,8 @@ const others = [
   { registrationId: 'a0000000-0000-4000-8000-00000000000d', name: 'Ann Bell' },
 ]
 const everyone = [...inferred, ...others]
+/** Ann Bell is a youth: her winnings go to a SMART account (SMT-03). */
+const smartIds = new Set(['a0000000-0000-4000-8000-00000000000d'])
 const nameOf = (id: string) =>
   everyone.find((bowler) => bowler.registrationId === id)?.name ?? 'Unknown bowler'
 
@@ -72,6 +74,7 @@ export function createPayoutHandlers() {
         seed: source === 'finals' ? index + 1 : null,
         previousCasher: false,
         inferred: true,
+        smartScholarship: smartIds.has(bowler.registrationId),
         payout: row ? view(row) : null,
       }
     })
@@ -85,13 +88,18 @@ export function createPayoutHandlers() {
         seed: null,
         previousCasher: false,
         inferred: false,
+        smartScholarship: smartIds.has(row.registrationId),
         payout: view(row),
       })
     }
     const listed = new Set(payees.map((payee) => payee.registrationId))
     const rest: SheetOther[] = others
       .filter((bowler) => !listed.has(bowler.registrationId))
-      .map((bowler) => ({ ...bowler, divisionName: 'Open' }))
+      .map((bowler) => ({
+        ...bowler,
+        divisionName: 'Open',
+        smartScholarship: smartIds.has(bowler.registrationId),
+      }))
     return {
       event: {
         source,
@@ -118,6 +126,7 @@ export function createPayoutHandlers() {
       registrationId: row.registrationId,
       name: nameOf(row.registrationId),
       divisionName: 'Open',
+      smartScholarship: smartIds.has(row.registrationId),
       amount: formatCents(row.cents),
       note: row.note,
       paid: row.paid,
@@ -218,6 +227,7 @@ export function createPayoutHandlers() {
             count: bowler.count,
             total: formatCents(bowler.total),
             unpaidTotal: formatCents(bowler.unpaid),
+            smartScholarship: smartIds.has(registrationId),
           })),
       })
     }),

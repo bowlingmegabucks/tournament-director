@@ -1,4 +1,6 @@
 import type { Division } from '../divisions/types.ts'
+import { shownPayout } from '../payouts/amounts.ts'
+import type { PayoutAmountRow } from '../payouts/store.ts'
 import type { DivisionOutcome } from './squadResults.ts'
 import type { Tie } from './ties.ts'
 import type { DivisionResult, SquadRow } from './types.ts'
@@ -16,7 +18,7 @@ export function toDivisionResult(
   throughGame: number | null,
   flagged: ReadonlySet<string> = new Set(),
   /** The saved payouts of this squad by registration id (PAY-20, D-284). */
-  payouts: ReadonlyMap<string, string> = new Map(),
+  payouts: ReadonlyMap<string, PayoutAmountRow> = new Map(),
 ): DivisionResult {
   const { advancers, cashers, others, cutTotal } = outcome
 
@@ -40,8 +42,9 @@ export function toDivisionResult(
     ties: marks.get(entry.registrationId) ?? [],
     dnf: flagged.has(entry.registrationId),
     unverified: entry.unverified,
+    ...(group === 'advancer' && entry.forced ? { byRuling: true } : {}),
     // D-284: only an inferred payee, a casher, shows an amount.
-    payout: group === 'casher' ? (payouts.get(entry.registrationId) ?? null) : null,
+    ...shownPayout(group === 'casher' ? payouts.get(entry.registrationId) : undefined),
   }))
 
   const everyone = [

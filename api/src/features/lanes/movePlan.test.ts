@@ -11,6 +11,7 @@ function facts(overrides: Partial<MoveFacts> = {}): MoveFacts {
     startingLane: 1,
     numberOfLanes: 8,
     maxPerPair: 4,
+    outOfPlay: [],
     entries: [{ registrationId: mine, position: '' }],
     ...overrides,
   }
@@ -23,6 +24,23 @@ const others = (...positions: string[]) =>
   }))
 
 describe('planLaneMove', () => {
+  it.each([
+    [8, 3, 'Lanes 3-4 are out of play. Pick another pair.'],
+    [7, 7, 'Lane 7 is out of play. Pick another pair.'],
+  ])('refuses a pair out of play on %s lanes (OOP-02)', (numberOfLanes, lane, message) => {
+    expect(planLaneMove(facts({ numberOfLanes, outOfPlay: [lane] }), mine, lane)).toEqual({
+      type: 'outOfPlay',
+      message,
+    })
+  })
+
+  it('still takes a bowler off a pair that is out of play, and leaves one already there (OOP-02)', () => {
+    const there = facts({ outOfPlay: [1], entries: [{ registrationId: mine, position: '1A' }] })
+
+    expect(planLaneMove(there, mine, null)).toEqual({ type: 'move', position: '' })
+    expect(planLaneMove(there, mine, 1)).toEqual({ type: 'unchanged', position: '1A' })
+  })
+
   it('refuses a registration not on the session (LAN-05)', () => {
     expect(planLaneMove(facts(), 'c0000000-0000-4000-8000-000000000009', 1)).toEqual({
       type: 'notOnSession',

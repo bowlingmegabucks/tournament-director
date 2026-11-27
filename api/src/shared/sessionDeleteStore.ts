@@ -50,6 +50,8 @@ export function createSessionDeleter(
           { completed: tournament.completed, complete: row.complete, entryCount, scoreCount },
           kind,
           async () => {
+            // No foreign key, so the pairs out of play do not cascade (OOP-07).
+            await tx.laneOutOfPlay.deleteMany({ where: { squadId: sessionId } })
             await tx.squad.delete({ where: { id: sessionId } })
           },
         )

@@ -157,6 +157,28 @@
   box-shadow: inset 0 calc(var(--border-width) * -2) 0 var(--color-live);
 }
 
+/*
+ * The table sits inside gutters, so the column heads' band stops short of the bar. The first and
+ * last head fill the gutter beside them, and travel with it while pinned. --gutter is the table's
+ * side margin.
+ */
+.open .table table thead th:first-child::before,
+.open .table table thead th:last-child::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inline-size: var(--gutter);
+  background: var(--color-live-tint);
+}
+
+.open .table table thead th:first-child::before {
+  inset-inline-end: 100%;
+}
+
+.open .table table thead th:last-child::after {
+  inset-inline-start: 100%;
+}
+
 /* The badge follows the title in the page's order and is drawn before it. */
 .open .heading {
   display: flex;
@@ -180,7 +202,9 @@
 }
 
 .table {
-  margin-inline: var(--space-6);
+  --gutter: var(--space-6);
+
+  margin-inline: var(--gutter);
   font-size: var(--font-size-tv-body);
 }
 
@@ -212,7 +236,7 @@
 }
 
 /* The table that just changed (D-245). Outlined, not only colored: a second cue for the eye. */
-.updated .table {
+.justChanged .table {
   outline: 3px solid var(--color-accent);
   outline-offset: var(--space-1);
 }
@@ -331,7 +355,7 @@
   }
 
   .table {
-    margin-inline: var(--space-3);
+    --gutter: var(--space-3);
   }
 
   /* The card layout pads its own cells; the TV table padding above would win on specificity. */

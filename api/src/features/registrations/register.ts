@@ -188,6 +188,8 @@ export interface CompleteRegistrationInput {
   squadIds: string[]
   sweeperIds: string[]
   superSweeper: boolean
+  /** SMT-01, the desk only. Left out keeps what is stored. */
+  smartScholarship?: boolean
   /** `null` keeps the old average on an append (REG-12). */
   average: number | null
   payment: NewPayment | null
@@ -271,6 +273,7 @@ export async function completeRegistration(
       divisionId: input.divisionId,
       average,
       superSweeper: input.superSweeper,
+      smartScholarship: input.smartScholarship,
       // A new division or a desk change of the average is unverified again (AVG-08, D-290). The
       // registration site's new average keeps the check (D-299).
       ...averageCheckChange({

@@ -170,6 +170,14 @@ export function createPrismaTournamentWriter(
               where: { registrationId: { in: checked.map((item) => item.id) } },
             })
             await tx.registration.deleteMany({ where: registrations })
+            // Nor do the pairs out of play (OOP-07): go before their squads.
+            const sessions = await tx.squad.findMany({
+              where: { tournamentId: id },
+              select: { id: true },
+            })
+            await tx.laneOutOfPlay.deleteMany({
+              where: { squadId: { in: sessions.map((item) => item.id) } },
+            })
             // The payouts table has no foreign key, so nothing cascades (PAY-18, D-280).
             await tx.payout.deleteMany({ where: { tournamentId: id } })
             await tx.tournament.delete({ where: { id } })

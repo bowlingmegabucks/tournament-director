@@ -304,7 +304,7 @@ describe('every response is checked field by field', () => {
   const payee = createPayee({ payout: { id: 'p1', amount: '100.00', note: null, paid: false } })
   const sheet = createSheet({
     payees: [payee],
-    others: [{ registrationId: 'x', name: 'Tom', divisionName: 'Open' }],
+    others: [{ registrationId: 'x', name: 'Tom', divisionName: 'Open', smartScholarship: false }],
   })
   const sheetBody = { sheet }
 
@@ -334,6 +334,7 @@ describe('every response is checked field by field', () => {
     ['other.registrationId', ['sheet', 'others', 0, 'registrationId']],
     ['other.name', ['sheet', 'others', 0, 'name']],
     ['other.divisionName', ['sheet', 'others', 0, 'divisionName']],
+    ['other.smartScholarship', ['sheet', 'others', 0, 'smartScholarship']],
   ]
 
   it('accepts the sheet as it is', async () => {

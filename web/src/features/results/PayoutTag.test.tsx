@@ -15,3 +15,12 @@ describe('PayoutTag (PAY-20, D-284)', () => {
     expect(container).toBeEmptyDOMElement()
   })
 })
+
+describe('PayoutTag for SMART money (SMT-03)', () => {
+  it('names it a scholarship, not a payout', () => {
+    render(<PayoutTag amount="75" smartScholarship />)
+
+    expect(screen.getByText('SMART scholarship $75.00')).toBeInTheDocument()
+    expect(screen.queryByText(/Payout/)).toBeNull()
+  })
+})

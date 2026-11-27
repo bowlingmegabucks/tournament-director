@@ -31,6 +31,8 @@ import { createRegistrationRouter } from './features/registrations/routes.ts'
 import type { RegistrationRepository } from './features/registrations/repository.ts'
 import { createDeskRegistrationRouter } from './features/registrations/deskRoutes.ts'
 import { createDeskDeleteRouter } from './features/registrations/deskDeleteRoutes.ts'
+import { createNoShowRouter } from './features/noShows/routes.ts'
+import type { NoShowStore } from './features/noShows/store.ts'
 import { createEditRegistrationRouter } from './features/registrations/editRoutes.ts'
 import { createVendorRegistrationRouter } from './features/registrations/vendorRoutes.ts'
 import { createPublishingRegistrationWriter } from './features/registrations/publishingWriter.ts'
@@ -149,6 +151,8 @@ export interface AppDependencies {
   payoutStore: PayoutStore
   /** The average checks (AVG-01): the Averages page writes them, every handicap reads the one in use (AVG-09). */
   averageStore: AverageStore
+  /** Writes a no-show move or refund (NSH-04 to NSH-06). */
+  noShowStore: NoShowStore
   squads: SquadRepository
   /** Adds squads (SQD-01 to SQD-08, D-167). */
   squadWriter: SquadWriter
@@ -183,6 +187,7 @@ export function createApp({
   dnfStore,
   payoutStore,
   averageStore,
+  noShowStore,
   squads,
   squadWriter,
   sweepers,
@@ -213,6 +218,10 @@ export function createApp({
     logger,
     (tournamentId) => tellAveragesChanged(tournamentId),
     (tournamentId) => liveNotifier.entriesChanged(tournamentId),
+    (tournamentId) => {
+      dropFinalsPages(tournamentId)
+      liveNotifier.payoutsSaved(tournamentId)
+    },
   )
   // The tournament-wide half of an average change: the finals pages and the TV feed (AVG-19, D-298).
   // A function declaration, so the registration writer above can call it once the pages exist.
@@ -314,6 +323,30 @@ export function createApp({
       ])),
     )
 
+  const noShows = createNoShowRouter(
+    {
+      tournaments,
+      divisions,
+      squads,
+      sweepers,
+      lanes,
+      scores,
+      payouts: payoutStore,
+      writer: storedRegistrationWriter,
+    },
+    noShowStore,
+    {
+      // The session stream's publish drops that session's cached pages; the rest is dropped here.
+      saved: ({ tournamentId, sessionIds, payoutNotes }) => {
+        dropFinalsPages(tournamentId)
+        for (const sessionId of sessionIds) events.publish(sessionId, 'entries')
+        liveNotifier.entriesChanged(tournamentId)
+        if (payoutNotes > 0) liveNotifier.payoutsSaved(tournamentId)
+      },
+    },
+    logger,
+  )
+
   // One router serves every method; the two groups below give each its own access.
   const vendorRegistrations = createVendorRegistrationRouter({
     tournaments,
@@ -395,6 +428,13 @@ export function createApp({
         path: '/v1/tournaments/:id/squads',
         access: 'public',
         router: createSquadRouter(squads, tournaments),
+      },
+      {
+        // Before the other squad writes, so only this permission is asked for here.
+        path: '/v1/tournaments/:id/squads/:sessionId/no-shows/:registrationId',
+        access: { permission: 'entries.override' }, // NSH-01: admin only; no API key
+        methods: ['POST'],
+        router: noShows,
       },
       {
         path: '/v1/tournaments/:id/squads',

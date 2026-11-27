@@ -26,6 +26,8 @@ export interface ResultEntryInput {
   pins: number
   /** In a handicap division, bowling on an average no director checked (AVG-13, D-293). */
   unverified: boolean
+  /** NSH-20: an admin ruled that this entry advances. Set only when true. */
+  forced?: boolean
 }
 
 /** An entry with the figures that ranking compares (SCR-11). */
@@ -130,6 +132,7 @@ export function buildResultEntries(
         ),
         pins: pinsFor(entry, division),
         unverified: isUnverified(entry.averageStatus, division.handicapPercentage !== null),
+        ...(entry.forcedAdvancer ? { forced: true } : {}),
       }),
     )
   }

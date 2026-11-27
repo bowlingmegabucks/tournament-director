@@ -748,3 +748,19 @@ describe('the Edit link (REG-25, D-197, D-198)', () => {
     expect(screen.queryByText(/Registration updated/)).not.toBeInTheDocument()
   })
 })
+
+describe('the SMART marker (SMT-04)', () => {
+  it('shows beside a youth’s name and no other', async () => {
+    setMockUser(createSignedInUser({ roles: ['director'] }))
+    serve([
+      createRegistration({ smartScholarship: true }),
+      createRegistration({ smartScholarship: false }),
+    ])
+
+    open()
+
+    await screen.findByRole('table')
+    expect(screen.getAllByText('SMART')).toHaveLength(1)
+    expect(screen.getByRole('rowheader', { name: /SMART$/ })).toBeVisible()
+  })
+})

@@ -55,6 +55,8 @@ export const squadRowSchema = z.object({
   scores: gameScoresSchema,
   /** True only for an earlier advancer at or above the cut score (D-81). */
   advancedEarlier: z.boolean(),
+  /** NSH-24: advances because an admin ruled it. Sent only when true. */
+  byRuling: z.boolean().optional(),
   /** Flagged "did not finish" in a squad that is still open (D-248, D-251). */
   dnf: z.boolean(),
   /**
@@ -62,6 +64,8 @@ export const squadRowSchema = z.object({
    * as `"100.00"`. `null` for a bowler with no saved payout, and for any row that is not an inferred payee.
    */
   payout: z.string().nullable(),
+  /** Present when `payout` is SMART scholarship money, not cash (SMT-03). */
+  smartScholarship: z.literal(true).optional(),
 })
 
 /** A bowler listed apart on a complete squad: no place, no group, no ties (D-75). */
@@ -136,6 +140,8 @@ export const sweeperRowSchema = z.object({
    * as `"100.00"`. `null` for a bowler with no saved payout, and for any row that is not an inferred payee.
    */
   payout: z.string().nullable(),
+  /** Present when `payout` is SMART scholarship money, not cash (SMT-03). */
+  smartScholarship: z.literal(true).optional(),
 })
 
 export type SweeperRow = z.infer<typeof sweeperRowSchema>
@@ -214,6 +220,8 @@ export const seedingRowSchema = z.object({
   squadDate: localDateTimeSchema,
   total: z.number().int(),
   highGame: z.number().int(),
+  /** NSH-24: a finalist who advanced from a squad by ruling. Sent only when true. */
+  byRuling: z.boolean().optional(),
   /** The handicap per game of that entry (D-92). */
   handicap: z.number().int(),
   previousCasher: z.boolean(),
@@ -228,6 +236,8 @@ export const seedingRowSchema = z.object({
    * as `"100.00"`. `null` for a bowler with no saved payout, and for any row that is not an inferred payee.
    */
   payout: z.string().nullable(),
+  /** Present when `payout` is SMART scholarship money, not cash (SMT-03). */
+  smartScholarship: z.literal(true).optional(),
 })
 
 export const seedingDivisionSchema = z.object({
@@ -282,6 +292,8 @@ export const superSweeperRowSchema = z.object({
    * as `"100.00"`. `null` for a bowler with no saved payout, and for any row that is not an inferred payee.
    */
   payout: z.string().nullable(),
+  /** Present when `payout` is SMART scholarship money, not cash (SMT-03). */
+  smartScholarship: z.literal(true).optional(),
 })
 
 export type SuperSweeperRow = z.infer<typeof superSweeperRowSchema>

@@ -254,7 +254,9 @@ test('a drop on a pair with room moves the bowler, saves it, and shows the seat 
   )
 
   await expect(page.getByRole('heading', { name: 'Unassigned (3)' })).toBeVisible()
-  const pair = page.getByRole('heading', { level: 3, name: /^Lanes 3-4/ }).locator('xpath=..')
+  const pair = page
+    .getByRole('heading', { level: 3, name: /^Lanes 3-4/ })
+    .locator('xpath=ancestor::li[1]')
   await expect(pair).toContainText('3 of 4')
   await expect(pair.getByText('Pat Nguyen')).toBeVisible()
   // The first free seat after 3A and 4C (D-56).
@@ -327,8 +329,68 @@ test('the Assign to lanes dialog picks a pair, and Escape closes it (D-58)', asy
 
   await expect(page.getByRole('heading', { name: 'Unassigned (3)' })).toBeVisible()
   await expect(
-    page.getByRole('heading', { level: 3, name: /^Lanes 7-8/ }).locator('xpath=..'),
+    page.getByRole('heading', { level: 3, name: /^Lanes 7-8/ }).locator('xpath=ancestor::li[1]'),
   ).toContainText('Pat Nguyen')
+})
+
+test('a pair taken out of play empties, refuses bowlers, and comes back (OOP-02 to OOP-05, OOP-09)', async ({
+  page,
+}) => {
+  // Tall enough that the drag does not scroll the page under the pointer: it would miss the pair.
+  await page.setViewportSize({ width: 1280, height: 1400 })
+  await openSquad(page, '1:00 PM')
+  const box = page.getByRole('checkbox', { name: 'Lanes 1-2 in play' })
+  const pair = page
+    .getByRole('heading', { level: 3, name: /^Lanes 1-2/ })
+    .locator('xpath=ancestor::li[1]')
+  const spots = page.getByText(/spots open|over the \d+ spots/)
+  const before = await spots.textContent()
+
+  // The pair holds bowlers, so it asks first, and going back changes nothing.
+  await box.focus()
+  await page.keyboard.press('Space')
+  const dialog = page.getByRole('dialog', { name: 'Take lanes 1-2 out of play?' })
+  await dialog.getByRole('button', { name: 'Go back' }).click()
+  await expect(box).toBeFocused()
+  await expect(box).toBeChecked()
+  await expect(spots).toHaveText(before ?? '')
+  // The closed dialog leaves the page a moment later; a key sent before that reaches the old one.
+  await expect(page.locator('dialog')).toHaveCount(0)
+
+  await page.keyboard.press('Space')
+  await dialog.getByRole('button', { name: 'Take out of play' }).click()
+  await expect(dialog).toBeHidden()
+  // Focus goes back to the box, not to the top of the page (WCAG 2.4.3).
+  await expect(box).toBeFocused()
+  await expect(box).not.toBeChecked()
+  await expect(pair).toContainText('Out of play')
+  await expect(page.getByRole('heading', { name: 'Unassigned (8)' })).toBeVisible()
+  await expect(spots).not.toHaveText(before ?? '')
+
+  await dragTo(
+    page,
+    page.getByRole('button', { name: 'Drag Pat Nguyen' }),
+    page.getByRole('heading', { level: 3, name: /^Lanes 1-2/ }),
+  )
+  await expect(page.getByRole('alert')).toContainText(
+    'Lanes 1-2 are out of play. Pick another pair.',
+  )
+
+  await page.getByRole('button', { name: 'Assign to lanes: Pat Nguyen' }).click()
+  await expect(
+    page.getByRole('dialog').getByRole('button', { name: /Lanes 1-2.*Out of play/ }),
+  ).toBeDisabled()
+  await page.keyboard.press('Escape')
+
+  // Back in play by keyboard: focus stays through the save, and the bowlers who left stay off.
+  await box.focus()
+  await page.keyboard.press('Space')
+  await expect(box).toBeChecked()
+  await expect(box).not.toHaveAttribute('aria-disabled')
+  await expect(box).toBeFocused()
+  await expect(spots).toHaveText(before ?? '')
+  await expect(pair).toContainText('0 of 4')
+  await expect(page.getByRole('heading', { name: 'Unassigned (8)' })).toBeVisible()
 })
 
 test('a complete squad has no handles or buttons (LAN-13, D-10)', async ({ page }) => {

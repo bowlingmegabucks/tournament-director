@@ -9,7 +9,7 @@ import { limitToCountedGames, type RankMode } from './fullGame.ts'
 import { workOutDivision, type DivisionOutcome } from './squadResults.ts'
 
 export interface SquadFlowDeps {
-  lanes: LaneRepository
+  lanes: Pick<LaneRepository, 'listEntries'>
   scores: ScoreRepository
 }
 

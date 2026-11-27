@@ -92,6 +92,26 @@ describe('LanesPage', () => {
     )
   })
 
+  it.each([
+    ['no bowlers', createLanePage({ pairs: [], unassigned: [], other: [] })],
+    ['no lanes', createLanePage({ pairs: [], unassigned: [carl] })],
+  ])('links to Add registration on a squad with %s (REG-22)', async (_, page) => {
+    serve(page)
+
+    open(page)
+
+    expect(
+      await screen.findByRole(
+        'link',
+        { name: 'Add registration to this squad' },
+        { timeout: 3000 },
+      ),
+    ).toHaveAttribute(
+      'href',
+      `/tournaments/${tournament.id}/registrations/new?squad=${page.session.id}`,
+    )
+  })
+
   it('has no Add registration link on a complete squad or for a score keeper (REG-33, D-157)', async () => {
     const complete = { ...filled(), session: { ...filled().session, complete: true } }
     serve(complete)
@@ -219,7 +239,7 @@ describe('LanesPage', () => {
     expect(
       await screen.findByText('No bowlers have entered this squad yet.', {}, { timeout: 3000 }),
     ).toBeVisible()
-    expect(screen.queryByRole('heading', { name: /Unassigned/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Unassigned (0)' })).toBeVisible()
   })
 
   it('says sweeper for a sweeper (LAN-10)', async () => {

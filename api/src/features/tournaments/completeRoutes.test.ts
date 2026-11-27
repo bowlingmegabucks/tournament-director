@@ -228,6 +228,7 @@ describe(`GET ${infoUrl}`, () => {
       payoutCount: 9,
       unpaidPayoutCount: 5,
       unpaidPayoutTotal: '1450.00',
+      unpaidPayoutSmartTotal: '75.00',
     }
 
     const response = await request(setup({ facts }).app).get(infoUrl)

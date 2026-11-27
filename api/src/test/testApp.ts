@@ -13,6 +13,7 @@ import { metrics } from '@opentelemetry/api'
 import { createInMemoryBowlerRepository } from '../features/bowlers/repository.ts'
 import { createInMemoryRegistrationRepository } from '../features/registrations/repository.ts'
 import { createInMemoryRegistrationWriter } from '../features/registrations/writer.ts'
+import { createInMemoryNoShowStore } from '../features/noShows/store.ts'
 import { createInMemoryScoreRepository } from '../features/scores/repository.ts'
 import { createInMemoryScoreWriter } from '../features/scores/scoreWriter.ts'
 import { createInMemoryDnfStore } from '../features/dnf/store.ts'
@@ -49,6 +50,7 @@ export function createTestApp(overrides: Partial<AppDependencies> = {}): Express
     dnfStore: createInMemoryDnfStore().store,
     payoutStore: createInMemoryPayoutStore().store,
     averageStore: createInMemoryAverageStore([]),
+    noShowStore: createInMemoryNoShowStore().store,
     squads: createInMemorySquadRepository([]),
     squadWriter: createInMemorySquadWriter().writer,
     sweepers: createInMemorySweeperRepository([]),

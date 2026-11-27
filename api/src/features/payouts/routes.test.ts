@@ -67,9 +67,14 @@ function setup(
     seed?: PayoutRecord[]
     role?: 'director' | 'scoreKeeper' | 'admin'
     store?: PayoutStore
+    smartIds?: string[]
   } = {},
 ) {
-  const made = createInMemoryPayoutStore(options.seed ?? [], () => options.facts ?? openFacts)
+  const made = createInMemoryPayoutStore(
+    options.seed ?? [],
+    () => options.facts ?? openFacts,
+    options.smartIds,
+  )
   const recorded = recordingEvents()
   const captured = createCapturedLogger()
   const app = createSignedInTestApp(
@@ -159,6 +164,7 @@ describe('GET payouts/squad/:sessionId (PAY-02, PAY-06, PAY-10, PAY-11)', () => 
         seed: null,
         previousCasher: false,
         inferred: true,
+        smartScholarship: false,
         payout: null,
       },
     ])
@@ -237,6 +243,61 @@ describe('GET payouts/squad/:sessionId (PAY-02, PAY-06, PAY-10, PAY-11)', () => 
     const missing = await request(setup({ facts: { notFound: 'tournament' } }).app).get(squadUrl)
     expect(missing.status).toBe(404)
     expect(missing.body).toEqual({ message: 'Squad not found' })
+  })
+})
+
+describe('SMART scholarship on the sheet (SMT-03)', () => {
+  it('flags a SMART payee, inferred or added by hand', async () => {
+    const { app } = setup({
+      smartIds: [casher.registrationId, other.registrationId],
+      seed: [record({ registrationId: other.registrationId, note: 'Lane breakdown' })],
+    })
+
+    const { sheet } = (await request(app).get(squadUrl)).body
+
+    expect(
+      sheet.payees.map((payee: { name: string; smartScholarship: boolean }) => [
+        payee.name,
+        payee.smartScholarship,
+      ]),
+    ).toEqual([
+      ['Dana Whitfield', true],
+      ['Marcus Lee', true],
+    ])
+    expect(
+      sheet.others.map((item: { smartScholarship: boolean }) => item.smartScholarship),
+    ).toEqual([false, false])
+  })
+
+  it('flags a SMART bowler who is not on the sheet yet, for the add dialog (SMT-04)', async () => {
+    const { app } = setup({ smartIds: [other.registrationId] })
+
+    const { sheet } = (await request(app).get(squadUrl)).body
+
+    expect(
+      sheet.others.map((item: { name: string; smartScholarship: boolean }) => [
+        item.name,
+        item.smartScholarship,
+      ]),
+    ).toEqual([
+      ['Lois Park', false],
+      ['Marcus Lee', true],
+      ['Tom Becker', false],
+    ])
+  })
+
+  it('keeps the flag in the list and the totals for a bowler who cannot be read (SMT-04)', async () => {
+    const unreadable = crypto.randomUUID()
+    const { app } = setup({
+      smartIds: [unreadable],
+      seed: [record({ registrationId: unreadable })],
+    })
+
+    const list = await request(app).get(base)
+    const totals = await request(app).get(`${base}/totals`)
+
+    expect(list.body.payouts).toMatchObject([{ name: 'Unknown bowler', smartScholarship: true }])
+    expect(totals.body.bowlers).toMatchObject([{ name: 'Unknown bowler', smartScholarship: true }])
   })
 })
 
@@ -599,6 +660,7 @@ describe('GET payouts and payouts/totals (PAY-19)', () => {
         count: 1,
         total: '1500.00',
         unpaidTotal: '1500.00',
+        smartScholarship: false,
       },
       {
         registrationId: casher.registrationId,
@@ -607,6 +669,7 @@ describe('GET payouts and payouts/totals (PAY-19)', () => {
         count: 3,
         total: '850.00',
         unpaidTotal: '750.00',
+        smartScholarship: false,
       },
     ])
     const filtered = await request(app).get(`${base}/totals?min=1000`)
@@ -937,6 +1000,7 @@ describe('a storage outage', () => {
       save: outage,
       setPaid: outage,
       summary: outage,
+      smartRegistrationIds: outage,
     }
     const { app } = setup({ store })
 

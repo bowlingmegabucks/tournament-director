@@ -126,6 +126,9 @@ Issues that need schema changes wait for a 1.x release, after WinForms is sunset
   - How the page loads under the `helmet` headers (its scripts and styles need allowing), and that the "try it" button sends the `x-api-key` header and never stores the key.
   - Check the Scalar docs (Context7) before we use its Express package; its API changes between releases.
 
+- [x] SMART scholarship: a youth's winnings are marked on the registration, results, and payout reports (D-317, [requirements/smart-scholarship.md](requirements/smart-scholarship.md)).
+- [ ] When the 1099 report is built, leave SMART scholarship money out (confirm with whoever handles the taxes).
+
 ## Release candidates
 
 - [ ] `1.0.0-rc.1` tagged and trialled; fix and cut more as needed.

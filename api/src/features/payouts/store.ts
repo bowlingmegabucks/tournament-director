@@ -14,6 +14,8 @@ export interface PayoutAmountRow {
   registrationId: string
   /** Money text, `"100.00"`. */
   amount: string
+  /** Present only for a SMART scholarship payee (SMT-03). */
+  smartScholarship?: true
 }
 
 export interface PayoutAmounts {
@@ -58,6 +60,8 @@ export type PaidOutcome =
   { notFound: true } | { refused: string } | { payout: PayoutRecord; changed: boolean }
 
 export interface PayoutStore extends PayoutAmounts {
+  /** The tournament's registrations whose winnings go to a SMART account (SMT-03). */
+  smartRegistrationIds(tournamentId: string): Promise<ReadonlySet<string>>
   /** Every payout of the tournament. */
   list(tournamentId: string): Promise<PayoutRecord[]>
   /** The tournament lock and the gate of one event; or what is missing. */
@@ -84,7 +88,10 @@ export function createInMemoryPayoutStore(
     tournamentComplete: false,
     gate: { kind: 'squad', complete: true },
   }),
+  /** Registrations paid by SMART scholarship (SMT-03). */
+  smartIds: readonly string[] = [],
 ) {
+  const smart = new Set(smartIds)
   const records: PayoutRecord[] = [...seed]
   let counter = 0
   const store: PayoutStore = {
@@ -97,8 +104,10 @@ export function createInMemoryPayoutStore(
             eventId,
             registrationId,
             amount: formatCents(amountCents),
+            ...(smart.has(registrationId) && { smartScholarship: true as const }),
           })),
       ),
+    smartRegistrationIds: () => Promise.resolve(smart),
     list: (tournamentId) =>
       Promise.resolve(records.filter((record) => record.tournamentId === tournamentId)),
     eventFacts: (tournamentId, source, eventId) =>

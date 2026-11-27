@@ -12,6 +12,7 @@ import {
   emptyRegistration,
   filledFields,
   overlayBowler,
+  smartAgeWarning,
   stepOfError,
   toBowlerValues,
   totalDue,
@@ -36,6 +37,7 @@ const held: BowlerRegistration = {
   divisionName: 'Handicap',
   average: 182,
   superSweeper: false,
+  smartScholarship: false,
   squadIds: ['s1'],
   sweeperIds: ['w1'],
   hasScores: false,
@@ -230,6 +232,7 @@ describe('the request (D-157, D-165)', () => {
       squadIds: ['s1'],
       sweeperIds: ['w1'],
       superSweeper: false,
+      smartScholarship: false,
     })
     expect(toRegistrationValues({ ...held, average: null }).average).toBe('')
   })
@@ -267,6 +270,7 @@ describe('the fixed lists', () => {
       squadIds: [],
       sweeperIds: [],
       superSweeper: false,
+      smartScholarship: false,
     })
   })
 
@@ -373,5 +377,41 @@ describe('the bowler display name (matches the list)', () => {
     expect(bowlerNameOf({ firstName: 'Maria', lastName: 'Gonzalez', suffix: ' Jr ' })).toBe(
       'Maria Gonzalez, Jr',
     )
+  })
+})
+
+describe('SMART scholarship (SMT-02, SMT-07)', () => {
+  const build = (checked: boolean, existing: BowlerRegistration | null) =>
+    buildRequest({
+      stored: undefined,
+      bowler: maria,
+      registration: { ...emptyRegistration, smartScholarship: checked },
+      existing,
+      confirmAppend: false,
+    })
+
+  it('is sent only when it differs from what the registration holds', () => {
+    expect(build(true, null).smartScholarship).toBe(true)
+    expect(build(false, null)).not.toHaveProperty('smartScholarship')
+    expect(build(false, { ...held, smartScholarship: true }).smartScholarship).toBe(false)
+    expect(build(true, { ...held, smartScholarship: true })).not.toHaveProperty('smartScholarship')
+  })
+
+  it('sends a refusal about it back to the Bowler step', () => {
+    expect(stepOfError('smartScholarship')).toBe(1)
+  })
+
+  const missing = 'No date of birth is entered. Check that this bowler is a youth.'
+  const old = 'This bowler is 18 or older. Check that this bowler is a youth.'
+
+  it.each([
+    ['', missing],
+    ['2010-13-45', missing],
+    ['2008-11-27', old],
+    ['1980-01-01', old],
+    ['2008-11-28', undefined],
+    ['2015-06-01', undefined],
+  ])('warns about a date of birth of %j', (born, warning) => {
+    expect(smartAgeWarning(born, '2026-11-27')).toBe(warning)
   })
 })

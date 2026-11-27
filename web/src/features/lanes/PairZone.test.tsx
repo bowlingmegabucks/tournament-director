@@ -127,3 +127,81 @@ describe('PairZone', () => {
     expect(screen.getByRole('heading', { level: 3 }).closest('li')?.className).not.toMatch(/fresh/)
   })
 })
+
+describe('PairZone in and out of play (OOP-01, OOP-03)', () => {
+  const out = { ...createLanePair(3), outOfPlay: true }
+
+  function showToggle(pair: LanePair, savingInPlay?: boolean) {
+    const calls: boolean[] = []
+    render(
+      <DragDropProvider>
+        <ul>
+          <PairZone
+            pair={pair}
+            kind="squad"
+            dragging={undefined}
+            readOnly={false}
+            savingInPlay={savingInPlay}
+            play={{ takeOut: () => calls.push(false), bringBack: () => calls.push(true) }}
+            onAssign={() => undefined}
+          />
+        </ul>
+      </DragDropProvider>,
+    )
+    return calls
+  }
+
+  it('has a checked box for a pair in play, and reports an uncheck', async () => {
+    const calls = showToggle(createLanePair(3))
+    const box = screen.getByRole('checkbox', { name: 'Lanes 3-4 in play' })
+    expect(box).toBeChecked()
+
+    await userEvent.click(box)
+
+    expect(calls).toEqual([false])
+  })
+
+  it('says a pair is out of play, with its box unchecked', () => {
+    showToggle(out)
+
+    expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Lanes 3-4 Out of play')
+    expect(screen.getByText('No one can be put on these lanes.')).toBeVisible()
+    expect(screen.getByRole('checkbox', { name: 'Lanes 3-4 in play' })).not.toBeChecked()
+  })
+
+  it('shows what was asked for, keeps focus, and takes no more clicks, while saving', async () => {
+    const calls = showToggle(createLanePair(3), false)
+    const box = screen.getByRole('checkbox')
+
+    await userEvent.click(box)
+
+    expect(box).not.toBeChecked()
+    expect(box).toHaveAttribute('aria-disabled', 'true')
+    expect(box).toBeEnabled()
+    expect(box).toHaveFocus()
+    expect(screen.getByText('Saving…')).toBeVisible()
+    expect(screen.getByRole('listitem')).toHaveAttribute('aria-busy', 'true')
+    expect(calls).toEqual([])
+  })
+
+  it('says nothing about saving when nothing is', () => {
+    showToggle(createLanePair(3))
+
+    expect(screen.queryByText('Saving…')).not.toBeInTheDocument()
+    expect(screen.getByRole('listitem')).not.toHaveAttribute('aria-busy')
+    expect(screen.getByRole('checkbox')).not.toHaveAttribute('aria-disabled')
+  })
+
+  it('has no box without a way to change it, but still says it is out', () => {
+    show(out)
+
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Out of play')
+  })
+
+  it('shows a refusal when a bowler is dragged (OOP-02)', () => {
+    show(out, createLaneBowler())
+
+    expect(screen.getByText('Out of play: cannot drop here')).toBeVisible()
+  })
+})

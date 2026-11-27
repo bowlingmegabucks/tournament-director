@@ -48,6 +48,7 @@ export const editRequestSchema = z
     divisionId: z.uuid({ error: 'Pick a division' }).optional(),
     average,
     superSweeper: z.boolean().optional(),
+    smartScholarship: z.boolean().optional(),
     addSquadIds: ids,
     removeSquadIds: ids,
     addSweeperIds: ids,

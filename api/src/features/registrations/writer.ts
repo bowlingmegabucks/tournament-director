@@ -20,6 +20,8 @@ export interface StoredRegistration {
   divisionId: string
   average: number | null
   superSweeper: boolean
+  /** Winnings go to the bowler's SMART account (SMT-01). Absent reads as false. */
+  smartScholarship?: boolean
   sessionIds: string[]
 }
 
@@ -57,6 +59,8 @@ export interface SaveRegistration {
     divisionId: string
     average: number | null
     superSweeper: boolean
+    /** SMT-01. Left out keeps what is stored (false on a new registration): the site never sends it. */
+    smartScholarship?: boolean
     /**
      * Delete the registration's average check in the same save (AVG-08, D-290): the average or the
      * division changed, so the old check no longer says anything.
@@ -99,6 +103,8 @@ export interface RegistrationWriter {
   findRegistrationIdByPaymentCode(confirmationCode: string): Promise<string | undefined>
   /** The ids of the squads and sweepers where this bowler has any score (REG-34, REG-36, REG-15). */
   findScoredSessionIds(bowlerId: string): Promise<string[]>
+  /** Whether any payout of this registration is marked paid (SMT-05). */
+  hasPaidPayout(registrationId: string): Promise<boolean>
   save(command: SaveRegistration): Promise<void>
   /** Removes the registration with its squad links and payments. The bowler stays (REG-19). */
   deleteRegistration(registrationId: string): Promise<void>
@@ -134,6 +140,8 @@ export interface InMemoryWriterSeed {
   payments?: { registrationId: string; confirmationCode: string; amount?: number }[]
   /** A score of one bowler in one squad or sweeper. */
   scores?: { bowlerId: string; sessionId: string }[]
+  /** Registrations with a payout marked paid (SMT-05). */
+  paidRegistrationIds?: string[]
 }
 
 /** Storage in memory. `state` lets a test see what was saved. */
@@ -146,6 +154,7 @@ export function createInMemoryRegistrationWriter(seed: InMemoryWriterSeed = {}) 
     payments: [...(seed.payments ?? [])],
     scores: [...(seed.scores ?? [])],
     completedTournamentIds: [...(seed.completedTournamentIds ?? [])],
+    paidRegistrationIds: [...(seed.paidRegistrationIds ?? [])],
     /** The registrations whose average check a save or a delete cleared (AVG-08, D-287, D-290). */
     clearedAverageChecks: [] as string[],
     keptAverageChecks: [] as { registrationId: string; average: number }[],
@@ -206,6 +215,8 @@ export function createInMemoryRegistrationWriter(seed: InMemoryWriterSeed = {}) 
       Promise.resolve(
         state.payments.find((payment) => payment.confirmationCode === code)?.registrationId,
       ),
+    hasPaidPayout: (registrationId) =>
+      Promise.resolve(state.paidRegistrationIds.includes(registrationId)),
     findScoredSessionIds: (bowlerId) =>
       Promise.resolve([
         ...new Set(
@@ -239,6 +250,7 @@ export function createInMemoryRegistrationWriter(seed: InMemoryWriterSeed = {}) 
             divisionId: registration.divisionId,
             average: registration.average,
             superSweeper: registration.superSweeper,
+            smartScholarship: registration.smartScholarship ?? false,
             sessionIds: [...addSessionIds],
           },
         })
@@ -250,6 +262,9 @@ export function createInMemoryRegistrationWriter(seed: InMemoryWriterSeed = {}) 
             divisionId: registration.divisionId,
             average: registration.average,
             superSweeper: registration.superSweeper,
+            ...(registration.smartScholarship !== undefined && {
+              smartScholarship: registration.smartScholarship,
+            }),
             sessionIds: [
               ...entry.registration.sessionIds.filter((id) => !removeSessionIds.includes(id)),
               ...addSessionIds,

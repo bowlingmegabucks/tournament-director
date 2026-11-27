@@ -211,6 +211,7 @@ export function createRegistration(overrides: Partial<Registration> = {}): Regis
     squadIds: [],
     sweeperIds: [],
     superSweeper: false,
+    smartScholarship: false,
     average: 200,
     averageStatus: 'none',
     ...overrides,
@@ -322,6 +323,7 @@ export function createDemoRegistrationList(
         squadIds: entered.squads.flatMap((position) => squads[position]?.id ?? []),
         sweeperIds: entered.sweepers.flatMap((position) => sweepers[position]?.id ?? []),
         superSweeper: entered.superSweeper,
+        smartScholarship: false,
       })
     },
   )
@@ -417,7 +419,7 @@ export function createLanePair(
   bowlers: LaneBowler[] = [],
   capacity = 5,
 ): LanePair {
-  return { firstLane, lanes: [firstLane, firstLane + 1], capacity, bowlers }
+  return { firstLane, lanes: [firstLane, firstLane + 1], capacity, outOfPlay: false, bowlers }
 }
 
 /** A lane page for a session of 10 lanes from lane 1, with five bowlers per pair. Override what a test cares about. */
@@ -746,6 +748,9 @@ export function createDemoScorePage(
   })
 }
 
+/** The one no-show of the demo squad results, so the mock server can move or refund it. */
+export const demoNoShowId = '3f6c1e0a-7b52-4d8e-9a41-5c2f8b7d9e10'
+
 /** A placed bowler of a squad division. Three games of 200, no handicap, no tie, not an earlier advancer. */
 export function createSquadRow(overrides: Partial<SquadRow> = {}): SquadRow {
   return {
@@ -1031,7 +1036,7 @@ function createDemoSquad(
             unverified: false,
           },
         ],
-        noShows: [{ registrationId: faker.string.uuid(), name: 'Mike Tran' }],
+        noShows: [{ registrationId: demoNoShowId, name: 'Mike Tran' }],
       }),
     )
   }
@@ -1400,6 +1405,7 @@ const allPermissions = [
   'tournaments.delete',
   'divisions.write',
   'squads.write',
+  'entries.override',
   'bowlers.read',
   'bowlers.ssn',
   'payouts.read',
@@ -1415,7 +1421,8 @@ const permissionsByRole: Record<string, string[]> = {
     (permission) =>
       permission !== 'users.manage' &&
       permission !== 'bowlers.ssn' &&
-      permission !== 'tournaments.delete',
+      permission !== 'tournaments.delete' &&
+      permission !== 'entries.override',
   ),
   scoreKeeper: ['scores.write', 'registrations.read', 'lanes.read'],
 }
@@ -1481,6 +1488,7 @@ export function createEditInfo(
       divisionId: faker.string.uuid(),
       average: 182,
       superSweeper: false,
+      smartScholarship: false,
       squadIds: [],
       sweeperIds: [],
       ...overrides.registration,
@@ -1560,6 +1568,7 @@ export function createPayee(overrides: Partial<SheetPayee> = {}): SheetPayee {
     seed: null,
     previousCasher: false,
     inferred: true,
+    smartScholarship: false,
     payout: null,
     ...overrides,
   }
@@ -1570,6 +1579,7 @@ export function createOther(overrides: Partial<SheetOther> = {}): SheetOther {
     registrationId: crypto.randomUUID(),
     name: 'Tom Becker',
     divisionName: 'Open',
+    smartScholarship: false,
     ...overrides,
   }
 }
@@ -1622,6 +1632,7 @@ export function createPayoutRow(overrides: Partial<PayoutRow> = {}): PayoutRow {
     amount: '100.00',
     note: null,
     paid: false,
+    smartScholarship: false,
     ...overrides,
   }
 }
@@ -1645,6 +1656,7 @@ export function createTotal(overrides: Partial<BowlerTotal> = {}): BowlerTotal {
     count: 1,
     total: '100.00',
     unpaidTotal: '100.00',
+    smartScholarship: false,
     ...overrides,
   }
 }

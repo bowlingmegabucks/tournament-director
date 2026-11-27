@@ -66,6 +66,8 @@ export interface RegistrationValues {
   squadIds: string[]
   sweeperIds: string[]
   superSweeper: boolean
+  /** The checkbox on the Bowler step (SMT-01). */
+  smartScholarship: boolean
 }
 
 export const emptyRegistration: RegistrationValues = {
@@ -74,6 +76,7 @@ export const emptyRegistration: RegistrationValues = {
   squadIds: [],
   sweeperIds: [],
   superSweeper: false,
+  smartScholarship: false,
 }
 
 /** The stored bowler as the form's values (the id stays out). */
@@ -91,6 +94,7 @@ export function toRegistrationValues(registration: BowlerRegistration): Registra
     squadIds: [...registration.squadIds],
     sweeperIds: [...registration.sweeperIds],
     superSweeper: registration.superSweeper,
+    smartScholarship: registration.smartScholarship,
   }
 }
 
@@ -180,6 +184,9 @@ export function buildRequest(input: BuildInput): DeskRegistrationRequest {
     superSweeper: registration.superSweeper,
     bowler: stored ? changedFields(stored.values, bowler) : filledFields(bowler),
   }
+  if (registration.smartScholarship !== (existing?.smartScholarship ?? false)) {
+    request.smartScholarship = registration.smartScholarship
+  }
   if (stored) request.bowlerId = stored.id
   if (existing || input.confirmAppend) request.appendToExisting = true
   return request
@@ -187,7 +194,7 @@ export function buildRequest(input: BuildInput): DeskRegistrationRequest {
 
 /** Which step holds a server error key: the bowler's fields are step 1, the rest step 2. */
 export function stepOfError(key: string): 1 | 2 {
-  return key.startsWith('bowler.') ? 1 : 2
+  return key.startsWith('bowler.') || key === 'smartScholarship' ? 1 : 2
 }
 
 export interface Change {
@@ -254,4 +261,19 @@ export function bowlerNameOf(
   const name = `${values.firstName.trim()} ${values.lastName.trim()}`
   const suffix = values.suffix.trim()
   return suffix === '' ? name : `${name}, ${suffix}`
+}
+
+/**
+ * Why the SMART box deserves a second look, or `undefined` (SMT-07). A warning only: SMART has its
+ * own rules, so the desk may still tick it. `today` is `YYYY-MM-DD`.
+ */
+export function smartAgeWarning(dateOfBirth: string, today: string): string | undefined {
+  const born = dateOfBirth.trim()
+  if (born === '' || !isRealDate(born)) {
+    return 'No date of birth is entered. Check that this bowler is a youth.'
+  }
+  const eighteenth = `${String(Number(born.slice(0, 4)) + 18).padStart(4, '0')}${born.slice(4)}`
+  return eighteenth <= today
+    ? 'This bowler is 18 or older. Check that this bowler is a youth.'
+    : undefined
 }

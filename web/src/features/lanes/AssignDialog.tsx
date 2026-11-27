@@ -21,6 +21,7 @@ function showOnMount(node: HTMLDialogElement | null) {
 function status(pair: LanePair, bowler: LaneBowler): string {
   const outcome = dropOutcome(pair, bowler.registrationId)
   if (outcome === 'same') return 'Current pair'
+  if (outcome === 'out') return 'Out of play'
   if (outcome === 'full') return `Full (${pair.bowlers.length} of ${pair.capacity})`
   const left = seatsLeft(pair)
   return `${left} ${left === 1 ? 'seat' : 'seats'} left (${formatFill(pair)})`
@@ -28,7 +29,8 @@ function status(pair: LanePair, bowler: LaneBowler): string {
 
 /**
  * The way to assign or move a bowler without dragging (WCAG 2.5.7, D-58): a modal listing the
- * pairs, with full ones and the bowler's own pair disabled. A pick does what a drop does.
+ * pairs, with full ones, pairs out of play, and
+ * the bowler's own pair disabled. A pick does what a drop does.
  */
 export function AssignDialog({ bowler, kind, page, onPick, onClose }: Readonly<AssignDialogProps>) {
   const titleId = useId()

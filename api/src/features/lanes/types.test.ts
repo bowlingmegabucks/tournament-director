@@ -54,7 +54,7 @@ describe('lanePageSchema', () => {
       numberOfLanes: 10,
       maxPerPair: 5,
     },
-    pairs: [{ firstLane: 1, lanes: [1, 2], capacity: 5, bowlers: [bowler] }],
+    pairs: [{ firstLane: 1, lanes: [1, 2], capacity: 5, outOfPlay: false, bowlers: [bowler] }],
     unassigned: [],
     other: [],
     divisions: [{ id: bowler.divisionId, number: 1, name: 'Open', entries: 1 }],

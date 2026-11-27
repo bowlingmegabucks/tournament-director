@@ -135,6 +135,19 @@ describe('Prisma lane repository', () => {
     ])
   })
 
+  it('reads the lanes out of play of one session (OOP-01)', async () => {
+    const sessionId = crypto.randomUUID()
+    await client.laneOutOfPlay.createMany({
+      data: [
+        { squadId: sessionId, lane: 3 },
+        { squadId: crypto.randomUUID(), lane: 5 },
+      ],
+    })
+    const { repository } = setup()
+
+    await expect(repository.listOutOfPlay(sessionId)).resolves.toEqual([3])
+  })
+
   it('reads the average a director checked as the one in use, with its status (AVG-09, D-288)', async () => {
     const tournamentId = await insertTournament()
     const divisionId = await insertDivision(tournamentId)

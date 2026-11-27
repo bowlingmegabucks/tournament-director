@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   badAmountMessage,
+  centsOf,
   formatCents,
   needsAmountMessage,
   parseAmount,
@@ -70,5 +71,17 @@ describe('formatCents', () => {
     [9999999, '99999.99'],
   ])('writes %i cents as %s', (cents, text) => {
     expect(formatCents(cents)).toBe(text)
+  })
+})
+
+describe('centsOf', () => {
+  it.each([
+    ['100.00', 10000],
+    ['0.29', 29],
+    ['120000.00', 12_000_000],
+    ['', 0],
+    ['x', 0],
+  ])('reads %j from the API as %i cents, with no upper limit', (text, cents) => {
+    expect(centsOf(text)).toBe(cents)
   })
 })

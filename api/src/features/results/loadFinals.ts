@@ -1,6 +1,7 @@
 import { HttpError } from '../../shared/errors.ts'
 import type { Division } from '../divisions/types.ts'
-import { amountsFor, type PayoutsOption } from '../payouts/amounts.ts'
+import { amountsFor, shownPayout, type PayoutsOption } from '../payouts/amounts.ts'
+import type { PayoutAmountRow } from '../payouts/store.ts'
 import type { Squad } from '../squads/types.ts'
 import {
   workOutAtLarge,
@@ -122,7 +123,11 @@ export async function loadAtLarge(
   }
 }
 
-function seedingRows(seeding: SeedingOutcome, payouts: ReadonlyMap<string, string>) {
+function seedingRows(
+  seeding: SeedingOutcome,
+  payouts: ReadonlyMap<string, PayoutAmountRow>,
+  ruled: ReadonlySet<string>,
+) {
   const marks = markCutLine(entriesOf(seeding.finalists), entriesOf(seeding.others))
   const toRow = (item: PlacedEntry, seed: number, group: 'finalist' | 'other') => ({
     registrationId: item.entry.registrationId,
@@ -136,8 +141,9 @@ function seedingRows(seeding: SeedingOutcome, payouts: ReadonlyMap<string, strin
     previousCasher: seeding.previousCashers.has(item.entry.bowlerId),
     ties: marks.get(item.entry.registrationId) ?? [],
     unverified: item.entry.unverified,
+    ...(group === 'finalist' && ruled.has(item.entry.bowlerId) ? { byRuling: true } : {}),
     // D-284: only an inferred payee, a finalist, shows an amount.
-    payout: group === 'finalist' ? (payouts.get(item.entry.registrationId) ?? null) : null,
+    ...shownPayout(group === 'finalist' ? payouts.get(item.entry.registrationId) : undefined),
   })
   return [
     ...seeding.finalists.map((item, index) => toRow(item, index + 1, 'finalist')),
@@ -163,7 +169,13 @@ export async function loadSeeding(
     divisions: divisions.map(({ division, runs }) => {
       const atLarge = workOutAtLarge(runs, finalsRatio)
       const seeding = workOutSeeding(runs, atLarge)
-      const rows = seedingRows(seeding, amountsFor(amounts, 'finals', division.id))
+      // NSH-24: the seeding entry may be from another squad than the one ruled on (RES-19).
+      const ruled = new Set(
+        runs
+          .flatMap((run) => run.outcome.advancers)
+          .flatMap((entry) => (entry.forced ? [entry.bowlerId] : [])),
+      )
+      const rows = seedingRows(seeding, amountsFor(amounts, 'finals', division.id), ruled)
       return {
         id: division.id,
         number: division.number,
@@ -240,7 +252,7 @@ export async function loadSuperSweeper(
     dnf: item.dnf,
     unverified: item.entry.unverified,
     // D-284: only an inferred payee, a casher, shows an amount.
-    payout: group === 'casher' ? (paid.get(item.entry.registrationId) ?? null) : null,
+    ...shownPayout(group === 'casher' ? paid.get(item.entry.registrationId) : undefined),
   })
 
   return {

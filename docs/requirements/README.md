@@ -52,7 +52,8 @@ What the user sees and can do.
 | Edit registration (desk: squads, division, average, move, remove)       | [edit-registration.md](edit-registration.md)     |
 | Delete registration (desk: dialog, refund view, payment warning)        | [delete-registration.md](delete-registration.md) |
 | Average verification (Averages page, verify and adjust, marker)         | [averages.md](averages.md)                       |
-| Lane assignments (page, drag, portal)                                   | [lane-assignments.md](lane-assignments.md)       |
+| No-shows after a squad is complete (move, refund, forced advancer)      | [no-shows.md](no-shows.md)                       |
+| Lane assignments (page, drag, portal, lanes out of play)                | [lane-assignments.md](lane-assignments.md)       |
 | Recap sheets (preview, print, the cross, QR code)                       | [recap-sheets.md](recap-sheets.md)               |
 | Scores (view)                                                           | [scores.md](scores.md)                           |
 | Score entry (game board, pair sheet, stored skip, live)                 | [score-entry.md](score-entry.md)                 |
@@ -60,6 +61,7 @@ What the user sees and can do.
 | Results (at-large, seeding, super sweeper)                              | [finals-results.md](finals-results.md)           |
 | Encryption (SSN format, key setting, log redaction, key check)          | [encryption.md](encryption.md)                   |
 | Payouts (per event, entry sheet, full list, amounts in results)         | [payouts.md](payouts.md)                         |
+| SMART scholarship (youth bowlers)                                       | [smart-scholarship.md](smart-scholarship.md)     |
 | Navigation and layout                                                   | [navigation.md](navigation.md)                   |
 | API route access                                                        | [api-access.md](api-access.md)                   |
 | Sign-in (web)                                                           | [sign-in.md](sign-in.md)                         |

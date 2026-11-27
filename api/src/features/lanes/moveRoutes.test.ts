@@ -21,6 +21,7 @@ function setup(
     maxPerPair?: number
     role?: 'scoreKeeper'
     crowded?: boolean
+    outOfPlay?: number[]
   } = {},
 ) {
   const tournament = createTournament()
@@ -50,6 +51,7 @@ function setup(
         startingLane: 1,
         numberOfLanes: 6,
         maxPerPair: options.maxPerPair ?? 4,
+        outOfPlay: options.outOfPlay,
       },
       {
         id: sweeper.id,
@@ -317,5 +319,140 @@ describe('PUT /v1/tournaments/:id/squads/:sessionId/lanes/:registrationId', () =
       expect(response.status).toBe(403)
       expect(state.entries.find((entry) => entry.registrationId === mine)?.position).toBe('')
     })
+  })
+})
+
+describe('PUT /v1/tournaments/:id/squads/:sessionId/lanes/pairs/:lane', () => {
+  const pairUrl = (context: ReturnType<typeof setup>, lane: number | string = 1) =>
+    `/v1/tournaments/${context.tournament.id}/squads/${context.squad.id}/lanes/pairs/${lane}`
+  const positionOf = (context: ReturnType<typeof setup>, registrationId: string) =>
+    context.state.entries.find(
+      (entry) => entry.sessionId === context.squad.id && entry.registrationId === registrationId,
+    )?.position
+
+  it('asks before it unassigns anyone, and saves nothing (OOP-04)', async () => {
+    const context = setup()
+
+    const response = await request(context.app).put(pairUrl(context)).send({ inPlay: false })
+
+    const message = '1 bowler on lanes 1-2 will move to unassigned.'
+    expect(response.status).toBe(409)
+    expect(response.body).toEqual({ message, warnings: [{ field: 'inPlay', message }] })
+    expect(positionOf(context, friend)).toBe('1A')
+    expect(context.seen).toEqual([])
+  })
+
+  it('takes the pair out, unassigns its bowlers, and tells every screen (OOP-03, OOP-08)', async () => {
+    const context = setup()
+
+    const response = await request(context.app)
+      .put(pairUrl(context))
+      .send({ inPlay: false, confirmWarnings: true })
+
+    expect(response.status).toBe(200)
+    expect(response.body).toEqual({ inPlay: false, unassigned: 1 })
+    expect(positionOf(context, friend)).toBe('')
+    expect(context.seen.map(({ event }) => event.kind)).toEqual(['lanes'])
+    expect(context.live.map((event) => event.kind)).toEqual(['entries'])
+    expect(
+      context.captured.records().find((line) => line['msg'] === 'Lane pair change saved'),
+    ).toMatchObject({ lane: 1, inPlay: false, unassigned: 1, squadId: context.squad.id })
+  })
+
+  it('asks again when the pair holds someone the caller was not shown (OOP-04)', async () => {
+    const context = setup()
+
+    const response = await request(context.app)
+      .put(pairUrl(context))
+      .send({ inPlay: false, confirmWarnings: true, seen: [mine] })
+
+    expect(response.status).toBe(409)
+    expect(positionOf(context, friend)).toBe('1A')
+  })
+
+  it('logs both refusals with a constant message (OOP-02, OOP-06)', async () => {
+    const done = setup({ complete: true })
+    await request(done.app).put(pairUrl(done)).send({ inPlay: false })
+    const out = setup({ outOfPlay: [3] })
+    await request(out.app).put(out.url()).send({ lane: 3 })
+
+    expect(
+      done.captured
+        .records()
+        .find((line) => line['msg'] === 'Lane pair change refused: session or tournament complete'),
+    ).toMatchObject({ level: 30, kind: 'squad', lane: 1, squadId: done.squad.id })
+    expect(
+      out.captured.records().find((line) => line['msg'] === 'Lane move refused: pair out of play'),
+    ).toMatchObject({ level: 30, lane: 3, registrationId: mine })
+  })
+
+  it('then refuses a move onto the pair until it is brought back (OOP-02, OOP-05)', async () => {
+    const context = setup({ outOfPlay: [3] })
+
+    const refused = await request(context.app).put(context.url()).send({ lane: 3 })
+    expect(refused.status).toBe(409)
+    expect(refused.body).toEqual({ message: 'Lanes 3-4 are out of play. Pick another pair.' })
+
+    const back = await request(context.app).put(pairUrl(context, 3)).send({ inPlay: true })
+    expect(back.body).toEqual({ inPlay: true, unassigned: 0 })
+    expect((await request(context.app).put(context.url()).send({ lane: 3 })).status).toBe(200)
+  })
+
+  it('answers 200 and publishes nothing when the pair is already as asked', async () => {
+    const context = setup()
+
+    const response = await request(context.app).put(pairUrl(context, 5)).send({ inPlay: true })
+
+    expect(response.body).toEqual({ inPlay: true, unassigned: 0 })
+    expect(context.seen).toEqual([])
+  })
+
+  it('refuses a complete squad, and a lane that starts no pair (OOP-06)', async () => {
+    const done = setup({ complete: true })
+    const response = await request(done.app).put(pairUrl(done)).send({ inPlay: false })
+    expect(response.status).toBe(409)
+    expect(response.body).toEqual({ message: 'This squad is complete. Lanes cannot change.' })
+
+    const context = setup()
+    expect(
+      (await request(context.app).put(pairUrl(context, 2)).send({ inPlay: false })).status,
+    ).toBe(400)
+  })
+
+  it('answers 404 for an unknown session', async () => {
+    const context = setup()
+    const response = await request(context.app)
+      .put(`/v1/tournaments/${context.tournament.id}/sweepers/${context.squad.id}/lanes/pairs/1`)
+      .send({ inPlay: false })
+    expect(response.status).toBe(404)
+    expect(response.body).toEqual({ message: 'Sweeper not found' })
+  })
+
+  it.each([
+    ['no flag', 1, {}],
+    ['a text flag', 1, { inPlay: 'false' }],
+    ['an extra key', 1, { inPlay: false, lane: 1 }],
+    ['a lane of zero', 0, { inPlay: false }],
+    ['a lane over 199', 200, { inPlay: false }],
+    ['a lane that is not a number', 'one', { inPlay: false }],
+  ])('answers 400 for %s', async (_name, lane, body) => {
+    const context = setup()
+    const response = await request(context.app).put(pairUrl(context, lane)).send(body)
+    expect(response.status).toBe(400)
+  })
+
+  it('answers 403 for a score keeper and for the API key', async () => {
+    const context = setup({ role: 'scoreKeeper' })
+    expect((await request(context.app).put(pairUrl(context)).send({ inPlay: false })).status).toBe(
+      403,
+    )
+    expect(
+      (
+        await request(createTestApp(context.overrides))
+          .put(pairUrl(context))
+          .set(apiKeyHeader, testApiKey)
+          .send({ inPlay: false })
+      ).status,
+    ).toBe(403)
   })
 })

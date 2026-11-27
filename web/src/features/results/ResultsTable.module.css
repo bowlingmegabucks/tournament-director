@@ -433,3 +433,9 @@
 .chip {
   margin-inline-start: var(--space-2);
 }
+
+/* The no-show button (NSH-01): an outline button beside the name. */
+.action {
+  background: transparent;
+  color: var(--color-accent);
+}

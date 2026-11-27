@@ -10,7 +10,7 @@ The other suites check one screen or route at a time, on mocks or small data. Th
 
 ## Status
 
-Built so far (branch `tournamentLifecycleTest`, 1.0.0-rc.1): the harness, stages 0 to 3, stage 4 (the site's 90, the desk's 60 in batches, and the desk edits), lanes, scores, and complete for the four squads and both sweepers with designed scores and hand-written results (stages 5 to 7), the scripted refusals that apply today, the access stage (stage 9), and Complete tournament, in `web/lifecycle/` (27 tests, about 5 minutes). Run `npm run test:lifecycle` in `web/` (needs Docker and `python3`).
+Built so far (branch `tournamentLifecycleTest`, 1.0.0-rc.1): the harness, stages 0 to 3, stage 4 (the site's 90, the desk's 60 in batches, and the desk edits), lanes, scores, and complete for the four squads and both sweepers with designed scores and hand-written results (stages 5 to 7), the scripted refusals that apply today, the access stage (stage 9), and Complete tournament, in `web/lifecycle/` (29 tests, about 5 minutes). Run `npm run test:lifecycle` in `web/` (needs Docker and `python3`).
 
 - **Stack.** `web/lifecycle/docker-compose.yml` (its own MariaDB on 15406 and Mailpit on 15425, no volume), the API on 3100 (empty tables from `npm run db:tables` in `api/`), and the production web build (`dist-lifecycle`, sign-in on, `check:dist` run on it) on 4273. `globalTeardown` removes the containers; `LIFECYCLE_KEEP=1` keeps them.
 - **Stage 0 so far.** First admin from `users:create-admin` through a pseudo-terminal (`support/answerPrompts.py`, because the script refuses piped input), then director and score keeper through the add-user page, invites read from Mailpit, passwords set, sign-in with the real login page. **Not yet:** the earlier tournament and its 50 returning bowlers.
@@ -37,11 +37,14 @@ Built so far (branch `tournamentLifecycleTest`, 1.0.0-rc.1): the harness, stages
 
 **Payouts (built, before the complete):** the director opens the full list (empty), then enters squad A's payouts (the six inferred cashers named and filled with $100, one advancer added by hand with a required note), sweeper one's seven cashers ($50), the super sweeper's one casher ($200), and the Scratch finals ($1,500 for the winner, two tied bowlers through the ticks at $400). The squad's Results tab shows "Payout $100.00" on the cashers and none on an advancer; Seeding shows the finals amounts. The list shows the hand-worked count (18) and total ($3,475.00), By bowler gives each bowler's total and the "Earned at least" box, one Paid tick is saved, and the Complete dialog counts the rest unpaid. While squad D is open, a payout save for it is refused with `409` (PAY-10) and nothing is stored. A second window holds squad A's Results tab open during the save and shows "Payout $100.00" without a reload (D-285). After the complete the list has no Paid box and a payout save is refused (`data/payouts.ts`, PAY-01 to PAY-21).
 
+**No-show after a complete squad (stage 10, built):** a tournament of its own (`data/noShow.ts`), so the main run's hand-worked tables do not move. One squad with three divisions and one no-show in each: a move where a casher drops out, a move where the admin keeps an advancer by ruling, and a refund with a payout saved while the admin reviews. Then the casher is paid by hand, the next squad is bowled, the forced advancer cashes there without advancing again, seeding marks them, and completing the tournament removes the button. Scores are saved through the API.
+
 **Complete tournament (built):** after every session is complete, the director opens the Danger zone, reads the dialog (it says every squad and sweeper is already complete), types the name, and completes. The Completed badge shows, the zone and Edit link go, the finals stay official, and the API answers 409 for an edit, a second complete, a division or squad add or edit, a registration edit or delete, and a lane move; the admin sees no zone and a delete is 409. Stage 9 now expects no Edit or Delete controls. The run does not yet complete with open sessions (the zero-fill path).
 
 **Not built:** the real-payment registration delete (D-210, no bowler is left without scores), the 15 extra squad entries and about 25 extra sweeper entries, a UI refusal for the man under 50, and the run that completes a tournament with open sessions (the zero-fill path).
 
 **Scripted refusals built (stage 5 to 8):** with entries and open sweepers, a super sweeper bowler cannot drop a sweeper (400 "Remove the Super Sweeper first") and a squad with entries is not deleted (409 with `errors`, it stays); with saved lanes in squad D, a lane count that no longer fits is a 409 and a score of 301 a 400; after squad D completes, a second complete is a 409 ("already complete") and a score and a did-not-finish flag are refused (409); once everything is complete, a bowler cannot leave or join a complete squad (400) or have a registration with scores deleted (409), and the admin cannot delete the tournament, with or without the confirm counts (409). These calls go through the page's request context, which carries the signed-in cookie (`support/refusals.ts`, `support/scriptedFailures.ts`).
+
 - **Open finding.** Once, a box on a pair sheet came up empty after its fill (a live update seemed to redraw the sheet), and the box was typed again. The helper now retries up to three times. Worth a look in the app: the sheet is meant to keep what the keeper typed.
 - **Not built yet:** the money checks beyond the Review totals, and the deletes of the stage-4 list.
 
@@ -60,15 +63,15 @@ Built so far (branch `tournamentLifecycleTest`, 1.0.0-rc.1): the harness, stages
 
 ## Data
 
-| Item            | Count | Notes                                                                                 |
-| --------------- | ----- | ------------------------------------------------------------------------------------- |
-| Tournament      | 1     | Made in the UI, with fixed dates.                                                     |
-| Divisions       | 3     | One scratch, one handicap with a percent, one limited by gender or age with averages. |
-| Squads          | 4     | Different sizes; one with its own fee, one with its own ratio.                        |
-| Sweepers        | 2     | One with bonus pins, one without. Three bowlers in the super sweeper.                 |
-| Squad entries   | 300   | 285 from registrations (site 180, desk 105) plus 15 added at the desk by site bowlers. |
-| Sweeper entries | 150   |                                                                                       |
-| Bowlers         | 150   | 50 returning, 100 new (40 through the site, 60 at the desk). Last year: 260 bowlers, about 760 entries (2.9 each).         |
+| Item            | Count | Notes                                                                                                              |
+| --------------- | ----- | ------------------------------------------------------------------------------------------------------------------ |
+| Tournament      | 1     | Made in the UI, with fixed dates.                                                                                  |
+| Divisions       | 3     | One scratch, one handicap with a percent, one limited by gender or age with averages.                              |
+| Squads          | 4     | Different sizes; one with its own fee, one with its own ratio.                                                     |
+| Sweepers        | 2     | One with bonus pins, one without. Three bowlers in the super sweeper.                                              |
+| Squad entries   | 300   | 285 from registrations (site 180, desk 105) plus 15 added at the desk by site bowlers.                             |
+| Sweeper entries | 150   |                                                                                                                    |
+| Bowlers         | 150   | 50 returning, 100 new (40 through the site, 60 at the desk). Last year: 260 bowlers, about 760 entries (2.9 each). |
 
 The 50 returning bowlers come from an earlier, smaller tournament that the test registers first through the vendor routes, so they exist the way real ones do (D-05). Entries split between the desk (UI), the registration site (API key), and the returning bowlers.
 
@@ -96,29 +99,31 @@ Stages that wait on a missing feature stay in the plan and are skipped in the ru
 
 Start with these; add one whenever a feature brings a new refusal.
 
-| Stage     | Action                                                                           | Expect                                                   |
-| --------- | -------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| Divisions | Create a division with a name already used                                       | 409, list unchanged                                      |
-| Squads    | Create a squad dated outside the tournament                                      | 409 with the message                                     |
-| Squads    | Delete a squad that has entries (`SQD-14`, D-186)                                | 409 with `errors`, the squad stays                       |
-| Lanes     | Edit lanes so a saved pair no longer fits                                        | 409 with `errors` (after stage 5 saves lanes)            |
+| Stage     | Action                                                                           | Expect                                                                                            |
+| --------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Divisions | Create a division with a name already used                                       | 409, list unchanged                                                                               |
+| Squads    | Create a squad dated outside the tournament                                      | 409 with the message                                                                              |
+| Squads    | Delete a squad that has entries (`SQD-14`, D-186)                                | 409 with `errors`, the squad stays                                                                |
+| Lanes     | Edit lanes so a saved pair no longer fits                                        | 409 with `errors` (after stage 5 saves lanes)                                                     |
+| Lanes     | Move a bowler onto a pair out of play (`OOP-02`)                                 | 409, nothing saved (not built)                                                                    |
 | Register  | Put a man under 50 in the Women or Seniors division (REG-04e, D-107)             | 400 "Bowler too young for selected division" from the route (done); a refusal in the UI (not yet) |
-| Register  | Repeat a payment code (D-109, D-118)                                             | A retry with the same id, no second entry (done)         |
-| Scores    | Delete an entry that has a score (`REG-19`, D-211)                               | 409 with `errors.scores`, the entry stays (done) |
-| Register  | Delete a registration with a real payment from the site (D-210)                  | 409 with a warning and the total; deletes after the tick |
-| Scores    | Enter a score above 300                                                          | Refused                                                  |
-| Scores    | Enter or flag a score in a complete squad (D-228)                                | 409 with `errors`, nothing saved                         |
-| Results   | Read results while `SessionDnf` is missing (run the SQL file first)              | 503; none in a run that ran `score-tables.sql`           |
-| Scores    | Remove or move a bowler out of a squad where they have a score (`REG-34`, D-203) | 400, the entry and the lane stay                         |
-| Complete  | Move a bowler out of a complete squad, or into one (D-10, D-202)                 | 400, nothing changes                                     |
-| Register  | Remove a sweeper while the bowler is in the super sweeper (D-203)                | 400 "Remove the Super Sweeper first."                    |
-| Register  | The site adds a squad while the desk edit is open, then the desk saves (D-199)   | 409 `changed`; the site's squad is kept                  |
-| Complete  | Complete a squad that is already complete (D-192)                                | 409 with `errors`, no second set of zeros                |
-| Complete  | Complete a tournament that is already complete (D-257)                           | 409 with `errors.tournament`, nothing changes            |
-| Complete  | Complete a tournament that has no squad (D-257)                                  | 409 "Add a squad before you complete this tournament"    |
-| Complete  | Edit a complete tournament                                                       | 409, every field frozen                                  |
-| Delete    | Delete a tournament that has scores                                              | 409, no override                                         |
-| Access    | Score keeper opens a director-only action                                        | Link hidden; API refuses                                 |
+| Register  | Repeat a payment code (D-109, D-118)                                             | A retry with the same id, no second entry (done)                                                  |
+| Scores    | Delete an entry that has a score (`REG-19`, D-211)                               | 409 with `errors.scores`, the entry stays (done)                                                  |
+| Register  | Delete a registration with a real payment from the site (D-210)                  | 409 with a warning and the total; deletes after the tick                                          |
+| Scores    | Enter a score above 300                                                          | Refused                                                                                           |
+| Scores    | Enter or flag a score in a complete squad (D-228)                                | 409 with `errors`, nothing saved                                                                  |
+| Results   | Read results while `SessionDnf` is missing (run the SQL file first)              | 503; none in a run that ran `score-tables.sql`                                                    |
+| Scores    | Remove or move a bowler out of a squad where they have a score (`REG-34`, D-203) | 400, the entry and the lane stay                                                                  |
+| Complete  | Move a bowler out of a complete squad, or into one (D-10, D-202)                 | 400, nothing changes                                                                              |
+| Register  | Remove a sweeper while the bowler is in the super sweeper (D-203)                | 400 "Remove the Super Sweeper first."                                                             |
+| Register  | The site adds a squad while the desk edit is open, then the desk saves (D-199)   | 409 `changed`; the site's squad is kept                                                           |
+| Complete  | Complete a squad that is already complete (D-192)                                | 409 with `errors`, no second set of zeros                                                         |
+| Complete  | Complete a tournament that is already complete (D-257)                           | 409 with `errors.tournament`, nothing changes                                                     |
+| Complete  | Complete a tournament that has no squad (D-257)                                  | 409 "Add a squad before you complete this tournament"                                             |
+| Complete  | Edit a complete tournament                                                       | 409, every field frozen                                                                           |
+| Delete    | Delete a tournament that has scores                                              | 409, no override                                                                                  |
+| No-show   | Refund while a payout was saved during the review (NSH-08)                       | 409, nothing saved (done, stage 10)                                                               |
+| Access    | Score keeper opens a director-only action                                        | Link hidden; API refuses                                                                          |
 
 ## Running it
 

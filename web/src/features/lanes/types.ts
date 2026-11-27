@@ -36,6 +36,8 @@ export interface LanePair {
   firstLane: number
   lanes: number[]
   capacity: number
+  /** A director took the pair out of play: no one can be put on it (OOP-01). */
+  outOfPlay: boolean
   bowlers: LaneBowler[]
 }
 

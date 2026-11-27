@@ -59,6 +59,18 @@ Run `api/prisma/score-tables.sql` once on the production database **before the d
 
 Run `api/prisma/payout-tables.sql` once on the production database **before the deploy that ships payouts**. It creates `Payouts` if it is missing, so running it again is safe, and it touches no legacy table. Without it the payout routes answer `503`. The results routes keep working and show no payout amounts (the read fails, the API logs `Payout amounts unavailable, so the results show none`). Same way as the other scripts. Locally: `docker exec -i tournament-director-db mariadb -uroot -p<password> <database> < api/prisma/payout-tables.sql`. The new permissions `payouts.read` and `payouts.write` need no setting: the director and admin hold them from the first request after the deploy.
 
+### Database script for no-show moves (D-314)
+
+Run `api/prisma/forced-advancer-column.sql` once on the production database **before the deploy that ships no-show moves**. It adds `SquadRegistration.ForcedAdvancer` if it is missing, so running it again is safe. Unlike the table scripts, it is required for existing pages: without the column, every squad and sweeper entry read fails. Locally: `docker exec -i tournament-director-db mariadb -uroot -p<password> <database> < api/prisma/forced-advancer-column.sql`. The permission `entries.override` needs no setting: the admin holds it from the first request after the deploy.
+
+### Database script for lanes out of play (D-316)
+
+Run `api/prisma/lanes-out-of-play-table.sql` once on the production database **before the deploy that ships lanes out of play**. It creates `LanesOutOfPlay` if it is missing, so running it again is safe, and it touches no legacy table. Without it the lane page, recap sheets, and score pages answer `503`. Same way as the other scripts. Locally: `docker exec -i tournament-director-db mariadb -uroot -p<password> <database> < api/prisma/lanes-out-of-play-table.sql`.
+
+### Database script for SMART scholarships (D-317)
+
+Run `api/prisma/smart-scholarship-column.sql` once on the production database **before the deploy that ships SMART scholarships**. It adds `Registrations.SmartScholarship` if it is missing, so running it again is safe. It is required for existing pages: without the column, the registrations list and desk registration fail, the payout pages answer `503`, and results show no payout amounts. The vendor routes read registrations too, so run it first. Locally: `docker exec -i tournament-director-db mariadb -uroot -p<password> <database> < api/prisma/smart-scholarship-column.sql`.
+
 ### Database script for average checks (D-287)
 
 Run `api/prisma/average-tables.sql` once on the production database **before the deploy that ships average verification**. It creates `AverageVerifications` if it is missing, so running it again is safe, and it touches no legacy table (no foreign key: our delete routes remove the row). Without it the Averages routes answer `503`, and so do the lane page, recap sheets, results, and the registrations list, which read the checks to work out handicap and the "Avg not verified" chip. So run it before the deploy, not after. Same way as the other scripts. Locally: `docker exec -i tournament-director-db mariadb -uroot -p<password> <database> < api/prisma/average-tables.sql`. The new permission `averages.verify` reaches the director and the admin with no role change (D-292). The vendor routes start refusing a handicap-division registration with no average (VC-08, D-289): send the registration site the note in [registration-api.md](requirements/registration-api.md#vendor-notes-to-send) first.

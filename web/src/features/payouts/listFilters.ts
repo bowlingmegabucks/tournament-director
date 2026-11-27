@@ -1,4 +1,4 @@
-import { parseAmount } from './amount'
+import { centsOf, parseAmount } from './amount'
 import type { BowlerTotal, PayoutRow } from './types'
 
 /** The key an event filter uses: the source and the event id. */
@@ -57,8 +57,5 @@ export function readMinimum(text: string): MinimumResult {
 
 /** The bowlers whose total is at least the minimum. A total is money text. */
 export function atLeast(bowlers: readonly BowlerTotal[], cents: number): BowlerTotal[] {
-  return bowlers.filter((bowler) => {
-    const total = parseAmount(bowler.total)
-    return total.kind === 'amount' && total.cents >= cents
-  })
+  return bowlers.filter((bowler) => centsOf(bowler.total) >= cents)
 }

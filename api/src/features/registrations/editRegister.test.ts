@@ -35,6 +35,9 @@ interface Options {
   scoredElsewhere?: boolean
   average?: number | null
   bowler?: Partial<ReturnType<typeof createCommonBowler>>
+  smartScholarship?: boolean
+  /** A payout of this registration is marked paid. */
+  paid?: boolean
 }
 
 /** A tournament with two divisions, three squads, two sweepers, and one registered bowler. */
@@ -76,9 +79,11 @@ function setup(options: Options = {}) {
           average: options.average === undefined ? 180 : options.average,
           superSweeper: options.superSweeper ?? false,
           sessionIds,
+          smartScholarship: options.smartScholarship ?? false,
         },
       },
     ],
+    paidRegistrationIds: options.paid ? [registrationId] : [],
     sessions: [...squads, ...sweepers, elsewhere],
     scores: [
       ...(options.scoredIn ?? []).map((key) => ({
@@ -938,5 +943,68 @@ describe('what is checked, and when (D-199, D-205, D-110)', () => {
         request({ addSquadIds: [squads[1]?.id] }),
       ),
     ).rejects.toThrow('disk full')
+  })
+})
+
+describe('SMART scholarship (SMT-02, SMT-05)', () => {
+  const stored = (state: ReturnType<typeof setup>['state']) =>
+    state.registrations[0]?.registration.smartScholarship
+
+  it('turns it on and off', async () => {
+    const { run, state } = setup()
+
+    await run({ smartScholarship: true })
+    expect(stored(state)).toBe(true)
+    await run({ smartScholarship: false })
+    expect(stored(state)).toBe(false)
+  })
+
+  it('keeps what is stored when the request leaves it out', async () => {
+    const { run, state } = setup({ smartScholarship: true })
+
+    await run({ average: 190 })
+
+    expect(stored(state)).toBe(true)
+  })
+
+  it.each([
+    [false, 'A payout is already marked paid. It will now show as SMART scholarship, not cash.'],
+    [true, 'A payout is already marked paid. It will now show as cash, not SMART scholarship.'],
+  ])('warns when a paid payout would change kind (stored %s)', async (was, message) => {
+    const { run, state } = setup({ smartScholarship: was, paid: true })
+
+    const result = await run({ smartScholarship: !was })
+
+    expect(result).toEqual({
+      ok: false,
+      kind: 'warnings',
+      warnings: [{ field: 'smartScholarship', message }],
+    })
+    expect(stored(state)).toBe(was)
+  })
+
+  it('saves after the desk confirms', async () => {
+    const { run, state } = setup({ paid: true })
+
+    const result = await run({ smartScholarship: true, confirmWarnings: true })
+
+    expect(result.ok).toBe(true)
+    expect(stored(state)).toBe(true)
+  })
+
+  it('does not warn when the setting stays the same', async () => {
+    const { run } = setup({ smartScholarship: true, paid: true })
+
+    expect((await run({ smartScholarship: true })).ok).toBe(true)
+  })
+
+  it('lists the average warning and this one together', async () => {
+    const { run } = setup({ paid: true, scoredIn: ['squad0'] })
+
+    const result = await run({ smartScholarship: true, average: 190 })
+
+    expect(result).toMatchObject({
+      warnings: [{ field: 'average' }, { field: 'smartScholarship' }],
+    })
   })
 })

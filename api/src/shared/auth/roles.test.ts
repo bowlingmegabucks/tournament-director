@@ -36,7 +36,11 @@ describe('roles (D-97)', () => {
 
     expect(held).toEqual(
       permissions.filter(
-        (p) => p !== 'users.manage' && p !== 'bowlers.ssn' && p !== 'tournaments.delete',
+        (p) =>
+          p !== 'users.manage' &&
+          p !== 'bowlers.ssn' &&
+          p !== 'tournaments.delete' &&
+          p !== 'entries.override',
       ),
     )
     expect(held).toContain('tournaments.write')
@@ -73,6 +77,13 @@ describe('roles (D-97)', () => {
       expect(permissionsOf(role)).not.toContain('tournaments.delete')
     }
     expect(permissionsOf('admin')).toContain('tournaments.delete')
+  })
+
+  it('lets no one but the admin move or refund a no-show (NSH-01)', () => {
+    for (const role of ['scoreKeeper', 'director']) {
+      expect(permissionsOf(role)).not.toContain('entries.override')
+    }
+    expect(permissionsOf('admin')).toContain('entries.override')
   })
 
   it('lets a director and an admin read and write payouts, not a score keeper (D-275, PAY-16)', () => {

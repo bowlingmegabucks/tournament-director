@@ -966,3 +966,77 @@ describe('the request errors (D-157)', () => {
     expect(parseDeskRequest(base)).toMatchObject({ success: true, data: { average: null } })
   })
 })
+
+describe('SMART scholarship at the desk (SMT-02, SMT-05)', () => {
+  function entered(options: { smartScholarship?: boolean; paid?: boolean } = {}) {
+    const bowler = createCommonBowler()
+    const registrationId = crypto.randomUUID()
+    const made = setup()
+    made.state.bowlers.push(bowler)
+    made.state.registrations.push({
+      tournamentId: made.tournament.id,
+      registration: {
+        id: registrationId,
+        bowlerId: bowler.id,
+        divisionId: made.division.id,
+        average: 185,
+        superSweeper: false,
+        smartScholarship: options.smartScholarship ?? false,
+        sessionIds: [made.squads[0]?.id ?? ''],
+      },
+    })
+    if (options.paid) made.state.paidRegistrationIds.push(registrationId)
+    const append = (overrides: Record<string, unknown> = {}) =>
+      deskRegister(
+        made.deps,
+        made.tournament.id,
+        made.request({
+          bowlerId: bowler.id,
+          appendToExisting: true,
+          bowler: {},
+          squadIds: [made.squads[1]?.id],
+          ...overrides,
+        }),
+      )
+    const stored = () => made.state.registrations[0]?.registration.smartScholarship
+    return { ...made, append, stored }
+  }
+
+  it('saves it on a new registration, and false when left out', async () => {
+    const { deps, state, tournament, request } = setup()
+
+    await deskRegister(deps, tournament.id, request({ smartScholarship: true }))
+    await deskRegister(deps, tournament.id, request())
+
+    expect(state.registrations.map((entry) => entry.registration.smartScholarship)).toEqual([
+      true,
+      false,
+    ])
+  })
+
+  it('keeps it on an append that leaves it out', async () => {
+    const { append, stored } = entered({ smartScholarship: true, paid: true })
+
+    expect(await append()).toMatchObject({ ok: true })
+    expect(stored()).toBe(true)
+  })
+
+  it('changes it on an append when no payout is paid', async () => {
+    const { append, stored } = entered()
+
+    await append({ smartScholarship: true })
+
+    expect(stored()).toBe(true)
+  })
+
+  it('refuses to change it on an append once a payout is paid', async () => {
+    const { append, stored } = entered({ paid: true })
+
+    const failures = await failuresOf(append({ smartScholarship: true }))
+
+    expect(failures.map((failure) => failure.description)).toEqual([
+      'A payout is already marked paid. Change SMART scholarship from Edit registration.',
+    ])
+    expect(stored()).toBe(false)
+  })
+})

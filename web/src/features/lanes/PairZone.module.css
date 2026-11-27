@@ -5,11 +5,19 @@
   border-radius: var(--radius);
 }
 
+/* The heading and "In play" share a line; on a phone the checkbox takes its own (below). */
+.header {
+  display: flex;
+  flex-direction: column;
+  margin-block-end: var(--space-2);
+}
+
 .title {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-2);
+  gap: 0 var(--space-2);
+  margin: 0;
   font-size: var(--font-size-base);
 }
 
@@ -17,6 +25,43 @@
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   font-weight: 400;
+}
+
+.inPlay {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.inPlayLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--target-min);
+}
+
+.savingText {
+  color: var(--color-text-muted);
+}
+
+@media (min-width: 40rem) {
+  .header {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .title {
+    flex: 1;
+    min-inline-size: 0;
+  }
+}
+
+/* Out of play: the words say so; the dashed edge and the page color set it apart. */
+.out {
+  background: var(--color-bg);
+  border-style: dashed;
 }
 
 .bowlers {

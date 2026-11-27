@@ -10,20 +10,17 @@ import { LaneSetupError } from '../../shared/session'
 import { AssignDialog } from './AssignDialog'
 import { BowlerPreview } from './BowlerRow'
 import { decideDrop, pairDropId, unassignedDropId, type DropTarget } from './dropRules'
-import { countBowlers, formatSpots, formatTotals } from './format'
-import styles from './LanesPage.module.css'
-import { OtherPositions } from './OtherPositions'
-import { PairZone } from './PairZone'
+import { LaneBoard } from './LaneBoard'
+import { PairOutDialog } from './PairOutDialog'
 import { useCan } from '../auth/useCan'
-import { AddRegistrationLink } from '../registrations/AddRegistrationLink'
 import { SessionActionsDialog } from '../registrations/SessionActionsDialog'
 import { CheckInDialog } from './CheckInDialog'
 import { RecapDialog } from '../recapSheets/RecapDialog'
 import type { LaneBowler, LanePage, SessionKind } from './types'
-import { UnassignedList } from './UnassignedList'
 import { LiveStatus } from '../../shared/LiveStatus'
 import { useLanes } from './useLanes'
 import { useMoveBowler } from './useMoveBowler'
+import { usePairPlay } from './usePairPlay'
 import { useSessionEvents } from './useSessionEvents'
 
 /** How long a success notice stays. An error stays until dismissed. */
@@ -31,6 +28,21 @@ const INFO_MS = 8000
 
 function everyBowler(page: LanePage): LaneBowler[] {
   return [...page.pairs.flatMap((pair) => pair.bowlers), ...page.unassigned, ...page.other]
+}
+
+/** The bowler and place of a finished drag; nothing for a canceled one or a drop outside. */
+function dropOf(
+  sourceId: string | undefined,
+  targetId: string | undefined,
+  bowlers: readonly LaneBowler[],
+  pairs: LanePage['pairs'],
+): { bowler: LaneBowler; target: DropTarget } | undefined {
+  const bowler = bowlers.find((candidate) => candidate.registrationId === sourceId)
+  const target =
+    targetId === unassignedDropId
+      ? 'unassigned'
+      : pairs.find((candidate) => pairDropId(candidate) === targetId)
+  return bowler && target ? { bowler, target } : undefined
 }
 
 /**
@@ -56,6 +68,9 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
   const canAssign = useCan('lanes.assign')
   const { move, savingIds } = useMoveBowler(kind, id, sessionId)
   const [checkInOpen, setCheckInOpen] = useState(false)
+  const pairPlay = usePairPlay(kind, id, sessionId, (text) => {
+    setToast({ kind: 'error', text })
+  })
   // The add-registration page sets this as it comes back here (REG-22). Clearing it keeps a reload quiet.
   const location = useLocation()
   const navigate = useNavigate()
@@ -85,6 +100,10 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
   const view = data
   const bowlers = everyBowler(view)
   const dragging = bowlers.find((bowler) => bowler.registrationId === draggingId)
+  const askingPair = view.pairs.find((pair) => pair.firstLane === pairPlay.asking)
+  // The question is stale once the pair is gone or the page can no longer change. Drop it, so it
+  // cannot come back later.
+  if (pairPlay.asking !== undefined && (readOnly || !askingPair)) pairPlay.cancel()
 
   // One place decides what a drop or a dialog pick does (D-58, D-220).
   function attempt(bowler: LaneBowler, target: DropTarget) {
@@ -107,108 +126,6 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
     }
   }
 
-  let body
-  if (countBowlers(view) === 0) {
-    body = <p>No bowlers have entered this {kind} yet.</p>
-  } else if (view.pairs.length === 0) {
-    body = (
-      <>
-        <p>
-          This {kind} has no lanes set, so there is nowhere to drop a bowler. Set its lanes first.
-        </p>
-        <UnassignedList
-          bowlers={view.unassigned}
-          kind={kind}
-          dragging={undefined}
-          readOnly
-          onAssign={() => undefined}
-        />
-      </>
-    )
-  } else {
-    body = (
-      <>
-        <div className={styles.stripRow}>
-          <ul className={styles.strip} aria-label="Bowlers per division">
-            {view.divisions.map((division) => (
-              <li key={division.id}>
-                {division.name}: {division.entries}
-              </li>
-            ))}
-            <li>
-              <strong>{formatTotals(view)}</strong>
-            </li>
-            <li>
-              <strong>{formatSpots(view)}</strong>
-            </li>
-          </ul>
-          <span className={styles.stripActions}>
-            {!readOnly && (
-              <AddRegistrationLink tournamentId={id} session={{ kind, id: sessionId }}>
-                {`Add registration to this ${kind}`}
-              </AddRegistrationLink>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                setRecapOpen(true)
-              }}
-            >
-              Recap sheets
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setCheckInOpen(true)
-              }}
-            >
-              Check-in sheet
-            </button>
-          </span>
-        </div>
-        {session.complete && (
-          <p className={styles.note}>This {kind} is complete. Lanes cannot change.</p>
-        )}
-        <div className={styles.layout}>
-          <UnassignedList
-            bowlers={view.unassigned}
-            kind={kind}
-            dragging={dragging}
-            readOnly={readOnly}
-            savingIds={savingIds}
-            onAssign={setAssigning}
-            onManage={canManage ? setManaging : undefined}
-          />
-          <section aria-labelledby="lanes-title">
-            <h2 id="lanes-title" className={styles.areaTitle}>
-              Lanes ({session.startingLane} to {session.startingLane + session.numberOfLanes - 1})
-            </h2>
-            {/* A scrolling region must take the keyboard, or its overflow is out of reach. */}
-            {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-            <section className={styles.scroll} tabIndex={0} aria-label="Lane pairs">
-              <ul className={styles.pairs}>
-                {view.pairs.map((pair) => (
-                  <PairZone
-                    key={pair.firstLane}
-                    pair={pair}
-                    kind={kind}
-                    dragging={dragging}
-                    readOnly={readOnly}
-                    savingIds={savingIds}
-                    fresh={live.updated?.pairs.includes(pair.firstLane)}
-                    onAssign={setAssigning}
-                    onManage={canManage ? setManaging : undefined}
-                  />
-                ))}
-              </ul>
-            </section>
-          </section>
-        </div>
-        {view.other.length > 0 && <OtherPositions bowlers={view.other} kind={kind} />}
-      </>
-    )
-  }
-
   return (
     <DragDropProvider
       onDragStart={({ operation }) => {
@@ -216,22 +133,38 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
       }}
       onDragEnd={({ operation, canceled }) => {
         setDraggingId(undefined)
-        const source = operation.source
-        const target = operation.target
-        if (canceled || !source || !target) return
-        const bowler = bowlers.find((candidate) => candidate.registrationId === String(source.id))
-        if (!bowler) return
-        if (String(target.id) === unassignedDropId) {
-          attempt(bowler, 'unassigned')
-          return
-        }
-        const pair = view.pairs.find((candidate) => pairDropId(candidate) === String(target.id))
-        if (pair) attempt(bowler, pair)
+        if (canceled) return
+        const { source, target } = operation
+        const drop = dropOf(
+          source ? String(source.id) : undefined,
+          target ? String(target.id) : undefined,
+          bowlers,
+          view.pairs,
+        )
+        if (drop) attempt(drop.bowler, drop.target)
       }}
     >
       <title>{`Lane assignments · ${formatSessionDate(session.date)} · ${tournament.name} · Tournament Director`}</title>
       {!session.complete && <LiveStatus state={live.state} updated={live.updated?.text} />}
-      {body}
+      <LaneBoard
+        kind={kind}
+        tournamentId={id}
+        sessionId={sessionId}
+        view={view}
+        dragging={dragging}
+        readOnly={readOnly}
+        savingIds={savingIds}
+        freshPairs={live.updated?.pairs}
+        pairPlay={pairPlay}
+        onAssign={setAssigning}
+        onManage={canManage ? setManaging : undefined}
+        onRecap={() => {
+          setRecapOpen(true)
+        }}
+        onCheckIn={() => {
+          setCheckInOpen(true)
+        }}
+      />
       {checkInOpen && (
         <CheckInDialog
           page={view}
@@ -239,6 +172,15 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
           onClose={() => {
             setCheckInOpen(false)
           }}
+        />
+      )}
+      {askingPair && !readOnly && (
+        <PairOutDialog
+          pair={askingPair}
+          onConfirm={() => {
+            pairPlay.confirm(askingPair)
+          }}
+          onClose={pairPlay.cancel}
         />
       )}
       <DragOverlay>{dragging ? <BowlerPreview name={dragging.name} /> : null}</DragOverlay>

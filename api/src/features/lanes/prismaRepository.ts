@@ -13,6 +13,12 @@ export function createPrismaLaneRepository(client: PrismaClient, logger: Logger)
   const reported = new Set<string>()
 
   return {
+    async listOutOfPlay(sessionId) {
+      const rows = await withDatabaseErrors(logger, () =>
+        client.laneOutOfPlay.findMany({ where: { squadId: sessionId }, select: { lane: true } }),
+      )
+      return rows.map((row) => row.lane)
+    },
     async listEntries(sessionId) {
       const rows = await withDatabaseErrors(logger, () =>
         client.squadRegistration.findMany({
@@ -21,6 +27,7 @@ export function createPrismaLaneRepository(client: PrismaClient, logger: Logger)
           select: {
             registrationId: true,
             laneAssignment: true,
+            forcedAdvancer: true,
             registration: {
               select: {
                 id: true,

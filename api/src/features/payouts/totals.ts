@@ -8,6 +8,7 @@ export interface TotalInput {
   divisionName: string
   amountCents: number
   paid: boolean
+  smartScholarship: boolean
 }
 
 /**
@@ -18,7 +19,14 @@ export interface TotalInput {
 export function totalsByBowler(rows: readonly TotalInput[], minCents = 0): BowlerTotal[] {
   const byBowler = new Map<
     string,
-    { name: string; divisionName: string; count: number; total: number; unpaid: number }
+    {
+      name: string
+      divisionName: string
+      count: number
+      total: number
+      unpaid: number
+      smartScholarship: boolean
+    }
   >()
   for (const row of rows) {
     const found = byBowler.get(row.registrationId) ?? {
@@ -27,6 +35,7 @@ export function totalsByBowler(rows: readonly TotalInput[], minCents = 0): Bowle
       count: 0,
       total: 0,
       unpaid: 0,
+      smartScholarship: row.smartScholarship,
     }
     found.count += 1
     found.total += row.amountCents
@@ -43,6 +52,7 @@ export function totalsByBowler(rows: readonly TotalInput[], minCents = 0): Bowle
       count: bowler.count,
       total: formatCents(bowler.total),
       unpaidTotal: formatCents(bowler.unpaid),
+      smartScholarship: bowler.smartScholarship,
     }))
 }
 

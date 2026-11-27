@@ -365,3 +365,87 @@ describe('workOutDivision: did not finish and no show (D-75)', () => {
     expect(result.noShows).toEqual([])
   })
 })
+
+describe('workOutDivision: forced advancers (NSH-20 to NSH-23)', () => {
+  /** `count` bowlers, best first, with finals 1 in 7 and cash 1 in 5. `forced` are indexes. */
+  const ranked = (count: number, ...forced: number[]) =>
+    Array.from({ length: count }, (_, index) => ({
+      ...flat(250 - index),
+      ...(forced.includes(index) ? { forced: true } : {}),
+    }))
+  const at = (entries: ResultEntry[], over: Partial<DivisionInput> = {}) =>
+    work(entries, { finalsRatio: 7, cashRatio: 5, ...over })
+
+  it('has 3 advance and 1 cash from 21 entries', () => {
+    const bowlers = ranked(21)
+
+    const result = at(bowlers)
+
+    expect(ids(result.advancers)).toEqual(ids(bowlers.slice(0, 3)))
+    expect(ids(result.cashers)).toEqual(ids(bowlers.slice(3, 4)))
+  })
+
+  it('has 2 advance and 2 cash from 20 entries', () => {
+    const bowlers = ranked(20)
+
+    const result = at(bowlers)
+
+    expect(ids(result.advancers)).toEqual(ids(bowlers.slice(0, 2)))
+    expect(ids(result.cashers)).toEqual(ids(bowlers.slice(2, 4)))
+  })
+
+  it('reads like the 21 entry squad when the third bowler is forced at 20', () => {
+    const bowlers = ranked(20, 2)
+
+    const result = at(bowlers)
+
+    expect(ids(result.advancers)).toEqual(ids(bowlers.slice(0, 3)))
+    expect(ids(result.cashers)).toEqual(ids(bowlers.slice(3, 4)))
+    // The cut stays with the last bowler who made it on score.
+    expect(result.cutTotal).toBe(bowlers[1]?.total)
+    expect(result.advanceSpots).toBe(2)
+  })
+
+  it('leaves an earlier advancer below the natural cut where they were (D-81)', () => {
+    const bowlers = ranked(20, 3)
+    const third = bowlers[2]
+
+    const result = at(bowlers, { advancedBefore: new Set(third ? [third.bowlerId] : []) })
+
+    // Naturals: first and second. The fourth is forced, below the third, who advanced earlier.
+    expect(result.cutTotal).toBe(bowlers[1]?.total)
+  })
+
+  it('has no cut when the only advancer is forced', () => {
+    expect(at(ranked(6, 0)).cutTotal).toBeUndefined()
+  })
+
+  it('adds nothing for a forced bowler who already ranks inside the cut', () => {
+    const bowlers = ranked(20, 0)
+
+    const result = at(bowlers)
+
+    expect(result.advancers).toHaveLength(2)
+    expect(result.cashers).toHaveLength(2)
+  })
+
+  it('lets a forced bowler advance when no one else does', () => {
+    const bowlers = ranked(6, 0)
+
+    const result = at(bowlers)
+
+    expect(ids(result.advancers)).toEqual(ids(bowlers.slice(0, 1)))
+    // 1 advancer counts against floor(6 / 5) = 1 cash spot.
+    expect(result.cashers).toEqual([])
+  })
+
+  it('ignores the flag of a bowler who advanced in an earlier squad (RES-06)', () => {
+    const bowlers = ranked(20, 2)
+    const third = bowlers[2]
+
+    const result = at(bowlers, { advancedBefore: new Set(third ? [third.bowlerId] : []) })
+
+    expect(ids(result.advancers)).toEqual(ids(bowlers.slice(0, 2)))
+    expect(ids(result.cashers)).toContain(third?.bowlerId)
+  })
+})

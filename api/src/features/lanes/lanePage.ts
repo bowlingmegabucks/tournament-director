@@ -46,11 +46,14 @@ export function buildLanePage(
   session: LaneSession,
   entries: readonly LaneEntry[],
   divisions: readonly Division[],
+  outOfPlay: readonly number[],
 ): BuiltLanePage {
   const divisionById = new Map(divisions.map((division) => [division.id, division]))
   const pairs = buildPairs(session.startingLane, session.numberOfLanes).map((pair) => ({
     ...pair,
     capacity: session.maxPerPair,
+    // A row that no longer starts a pair of this session matches nothing (OOP-07).
+    outOfPlay: outOfPlay.includes(pair.firstLane),
     bowlers: [] as LaneBowler[],
   }))
   const unassigned: LaneBowler[] = []

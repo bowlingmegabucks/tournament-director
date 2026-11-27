@@ -56,6 +56,7 @@ export const bowlerRegistrationSchema = z.object({
   divisionName: z.string(),
   average: z.number().int().nullable(),
   superSweeper: z.boolean(),
+  smartScholarship: z.boolean(),
   squadIds: z.array(z.uuid()),
   sweeperIds: z.array(z.uuid()),
   /** Any score in this tournament: a division move is refused (D-160). */

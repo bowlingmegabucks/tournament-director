@@ -4,13 +4,15 @@ import type { LaneBowler, LanePair } from './types'
 
 /**
  * What a bowler dropped on a pair would do (D-56, D-58): `same` when they already sit in it,
- * `full` when it holds `capacity` bowlers (a legacy pair over its limit counts as full), else `room`.
+ * `out` when the pair is out of play (OOP-02), `full` when it holds `capacity` bowlers (a legacy pair
+ * over its limit counts as full), else `room`.
  * The cue colors, the drop, and the Assign dialog all ask this one question.
  */
-export type DropOutcome = 'same' | 'full' | 'room'
+export type DropOutcome = 'same' | 'out' | 'full' | 'room'
 
 export function dropOutcome(pair: LanePair, registrationId: string): DropOutcome {
   if (pair.bowlers.some((bowler) => bowler.registrationId === registrationId)) return 'same'
+  if (pair.outOfPlay) return 'out'
   return pair.bowlers.length >= pair.capacity ? 'full' : 'room'
 }
 
@@ -44,6 +46,13 @@ export function decideDrop(bowler: LaneBowler, target: DropTarget): DropDecision
       : { type: 'move', move: planMove(bowler, target) }
   }
   const outcome = dropOutcome(target, bowler.registrationId)
+  if (outcome === 'out') {
+    const verb = target.lanes.length === 1 ? 'is' : 'are'
+    return {
+      type: 'refuse',
+      message: `${formatPair(target)} ${verb} out of play. Pick another pair.`,
+    }
+  }
   if (outcome === 'full') {
     return {
       type: 'refuse',

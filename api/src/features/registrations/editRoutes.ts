@@ -47,6 +47,7 @@ export function createEditRegistrationRouter(deps: RegisterDependencies, logger:
         divisionId: stored.divisionId,
         average: stored.average,
         superSweeper: stored.superSweeper,
+        smartScholarship: stored.smartScholarship ?? false,
         ...held,
       },
       locks: {

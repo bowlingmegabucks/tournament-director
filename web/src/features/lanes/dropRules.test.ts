@@ -89,3 +89,30 @@ describe('drop zone ids', () => {
     expect(unassignedDropId).toBe('unassigned')
   })
 })
+
+describe('a pair out of play (OOP-02)', () => {
+  const out = { ...createLanePair(3), outOfPlay: true }
+
+  it('refuses a drop and says why', () => {
+    const bowler = createLaneBowler()
+
+    expect(dropOutcome(out, bowler.registrationId)).toBe('out')
+    expect(decideDrop(bowler, out)).toEqual({
+      type: 'refuse',
+      message: 'Lanes 3-4 are out of play. Pick another pair.',
+    })
+  })
+
+  it('says lane, not lanes, for a one-lane pair', () => {
+    expect(decideDrop(createLaneBowler(), { ...out, lanes: [3] })).toEqual({
+      type: 'refuse',
+      message: 'Lane 3 is out of play. Pick another pair.',
+    })
+  })
+
+  it('still calls the pair a bowler is in "same", so their own drop does nothing', () => {
+    const bowler = createLaneBowler({ position: '3A' })
+
+    expect(dropOutcome({ ...out, bowlers: [bowler] }, bowler.registrationId)).toBe('same')
+  })
+})

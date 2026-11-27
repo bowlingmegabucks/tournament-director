@@ -1,0 +1,63 @@
+/* A full-screen sheet on a phone, a dialog from 40rem. */
+.sheet {
+  inline-size: 100%;
+  max-inline-size: 100%;
+  block-size: 100%;
+  max-block-size: 100%;
+  margin: 0;
+  border-radius: 0;
+}
+
+@media (min-width: 40rem) {
+  .sheet {
+    inline-size: min(36rem, calc(100vw - 2 * var(--space-4)));
+    block-size: fit-content;
+    max-block-size: calc(100vh - 2 * var(--space-4));
+    margin: auto;
+    border-radius: var(--radius);
+  }
+}
+
+.group {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.group legend,
+.heading {
+  margin: 0;
+  padding: 0;
+  font-size: var(--font-size-base);
+  font-weight: 600;
+}
+
+.choice {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-block-size: var(--target-min);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.list {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-inline-start: var(--space-4);
+  overflow-wrap: anywhere;
+}
+
+.warning {
+  margin: 0;
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-danger);
+  border-radius: var(--radius);
+}

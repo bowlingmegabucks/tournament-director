@@ -49,6 +49,8 @@ function setup(options: {
   flags?: { sessionId: string; registrationId: string }[]
   /** Saved payouts, as storage holds them (PAY-20). */
   payouts?: Omit<PayoutRecord, 'id' | 'tournamentId'>[]
+  /** Registrations whose winnings go to a SMART account (SMT-03). */
+  smartIds?: string[]
 }) {
   const tournament = createTournament()
   const seats = options.seats ?? []
@@ -76,6 +78,8 @@ function setup(options: {
         id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
         tournamentId: tournament.id,
       })),
+      undefined,
+      options.smartIds,
     ).store,
     divisions: createInMemoryDivisionRepository(
       (options.divisions ?? [open]).map((division) => ({
@@ -1017,6 +1021,25 @@ describe('payouts in the rows (PAY-20, D-284)', () => {
       null,
       null,
     ])
+  })
+
+  it('marks SMART money on the row that shows it, and says nothing without an amount (SMT-03)', async () => {
+    const squad = squadAt(morning)
+    const { bowlers, seats } = field([squad.id], four)
+    const [advancer, casher] = bowlers
+    if (!advancer || !casher) throw new Error('no bowlers')
+    const { deps, reporting, tournament } = setup({
+      squads: [squad],
+      seats,
+      payouts: [saved('squad', squad.id, casher, 10000)],
+      smartIds: [casher.registrationId, advancer.registrationId],
+    })
+
+    const result = await loadSquadResults(deps, reporting, tournament.id, squad.id)
+
+    expect(squadResultsSchema.safeParse(result).success).toBe(true)
+    expect(rowOf(result, casher)).toMatchObject({ payout: '100.00', smartScholarship: true })
+    expect(rowOf(result, advancer)).not.toHaveProperty('smartScholarship')
   })
 
   it('shows the saved amount on a sweeper casher only (PAY-20)', async () => {

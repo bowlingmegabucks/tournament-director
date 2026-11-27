@@ -13,8 +13,8 @@ const context: ListContext = {
     { id: 'd1', number: 1, name: 'Open' },
   ],
   registrations: [
-    { id: 'r1', bowler: { name: 'Dana Whitfield' }, divisionName: 'Open' },
-    { id: 'r2', bowler: { name: 'Amy Park' }, divisionName: 'Women' },
+    { id: 'r1', bowler: { name: 'Dana Whitfield' }, divisionName: 'Open', smartScholarship: false },
+    { id: 'r2', bowler: { name: 'Amy Park' }, divisionName: 'Women', smartScholarship: true },
   ],
 }
 
@@ -102,5 +102,16 @@ describe('buildRows (PAY-19)', () => {
 
   it('is empty for no payouts', () => {
     expect(buildRows([], context)).toEqual([])
+  })
+})
+
+describe('SMART scholarship lines (SMT-03)', () => {
+  it('flags the line of a SMART registration and no other', () => {
+    const rows = buildRows([record(), record({ registrationId: 'r2' })], context)
+
+    expect(rows.map((row) => [row.name, row.smartScholarship])).toEqual([
+      ['Amy Park', true],
+      ['Dana Whitfield', false],
+    ])
   })
 })

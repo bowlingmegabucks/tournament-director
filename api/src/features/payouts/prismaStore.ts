@@ -169,15 +169,27 @@ export function createPrismaPayoutStore(client: PrismaClient, logger: Logger): P
     )
   }
 
+  async function smartIdsOf(tournamentId: string): Promise<Set<string>> {
+    const rows = await client.registration.findMany({
+      where: { smartScholarship: true, division: { tournamentId } },
+      select: { id: true },
+    })
+    return new Set(rows.map((row) => row.id))
+  }
+
   return {
     // The public results only tag a casher with this amount. A table that is missing (the script has
     // not run yet) or a failed read must not take the results down: log it and show no amounts.
     listAmounts: async (tournamentId) => {
       try {
-        const rows = await client.payout.findMany({
-          where: { tournamentId },
-          select: { source: true, eventId: true, registrationId: true, amount: true },
-        })
+        // Both or neither: an amount without its flag would show scholarship money as cash.
+        const [rows, smart] = await Promise.all([
+          client.payout.findMany({
+            where: { tournamentId },
+            select: { source: true, eventId: true, registrationId: true, amount: true },
+          }),
+          smartIdsOf(tournamentId),
+        ])
         return rows.flatMap((row) =>
           isSource(row.source)
             ? [
@@ -186,6 +198,7 @@ export function createPrismaPayoutStore(client: PrismaClient, logger: Logger): P
                   eventId: row.eventId,
                   registrationId: row.registrationId,
                   amount: row.amount.toFixed(2),
+                  ...(smart.has(row.registrationId) && { smartScholarship: true as const }),
                 },
               ]
             : [],
@@ -195,6 +208,8 @@ export function createPrismaPayoutStore(client: PrismaClient, logger: Logger): P
         return []
       }
     },
+    smartRegistrationIds: (tournamentId) =>
+      withDatabaseErrors(logger, () => smartIdsOf(tournamentId)),
     list: (tournamentId) =>
       withDatabaseErrors(logger, async () =>
         (await client.payout.findMany({ where: { tournamentId } })).flatMap(

@@ -76,6 +76,8 @@ export interface TournamentCompleteInfo {
   /** Payouts not marked paid, and what they add up to as text (`"1450.00"`). */
   unpaidPayoutCount: number
   unpaidPayoutTotal: string
+  /** The part of `unpaidPayoutTotal` that is SMART scholarship money (SMT-04). */
+  unpaidPayoutSmartTotal: string
 }
 
 /** What the create, edit, and delete routes need from storage. The Prisma version writes to the legacy table. */
@@ -317,6 +319,7 @@ export function createInMemoryTournamentWriter(
     payoutCount: 0,
     unpaidPayoutCount: 0,
     unpaidPayoutTotal: '0.00',
+    unpaidPayoutSmartTotal: '0.00',
     ...options.completeFacts?.[id],
   })
   return {

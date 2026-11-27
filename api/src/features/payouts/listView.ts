@@ -6,7 +6,12 @@ export interface ListContext {
   squads: readonly { id: string; date: string }[]
   sweepers: readonly { id: string; date: string }[]
   divisions: readonly { id: string; number: number; name: string }[]
-  registrations: readonly { id: string; bowler: { name: string }; divisionName: string }[]
+  registrations: readonly {
+    id: string
+    bowler: { name: string }
+    divisionName: string
+    smartScholarship: boolean
+  }[]
 }
 
 /**
@@ -58,6 +63,7 @@ export function buildRows(records: readonly PayoutRecord[], context: ListContext
         amount: formatCents(record.amountCents),
         note: record.note,
         paid: record.paid,
+        smartScholarship: registration?.smartScholarship ?? false,
       }
       return { row, event }
     })

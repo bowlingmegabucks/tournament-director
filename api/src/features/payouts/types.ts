@@ -73,6 +73,8 @@ export interface PayoutView {
 export interface SheetPayee extends Payee {
   /** False for a bowler a director added by hand (D-269). */
   inferred: boolean
+  /** The money goes to the bowler's SMART account, not to the bowler (SMT-03). */
+  smartScholarship: boolean
   payout: PayoutView | null
 }
 
@@ -118,6 +120,8 @@ export interface PayoutRow {
   amount: string
   note: string | null
   paid: boolean
+  /** SMART scholarship money: not handed to the bowler (SMT-03). */
+  smartScholarship: boolean
 }
 
 export interface PayoutSummary {
@@ -135,4 +139,6 @@ export interface BowlerTotal {
   count: number
   total: string
   unpaidTotal: string
+  /** The whole total is SMART scholarship money: the flag is per registration (SMT-02). */
+  smartScholarship: boolean
 }

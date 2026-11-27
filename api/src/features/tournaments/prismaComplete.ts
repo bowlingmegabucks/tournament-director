@@ -133,11 +133,23 @@ export function createTournamentCompleter(
                 ),
               ),
             )
-            const [payoutCount, unpaid] = await Promise.all([
+            const smart = await tx.registration.findMany({
+              where: { smartScholarship: true, division: { tournamentId: id } },
+              select: { id: true },
+            })
+            const [payoutCount, unpaid, unpaidSmart] = await Promise.all([
               tx.payout.count({ where: { tournamentId: id } }),
               tx.payout.aggregate({
                 where: { tournamentId: id, paid: false },
                 _count: true,
+                _sum: { amount: true },
+              }),
+              tx.payout.aggregate({
+                where: {
+                  tournamentId: id,
+                  paid: false,
+                  registrationId: { in: smart.map((row) => row.id) },
+                },
                 _sum: { amount: true },
               }),
             ])
@@ -154,6 +166,7 @@ export function createTournamentCompleter(
               payoutCount,
               unpaidPayoutCount: unpaid._count,
               unpaidPayoutTotal: unpaid._sum.amount?.toFixed(2) ?? '0.00',
+              unpaidPayoutSmartTotal: unpaidSmart._sum.amount?.toFixed(2) ?? '0.00',
             }
           },
           { isolationLevel: 'RepeatableRead' },

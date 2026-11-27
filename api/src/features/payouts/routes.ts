@@ -140,6 +140,7 @@ export function createPayoutReadRouter(deps: PayoutRouterDeps): Router {
         divisionName: registrationBy.get(record.registrationId)?.divisionName ?? '',
         amountCents: record.amountCents,
         paid: record.paid,
+        smartScholarship: registrationBy.get(record.registrationId)?.smartScholarship ?? false,
       })),
       parsed.kind === 'amount' ? parsed.cents : 0,
     )

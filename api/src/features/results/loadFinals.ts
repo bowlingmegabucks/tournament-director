@@ -1,6 +1,7 @@
 import { HttpError } from '../../shared/errors.ts'
 import type { Division } from '../divisions/types.ts'
-import { amountsFor, type PayoutsOption } from '../payouts/amounts.ts'
+import { amountsFor, shownPayout, type PayoutsOption } from '../payouts/amounts.ts'
+import type { PayoutAmountRow } from '../payouts/store.ts'
 import type { Squad } from '../squads/types.ts'
 import {
   workOutAtLarge,
@@ -124,7 +125,7 @@ export async function loadAtLarge(
 
 function seedingRows(
   seeding: SeedingOutcome,
-  payouts: ReadonlyMap<string, string>,
+  payouts: ReadonlyMap<string, PayoutAmountRow>,
   ruled: ReadonlySet<string>,
 ) {
   const marks = markCutLine(entriesOf(seeding.finalists), entriesOf(seeding.others))
@@ -142,7 +143,7 @@ function seedingRows(
     unverified: item.entry.unverified,
     ...(group === 'finalist' && ruled.has(item.entry.bowlerId) ? { byRuling: true } : {}),
     // D-284: only an inferred payee, a finalist, shows an amount.
-    payout: group === 'finalist' ? (payouts.get(item.entry.registrationId) ?? null) : null,
+    ...shownPayout(group === 'finalist' ? payouts.get(item.entry.registrationId) : undefined),
   })
   return [
     ...seeding.finalists.map((item, index) => toRow(item, index + 1, 'finalist')),
@@ -251,7 +252,7 @@ export async function loadSuperSweeper(
     dnf: item.dnf,
     unverified: item.entry.unverified,
     // D-284: only an inferred payee, a casher, shows an amount.
-    payout: group === 'casher' ? (paid.get(item.entry.registrationId) ?? null) : null,
+    ...shownPayout(group === 'casher' ? paid.get(item.entry.registrationId) : undefined),
   })
 
   return {

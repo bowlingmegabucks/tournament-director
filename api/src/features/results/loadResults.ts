@@ -8,8 +8,8 @@ import type { SquadRepository } from '../squads/repository.ts'
 import type { Squad } from '../squads/types.ts'
 import type { SweeperRepository } from '../sweepers/repository.ts'
 import type { TournamentRepository } from '../tournaments/repository.ts'
-import type { PayoutAmounts } from '../payouts/store.ts'
-import { amountsFor, type PayoutsOption } from '../payouts/amounts.ts'
+import type { PayoutAmountRow, PayoutAmounts } from '../payouts/store.ts'
+import { amountsFor, shownPayout, type PayoutsOption } from '../payouts/amounts.ts'
 import { toDivisionResult } from './divisionResult.ts'
 import { buildResultEntries, sweeperPins, type ResultEntry } from './entries.ts'
 import { limitToCountedGames, type RankMode } from './fullGame.ts'
@@ -43,7 +43,7 @@ export function toSquadResults(
   worked: WorkedSquad,
   divisions: readonly Division[],
   mode: RankMode,
-  payouts: ReadonlyMap<string, string> = new Map(),
+  payouts: ReadonlyMap<string, PayoutAmountRow> = new Map(),
 ): SquadResults {
   const { outcomes, advancedBefore, flagged } = worked
   // The advancers of every squad before this one decide who is an earlier advancer (RES-06).
@@ -189,7 +189,7 @@ export async function loadSweeperResults(
     dnf: flagged.has(entry.registrationId),
     unverified: entry.unverified,
     // D-284: only an inferred payee, a casher, shows an amount.
-    payout: group === 'casher' ? (paid.get(entry.registrationId) ?? null) : null,
+    ...shownPayout(group === 'casher' ? paid.get(entry.registrationId) : undefined),
   })
 
   return {

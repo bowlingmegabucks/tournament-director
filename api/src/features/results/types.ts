@@ -64,6 +64,8 @@ export const squadRowSchema = z.object({
    * as `"100.00"`. `null` for a bowler with no saved payout, and for any row that is not an inferred payee.
    */
   payout: z.string().nullable(),
+  /** Present when `payout` is SMART scholarship money, not cash (SMT-03). */
+  smartScholarship: z.literal(true).optional(),
 })
 
 /** A bowler listed apart on a complete squad: no place, no group, no ties (D-75). */
@@ -138,6 +140,8 @@ export const sweeperRowSchema = z.object({
    * as `"100.00"`. `null` for a bowler with no saved payout, and for any row that is not an inferred payee.
    */
   payout: z.string().nullable(),
+  /** Present when `payout` is SMART scholarship money, not cash (SMT-03). */
+  smartScholarship: z.literal(true).optional(),
 })
 
 export type SweeperRow = z.infer<typeof sweeperRowSchema>
@@ -232,6 +236,8 @@ export const seedingRowSchema = z.object({
    * as `"100.00"`. `null` for a bowler with no saved payout, and for any row that is not an inferred payee.
    */
   payout: z.string().nullable(),
+  /** Present when `payout` is SMART scholarship money, not cash (SMT-03). */
+  smartScholarship: z.literal(true).optional(),
 })
 
 export const seedingDivisionSchema = z.object({
@@ -286,6 +292,8 @@ export const superSweeperRowSchema = z.object({
    * as `"100.00"`. `null` for a bowler with no saved payout, and for any row that is not an inferred payee.
    */
   payout: z.string().nullable(),
+  /** Present when `payout` is SMART scholarship money, not cash (SMT-03). */
+  smartScholarship: z.literal(true).optional(),
 })
 
 export type SuperSweeperRow = z.infer<typeof superSweeperRowSchema>

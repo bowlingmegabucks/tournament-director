@@ -10,12 +10,23 @@ export function amountsFor(
   rows: readonly PayoutAmountRow[],
   source: PayoutSource,
   eventId: string,
-): ReadonlyMap<string, string> {
+): ReadonlyMap<string, PayoutAmountRow> {
   return new Map(
     rows
       .filter((row) => row.source === source && row.eventId === eventId)
-      .map((row) => [row.registrationId, row.amount]),
+      .map((row) => [row.registrationId, row]),
   )
+}
+
+/**
+ * What a results row carries: the amount, and `smartScholarship` only when that amount is SMART
+ * money (SMT-03). A row with no amount says nothing about the bowler.
+ */
+export function shownPayout(row: PayoutAmountRow | undefined) {
+  return {
+    payout: row?.amount ?? null,
+    ...(row?.smartScholarship && { smartScholarship: true as const }),
+  }
 }
 
 /** Passed along when one request reads several events, so the table is read once. */

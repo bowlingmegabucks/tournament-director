@@ -7,6 +7,7 @@ const row = (overrides: Partial<TotalInput> = {}): TotalInput => ({
   divisionName: 'Open',
   amountCents: 10000,
   paid: false,
+  smartScholarship: false,
   ...overrides,
 })
 
@@ -25,6 +26,7 @@ describe('totalsByBowler (PAY-19)', () => {
         count: 3,
         total: '1850.50',
         unpaidTotal: '1750.50',
+        smartScholarship: false,
       },
     ])
   })
@@ -71,5 +73,19 @@ describe('summarize (PAY-19)', () => {
       unpaidCount: 0,
       unpaidTotal: '0.00',
     })
+  })
+})
+
+describe('SMART scholarship totals (SMT-04)', () => {
+  it('flags the total of a SMART registration', () => {
+    const totals = totalsByBowler([
+      row({ smartScholarship: true }),
+      row({ registrationId: 'r2', amountCents: 500 }),
+    ])
+
+    expect(totals.map((total) => [total.registrationId, total.smartScholarship])).toEqual([
+      ['r1', true],
+      ['r2', false],
+    ])
   })
 })

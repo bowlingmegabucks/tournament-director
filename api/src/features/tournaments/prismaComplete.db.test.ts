@@ -317,6 +317,7 @@ describe('Prisma complete tournament (TRN-10, TRN-38 to TRN-41, D-256 to D-259)'
         payoutCount: 0,
         unpaidPayoutCount: 0,
         unpaidPayoutTotal: '0.00',
+        unpaidPayoutSmartTotal: '0.00',
       })
     })
 
@@ -332,6 +333,41 @@ describe('Prisma complete tournament (TRN-10, TRN-38 to TRN-41, D-256 to D-259)'
         payoutCount: 0,
         unpaidPayoutCount: 0,
         unpaidPayoutTotal: '0.00',
+        unpaidPayoutSmartTotal: '0.00',
+      })
+    })
+
+    it('adds up the unpaid SMART scholarship money on its own (SMT-04)', async () => {
+      const tournamentId = await rows.tournament()
+      const squadId = await rows.session(tournamentId, 'squad', '2026-10-24 09:00:00')
+      await enter(tournamentId, squadId, 2)
+      const [flagged, other] = await client.registration.findMany({
+        where: { division: { tournamentId } },
+        select: { id: true },
+      })
+      if (!flagged || !other) throw new Error('no registrations')
+      await client.registration.update({
+        where: { id: flagged.id },
+        data: { smartScholarship: true },
+      })
+      for (const [registrationId, amount] of [
+        [flagged.id, '75.00'],
+        [other.id, '25.00'],
+      ]) {
+        await client.$executeRawUnsafe(
+          `INSERT INTO Payouts (Id, TournamentId, Source, EventId, RegistrationId, Amount, Paid, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy)
+           VALUES (?, ?, 'squad', ?, ?, ?, 0, NOW(3), 'u', NOW(3), 'u')`,
+          crypto.randomUUID(),
+          tournamentId,
+          squadId,
+          registrationId,
+          amount,
+        )
+      }
+
+      expect(await writer().getCompleteInfo(tournamentId)).toMatchObject({
+        unpaidPayoutTotal: '100.00',
+        unpaidPayoutSmartTotal: '75.00',
       })
     })
 
@@ -356,6 +392,7 @@ describe('Prisma complete tournament (TRN-10, TRN-38 to TRN-41, D-256 to D-259)'
         payoutCount: 3,
         unpaidPayoutCount: 2,
         unpaidPayoutTotal: '1450.00',
+        unpaidPayoutSmartTotal: '0.00',
       })
     })
   })

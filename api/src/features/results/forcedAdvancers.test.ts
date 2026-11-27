@@ -21,12 +21,16 @@ import { createInMemoryTournamentRepository } from '../tournaments/repository.ts
 const tournament = createTournament({ id: idOf(50) })
 const base = `/v1/tournaments/${tournament.id}`
 
-/** 20 entries in squad one, Cal (third) forced. Squad two: Cal again, with the best score. */
-function app() {
-  const first: Bowled[] = field(20).map((item, index) =>
-    index === 2 ? { ...item, entry: { ...item.entry, forcedAdvancer: true } } : item,
+/** Squad one, 20 entries: Cal is third. `forced` flags them. */
+const firstSquad = (forced: boolean): Bowled[] =>
+  field(20).map((item, index) =>
+    forced && index === 2 ? { ...item, entry: { ...item.entry, forcedAdvancer: true } } : item,
   )
-  const second: Bowled[] = [{ entry: person(2), score: 280 }, ...field(13, 30)]
+
+/** Squad two: Cal again, with the best score. */
+const calBest: Bowled[] = [{ entry: person(2), score: 280 }, ...field(13, 30)]
+
+function app(first = firstSquad(true), second = calBest) {
   const squads = [squadOne, squadTwo]
   const bowled = [first, second]
   return createSignedInTestApp(
@@ -110,5 +114,42 @@ describe('results with a forced advancer (NSH-21 to NSH-24)', () => {
     // 34 entries: floor(34 / 7) = 4 spots. Advancers: Amy, Ben, Cal, Field30, Field31.
     expect(division).toMatchObject({ totalSpots: 4, squadAdvancers: 5, atLargeSpots: 0 })
     expect(division.rows).toEqual([])
+  })
+})
+
+// A no-show left squad one at 20 entries and Cal was not kept advancing. Cal also bowled squad two.
+describe('an unkept bowler who bowled a later squad (RES-06, RES-16)', () => {
+  const seedingOf = async (second: Bowled[]) => {
+    const response = await request(app(firstSquad(false), second)).get(`${base}/seeding`)
+    return (response.body.divisions[0].rows as (Row & { previousCasher: boolean })[]).find(
+      (row) => row.name === 'Cal Lane',
+    )
+  }
+
+  it('advances there when the score would have advanced, with no casher mark', async () => {
+    const server = app(firstSquad(false), calBest)
+
+    const response = await request(server).get(`${base}/squads/${squadTwo.id}/results`)
+
+    const rows = response.body.divisions[0].rows as Row[]
+    expect(rows.find((row) => row.name === 'Cal Lane')).toMatchObject({ group: 'advancer' })
+    expect(await seedingOf(calBest)).toMatchObject({ group: 'finalist', previousCasher: false })
+  })
+
+  it('stays a casher in both when below the later cut, and is marked at-large', async () => {
+    // 20 entries: Field30 (250) and Field31 (248) advance. Cal's 247 cashes.
+    const second: Bowled[] = [{ entry: person(2), score: 247 }, ...field(19, 30)]
+    const server = app(firstSquad(false), second)
+
+    for (const squad of [squadOne, squadTwo]) {
+      const response = await request(server).get(`${base}/squads/${squad.id}/results`)
+      const rows = response.body.divisions[0].rows as Row[]
+      expect(rows.find((row) => row.name === 'Cal Lane')).toMatchObject({ group: 'casher' })
+    }
+    const atLarge = await request(server).get(`${base}/at-large`)
+    expect(atLarge.body.divisions[0].rows).toMatchObject([
+      { name: 'Cal Lane', previousCasher: true },
+    ])
+    expect(await seedingOf(second)).toMatchObject({ group: 'finalist', previousCasher: true })
   })
 })

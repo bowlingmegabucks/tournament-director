@@ -356,6 +356,7 @@ describe('Prisma registration writer', () => {
       divisionId,
       average: 170,
       superSweeper: false,
+      smartScholarship: false,
       sessionIds: [squadId],
     })
     expect(await writer.findRegistration(bowlerId, otherTournament)).toBeUndefined()
@@ -826,5 +827,47 @@ describe('Prisma registration writer', () => {
     expect(result).toMatchObject({ ok: false, reason: 'refused' })
     expect(await client.registration.count()).toBe(1)
     expect(await client.squadRegistration.count()).toBe(1)
+  })
+
+  it('keeps SMART scholarship until a save names it, and sees a paid payout (SMT-02, SMT-05)', async () => {
+    const { writer } = setup()
+    const tournamentId = await insertTournament()
+    const divisionId = await insertDivision(tournamentId)
+    const bowlerId = crypto.randomUUID()
+    const id = crypto.randomUUID()
+    const save = (isNew: boolean, smartScholarship?: boolean) =>
+      writer.save({
+        bowler: isNew
+          ? { id: bowlerId, isNew: true, data: bowlerData }
+          : { id: bowlerId, isNew: false, patch: {} },
+        registration: {
+          id,
+          isNew,
+          divisionId,
+          average: 180,
+          superSweeper: false,
+          smartScholarship,
+        },
+        addSessionIds: [],
+        payment: null,
+      })
+
+    await save(true)
+    expect((await writer.getDetail(id))?.smartScholarship).toBe(false)
+    await save(false, true)
+    await save(false)
+    expect((await writer.getDetail(id))?.smartScholarship).toBe(true)
+    expect((await writer.findRegistration(bowlerId, tournamentId))?.smartScholarship).toBe(true)
+
+    expect(await writer.hasPaidPayout(id)).toBe(false)
+    await client.$executeRawUnsafe(
+      `INSERT INTO Payouts (Id, TournamentId, Source, EventId, RegistrationId, Amount, Paid, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy)
+       VALUES (?, ?, 'squad', ?, ?, 10, 1, NOW(3), 'u', NOW(3), 'u')`,
+      crypto.randomUUID(),
+      tournamentId,
+      crypto.randomUUID(),
+      id,
+    )
+    expect(await writer.hasPaidPayout(id)).toBe(true)
   })
 })

@@ -43,6 +43,8 @@ export const deskRequestSchema = z.object({
   squadIds: z.array(z.uuid()).default([]),
   sweeperIds: z.array(z.uuid()).default([]),
   superSweeper: z.boolean().default(false),
+  /** SMT-01. Left out keeps what an existing registration holds. */
+  smartScholarship: z.boolean().optional(),
   /** A stored bowler; `bowler` is then a patch. Absent means a new bowler (D-157, D-162). */
   bowlerId: z.uuid().optional(),
   bowler: deskBowlerSchema.default({}),

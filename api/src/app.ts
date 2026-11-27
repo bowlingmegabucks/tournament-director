@@ -218,6 +218,10 @@ export function createApp({
     logger,
     (tournamentId) => tellAveragesChanged(tournamentId),
     (tournamentId) => liveNotifier.entriesChanged(tournamentId),
+    (tournamentId) => {
+      dropFinalsPages(tournamentId)
+      liveNotifier.payoutsSaved(tournamentId)
+    },
   )
   // The tournament-wide half of an average change: the finals pages and the TV feed (AVG-19, D-298).
   // A function declaration, so the registration writer above can call it once the pages exist.

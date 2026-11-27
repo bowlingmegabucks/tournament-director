@@ -89,6 +89,7 @@ export function createBowlerRouter(
           tournamentDivisions.find((division) => division.id === stored.divisionId)?.name ?? '',
         average: stored.average,
         superSweeper: stored.superSweeper,
+        smartScholarship: stored.smartScholarship ?? false,
         ...held,
         hasScores,
       }

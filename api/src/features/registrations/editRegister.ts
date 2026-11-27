@@ -316,16 +316,30 @@ export async function editRegistration(
   }
   if (list.length > 0) return failures(list)
 
-  // D-201: a later average moves handicap and results once scores exist.
-  if (averageChanged && scoredHere.length > 0 && !request.confirmWarnings) {
-    return {
-      ok: false,
-      kind: 'warnings',
-      warnings: [
-        { field: 'average', message: 'This bowler has scores. Handicap and results will change.' },
-      ],
+  const smartScholarship = request.smartScholarship ?? stored.smartScholarship ?? false
+  const warnings: EditWarning[] = []
+  if (!request.confirmWarnings) {
+    // D-201: a later average moves handicap and results once scores exist.
+    if (averageChanged && scoredHere.length > 0) {
+      warnings.push({
+        field: 'average',
+        message: 'This bowler has scores. Handicap and results will change.',
+      })
+    }
+    // SMT-05: money already handed out may have been the wrong kind.
+    if (
+      smartScholarship !== (stored.smartScholarship ?? false) &&
+      (await writer.hasPaidPayout(stored.id))
+    ) {
+      warnings.push({
+        field: 'smartScholarship',
+        message: smartScholarship
+          ? 'A payout is already marked paid. It will now show as SMART scholarship, not cash.'
+          : 'A payout is already marked paid. It will now show as cash, not SMART scholarship.',
+      })
     }
   }
+  if (warnings.length > 0) return { ok: false, kind: 'warnings', warnings }
 
   const addSessionIds = [...change.addSquads, ...change.addSweepers]
   const removeSessionIds = [...change.removeSquads, ...change.removeSweepers]
@@ -338,6 +352,7 @@ export async function editRegistration(
         divisionId,
         average,
         superSweeper,
+        smartScholarship: request.smartScholarship,
         // A new average or division is unverified again (AVG-08, D-290).
         clearAverageCheck: divisionMoved || averageChanged,
       },

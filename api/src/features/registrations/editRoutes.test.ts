@@ -107,6 +107,7 @@ describe('GET /v1/tournaments/{id}/registrations/{registrationId}/edit-info (D-1
         divisionId: division.id,
         average: 180,
         superSweeper: false,
+        smartScholarship: false,
         squadIds: [squads[0]?.id],
         sweeperIds: [sweepers[0]?.id],
       },

@@ -24,6 +24,8 @@ export const registrationSchema = z.object({
   squadIds: z.array(z.uuid()),
   sweeperIds: z.array(z.uuid()),
   superSweeper: z.boolean(),
+  /** Winnings go to the bowler's SMART account (SMT-01, SMT-04). */
+  smartScholarship: z.boolean(),
   /** The average handicap uses: the checked one, else the one the bowler gave; `null` when none (AVG-09, D-288). */
   average: z.number().int().nullable(),
   /** Whether a director checked it (AVG-11, D-295). `none` in a division with no handicap, where there is nothing to check. */

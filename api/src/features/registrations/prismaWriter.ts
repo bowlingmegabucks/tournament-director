@@ -62,6 +62,8 @@ async function writeRegistration(
     divisionId: registration.divisionId,
     average: registration.average,
     superSweeper: registration.superSweeper,
+    // Undefined leaves the column alone (and false on a create): SMT-01.
+    smartScholarship: registration.smartScholarship,
   }
   if (registration.isNew) {
     await tx.registration.create({ data: { id: registration.id, bowlerId, ...columns } })
@@ -152,6 +154,7 @@ export function createPrismaRegistrationWriter(
             divisionId: true,
             average: true,
             superSweeper: true,
+            smartScholarship: true,
             squads: { select: { squadId: true } },
           },
         }),
@@ -187,6 +190,13 @@ export function createPrismaRegistrationWriter(
         }),
       )
       return row?.registrationId
+    },
+
+    async hasPaidPayout(registrationId) {
+      const count = await withDatabaseErrors(logger, () =>
+        client.payout.count({ where: { registrationId, paid: true } }),
+      )
+      return count > 0
     },
 
     async findScoredSessionIds(bowlerId) {
@@ -278,6 +288,7 @@ export function createPrismaRegistrationWriter(
             divisionId: true,
             average: true,
             superSweeper: true,
+            smartScholarship: true,
             division: { select: { tournamentId: true } },
             bowler: true,
             squads: { select: { squadId: true } },
@@ -291,6 +302,7 @@ export function createPrismaRegistrationWriter(
         divisionId: row.divisionId,
         average: row.average,
         superSweeper: row.superSweeper,
+        smartScholarship: row.smartScholarship,
         tournamentId: row.division.tournamentId,
         bowler: toStoredBowler(row.bowler),
         sessionIds: row.squads.map((entry) => entry.squadId),

@@ -155,6 +155,21 @@ export async function deskRegister(
   const conflict = await checkExisting(deps, tournament.id, request, knownBowler, existing)
   if (conflict) return conflict
 
+  // SMT-05: switching cash and scholarship on a paid payout needs the edit page's confirmation.
+  if (
+    existing &&
+    request.smartScholarship !== undefined &&
+    request.smartScholarship !== (existing.smartScholarship ?? false) &&
+    (await writer.hasPaidPayout(existing.id))
+  ) {
+    return failures([
+      validation(
+        'Registration.SmartScholarshipPaid',
+        'A payout is already marked paid. Change SMART scholarship from Edit registration.',
+      ),
+    ])
+  }
+
   const result = await completeRegistration(deps, {
     tournament,
     division: located.division,
@@ -167,6 +182,7 @@ export async function deskRegister(
     squadIds: unique(request.squadIds),
     sweeperIds: unique(request.sweeperIds),
     superSweeper: request.superSweeper,
+    smartScholarship: request.smartScholarship,
     average: request.average,
     payment: {
       id: newId(),
@@ -215,6 +231,7 @@ const fieldOfCode: Record<string, string> = {
   'Registration.InvalidSweeperIds': 'sweeperIds',
   'Registration.SweeperComplete': 'sweeperIds',
   'Sweeper.Conflict': 'sweeperIds',
+  'Registration.SmartScholarshipPaid': 'smartScholarship',
   'Registration.SuperSweeperNeedsAllSweepers': 'superSweeper',
   'Registration.SuperSweeperLocked': 'superSweeper',
   'Registration.SuperSweeperRemoveFirst': 'superSweeper',

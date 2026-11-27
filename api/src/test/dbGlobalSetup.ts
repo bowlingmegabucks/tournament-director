@@ -6,6 +6,7 @@ import { averageSchemaSql } from './averageSchema.ts'
 import { forcedAdvancerSchemaSql } from './forcedAdvancerSchema.ts'
 import { payoutSchemaSql } from './payoutSchema.ts'
 import { scoreSchemaSql } from './scoreSchema.ts'
+import { laneSchemaSql } from './laneSchema.ts'
 import { legacySchemaSql } from './legacySchema.ts'
 
 declare module 'vitest' {
@@ -33,6 +34,8 @@ export default async function setup(project: TestProject): Promise<() => Promise
       ...averageSchemaSql(),
       ...forcedAdvancerSchemaSql(),
       ...forcedAdvancerSchemaSql(),
+      ...laneSchemaSql(),
+      ...laneSchemaSql(),
     ]) {
       // In order: a table with a foreign key needs the table it points to first.
       await client.$executeRawUnsafe(statement) // NOSONAR: order matters

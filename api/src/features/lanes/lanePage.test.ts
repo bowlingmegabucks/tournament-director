@@ -54,6 +54,12 @@ describe('buildLanePage', () => {
     )
   })
 
+  it('marks the pairs taken out of play, and ignores a lane that starts no pair (OOP-01, OOP-07)', () => {
+    const { page } = buildLanePage(session(), [], [division], [3, 4, 21])
+
+    expect(page.pairs.map((pair) => pair.outOfPlay)).toEqual([false, true, false, false, false])
+  })
+
   it('sorts a pair by lane, then letter (LAN-04)', () => {
     const { page } = buildLanePage(
       session(),

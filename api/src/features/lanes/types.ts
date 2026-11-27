@@ -43,6 +43,8 @@ export const lanePairSchema = z.object({
   lanes: z.array(z.number().int()),
   /** Seats on the pair: the session's `maxPerPair` (D-56). The pair is full at this many bowlers. */
   capacity: z.number().int(),
+  /** A director took the pair out of play: no one can be put on it (OOP-01). */
+  outOfPlay: z.boolean(),
   bowlers: z.array(laneBowlerSchema),
 })
 

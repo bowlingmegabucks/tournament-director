@@ -7,13 +7,20 @@ import type { LaneEntry } from './types.ts'
  */
 export interface LaneRepository {
   listEntries(sessionId: string): Promise<LaneEntry[]>
+  /** The first lanes of the pairs taken out of play (OOP-01). */
+  listOutOfPlay(sessionId: string): Promise<number[]>
 }
 
 /** Entries stored with the session they belong to. */
 export function createInMemoryLaneRepository(
   seed: { sessionId: string; entry: LaneEntry }[],
+  outOfPlay: { sessionId: string; lane: number }[] = [],
 ): LaneRepository {
   return {
+    listOutOfPlay: (sessionId) =>
+      Promise.resolve(
+        outOfPlay.filter((item) => item.sessionId === sessionId).map((item) => item.lane),
+      ),
     listEntries: (sessionId) =>
       Promise.resolve(
         seed.filter((item) => item.sessionId === sessionId).map((item) => ({ ...item.entry })),

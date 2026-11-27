@@ -17,6 +17,18 @@ describe('in-memory lane repository', () => {
     expect(await createInMemoryLaneRepository([]).listEntries('a')).toEqual([])
   })
 
+  it('lists the lanes out of play of the session asked for (OOP-01)', async () => {
+    const repository = createInMemoryLaneRepository(
+      [],
+      [
+        { sessionId: 'a', lane: 3 },
+        { sessionId: 'b', lane: 5 },
+      ],
+    )
+
+    expect(await repository.listOutOfPlay('a')).toEqual([3])
+  })
+
   it('hands out copies, so a caller cannot change the stored entry', async () => {
     const repository = createInMemoryLaneRepository([
       { sessionId: 'a', entry: createLaneEntry({ position: '1A' }) },

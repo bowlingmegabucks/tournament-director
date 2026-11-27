@@ -171,6 +171,16 @@ model SquadRegistration {
   @@map("SquadRegistration")
 }
 
+/// A lane pair taken out of play for one squad or sweeper, by its first lane (OOP-01). Created by
+/// prisma/lanes-out-of-play-table.sql. No relation: the delete routes remove the rows.
+model LaneOutOfPlay {
+  squadId String @map("SquadId") @db.Char(36)
+  lane    Int    @map("Lane") @db.SmallInt
+
+  @@id([squadId, lane])
+  @@map("LanesOutOfPlay")
+}
+
 /// One game score for one bowler in one squad or sweeper, in scratch pins (storage section of
 /// `scores.md`). Read only for the score view (D-69). Linked to the bowler, not the registration,
 /// and modeled without relations: the view joins them in code.

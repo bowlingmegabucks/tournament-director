@@ -69,6 +69,17 @@ describe('planPairChange', () => {
     ).toEqual({ type: 'save', unassign: ['id-1A', 'id-2C'] })
   })
 
+  it('does not ask again about an entry the lane page hides (OOP-04)', () => {
+    const [shown, hidden] = seated('1A', '2C')
+    if (!shown || !hidden) throw new Error('no entries')
+    const entries = [shown, { ...hidden, hidden: true }]
+
+    expect(
+      planPairChange(facts({ entries }), request({ confirmWarnings: true, seen: ['id-1A'] })),
+    ).toEqual({ type: 'save', unassign: ['id-1A', 'id-2C'] })
+    expect(planPairChange(facts({ entries }), request()).type).toBe('confirm')
+  })
+
   it('brings a pair back and moves no one (OOP-05)', () => {
     expect(
       planPairChange(facts({ outOfPlay: [1], entries: seated('1A') }), request({ inPlay: true })),

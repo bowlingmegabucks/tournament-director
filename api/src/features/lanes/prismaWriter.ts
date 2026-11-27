@@ -1,6 +1,8 @@
 import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { withRetry } from '../../shared/serializableRetry.ts'
+import { toDivision } from '../divisions/divisionRow.ts'
+import { toLaneEntry } from './entryRow.ts'
 import { planLaneMove, type MoveFacts } from './movePlan.ts'
 import { planPairChange } from './pairPlan.ts'
 import type {
@@ -69,6 +71,48 @@ async function readFacts(
 }
 
 /**
+ * The entries of the session the lane page leaves out: a row that breaks the read shape, or a
+ * division that is not one of the tournament's (D-51). Read with the page's own mappers, inside the
+ * transaction, so the two cannot disagree (OOP-04).
+ */
+async function hiddenFromPage(
+  tx: Pick<PrismaClient, 'squadRegistration' | 'division'>,
+  input: { tournamentId: string; sessionId: string },
+): Promise<ReadonlySet<string>> {
+  const rows = await tx.squadRegistration.findMany({
+    where: { squadId: input.sessionId },
+    // Named columns only, as the lane page reads them (BWL-17).
+    select: {
+      registrationId: true,
+      laneAssignment: true,
+      registration: {
+        select: {
+          id: true,
+          bowlerId: true,
+          average: true,
+          superSweeper: true,
+          divisionId: true,
+          bowler: { select: { firstName: true, lastName: true, suffix: true } },
+        },
+      },
+    },
+  })
+  const divisions = await tx.division.findMany({ where: { tournamentId: input.tournamentId } })
+  const readable = new Set(
+    divisions.flatMap((row) => {
+      const result = toDivision(row)
+      return result.success ? [result.data.id] : []
+    }),
+  )
+  return new Set(
+    rows.flatMap((row) => {
+      const result = toLaneEntry(row)
+      return result.success && readable.has(result.data.divisionId) ? [] : [row.registrationId]
+    }),
+  )
+}
+
+/**
  * Moves bowlers in the legacy `SquadRegistration` table (D-216) and takes pairs out of play
  * (OOP-03). Each write reads the tournament, the session, every entry, and the pairs out of play and
  * writes in one serializable transaction, so two moves into the last seat of a pair cannot both
@@ -104,7 +148,12 @@ export function createPrismaLaneWriter(client: PrismaClient, logger: Logger): La
       async (tx) => {
         const read = await readFacts(tx, input)
         if ('notFound' in read) return read
-        const outcome = planPairChange(read.facts, input)
+        const hidden = await hiddenFromPage(tx, input)
+        const entries = read.facts.entries.map((entry) => ({
+          ...entry,
+          hidden: hidden.has(entry.registrationId),
+        }))
+        const outcome = planPairChange({ ...read.facts, entries }, input)
         if (outcome.type !== 'save') return outcome
         const pair = { squadId: input.sessionId, lane: input.lane }
         if (input.inPlay) {

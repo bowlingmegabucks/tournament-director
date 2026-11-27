@@ -9,8 +9,11 @@ export interface PairFacts {
   startingLane: number
   numberOfLanes: number
   outOfPlay: readonly number[]
-  /** Every entry of the session with its stored position (`''` when none). */
-  entries: readonly { registrationId: string; position: string }[]
+  /**
+   * Every entry of the session with its stored position (`''` when none). `hidden` marks one the
+   * lane page leaves out (D-51), so the director can never have been shown it.
+   */
+  entries: readonly { registrationId: string; position: string; hidden?: boolean }[]
 }
 
 export interface PairRequest {
@@ -60,14 +63,15 @@ export function planPairChange(facts: PairFacts, request: PairRequest): PairOutc
   if (facts.outOfPlay.includes(pair.firstLane) !== request.inPlay) return { type: 'unchanged' }
   if (request.inPlay) return { type: 'save', unassign: [] }
 
-  const unassign = facts.entries
-    .filter((entry) => {
-      const position = parsePosition(entry.position)
-      return position !== undefined && pairOf(position.lane, [pair]) !== undefined
-    })
-    .map((entry) => entry.registrationId)
+  const onPair = facts.entries.filter((entry) => {
+    const position = parsePosition(entry.position)
+    return position !== undefined && pairOf(position.lane, [pair]) !== undefined
+  })
+  const unassign = onPair.map((entry) => entry.registrationId)
   const { seen } = request
-  const unseen = seen !== undefined && unassign.some((id) => !seen.includes(id))
+  const unseen =
+    seen !== undefined &&
+    onPair.some((entry) => !entry.hidden && !seen.includes(entry.registrationId))
   if (unassign.length > 0 && (!request.confirmWarnings || unseen)) {
     const who = unassign.length === 1 ? '1 bowler' : `${unassign.length} bowlers`
     return {

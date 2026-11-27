@@ -288,6 +288,24 @@ describe('Prisma lane writer', () => {
     expect(await storedPosition(onPair, sessionId)).toBe('')
   })
 
+  it('saves once the caller has seen everyone the lane page shows (OOP-04, D-51)', async () => {
+    const tournamentId = await insertTournament()
+    const divisionId = await insertDivision(tournamentId)
+    const elsewhere = await insertDivision(await insertTournament())
+    const sessionId = await insertSession(tournamentId)
+    const shown = await insertEntry(divisionId, sessionId, '1A')
+    const hidden = await insertEntry(elsewhere, sessionId, '2C')
+    const { writer } = setup()
+
+    await expect(
+      writer.setPair({ ...pairChange(tournamentId, sessionId, false), seen: [] }),
+    ).resolves.toMatchObject({ type: 'confirm' })
+    await expect(
+      writer.setPair({ ...pairChange(tournamentId, sessionId, false), seen: [shown] }),
+    ).resolves.toMatchObject({ type: 'save' })
+    expect(await storedPosition(hidden, sessionId)).toBe('')
+  })
+
   it('writes nothing until the caller confirms (OOP-04)', async () => {
     const tournamentId = await insertTournament()
     const divisionId = await insertDivision(tournamentId)

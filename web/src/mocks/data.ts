@@ -417,7 +417,7 @@ export function createLanePair(
   bowlers: LaneBowler[] = [],
   capacity = 5,
 ): LanePair {
-  return { firstLane, lanes: [firstLane, firstLane + 1], capacity, bowlers }
+  return { firstLane, lanes: [firstLane, firstLane + 1], capacity, outOfPlay: false, bowlers }
 }
 
 /** A lane page for a session of 10 lanes from lane 1, with five bowlers per pair. Override what a test cares about. */

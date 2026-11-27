@@ -56,13 +56,13 @@ export function formatTotals(page: LanePage): string {
 }
 
 /**
- * How many more bowlers the session can take (D-58): every seat on every pair, less everyone
- * entered, whether or not they have a lane yet. `undefined` when there are no pairs. Past the
- * limit it says by how many (a legacy session can hold more than its seats).
+ * How many more bowlers the session can take (D-58): every seat on every pair in play (OOP-09),
+ * less everyone entered, whether or not they have a lane yet. `undefined` when there are no pairs.
+ * Past the limit it says by how many (a pair may go out, or a legacy session hold more).
  */
 export function formatSpots(page: LanePage): string | undefined {
-  const seats = page.pairs.reduce((total, pair) => total + pair.capacity, 0)
-  if (seats === 0) return undefined
+  if (page.pairs.length === 0) return undefined
+  const seats = page.pairs.reduce((total, pair) => total + (pair.outOfPlay ? 0 : pair.capacity), 0)
   const open = seats - countBowlers(page)
   return open >= 0 ? `${open} of ${seats} spots open` : `${-open} over the ${seats} spots`
 }

@@ -20,6 +20,13 @@ export interface Put {
   lane: number | null
 }
 
+/** One pair change, as the page sent it. */
+export interface PairPut {
+  lane: number
+  inPlay: boolean
+  confirmWarnings?: boolean
+}
+
 /**
  * Serve the lane page for the squad or sweeper it describes, with a matching session list for the
  * header, and a move route that behaves like the API: it refuses a full pair, picks the first free
@@ -31,6 +38,35 @@ export function serve(page: LanePage) {
   const head = { id: session.id, date: session.date, complete: session.complete }
   let stored = page
   const puts: Put[] = []
+  const pairPuts: PairPut[] = []
+  server.use(
+    http.put(
+      '/v1/tournaments/:id/:kind/:sessionId/lanes/pairs/:lane',
+      async ({ params, request }) => {
+        const body = (await request.json()) as Omit<PairPut, 'lane'>
+        const lane = Number(params['lane'])
+        pairPuts.push({ lane, ...body })
+        const pair = stored.pairs.find((candidate) => candidate.firstLane === lane)
+        if (!pair) return HttpResponse.json({ message: 'Not a pair' }, { status: 400 })
+        const leaving = body.inPlay ? [] : pair.bowlers
+        if (leaving.length > 0 && !body.confirmWarnings) {
+          const warnings = [{ field: 'inPlay', message: 'Bowlers are on the pair' }]
+          return HttpResponse.json({ message: 'Confirm', warnings }, { status: 409 })
+        }
+        stored = applyMoves(
+          stored,
+          new Map(leaving.map((bowler) => [bowler.registrationId, planMove(bowler, 'unassigned')])),
+        )
+        stored = {
+          ...stored,
+          pairs: stored.pairs.map((item) =>
+            item.firstLane === lane ? { ...item, outOfPlay: !body.inPlay } : item,
+          ),
+        }
+        return HttpResponse.json({ inPlay: body.inPlay, unassigned: leaving.length })
+      },
+    ),
+  )
   server.use(
     http.get('/v1/tournaments/:id', () => HttpResponse.json({ tournament })),
     http.get('/v1/tournaments/:id/squads', () =>
@@ -64,7 +100,7 @@ export function serve(page: LanePage) {
       },
     ),
   )
-  return { puts, current: () => stored, replace: (next: LanePage) => (stored = next) }
+  return { puts, pairPuts, current: () => stored, replace: (next: LanePage) => (stored = next) }
 }
 
 export const open = (page: LanePage) =>

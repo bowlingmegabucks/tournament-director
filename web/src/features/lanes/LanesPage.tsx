@@ -13,6 +13,7 @@ import { decideDrop, pairDropId, unassignedDropId, type DropTarget } from './dro
 import { countBowlers, formatSpots, formatTotals } from './format'
 import styles from './LanesPage.module.css'
 import { OtherPositions } from './OtherPositions'
+import { PairOutDialog } from './PairOutDialog'
 import { PairZone } from './PairZone'
 import { useCan } from '../auth/useCan'
 import { AddRegistrationLink } from '../registrations/AddRegistrationLink'
@@ -24,6 +25,7 @@ import { UnassignedList } from './UnassignedList'
 import { LiveStatus } from '../../shared/LiveStatus'
 import { useLanes } from './useLanes'
 import { useMoveBowler } from './useMoveBowler'
+import { usePairPlay } from './usePairPlay'
 import { useSessionEvents } from './useSessionEvents'
 
 /** How long a success notice stays. An error stays until dismissed. */
@@ -56,6 +58,9 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
   const canAssign = useCan('lanes.assign')
   const { move, savingIds } = useMoveBowler(kind, id, sessionId)
   const [checkInOpen, setCheckInOpen] = useState(false)
+  const pairPlay = usePairPlay(kind, id, sessionId, (text) => {
+    setToast({ kind: 'error', text })
+  })
   // The add-registration page sets this as it comes back here (REG-22). Clearing it keeps a reload quiet.
   const location = useLocation()
   const navigate = useNavigate()
@@ -85,6 +90,7 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
   const view = data
   const bowlers = everyBowler(view)
   const dragging = bowlers.find((bowler) => bowler.registrationId === draggingId)
+  const askingPair = view.pairs.find((pair) => pair.firstLane === pairPlay.asking)
 
   // One place decides what a drop or a dialog pick does (D-58, D-220).
   function attempt(bowler: LaneBowler, target: DropTarget) {
@@ -205,6 +211,8 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
                     readOnly={readOnly}
                     savingIds={savingIds}
                     fresh={live.updated?.pairs.includes(pair.firstLane)}
+                    onSetInPlay={readOnly ? undefined : pairPlay.setInPlay}
+                    savingInPlay={pairPlay.saving.get(pair.firstLane)}
                     onAssign={setAssigning}
                     onManage={canManage ? setManaging : undefined}
                   />
@@ -249,6 +257,9 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
             setCheckInOpen(false)
           }}
         />
+      )}
+      {askingPair && (
+        <PairOutDialog pair={askingPair} onConfirm={pairPlay.confirm} onClose={pairPlay.cancel} />
       )}
       <DragOverlay>{dragging ? <BowlerPreview name={dragging.name} /> : null}</DragOverlay>
       {assigning && (

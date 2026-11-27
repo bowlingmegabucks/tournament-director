@@ -19,6 +19,21 @@
   font-weight: 400;
 }
 
+.inPlay {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--target-min);
+  margin-block-end: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+/* Out of play: the words say so; the dashed edge and the page color set it apart. */
+.out {
+  background: var(--color-bg);
+  border-style: dashed;
+}
+
 .bowlers {
   display: grid;
   gap: var(--space-2);

@@ -106,6 +106,8 @@ function withListedRegistrations(page: LanePage): LanePage {
 
 /** Moves made through the mock `PUT`, by session and then registration. Lost when the page reloads. */
 const laneMoves = new Map<string, Map<string, Move>>()
+/** Pairs taken out of play through the mock `PUT`, by session (OOP-03), as first lanes. */
+const lanesOut = new Map<string, Set<number>>()
 /** The skip saved through the mock `PUT`, by session (SCR-23). No entry means staggered. */
 const skips = new Map<string, 'staggered' | 'same'>()
 /** Scores saved through the mock `PUT`, by session and then registration. Lost when the page reloads. */
@@ -118,6 +120,7 @@ const streams = new Map<string, Set<(message: string) => void>>()
 /** Forget the moves and the streams, so one test cannot see another's (the test setup calls it). */
 export function resetMockLaneMoves() {
   laneMoves.clear()
+  lanesOut.clear()
   skips.clear()
   savedScores.clear()
   streams.clear()
@@ -125,7 +128,12 @@ export function resetMockLaneMoves() {
 
 function lanePageOf(kind: SessionKind, session: Parameters<typeof createDemoLanePage>[1]) {
   const page = withListedRegistrations(createDemoLanePage(kind, session, divisions))
-  return applyMoves(page, laneMoves.get(session.id) ?? new Map())
+  const moved = applyMoves(page, laneMoves.get(session.id) ?? new Map())
+  const out = lanesOut.get(session.id)
+  return {
+    ...moved,
+    pairs: moved.pairs.map((pair) => ({ ...pair, outOfPlay: out?.has(pair.firstLane) ?? false })),
+  }
 }
 
 /** Tell every open mock stream of the session that it changed, as the API does after a move (D-218). */
@@ -261,6 +269,9 @@ function planPairMove(
   if (pair.bowlers.some((candidate) => candidate.registrationId === bowler.registrationId)) {
     return HttpResponse.json({ position: bowler.position })
   }
+  if (pair.outOfPlay) {
+    return problem(`${formatPair(pair)} are out of play. Pick another pair.`, 409)
+  }
   if (pair.bowlers.length >= pair.capacity) {
     return problem(
       `${formatPair(pair)} ${pair.lanes.length === 1 ? 'is' : 'are'} full (${pair.bowlers.length} of ${pair.capacity}). Pick another pair.`,
@@ -298,6 +309,43 @@ function laneMoveHandler(kind: SessionKind, sessions: { id: string; complete: bo
       laneMoves.set(found.id, new Map(laneMoves.get(found.id)).set(bowler.registrationId, move))
       publishMock(found.id)
       return HttpResponse.json({ position: move.position })
+    },
+  )
+}
+
+/** The mock twin of taking a pair out of play or bringing it back (OOP-03 to OOP-05). */
+function lanePairHandler(kind: SessionKind) {
+  return http.put(
+    `/v1/tournaments/:id/${kind}s/:sessionId/lanes/pairs/:lane`,
+    async ({ params, request }) => {
+      const found = mockSession(String(params['id']), String(params['sessionId']), kind)
+      if (found.missing) return found.missing
+      if (found.session.complete) {
+        return problem(`This ${kind} is complete. Lanes cannot change.`, 409)
+      }
+      const body = (await request.json()) as { inPlay: boolean; confirmWarnings?: boolean }
+      const lane = Number(params['lane'])
+      const pair = lanePageOf(kind, found.session).pairs.find((item) => item.firstLane === lane)
+      if (!pair) return problem(`Lane ${lane} is not the first lane of a pair`, 400)
+      const out = lanesOut.get(found.session.id) ?? new Set<number>()
+      const leaving = body.inPlay ? [] : pair.bowlers
+      if (leaving.length > 0 && !body.confirmWarnings) {
+        const message = `Bowlers on ${formatPair(pair).toLowerCase()} will move to unassigned.`
+        return HttpResponse.json(
+          { message, warnings: [{ field: 'inPlay', message }] },
+          { status: 409 },
+        )
+      }
+      const moves = new Map(laneMoves.get(found.session.id))
+      for (const bowler of leaving) {
+        moves.set(bowler.registrationId, planMove(bowler, 'unassigned'))
+      }
+      laneMoves.set(found.session.id, moves)
+      if (body.inPlay) out.delete(lane)
+      else out.add(lane)
+      lanesOut.set(found.session.id, out)
+      publishMock(found.session.id)
+      return HttpResponse.json({ inPlay: body.inPlay, unassigned: leaving.length })
     },
   )
 }
@@ -786,6 +834,7 @@ export const handlers = [
       : HttpResponse.json({ message: 'Squad not found' }, { status: 404 })
   }),
   laneMoveHandler('squad', squads),
+  lanePairHandler('squad'),
   http.get('/v1/tournaments/:id/sweepers/:sessionId/lanes', ({ params }) => {
     if (!tournaments.some((candidate) => candidate.id === params.id)) return notFound()
     const sweeper = sweepers.find((candidate) => candidate.id === params.sessionId)
@@ -794,6 +843,7 @@ export const handlers = [
       : HttpResponse.json({ message: 'Sweeper not found' }, { status: 404 })
   }),
   laneMoveHandler('sweeper', sweepers),
+  lanePairHandler('sweeper'),
   // SCR-22, SCR-19: score entry. The mock keeps saved scores in memory and tells the streams.
   http.get('/v1/tournaments/:id/squads/:sessionId/scores/games', ({ params }) =>
     mockGames(String(params['id']), String(params['sessionId']), 'squad'),

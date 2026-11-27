@@ -49,7 +49,7 @@ describe('planMove (D-56, D-57, D-220)', () => {
   })
 
   it('puts every seat on the one lane of a one-lane pair', () => {
-    const pair = { firstLane: 5, lanes: [5], capacity: 5, bowlers: [at('5A')] }
+    const pair = { firstLane: 5, lanes: [5], capacity: 5, outOfPlay: false, bowlers: [at('5A')] }
 
     expect(planMove(waiting, pair)).toEqual({ firstLane: 5, position: '5C' })
   })

@@ -21,6 +21,7 @@ function showOnMount(node: HTMLDialogElement | null) {
 function status(pair: LanePair, bowler: LaneBowler): string {
   const outcome = dropOutcome(pair, bowler.registrationId)
   if (outcome === 'same') return 'Current pair'
+  if (outcome === 'out') return 'Out of play'
   if (outcome === 'full') return `Full (${pair.bowlers.length} of ${pair.capacity})`
   const left = seatsLeft(pair)
   return `${left} ${left === 1 ? 'seat' : 'seats'} left (${formatFill(pair)})`

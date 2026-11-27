@@ -43,6 +43,7 @@ function isPair(value: unknown): boolean {
     isNumber(field(value, 'firstLane')) &&
     isEvery(field(value, 'lanes'), isNumber) &&
     isNumber(field(value, 'capacity')) &&
+    isFlag(field(value, 'outOfPlay')) &&
     isEvery(field(value, 'bowlers'), isBowler)
   )
 }
@@ -169,4 +170,41 @@ export async function moveBowler(
     throw new LaneMoveError('Failed to save the move (unexpected response)')
   }
   return position
+}
+
+/**
+ * Takes one pair out of play, or brings it back (OOP-03, OOP-05). `confirm` means bowlers are on
+ * the pair and the API saved nothing: ask, then send again with `confirmWarnings` (OOP-04).
+ */
+export async function setPairInPlay(
+  kind: SessionKind,
+  tournamentId: string,
+  sessionId: string,
+  lane: number,
+  inPlay: boolean,
+  confirmWarnings: boolean,
+): Promise<'saved' | 'confirm'> {
+  const response = await apiFetch(
+    apiUrl(`/v1/tournaments/${tournamentId}/${kind}s/${sessionId}/lanes/pairs/${lane}`),
+    {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ inPlay, ...(confirmWarnings && { confirmWarnings }) }),
+    },
+  ).catch(() => {
+    throw new LaneMoveError('Could not save the lanes. Check your connection and try again.')
+  })
+  if (response.ok) return 'saved'
+  if (response.status === 403) {
+    throw new LaneMoveError('You are not allowed to change lanes.', 403)
+  }
+  const body: unknown = await response.json().catch(() => undefined)
+  if (response.status === 409 && field(body, 'warnings') !== undefined) return 'confirm'
+  const message = field(body, 'message')
+  throw new LaneMoveError(
+    typeof message === 'string' && message !== ''
+      ? message
+      : 'Could not save the lanes. Try again.',
+    response.status,
+  )
 }

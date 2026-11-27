@@ -6,7 +6,6 @@ import type { LaneEntry } from '../lanes/types.ts'
 import { formatCents } from '../payouts/money.ts'
 import type { PayoutStore } from '../payouts/store.ts'
 import type { PayoutRecord } from '../payouts/types.ts'
-import { isRealPayment } from '../registrations/payment.ts'
 import type { RegistrationWriter } from '../registrations/writer.ts'
 import { requireRatios } from '../results/resultHelpers.ts'
 import type { ScoreRepository } from '../scores/repository.ts'
@@ -195,9 +194,8 @@ export async function planNoShow(deps: NoShowDeps, request: Request): Promise<Pl
     .filter((id) => detail.sessionIds.includes(id))
   if (deletesRegistration) {
     warnings.push(sweeperIds.length > 0 ? messages.sweepers : messages.noSweepers)
-    const paid = facts.payments
-      .filter((payment) => isRealPayment(`${payment.system}_`, payment.amount))
-      .reduce((sum, payment) => sum + Math.round(payment.amount * 100), 0)
+    // The facts hold real payments only (D-106).
+    const paid = facts.payments.reduce((sum, payment) => sum + Math.round(payment.amount * 100), 0)
     if (paid > 0) {
       warnings.push(
         `This bowler paid ${dollars(paid)} outside this system. Deleting the registration removes the payment records.`,

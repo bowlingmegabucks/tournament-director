@@ -13,6 +13,7 @@ export const permissions = [
   'tournaments.delete',
   'divisions.write',
   'squads.write',
+  'entries.override',
   'bowlers.read',
   'bowlers.ssn',
   'payouts.read',

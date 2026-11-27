@@ -14,6 +14,7 @@ import { createPrismaLaneRepository } from './features/lanes/prismaRepository.ts
 import { createPrismaBowlerRepository } from './features/bowlers/prismaRepository.ts'
 import { createPrismaRegistrationRepository } from './features/registrations/prismaRepository.ts'
 import { createPrismaRegistrationWriter } from './features/registrations/prismaWriter.ts'
+import { createPrismaNoShowStore } from './features/noShows/prismaStore.ts'
 import { createPrismaScoreRepository } from './features/scores/prismaRepository.ts'
 import { createPrismaSquadRepository } from './features/squads/prismaRepository.ts'
 import { createPrismaSquadWriter } from './features/squads/prismaWriter.ts'
@@ -73,6 +74,7 @@ const app = createApp({
   dnfStore: createPrismaDnfStore(database, logger),
   payoutStore: createPrismaPayoutStore(database, logger),
   averageStore: createPrismaAverageStore(database, logger),
+  noShowStore: createPrismaNoShowStore(database, logger),
   squads: createPrismaSquadRepository(database, logger),
   squadWriter: createPrismaSquadWriter(database, logger),
   sweeperWriter: createPrismaSweeperWriter(database, logger),

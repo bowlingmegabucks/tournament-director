@@ -42,6 +42,7 @@ function isEditInfo(value: unknown): value is EditInfo {
     ['id', 'divisionId'].every((key) => isText(field(registration, key))) &&
     (average === null || typeof average === 'number') &&
     typeof field(registration, 'superSweeper') === 'boolean' &&
+    typeof field(registration, 'smartScholarship') === 'boolean' &&
     isTextList(field(registration, 'squadIds')) &&
     isTextList(field(registration, 'sweeperIds')) &&
     isTextList(field(locks, 'scoredSessionIds')) &&

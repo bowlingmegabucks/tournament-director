@@ -612,6 +612,7 @@ export const handlers = [
             payoutCount: 4,
             unpaidPayoutCount: 2,
             unpaidPayoutTotal: '350.00',
+            unpaidPayoutSmartTotal: '0.00',
           },
         })
       : notFound(),

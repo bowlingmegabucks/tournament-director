@@ -99,6 +99,7 @@ function initialRegistration(
       presetSweeperId === undefined ? [] : [presetSweeperId],
     ),
     superSweeper: base.superSweeper || typed.superSweeper,
+    smartScholarship: base.smartScholarship || typed.smartScholarship,
   }
 }
 
@@ -374,6 +375,11 @@ function Steps({
           errors={errors}
           listUrl={listUrl}
           onChange={changeBowler}
+          smartScholarship={registration.smartScholarship}
+          onSmartScholarship={(smartScholarship) => {
+            setTypedRegistration({ ...typedRegistration, smartScholarship })
+            setErrors((current) => keepErrors(current, (key) => key !== 'smartScholarship'))
+          }}
           onBack={onPickAnother}
           onNext={next}
         />

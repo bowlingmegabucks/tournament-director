@@ -965,3 +965,55 @@ describe('leaving the edit page with changes', () => {
     expect(screen.getByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
   })
 })
+
+describe('SMART scholarship on an edit (SMT-01, SMT-05)', () => {
+  const smartBox = () => box(/winnings go to their SMART account/)
+
+  it('is ticked on the Bowler step, shown on Review, confirmed, and saved', async () => {
+    const user = userEvent.setup()
+    signIn()
+    const message =
+      'A payout is already marked paid. It will now show as SMART scholarship, not cash.'
+    const served = serve({
+      patches: [
+        () =>
+          HttpResponse.json(
+            { message: 'Confirm', warnings: [{ field: 'smartScholarship', message }] },
+            { status: 409 },
+          ),
+        () => HttpResponse.json({ registrationId, added: 0, removed: 0 }),
+      ],
+    })
+    await open()
+
+    await press(user, 'Back to bowler details')
+    await user.click(smartBox())
+    await press(user, 'Next: registration')
+    await press(user, 'Next: review')
+    expect(screen.getByText('SMART scholarship: turned on.')).toBeVisible()
+    await press(user, 'Save changes')
+
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog).toHaveTextContent(message)
+    expect(dialog).toHaveTextContent('SMART scholarship: off → on')
+    await user.click(within(dialog).getByRole('button', { name: 'Save anyway' }))
+
+    await waitFor(() => {
+      expect(served.patched).toEqual([
+        { smartScholarship: true },
+        { smartScholarship: true, confirmWarnings: true },
+      ])
+    })
+  })
+
+  it('starts ticked for a registration that has it', async () => {
+    const user = userEvent.setup()
+    signIn()
+    serve({ info: info({ registration: { smartScholarship: true } as EditInfo['registration'] }) })
+    await open()
+
+    await press(user, 'Back to bowler details')
+
+    expect(smartBox()).toBeChecked()
+  })
+})

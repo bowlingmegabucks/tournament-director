@@ -19,6 +19,8 @@ export interface TournamentCompleteInfo {
   /** Payouts not marked paid, and what they add up to as money text. */
   unpaidPayoutCount: number
   unpaidPayoutTotal: string
+  /** The part of `unpaidPayoutTotal` that is SMART scholarship money (SMT-04). */
+  unpaidPayoutSmartTotal: string
 }
 
 /** What a complete closed (TRN-38, D-256). */
@@ -93,7 +95,8 @@ function isInfo(value: unknown): value is TournamentCompleteInfo {
     typeof field(value, 'partialCount') === 'number' &&
     typeof field(value, 'payoutCount') === 'number' &&
     typeof field(value, 'unpaidPayoutCount') === 'number' &&
-    typeof field(value, 'unpaidPayoutTotal') === 'string'
+    typeof field(value, 'unpaidPayoutTotal') === 'string' &&
+    typeof field(value, 'unpaidPayoutSmartTotal') === 'string'
   )
 }
 
@@ -154,6 +157,15 @@ export function completeLines(info: TournamentCompleteInfo): string[] {
   ].filter((line): line is string => line !== undefined)
 }
 
+/** The unpaid total, split into cash and SMART scholarship money when there is any (SMT-04). */
+function unpaidMoney(info: TournamentCompleteInfo): string {
+  const total = formatMoney(info.unpaidPayoutTotal)
+  const smart = Number(info.unpaidPayoutSmartTotal)
+  if (smart === 0) return total
+  const cash = (Math.round(Number(info.unpaidPayoutTotal) * 100) - Math.round(smart * 100)) / 100
+  return `${total}: ${formatMoney(cash.toFixed(2))} cash, ${formatMoney(info.unpaidPayoutSmartTotal)} SMART scholarship`
+}
+
 /**
  * What the director should know about payouts before completing (PAY-15, D-279): none recorded, or
  * some not marked paid. They are notes, not blocks: the typed name is the confirmation, and a
@@ -162,7 +174,7 @@ export function completeLines(info: TournamentCompleteInfo): string[] {
 export function payoutNotes(info: TournamentCompleteInfo): string[] {
   if (info.payoutCount === 0) return ['No payouts are recorded.']
   if (info.unpaidPayoutCount === 0) return []
-  const total = formatMoney(info.unpaidPayoutTotal)
+  const total = unpaidMoney(info)
   return [
     info.unpaidPayoutCount === 1
       ? `1 payout is not marked paid (${total}).`

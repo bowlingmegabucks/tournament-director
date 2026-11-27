@@ -215,7 +215,15 @@ export function RegistrationsPage() {
               <tbody>
                 {shown.map((registration) => (
                   <tr key={registration.id}>
-                    <th scope="row">{registration.bowler.name}</th>
+                    <th scope="row">
+                      {registration.bowler.name}
+                      {registration.smartScholarship && (
+                        <>
+                          {' '}
+                          <span className={styles.tag}>SMART</span>
+                        </>
+                      )}
+                    </th>
                     <td data-label="USBC ID">{registration.bowler.usbcId || '–'}</td>
                     <td data-label="Division">{registration.divisionName}</td>
                     <td data-label="Average">

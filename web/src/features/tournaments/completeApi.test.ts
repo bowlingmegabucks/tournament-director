@@ -25,6 +25,7 @@ const info = (overrides: Partial<TournamentCompleteInfo> = {}): TournamentComple
   payoutCount: 5,
   unpaidPayoutCount: 2,
   unpaidPayoutTotal: '1450.00',
+  unpaidPayoutSmartTotal: '0.00',
   ...overrides,
 })
 
@@ -274,6 +275,14 @@ describe('completeLines (TRN-43, D-259)', () => {
 })
 
 describe('payoutNotes (PAY-15, D-279)', () => {
+  it('splits the unpaid total when some of it is SMART scholarship money (SMT-04)', () => {
+    expect(
+      payoutNotes(info({ unpaidPayoutTotal: '1450.00', unpaidPayoutSmartTotal: '75.50' })),
+    ).toEqual([
+      '2 payouts are not marked paid ($1,450.00: $1,374.50 cash, $75.50 SMART scholarship).',
+    ])
+  })
+
   it('says none are recorded when the count is zero', () => {
     expect(payoutNotes(info({ payoutCount: 0, unpaidPayoutCount: 0 }))).toEqual([
       'No payouts are recorded.',

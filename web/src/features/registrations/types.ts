@@ -19,6 +19,8 @@ export interface Registration {
   squadIds: string[]
   sweeperIds: string[]
   superSweeper: boolean
+  /** A youth whose winnings go to their SMART account (SMT-01). */
+  smartScholarship: boolean
   /** The average handicap uses: the checked one, else the one the bowler gave; `null` when none (AVG-11). */
   average: number | null
   /** Whether a director checked it. `none` in a division with no handicap, where there is nothing to check. */
@@ -94,6 +96,7 @@ export interface BowlerRegistration {
   divisionName: string
   average: number | null
   superSweeper: boolean
+  smartScholarship: boolean
   squadIds: string[]
   sweeperIds: string[]
   /** Any score in this tournament: a division move is refused (D-160). */
@@ -113,6 +116,8 @@ export interface DeskRegistrationRequest {
   squadIds: string[]
   sweeperIds: string[]
   superSweeper: boolean
+  /** Sent only when it differs from what the registration holds (SMT-02). */
+  smartScholarship?: boolean
   /** A stored bowler; `bowler` is then only what changed. */
   bowlerId?: string
   bowler: Partial<BowlerValues>
@@ -144,6 +149,7 @@ export interface EditInfo {
     divisionId: string
     average: number | null
     superSweeper: boolean
+    smartScholarship: boolean
     squadIds: string[]
     sweeperIds: string[]
   }
@@ -163,6 +169,7 @@ export interface EditRegistrationRequest {
   /** `null` clears it (REG-16). */
   average?: number | null
   superSweeper?: boolean
+  smartScholarship?: boolean
   addSquadIds?: string[]
   removeSquadIds?: string[]
   addSweeperIds?: string[]

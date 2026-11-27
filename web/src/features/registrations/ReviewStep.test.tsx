@@ -52,6 +52,7 @@ const held: BowlerRegistration = {
   divisionName: 'Handicap',
   average: 182,
   superSweeper: false,
+  smartScholarship: false,
   squadIds: [morning.id],
   sweeperIds: [],
   hasScores: false,

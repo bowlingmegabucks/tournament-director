@@ -35,6 +35,8 @@ interface RankedRow {
    * `"100.00"`. `null` with no saved payout, and for any row that is not an inferred payee.
    */
   payout: string | null
+  /** Present when `payout` is SMART scholarship money (SMT-03). */
+  smartScholarship?: true
   /** A handicap bowler on an average no director checked (AVG-13, D-293). A flag only. */
   unverified: boolean
 }
@@ -176,6 +178,8 @@ export interface AtLargeResults {
 export interface SeedingRow {
   /** What the finalist won in the finals (PAY-20, D-284), money text; `null` with no saved payout. */
   payout: string | null
+  /** Present when `payout` is SMART scholarship money (SMT-03). */
+  smartScholarship?: true
   registrationId: string
   name: string
   seed: number

@@ -59,7 +59,10 @@ export function SeedingBody({ division }: Readonly<{ division: SeedingDivision }
                       {formatTie(tie)}
                     </span>
                   ))}
-                  <PayoutTag amount={item.row.payout} />
+                  <PayoutTag
+                    amount={item.row.payout}
+                    smartScholarship={item.row.smartScholarship}
+                  />
                 </th>
                 <td className={styles.totalCell} data-label="Total">
                   {item.row.total}

@@ -40,6 +40,7 @@ describe('toEditRegistrationValues (D-197)', () => {
       squadIds: [squadA.id],
       sweeperIds: [sweeperA.id],
       superSweeper: false,
+      smartScholarship: false,
     })
   })
 
@@ -306,5 +307,19 @@ describe('netText (D-207)', () => {
     expect(netText(-5)).toBe('Net: refund $5.00.')
     expect(netText(-0.1)).toBe('Net: refund $0.10.')
     expect(netText(0)).toBe('Net: even. Nothing to collect or refund.')
+  })
+})
+
+describe('SMART scholarship in the edit request (SMT-02)', () => {
+  const request = (smartScholarship: boolean) =>
+    buildEditRequest({
+      info,
+      bowler: storedBowlerOf(info),
+      registration: { ...start(), smartScholarship },
+    })
+
+  it('is sent only when it changed', () => {
+    expect(request(true)).toEqual({ smartScholarship: true })
+    expect(request(false)).toEqual({})
   })
 })

@@ -22,6 +22,8 @@ export interface SheetPayee {
   seed: number | null
   previousCasher: boolean
   inferred: boolean
+  /** The money goes to the bowler's SMART account (SMT-03). */
+  smartScholarship: boolean
   payout: PayoutView | null
 }
 
@@ -63,6 +65,7 @@ export interface PayoutRow {
   amount: string
   note: string | null
   paid: boolean
+  smartScholarship: boolean
 }
 
 export interface PayoutSummary {
@@ -86,6 +89,7 @@ export interface BowlerTotal {
   count: number
   total: string
   unpaidTotal: string
+  smartScholarship: boolean
 }
 
 /**

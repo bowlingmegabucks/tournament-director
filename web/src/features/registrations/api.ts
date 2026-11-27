@@ -27,6 +27,7 @@ function isRegistration(value: unknown): boolean {
     isTextList(field(value, 'squadIds')) &&
     isTextList(field(value, 'sweeperIds')) &&
     typeof field(value, 'superSweeper') === 'boolean' &&
+    typeof field(value, 'smartScholarship') === 'boolean' &&
     isAverage(field(value, 'average')) &&
     isAverageStatus(field(value, 'averageStatus'))
   )

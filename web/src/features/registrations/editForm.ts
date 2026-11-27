@@ -15,6 +15,7 @@ export function toEditRegistrationValues(
     squadIds: [...registration.squadIds],
     sweeperIds: [...registration.sweeperIds],
     superSweeper: registration.superSweeper,
+    smartScholarship: registration.smartScholarship,
   }
 }
 
@@ -71,6 +72,9 @@ export function buildEditRequest({
   if (average !== stored.average) request.average = average
   if (registration.superSweeper !== stored.superSweeper) {
     request.superSweeper = registration.superSweeper
+  }
+  if (registration.smartScholarship !== stored.smartScholarship) {
+    request.smartScholarship = registration.smartScholarship
   }
   const lists = {
     addSquadIds: idsNotIn(registration.squadIds, stored.squadIds),

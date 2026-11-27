@@ -123,7 +123,10 @@ export function DivisionBody({
                       <span className={styles.tag}>Advanced earlier</span>
                     )}
                     <TieMarks row={item.row} />
-                    <PayoutTag amount={item.row.payout} />
+                    <PayoutTag
+                      amount={item.row.payout}
+                      smartScholarship={item.row.smartScholarship}
+                    />
                   </th>
                   <PlusMinusCell total={item.row.total} games={item.row.games} />
                   <GameCells

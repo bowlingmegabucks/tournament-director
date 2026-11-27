@@ -84,6 +84,10 @@ export function ReviewStep({
         {newSweepers.length === 0 ? 'No new sweepers.' : `Sweepers: ${newSweepers.join(', ')}.`}
         {registration.superSweeper && ' Super sweeper.'}
       </p>
+      {registration.smartScholarship && <p>Winnings go to their SMART account.</p>}
+      {!registration.smartScholarship && existing?.smartScholarship && (
+        <p>Winnings no longer go to a SMART account.</p>
+      )}
       {due.length === 0 ? (
         <p>Nothing to collect.</p>
       ) : (

@@ -7,6 +7,7 @@ import { BowlerFields } from './BowlerFields'
 import { bowlerFieldId, type RegistrationValues } from './deskForm'
 import { RegistrationFields } from './RegistrationFields'
 import { ReviewStep } from './ReviewStep'
+import { SmartScholarshipField } from './SmartScholarshipField'
 import type { BowlerRegistration, BowlerResponse, BowlerValues, DeskFieldErrors } from './types'
 import { focusOnMount, stepNames, type Step } from './stepInfo'
 import styles from './AddRegistration.module.css'
@@ -150,6 +151,8 @@ interface BowlerStepProps {
   errors: DeskFieldErrors
   listUrl: string
   onChange: (key: keyof BowlerValues, value: string) => void
+  smartScholarship: boolean
+  onSmartScholarship: (checked: boolean) => void
   onBack: () => void
   onNext: () => void
 }
@@ -161,6 +164,8 @@ export function BowlerStep({
   errors,
   listUrl,
   onChange,
+  smartScholarship,
+  onSmartScholarship,
   onBack,
   onNext,
 }: Readonly<BowlerStepProps>) {
@@ -176,6 +181,12 @@ export function BowlerStep({
         legend={detail ? 'Bowler details' : 'New bowler'}
         hint={hint}
         onChange={onChange}
+      />
+      <SmartScholarshipField
+        checked={smartScholarship}
+        dateOfBirth={values.dateOfBirth}
+        error={errors['smartScholarship']}
+        onChange={onSmartScholarship}
       />
       <Actions listUrl={listUrl}>
         <button type="button" className={styles.secondary} onClick={onBack}>

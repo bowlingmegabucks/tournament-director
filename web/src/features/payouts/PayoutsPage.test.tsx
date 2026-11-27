@@ -367,3 +367,35 @@ describe('the printout (PAY-22)', () => {
     expect(screen.queryByRole('button', { name: 'Print list' })).not.toBeInTheDocument()
   })
 })
+
+describe('SMART money on the full page (SMT-04)', () => {
+  const youth = createPayoutRow({
+    id: 'p9',
+    name: 'Ann Bell',
+    amount: '50.00',
+    smartScholarship: true,
+  })
+
+  it('labels the line and splits the figures into cash and scholarship', async () => {
+    serve([...rows, youth])
+
+    open()
+
+    const table = await screen.findByRole('table', { name: 'Payouts by payout' })
+    expect(within(table).getByRole('row', { name: /Ann Bell/ })).toHaveTextContent(
+      'SMART scholarship: do not pay',
+    )
+    // The mocked summary says $1,850.00 in all, $50.00 of it scholarship.
+    expect(screen.getByText('$1,800.00')).toBeVisible()
+    expect(screen.getByText('SMART scholarship', { selector: 'dt' })).toBeVisible()
+  })
+
+  it('shows no cash and scholarship split without a youth', async () => {
+    serve()
+
+    open()
+
+    await screen.findByRole('table', { name: 'Payouts by payout' })
+    expect(screen.queryByText('Cash', { selector: 'dt' })).toBeNull()
+  })
+})

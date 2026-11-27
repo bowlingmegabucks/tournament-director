@@ -34,6 +34,7 @@ import {
 import { EditReviewStep } from './EditReviewStep'
 import { DeskRejectedError } from './bowlerApi'
 import { RegistrationFields } from './RegistrationFields'
+import { SmartScholarshipField } from './SmartScholarshipField'
 import { focusOnMount, stepNames, type Step } from './stepInfo'
 import { LeaveDialog } from '../../shared/LeaveDialog'
 import { useLeaveGuard } from '../../shared/useLeaveGuard'
@@ -250,6 +251,15 @@ export function EditRegistrationForm({
               setErrors((current) => keepErrors(current, (found) => found !== errorKeyOf(key)))
             }}
           />
+          <SmartScholarshipField
+            checked={registration.smartScholarship}
+            dateOfBirth={bowler.dateOfBirth}
+            error={errors['smartScholarship']}
+            onChange={(smartScholarship) => {
+              setRegistration({ ...registration, smartScholarship })
+              setErrors((current) => keepErrors(current, (key) => key !== 'smartScholarship'))
+            }}
+          />
           <Actions listUrl={listUrl}>
             <button type="button" onClick={next}>
               Next: registration
@@ -348,7 +358,7 @@ export function EditRegistrationForm({
           items={warnings.map((warning) => ({
             field: warning.field,
             message: warning.message,
-            change: warning.field === 'average' ? averageChange(info, registration) : '',
+            change: changeOf(warning.field, info, registration),
           }))}
           pending={edit.isPending}
           failure={dialogFailure}
@@ -375,6 +385,14 @@ export function EditRegistrationForm({
       )}
     </div>
   )
+}
+
+/** The old and new value under a warning (D-201, SMT-05). */
+function changeOf(field: string, info: EditInfo, registration: RegistrationValues): string {
+  if (field === 'average') return averageChange(info, registration)
+  if (field !== 'smartScholarship') return ''
+  const word = (on: boolean) => (on ? 'on' : 'off')
+  return `SMART scholarship: ${word(info.registration.smartScholarship)} → ${word(registration.smartScholarship)}`
 }
 
 function averageChange(info: EditInfo, registration: RegistrationValues): string {

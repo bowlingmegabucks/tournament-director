@@ -23,6 +23,8 @@ interface MockRegistration {
   divisionId: string
   average: number | null
   superSweeper: boolean
+  /** SMT-01. Absent reads as false. */
+  smartScholarship?: boolean
   squadIds: string[]
   sweeperIds: string[]
   hasScores: boolean
@@ -213,6 +215,7 @@ export function createRegistrationHandlers({
       divisionName: divisionName(entry.divisionId),
       average: entry.average,
       superSweeper: entry.superSweeper,
+      smartScholarship: entry.smartScholarship ?? false,
       squadIds: entry.squadIds,
       sweeperIds: entry.sweeperIds,
       hasScores: entry.hasScores,
@@ -297,6 +300,7 @@ export function createRegistrationHandlers({
       squadIds: [...entry.squadIds],
       sweeperIds: [...entry.sweeperIds],
       superSweeper: entry.superSweeper,
+      smartScholarship: entry.smartScholarship ?? false,
       average: entry.average,
       // A new or edited registration has no check (D-290); a scratch division has nothing to check.
       averageStatus: handicapDivision(entry.divisionId)
@@ -420,6 +424,7 @@ export function createRegistrationHandlers({
     existing.divisionId = division.id
     existing.average = body.average ?? existing.average
     existing.superSweeper = body.superSweeper
+    existing.smartScholarship = body.smartScholarship ?? existing.smartScholarship
     existing.squadIds.push(...body.squadIds)
     existing.sweeperIds.push(...body.sweeperIds)
     syncList(existing, owner, false)
@@ -441,6 +446,7 @@ export function createRegistrationHandlers({
       divisionId: body.divisionId,
       average: body.average,
       superSweeper: body.superSweeper,
+      smartScholarship: body.smartScholarship ?? false,
       squadIds: [...body.squadIds],
       sweeperIds: [...body.sweeperIds],
       hasScores: false,
@@ -448,6 +454,28 @@ export function createRegistrationHandlers({
     stored.push(entry)
     syncList(entry, owner, true)
     return HttpResponse.json({ registrationId: entry.id, mode: 'created' }, { status: 201 })
+  }
+
+  /** What the desk must confirm (D-201, SMT-05). In the mocks Tom Delgado has a payout marked paid. */
+  function editWarnings(entry: MockRegistration, owner: MockBowler, body: EditRegistrationRequest) {
+    const warnings: { field: string; message: string }[] = []
+    if (body.average !== undefined && body.average !== entry.average && entry.hasScores) {
+      warnings.push({
+        field: 'average',
+        message: 'This bowler has scores. Handicap and results will change.',
+      })
+    }
+    const smart = body.smartScholarship
+    const paid = owner.firstName === 'Tom' && owner.lastName === 'Delgado'
+    if (paid && smart !== undefined && smart !== (entry.smartScholarship ?? false)) {
+      warnings.push({
+        field: 'smartScholarship',
+        message: smart
+          ? 'A payout is already marked paid. It will now show as SMART scholarship, not cash.'
+          : 'A payout is already marked paid. It will now show as cash, not SMART scholarship.',
+      })
+    }
+    return warnings
   }
 
   /** What an edit may not do, in the order the API reports it (D-197 to D-206). One message per field. */
@@ -538,6 +566,7 @@ export function createRegistrationHandlers({
     if (body.divisionId !== undefined) entry.divisionId = body.divisionId
     if (body.average !== undefined) entry.average = body.average
     if (body.superSweeper !== undefined) entry.superSweeper = body.superSweeper
+    if (body.smartScholarship !== undefined) entry.smartScholarship = body.smartScholarship
     Object.assign(owner, body.bowler)
     syncList(entry, owner, false)
     return HttpResponse.json({
@@ -603,6 +632,7 @@ export function createRegistrationHandlers({
           divisionId: entry.divisionId,
           average: entry.average,
           superSweeper: entry.superSweeper,
+          smartScholarship: entry.smartScholarship ?? false,
           squadIds: entry.squadIds,
           sweeperIds: entry.sweeperIds,
         },
@@ -679,21 +709,12 @@ export function createRegistrationHandlers({
       if (conflict) return conflict
       const errors = editProblems(entry, owner, body)
       if (Object.keys(errors).length > 0) return reject(errors)
-      if (body.average !== undefined && body.average !== entry.average && entry.hasScores) {
-        if (body.confirmWarnings !== true) {
-          return HttpResponse.json(
-            {
-              message: 'Confirm these changes to save them.',
-              warnings: [
-                {
-                  field: 'average',
-                  message: 'This bowler has scores. Handicap and results will change.',
-                },
-              ],
-            },
-            { status: 409 },
-          )
-        }
+      const warnings = editWarnings(entry, owner, body)
+      if (warnings.length > 0 && body.confirmWarnings !== true) {
+        return HttpResponse.json(
+          { message: 'Confirm these changes to save them.', warnings },
+          { status: 409 },
+        )
       }
       return applyEdit(entry, owner, body)
     }),

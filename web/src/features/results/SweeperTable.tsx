@@ -93,7 +93,10 @@ export function SweeperTable({
                       {formatTie(tie)}
                     </span>
                   ))}
-                  <PayoutTag amount={item.row.payout} />
+                  <PayoutTag
+                    amount={item.row.payout}
+                    smartScholarship={item.row.smartScholarship}
+                  />
                 </th>
                 <PlusMinusCell total={item.row.total} games={item.row.games} />
                 <GameCells scores={item.row.scores} count={count} counted={throughGame} />

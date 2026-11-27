@@ -211,6 +211,7 @@ export function createRegistration(overrides: Partial<Registration> = {}): Regis
     squadIds: [],
     sweeperIds: [],
     superSweeper: false,
+    smartScholarship: false,
     average: 200,
     averageStatus: 'none',
     ...overrides,
@@ -322,6 +323,7 @@ export function createDemoRegistrationList(
         squadIds: entered.squads.flatMap((position) => squads[position]?.id ?? []),
         sweeperIds: entered.sweepers.flatMap((position) => sweepers[position]?.id ?? []),
         superSweeper: entered.superSweeper,
+        smartScholarship: false,
       })
     },
   )
@@ -1486,6 +1488,7 @@ export function createEditInfo(
       divisionId: faker.string.uuid(),
       average: 182,
       superSweeper: false,
+      smartScholarship: false,
       squadIds: [],
       sweeperIds: [],
       ...overrides.registration,
@@ -1565,6 +1568,7 @@ export function createPayee(overrides: Partial<SheetPayee> = {}): SheetPayee {
     seed: null,
     previousCasher: false,
     inferred: true,
+    smartScholarship: false,
     payout: null,
     ...overrides,
   }
@@ -1627,6 +1631,7 @@ export function createPayoutRow(overrides: Partial<PayoutRow> = {}): PayoutRow {
     amount: '100.00',
     note: null,
     paid: false,
+    smartScholarship: false,
     ...overrides,
   }
 }
@@ -1650,6 +1655,7 @@ export function createTotal(overrides: Partial<BowlerTotal> = {}): BowlerTotal {
     count: 1,
     total: '100.00',
     unpaidTotal: '100.00',
+    smartScholarship: false,
     ...overrides,
   }
 }

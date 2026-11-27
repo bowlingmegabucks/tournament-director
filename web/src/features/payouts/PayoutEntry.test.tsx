@@ -1006,6 +1006,42 @@ describe('the printouts (PAY-22)', () => {
     expect(printed.queryByText('Marcus Lee')).toBeNull()
   })
 
+  it('marks SMART money do not pay, in the signature box, and splits the totals (SMT-04)', async () => {
+    const user = userEvent.setup()
+    serve(
+      sheet({
+        payees: [
+          createPayee({
+            registrationId: dana.registrationId,
+            name: 'Dana Whitfield',
+            smartScholarship: true,
+            payout: { id: 'p1', amount: '75.00', note: null, paid: false },
+          }),
+          createPayee({
+            registrationId: marcus.registrationId,
+            name: 'Marcus Lee',
+            payout: { id: 'p2', amount: '25.00', note: null, paid: false },
+          }),
+        ],
+      }),
+    )
+    openPage()
+
+    const table = await screen.findByRole('table', { name: 'Payouts' })
+    expect(within(table).getByRole('row', { name: /Dana Whitfield/ })).toHaveTextContent(
+      'SMART scholarship: do not pay',
+    )
+    expect(within(table).getByRole('row', { name: /Marcus Lee/ })).not.toHaveTextContent('SMART')
+    expect(screen.getByText('2 ($100.00: $25.00 cash, $75.00 SMART scholarship)')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Print sign-off sheet' }))
+
+    const copy = document.querySelector<HTMLElement>('[data-payout-print-copy]')
+    const printed = within(copy as HTMLElement)
+    expect(printed.getByRole('cell', { name: 'SMART scholarship: do not pay' })).toBeVisible()
+    expect(printed.getByText(/Cash \$25\.00/)).toBeVisible()
+    expect(printed.getByText(/SMART scholarship \$75\.00/)).toBeVisible()
+  })
+
   it('offers no sign-off sheet until an amount is saved', async () => {
     serve(sheet({ payees: [dana, marcus] }))
     openPage()

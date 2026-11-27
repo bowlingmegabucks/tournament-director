@@ -14,6 +14,8 @@ export interface PrintColumn {
 export interface PrintRow {
   key: string
   cells: readonly string[]
+  /** Printed in "Received by" in place of the blank to sign: money that is not handed out (SMT-04). */
+  signatureText?: string
 }
 
 export interface PayoutPrintSheetProps {
@@ -86,7 +88,7 @@ export function PayoutPrintSheet({
                   {row.cells[index]}
                 </td>
               ))}
-              {signature && <td />}
+              {signature && <td>{row.signatureText}</td>}
             </tr>
           ))}
         </tbody>

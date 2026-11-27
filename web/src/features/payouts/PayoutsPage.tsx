@@ -4,6 +4,7 @@ import { formatMoney } from '../../shared/formatMoney'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
 import { formatSessionDate } from '../../shared/sessionFormat'
+import { smartNotice } from '../../shared/smartMoney'
 import { Toast } from '../../shared/Toast'
 import { TournamentNotFoundError } from '../../shared/tournamentQuery'
 import { useCan } from '../auth/useCan'
@@ -11,6 +12,7 @@ import type { Tournament } from '../tournaments/types'
 import { PayoutDisclaimer } from './PayoutDisclaimer'
 import { PrintPayoutsButton } from './PayoutPrint'
 import styles from './Payouts.module.css'
+import { centsOf, smartCents, splitMoney, totalFigures } from './smartTotals'
 import {
   asPaidFilter,
   atLeast,
@@ -88,8 +90,8 @@ function rowFigures(rows: readonly PayoutRow[]): string[] {
   }
   return [
     `${rows.length} ${rows.length === 1 ? 'payout' : 'payouts'}`,
-    `Total ${formatMoney(formatCents(total))}`,
-    `Not paid ${formatMoney(formatCents(unpaid))}`,
+    ...totalFigures(total, smartCents(rows)),
+    `Not paid ${splitMoney(unpaid, smartCents(rows.filter((row) => !row.paid)))}`,
   ]
 }
 
@@ -177,6 +179,7 @@ function ByPayout({ tournamentId, list }: Readonly<{ tournamentId: string; list:
                 row.note ?? '',
                 row.paid ? 'Paid' : 'Not paid',
               ],
+              signatureText: row.smartScholarship ? smartNotice : undefined,
             }))}
             figures={rowFigures(rows)}
             signature
@@ -207,7 +210,10 @@ function ByPayout({ tournamentId, list }: Readonly<{ tournamentId: string; list:
                   {row.eventLabel}
                   {row.eventDate && <> {formatSessionDate(row.eventDate)}</>}
                 </td>
-                <th scope="row">{row.name}</th>
+                <th scope="row">
+                  {row.name}
+                  {row.smartScholarship && <span className={styles.tag}>{smartNotice}</span>}
+                </th>
                 <td>{row.divisionName}</td>
                 <td className={styles.num}>{formatMoney(row.amount)}</td>
                 <td>{row.note}</td>
@@ -235,6 +241,15 @@ function ByPayout({ tournamentId, list }: Readonly<{ tournamentId: string; list:
       )}
     </>
   )
+}
+
+/** The bowler count, and the cash and SMART totals when any line is scholarship money (SMT-04). */
+function bowlerFigures(bowlers: readonly BowlerTotal[]): string[] {
+  const lines = bowlers.map((bowler) => ({ ...bowler, amount: bowler.total }))
+  const total = lines.reduce((sum, line) => sum + centsOf(line.amount), 0)
+  const smart = smartCents(lines)
+  const count = `${bowlers.length} ${bowlers.length === 1 ? 'bowler' : 'bowlers'}`
+  return smart === 0 ? [count] : [count, ...totalFigures(total, smart)]
 }
 
 function ByBowler({ tournamentId }: Readonly<{ tournamentId: string }>) {
@@ -301,14 +316,14 @@ function ByBowler({ tournamentId }: Readonly<{ tournamentId: string }>) {
             rows={shown.map((bowler) => ({
               key: bowler.registrationId,
               cells: [
-                bowler.name,
+                bowler.smartScholarship ? `${bowler.name} (${smartNotice})` : bowler.name,
                 bowler.divisionName,
                 String(bowler.count),
                 formatMoney(bowler.total),
                 formatMoney(bowler.unpaidTotal),
               ],
             }))}
-            figures={[`${shown.length} ${shown.length === 1 ? 'bowler' : 'bowlers'}`]}
+            figures={bowlerFigures(shown)}
           />
         </div>
       )}
@@ -339,7 +354,10 @@ function ByBowler({ tournamentId }: Readonly<{ tournamentId: string }>) {
           <tbody>
             {shown.map((bowler) => (
               <tr key={bowler.registrationId}>
-                <th scope="row">{bowler.name}</th>
+                <th scope="row">
+                  {bowler.name}
+                  {bowler.smartScholarship && <span className={styles.tag}>{smartNotice}</span>}
+                </th>
                 <td>{bowler.divisionName}</td>
                 <td className={styles.num}>{bowler.count}</td>
                 <td className={styles.num}>{formatMoney(bowler.total)}</td>
@@ -385,6 +403,9 @@ export function PayoutsPage() {
     )
   }
 
+  const smart = smartCents(data.payouts)
+  const unpaidSmart = smartCents(data.payouts.filter((row) => !row.paid))
+
   return (
     <>
       <title>Payouts · Tournament Director</title>
@@ -399,10 +420,23 @@ export function PayoutsPage() {
           <dt>Total</dt>
           <dd>{formatMoney(data.summary.total)}</dd>
         </div>
+        {smart > 0 && (
+          <>
+            <div>
+              <dt>Cash</dt>
+              <dd>{formatMoney(formatCents(centsOf(data.summary.total) - smart))}</dd>
+            </div>
+            <div>
+              <dt>SMART scholarship</dt>
+              <dd>{formatMoney(formatCents(smart))}</dd>
+            </div>
+          </>
+        )}
         <div>
           <dt>Not paid</dt>
           <dd>
-            {data.summary.unpaidCount} ({formatMoney(data.summary.unpaidTotal)})
+            {data.summary.unpaidCount} ({splitMoney(centsOf(data.summary.unpaidTotal), unpaidSmart)}
+            )
           </dd>
         </div>
       </dl>

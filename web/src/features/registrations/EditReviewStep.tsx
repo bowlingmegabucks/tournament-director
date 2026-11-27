@@ -79,6 +79,7 @@ export function EditReviewStep({
   const averageWas = stored.average === null ? '' : String(stored.average)
   const averageChanged = averageNow !== averageWas
   const superChanged = registration.superSweeper !== stored.superSweeper
+  const smartChanged = registration.smartScholarship !== stored.smartScholarship
   const dates = money.refund.map(
     (line) => `${line.kind === 'squad' ? 'squad' : 'sweeper'} ${formatSessionDate(line.date)}`,
   )
@@ -113,7 +114,7 @@ export function EditReviewStep({
           </ul>
         </div>
       )}
-      {(moved || averageChanged || superChanged) && (
+      {(moved || averageChanged || superChanged || smartChanged) && (
         <ul className={styles.changes}>
           {moved && (
             <li>
@@ -135,6 +136,9 @@ export function EditReviewStep({
           )}
           {superChanged && (
             <li>Super sweeper: turned {registration.superSweeper ? 'on' : 'off'}.</li>
+          )}
+          {smartChanged && (
+            <li>SMART scholarship: turned {registration.smartScholarship ? 'on' : 'off'}.</li>
           )}
         </ul>
       )}

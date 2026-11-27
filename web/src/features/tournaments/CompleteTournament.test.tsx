@@ -20,6 +20,7 @@ const info = (overrides: Partial<TournamentCompleteInfo> = {}): TournamentComple
   payoutCount: 5,
   unpaidPayoutCount: 0,
   unpaidPayoutTotal: '0.00',
+  unpaidPayoutSmartTotal: '0.00',
   ...overrides,
 })
 

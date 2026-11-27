@@ -76,6 +76,7 @@ function isPayee(value: unknown): value is SheetPayee {
     (field(value, 'seed') === null || isNumber(field(value, 'seed'))) &&
     isBoolean(field(value, 'previousCasher')) &&
     isBoolean(field(value, 'inferred')) &&
+    isBoolean(field(value, 'smartScholarship')) &&
     (payout === null || isView(payout))
   )
 }
@@ -117,7 +118,8 @@ function isRow(value: unknown): value is PayoutRow {
     isText(field(value, 'divisionName')) &&
     isText(field(value, 'amount')) &&
     isNullableText(field(value, 'note')) &&
-    isBoolean(field(value, 'paid'))
+    isBoolean(field(value, 'paid')) &&
+    isBoolean(field(value, 'smartScholarship'))
   )
 }
 
@@ -138,7 +140,8 @@ function isTotal(value: unknown): value is BowlerTotal {
     isText(field(value, 'divisionName')) &&
     isNumber(field(value, 'count')) &&
     isText(field(value, 'total')) &&
-    isText(field(value, 'unpaidTotal'))
+    isText(field(value, 'unpaidTotal')) &&
+    isBoolean(field(value, 'smartScholarship'))
   )
 }
 

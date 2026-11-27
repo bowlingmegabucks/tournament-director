@@ -16,6 +16,8 @@ export interface MoveFacts {
   startingLane: number
   numberOfLanes: number
   maxPerPair: number
+  /** The first lanes of the pairs taken out of play (OOP-01). */
+  outOfPlay: readonly number[]
   /** Every entry of the session with its stored position (`''` when none). */
   entries: readonly { registrationId: string; position: string }[]
 }
@@ -30,6 +32,8 @@ export type MoveOutcome =
   | { type: 'badSeats'; message: string }
   /** The lane is not the first lane of a pair of this session: 400. */
   | { type: 'badLane'; message: string }
+  /** The pair was taken out of play: 409, with the pair named (OOP-02). */
+  | { type: 'outOfPlay'; message: string }
   /** The pair has no room: 409, with the pair named (Q-28, D-57). */
   | { type: 'full'; message: string }
   /** Nothing to write (LAN-06). */
@@ -38,7 +42,7 @@ export type MoveOutcome =
 
 const label = (kind: 'squad' | 'sweeper') => (kind === 'squad' ? 'squad' : 'sweeper')
 
-function pairText(pair: Pair): string {
+export function pairText(pair: Pair): string {
   const [first, last] = [pair.lanes[0], pair.lanes.at(-1)]
   return pair.lanes.length === 1 ? `Lane ${first}` : `Lanes ${first}-${last}`
 }
@@ -95,6 +99,14 @@ export function planLaneMove(
 
   const stored = parsePosition(mine.position)
   if (stored && pairOf(stored.lane, [pair])) return { type: 'unchanged', position: mine.position }
+
+  if (facts.outOfPlay.includes(pair.firstLane)) {
+    const verb = pair.lanes.length === 1 ? 'is' : 'are'
+    return {
+      type: 'outOfPlay',
+      message: `${pairText(pair)} ${verb} out of play. Pick another pair.`,
+    }
+  }
 
   const others = facts.entries.filter((entry) => {
     // Stryker disable next-line ConditionalExpression: a bowler already in the pair returned above, so a stored position of their own never reaches the count.

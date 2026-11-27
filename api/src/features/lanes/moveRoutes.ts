@@ -18,6 +18,14 @@ const params = z.object({ id: z.uuid(), sessionId: z.uuid(), registrationId: z.u
  */
 const body = z.strictObject({ lane: z.number().int().min(1).max(199).nullable() })
 
+const pairParams = z.object({
+  id: z.uuid(),
+  sessionId: z.uuid(),
+  lane: z.coerce.number().int().min(1).max(199),
+})
+
+const pairBody = z.strictObject({ inPlay: z.boolean(), confirmWarnings: z.boolean().optional() })
+
 const sessionName = (kind: SessionKind) => (kind === 'squad' ? 'Squad' : 'Sweeper')
 
 export interface LaneMoveDeps {
@@ -30,7 +38,8 @@ export interface LaneMoveDeps {
 
 /**
  * Mounted at `/v1/tournaments/:id/squads/:sessionId/lanes` and `/sweepers/:sessionId/lanes` for
- * `PUT /:registrationId`, behind `lanes.assign`; the API key cannot reach it (D-216, D-96). Web
+ * `PUT /:registrationId` (one bowler) and `PUT /pairs/:lane` (one pair in or out of play, OOP-03),
+ * behind `lanes.assign`; the API key cannot reach it (D-216, D-96). Web
  * only: the legacy API has no such route, so the vendor sees no change (D-09). What may move, and
  * to which seat, is `planLaneMove` (LAN-05, LAN-06, LAN-09, LAN-13, D-56); this router turns its
  * answer into HTTP and, after a write, tells every open screen of the session (D-217, D-219).
@@ -41,6 +50,56 @@ export function createLaneMoveRouter(
 ): Router {
   const router = Router({ mergeParams: true })
   const label = sessionName(kind)
+  const notFound = (what: 'tournament' | 'session') =>
+    new HttpError(404, what === 'tournament' ? 'Tournament not found' : `${label} not found`)
+  // After the commit; a failed send is logged by the hub and never fails the save (D-219).
+  const changed = (tournamentId: string, sessionId: string) => {
+    events.publish(sessionId, 'lanes')
+    live?.entriesChanged(tournamentId)
+  }
+
+  router.put('/pairs/:lane', jsonBody, async (req, res) => {
+    const { id, sessionId, lane } = pairParams.parse(req.params)
+    const { inPlay, confirmWarnings = false } = pairBody.parse(req.body)
+
+    const outcome = await writer.setPair({
+      tournamentId: id,
+      kind,
+      sessionId,
+      lane,
+      inPlay,
+      confirmWarnings,
+    })
+    if ('notFound' in outcome) throw notFound(outcome.notFound)
+
+    const ids = {
+      actorId: callerOf(res).user?.id,
+      tournamentId: id,
+      [`${kind}Id`]: sessionId,
+      lane,
+    }
+    const log = requestLogger(res, logger)
+    switch (outcome.type) {
+      case 'refused':
+        log.info(ids, `Lane pair change refused: ${kind} or tournament complete`)
+        throw new HttpError(409, outcome.message)
+      case 'badLane':
+        throw new HttpError(400, outcome.message)
+      case 'confirm':
+        res.status(409).json({
+          message: outcome.message,
+          warnings: [{ field: 'inPlay', message: outcome.message }],
+        })
+        return
+      case 'unchanged':
+        res.json({ inPlay, unassigned: 0 })
+        return
+      case 'save':
+        log.info({ ...ids, inPlay, unassigned: outcome.unassign.length }, 'Lane pair change saved')
+        changed(id, sessionId)
+        res.json({ inPlay, unassigned: outcome.unassign.length })
+    }
+  })
 
   router.put('/:registrationId', jsonBody, async (req, res) => {
     const { id, sessionId, registrationId } = params.parse(req.params)
@@ -53,12 +112,7 @@ export function createLaneMoveRouter(
       registrationId,
       lane,
     })
-    if ('notFound' in outcome) {
-      throw new HttpError(
-        404,
-        outcome.notFound === 'tournament' ? 'Tournament not found' : `${label} not found`,
-      )
-    }
+    if ('notFound' in outcome) throw notFound(outcome.notFound)
 
     // Ids and the lane only: never a name (api-observability).
     const ids = {
@@ -74,6 +128,9 @@ export function createLaneMoveRouter(
       case 'refused':
         log.info(ids, `Lane move refused: ${kind} or tournament complete`)
         throw new HttpError(409, outcome.message)
+      case 'outOfPlay':
+        log.info({ ...ids, lane }, 'Lane move refused: pair out of play')
+        throw new HttpError(409, outcome.message)
       case 'full':
         log.info({ ...ids, lane }, 'Lane move refused: pair full')
         throw new HttpError(409, outcome.message)
@@ -86,9 +143,7 @@ export function createLaneMoveRouter(
         return
       case 'move':
         log.info({ ...ids, lane }, 'Lane assignment saved')
-        // After the commit; a failed send is logged by the hub and never fails the save (D-219).
-        events.publish(sessionId, 'lanes')
-        live?.entriesChanged(id)
+        changed(id, sessionId)
         res.json({ position: outcome.position })
     }
   })

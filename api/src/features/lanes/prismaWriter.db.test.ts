@@ -253,4 +253,68 @@ describe('Prisma lane writer', () => {
     )
     expect(Number(row?.n)).toBe(2)
   })
+
+  const pairChange = (
+    tournamentId: string,
+    sessionId: string,
+    inPlay: boolean,
+    confirmWarnings = true,
+  ) => ({ tournamentId, kind: 'squad' as const, sessionId, lane: 1, inPlay, confirmWarnings })
+
+  const lanesOut = (sessionId: string) =>
+    client.laneOutOfPlay.findMany({ where: { squadId: sessionId } })
+
+  it('takes a pair out, unassigns only its bowlers, and brings it back (OOP-03, OOP-05)', async () => {
+    const tournamentId = await insertTournament()
+    const divisionId = await insertDivision(tournamentId)
+    const sessionId = await insertSession(tournamentId)
+    const onPair = await insertEntry(divisionId, sessionId, '2C')
+    const elsewhere = await insertEntry(divisionId, sessionId, '3A')
+    const { writer } = setup()
+
+    await expect(writer.setPair(pairChange(tournamentId, sessionId, false))).resolves.toEqual({
+      type: 'save',
+      unassign: [onPair],
+    })
+    expect(await storedPosition(onPair, sessionId)).toBe('')
+    expect(await storedPosition(elsewhere, sessionId)).toBe('3A')
+    expect(await lanesOut(sessionId)).toEqual([{ squadId: sessionId, lane: 1 }])
+    await expect(writer.move(move(tournamentId, sessionId, onPair, 1))).resolves.toMatchObject({
+      type: 'outOfPlay',
+    })
+
+    await writer.setPair(pairChange(tournamentId, sessionId, true))
+    expect(await lanesOut(sessionId)).toEqual([])
+    expect(await storedPosition(onPair, sessionId)).toBe('')
+  })
+
+  it('writes nothing until the caller confirms (OOP-04)', async () => {
+    const tournamentId = await insertTournament()
+    const divisionId = await insertDivision(tournamentId)
+    const sessionId = await insertSession(tournamentId)
+    const entry = await insertEntry(divisionId, sessionId, '1A')
+    const { writer } = setup()
+
+    await expect(
+      writer.setPair(pairChange(tournamentId, sessionId, false, false)),
+    ).resolves.toMatchObject({ type: 'confirm' })
+    expect(await storedPosition(entry, sessionId)).toBe('1A')
+    expect(await lanesOut(sessionId)).toEqual([])
+  })
+
+  it('never leaves a bowler on a pair that went out as they were moved onto it (OOP-02)', async () => {
+    const tournamentId = await insertTournament()
+    const divisionId = await insertDivision(tournamentId)
+    const sessionId = await insertSession(tournamentId)
+    const entry = await insertEntry(divisionId, sessionId)
+    const { writer } = setup()
+
+    await Promise.all([
+      writer.move(move(tournamentId, sessionId, entry, 1)),
+      writer.setPair(pairChange(tournamentId, sessionId, false)),
+    ])
+
+    expect(await lanesOut(sessionId)).toHaveLength(1)
+    expect(await storedPosition(entry, sessionId)).toBe('')
+  })
 })

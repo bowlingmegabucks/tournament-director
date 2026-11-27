@@ -1,11 +1,5 @@
 import { formatMoney } from '../../shared/formatMoney'
-import { formatCents, parseAmount } from './amount'
-
-/** Money text as whole cents; 0 for text that is not an amount. */
-export function centsOf(amount: string): number {
-  const parsed = parseAmount(amount)
-  return parsed.kind === 'amount' ? parsed.cents : 0
-}
+import { centsOf, formatCents } from './amount'
 
 /** The part of some payouts that is SMART scholarship money, in cents (SMT-04). */
 export function smartCents(

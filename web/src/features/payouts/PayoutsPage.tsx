@@ -12,7 +12,7 @@ import type { Tournament } from '../tournaments/types'
 import { PayoutDisclaimer } from './PayoutDisclaimer'
 import { PrintPayoutsButton } from './PayoutPrint'
 import styles from './Payouts.module.css'
-import { centsOf, smartCents, splitMoney, totalFigures } from './smartTotals'
+import { smartCents, splitMoney, totalFigures } from './smartTotals'
 import {
   asPaidFilter,
   atLeast,
@@ -23,7 +23,7 @@ import {
 } from './listFilters'
 import type { BowlerTotal, PayoutList, PayoutRow } from './types'
 import { usePayoutTotals, usePayouts, useSetPaid } from './usePayouts'
-import { formatCents, parseAmount } from './amount'
+import { centsOf, formatCents, parseAmount } from './amount'
 
 /** The Paid cell: a checkbox that saves at once for a user who may, text with a check mark for anyone else (D-274). */
 function PaidCell({

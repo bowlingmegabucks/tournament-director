@@ -21,6 +21,7 @@ export function createPrismaLaneRepository(client: PrismaClient, logger: Logger)
           select: {
             registrationId: true,
             laneAssignment: true,
+            forcedAdvancer: true,
             registration: {
               select: {
                 id: true,

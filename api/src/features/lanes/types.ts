@@ -94,4 +94,6 @@ export interface LaneEntry {
   averageNote: string | null
   superSweeper: boolean
   position: string
+  /** NSH-20: an admin ruled that this squad entry advances. Set only when true. */
+  forcedAdvancer?: boolean
 }

@@ -40,6 +40,7 @@ const isNoShow = (entry: ResultEntry) => entry.games.every((score) => score === 
  * one squad.
  *
  * `A = floor(N / finalsRatio)`. `C` is 1 when `A` is 0 (D-08), else `max(floor(N / cashRatio) - A, 0)`.
+ * A forced advancer (NSH-20 to NSH-23) adds one to `A` in that formula.
  * An earlier advancer ranks like anyone else but cannot take an advancing spot. The cashers are the
  * next `C` bowlers after the advancers, plus any earlier advancer at or above the cut (who would
  * have advanced), so there can be more than `C`. With fewer bowlers than spots, all of them take
@@ -58,12 +59,14 @@ export function workOutDivision(input: DivisionInput): DivisionOutcome {
   const ranked = rankEntries(entries.filter((entry) => !apart.has(entry)))
 
   const advanceSpots = Math.floor(entryCount / finalsRatio)
-  const cashSpots =
-    advanceSpots === 0 ? 1 : Math.max(Math.floor(entryCount / cashRatio) - advanceSpots, 0)
 
-  const advancers = ranked
-    .filter((entry) => !advancedBefore.has(entry.bowlerId))
-    .slice(0, advanceSpots)
+  // NSH-21: a forced advancer is an advancer on top of the top `A`, in rank order.
+  const eligible = ranked.filter((entry) => !advancedBefore.has(entry.bowlerId))
+  const natural = new Set(eligible.slice(0, advanceSpots))
+  const advancers = eligible.filter((entry) => natural.has(entry) || entry.forced === true)
+  // NSH-22: a forced advancer counts against the cash spots like any other.
+  const taken = advanceSpots + advancers.length - natural.size
+  const cashSpots = taken === 0 ? 1 : Math.max(Math.floor(entryCount / cashRatio) - taken, 0)
   const cutTotal = advancers.at(-1)?.total
 
   const remaining = ranked.filter((entry) => !advancers.includes(entry))

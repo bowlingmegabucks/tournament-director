@@ -40,6 +40,7 @@ export function toDivisionResult(
     ties: marks.get(entry.registrationId) ?? [],
     dnf: flagged.has(entry.registrationId),
     unverified: entry.unverified,
+    ...(group === 'advancer' && entry.forced ? { byRuling: true } : {}),
     // D-284: only an inferred payee, a casher, shows an amount.
     payout: group === 'casher' ? (payouts.get(entry.registrationId) ?? null) : null,
   }))

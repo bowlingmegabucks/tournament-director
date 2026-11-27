@@ -55,6 +55,8 @@ export const squadRowSchema = z.object({
   scores: gameScoresSchema,
   /** True only for an earlier advancer at or above the cut score (D-81). */
   advancedEarlier: z.boolean(),
+  /** NSH-24: advances because an admin ruled it. Sent only when true. */
+  byRuling: z.boolean().optional(),
   /** Flagged "did not finish" in a squad that is still open (D-248, D-251). */
   dnf: z.boolean(),
   /**
@@ -214,6 +216,8 @@ export const seedingRowSchema = z.object({
   squadDate: localDateTimeSchema,
   total: z.number().int(),
   highGame: z.number().int(),
+  /** NSH-24: a finalist who advanced from a squad by ruling. Sent only when true. */
+  byRuling: z.boolean().optional(),
   /** The handicap per game of that entry (D-92). */
   handicap: z.number().int(),
   previousCasher: z.boolean(),

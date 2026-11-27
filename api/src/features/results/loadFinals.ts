@@ -122,7 +122,11 @@ export async function loadAtLarge(
   }
 }
 
-function seedingRows(seeding: SeedingOutcome, payouts: ReadonlyMap<string, string>) {
+function seedingRows(
+  seeding: SeedingOutcome,
+  payouts: ReadonlyMap<string, string>,
+  ruled: ReadonlySet<string>,
+) {
   const marks = markCutLine(entriesOf(seeding.finalists), entriesOf(seeding.others))
   const toRow = (item: PlacedEntry, seed: number, group: 'finalist' | 'other') => ({
     registrationId: item.entry.registrationId,
@@ -136,6 +140,7 @@ function seedingRows(seeding: SeedingOutcome, payouts: ReadonlyMap<string, strin
     previousCasher: seeding.previousCashers.has(item.entry.bowlerId),
     ties: marks.get(item.entry.registrationId) ?? [],
     unverified: item.entry.unverified,
+    ...(group === 'finalist' && ruled.has(item.entry.bowlerId) ? { byRuling: true } : {}),
     // D-284: only an inferred payee, a finalist, shows an amount.
     payout: group === 'finalist' ? (payouts.get(item.entry.registrationId) ?? null) : null,
   })
@@ -163,7 +168,13 @@ export async function loadSeeding(
     divisions: divisions.map(({ division, runs }) => {
       const atLarge = workOutAtLarge(runs, finalsRatio)
       const seeding = workOutSeeding(runs, atLarge)
-      const rows = seedingRows(seeding, amountsFor(amounts, 'finals', division.id))
+      // NSH-24: the seeding entry may be from another squad than the one ruled on (RES-19).
+      const ruled = new Set(
+        runs
+          .flatMap((run) => run.outcome.advancers)
+          .flatMap((entry) => (entry.forced ? [entry.bowlerId] : [])),
+      )
+      const rows = seedingRows(seeding, amountsFor(amounts, 'finals', division.id), ruled)
       return {
         id: division.id,
         number: division.number,

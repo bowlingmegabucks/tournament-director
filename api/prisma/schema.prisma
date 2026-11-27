@@ -162,6 +162,8 @@ model SquadRegistration {
   registrationId String       @map("RegistrationId") @db.Char(36)
   squadId        String       @map("SquadId") @db.Char(36)
   laneAssignment String?      @map("LaneAssignment") @db.VarChar(3)
+  /// An admin ruled that this entry advances (NSH-20). Added by prisma/forced-advancer-column.sql.
+  forcedAdvancer Boolean      @default(false) @map("ForcedAdvancer")
   registration   Registration @relation(fields: [registrationId], references: [id])
   squad          Squad        @relation(fields: [squadId], references: [id])
 

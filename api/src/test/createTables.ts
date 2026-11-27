@@ -3,6 +3,7 @@ import { describeDatabase, isLocalDatabase } from '../db/localDatabase.ts'
 import { createDatabaseClient } from '../shared/database.ts'
 import { authSchemaSql } from './authSchema.ts'
 import { averageSchemaSql } from './averageSchema.ts'
+import { forcedAdvancerSchemaSql } from './forcedAdvancerSchema.ts'
 import { legacySchemaSql } from './legacySchema.ts'
 import { payoutSchemaSql } from './payoutSchema.ts'
 import { scoreSchemaSql } from './scoreSchema.ts'
@@ -25,12 +26,15 @@ try {
     ...scoreSchemaSql(),
     ...payoutSchemaSql(),
     ...averageSchemaSql(),
+    ...forcedAdvancerSchemaSql(),
   ]
   for (const statement of statements) {
     // In order: a table with a foreign key needs the table it points to first.
     await client.$executeRawUnsafe(statement) // NOSONAR: order matters
   }
-  console.log(`Created ${statements.length} tables on ${describeDatabase(databaseUrl)}.`)
+  console.log(
+    `Created ${statements.length - forcedAdvancerSchemaSql().length} tables on ${describeDatabase(databaseUrl)}.`,
+  )
 } finally {
   await client.$disconnect()
 }

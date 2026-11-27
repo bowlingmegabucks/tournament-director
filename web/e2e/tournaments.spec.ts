@@ -254,7 +254,9 @@ test('a drop on a pair with room moves the bowler, saves it, and shows the seat 
   )
 
   await expect(page.getByRole('heading', { name: 'Unassigned (3)' })).toBeVisible()
-  const pair = page.getByRole('heading', { level: 3, name: /^Lanes 3-4/ }).locator('xpath=..')
+  const pair = page
+    .getByRole('heading', { level: 3, name: /^Lanes 3-4/ })
+    .locator('xpath=ancestor::li[1]')
   await expect(pair).toContainText('3 of 4')
   await expect(pair.getByText('Pat Nguyen')).toBeVisible()
   // The first free seat after 3A and 4C (D-56).
@@ -327,16 +329,20 @@ test('the Assign to lanes dialog picks a pair, and Escape closes it (D-58)', asy
 
   await expect(page.getByRole('heading', { name: 'Unassigned (3)' })).toBeVisible()
   await expect(
-    page.getByRole('heading', { level: 3, name: /^Lanes 7-8/ }).locator('xpath=..'),
+    page.getByRole('heading', { level: 3, name: /^Lanes 7-8/ }).locator('xpath=ancestor::li[1]'),
   ).toContainText('Pat Nguyen')
 })
 
 test('a pair taken out of play empties, refuses bowlers, and comes back (OOP-02 to OOP-05, OOP-09)', async ({
   page,
 }) => {
+  // Tall enough that the drag does not scroll the page under the pointer: it would miss the pair.
+  await page.setViewportSize({ width: 1280, height: 1400 })
   await openSquad(page, '1:00 PM')
   const box = page.getByRole('checkbox', { name: 'Lanes 1-2 in play' })
-  const pair = page.getByRole('heading', { level: 3, name: /^Lanes 1-2/ }).locator('xpath=..')
+  const pair = page
+    .getByRole('heading', { level: 3, name: /^Lanes 1-2/ })
+    .locator('xpath=ancestor::li[1]')
   const spots = page.getByText(/spots open|over the \d+ spots/)
   const before = await spots.textContent()
 

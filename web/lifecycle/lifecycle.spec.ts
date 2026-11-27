@@ -20,6 +20,27 @@ import {
 } from './data/sessions'
 import { createFirstAdmin } from './support/createAdmin'
 import {
+  makeUpExtras,
+  makeUpSquad,
+  makeUpSweeper,
+  missedScore,
+  missedSquad,
+  moveDivision,
+  noShowTournament,
+  paidDivision,
+  rulingDivision,
+  systemNote,
+} from './data/noShow'
+import {
+  idOfName,
+  namesIn,
+  openNoShowDialog,
+  registerEntries,
+  resultRows,
+  saveScores,
+} from './support/noShow'
+import { apiUrl } from './support/stack'
+import {
   addDeskRegistration,
   addDivision,
   editDeskRegistration,
@@ -979,3 +1000,235 @@ for (const persona of personas) {
     await checkApiAccess(page, who, siteRegistrationIds)
   })
 }
+
+// Stage 10: a no-show of a completed squad asks to bowl the next morning
+// (docs/plans/no-show-move-refund.md, NSH-01 to NSH-24). The figures are in `data/noShow.ts`.
+test('stage 10: a no-show of a completed squad is moved or refunded, and everything reconciles', async ({
+  page,
+}) => {
+  const move = moveDivision
+  const ruling = rulingDivision
+  const paid = paidDivision
+  const forced = ruling.nameAt(2)
+
+  await signIn(page, director)
+  await mainMenu(page).getByRole('link', { name: 'Tournaments' }).click()
+  await addTournament(page, noShowTournament)
+  const nav = page.getByRole('navigation', { name: noShowTournament.name })
+  await nav.getByRole('link', { name: 'Divisions' }).click()
+  for (const { name } of [move, ruling, paid]) {
+    await addDivision(page, { name, fields: {} })
+    await expect(page.getByText('Division created')).toBeVisible()
+  }
+  await nav.getByRole('link', { name: 'Squads' }).click()
+  for (const squad of [missedSquad, makeUpSquad]) {
+    await addSquad(page, squad)
+    await expect(page.getByText('Squad created')).toBeVisible()
+  }
+  await nav.getByRole('link', { name: 'Sweepers' }).click()
+  await addSweeper(page, makeUpSweeper)
+  await expect(page.getByText('Sweeper created')).toBeVisible()
+
+  const site = await VendorApi.open()
+  const main = await site.tournament(noShowTournament.name)
+  await site.close()
+  const first = idByDate(main.squads, missedSquad.date)
+  const second = idByDate(main.squads, makeUpSquad.date)
+  const sweeperId = idByDate(main.sweepers, makeUpSweeper.date)
+  const base = `/v1/tournaments/${main.id}`
+  const firstUrl = `${base}/squads/${first}`
+  const secondUrl = `${base}/squads/${second}`
+
+  const ids = await registerEntries(main, [
+    ...[move, ruling, paid].flatMap(({ name, bowled, noShow }) => [
+      // The third advancer of Ruling also bowls the second squad.
+      ...bowled.map((bowler) => ({
+        bowler,
+        division: name,
+        squadIds: fullName(bowler) === forced ? [first, second] : [first],
+      })),
+      {
+        bowler: noShow,
+        division: name,
+        squadIds: [first],
+        sweeperIds: name === paid.name ? [sweeperId] : [],
+      },
+    ]),
+    ...makeUpExtras.map((bowler) => ({ bowler, division: ruling.name, squadIds: [second] })),
+  ])
+
+  // The first squad is bowled by everyone but the three no-shows, and completed with their zeros.
+  await saveScores(
+    page,
+    firstUrl,
+    [move, ruling, paid].flatMap(({ bowled }) =>
+      bowled.map((bowler, place) => ({
+        registrationId: idOfName(ids, fullName(bowler)),
+        score: missedScore(place),
+      })),
+    ),
+  )
+  const completed = await page.request.post(`${apiUrl}${firstUrl}/complete`, { data: {} })
+  expect(completed.ok(), await completed.text()).toBe(true)
+
+  // As the squad finished.
+  expect(await namesIn(page, firstUrl, move.name, 'advancer')).toHaveLength(2)
+  expect(await namesIn(page, firstUrl, move.name, 'casher')).toEqual([
+    move.nameAt(2),
+    move.nameAt(3),
+  ])
+  expect(await namesIn(page, firstUrl, ruling.name, 'advancer')).toEqual([
+    ruling.nameAt(0),
+    ruling.nameAt(1),
+    forced,
+  ])
+  expect(await namesIn(page, firstUrl, ruling.name, 'casher')).toEqual([ruling.nameAt(3)])
+
+  // NSH-01: the director has no button, and the API refuses them.
+  const resultsPath = `/tournaments/${main.id}/squads/${first}/results`
+  await page.goto(resultsPath)
+  await expect(page.getByRole('heading', { name: 'No show', level: 3 })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Move or refund/ })).toHaveCount(0)
+  const noShowUrl = (name: string) => `${apiUrl}${firstUrl}/no-shows/${idOfName(ids, name)}`
+  const refused = await page.request.post(`${noShowUrl(fullName(move.noShow))}/preview`, {
+    data: { action: 'refund' },
+  })
+  expect(refused.status()).toBe(403)
+
+  await signIn(page, admin)
+
+  // Today's situation: move the no-show, and the second casher drops out. No payout exists yet.
+  let name = fullName(move.noShow)
+  let dialog = await openNoShowDialog(page, resultsPath, move.name, name)
+  await dialog.getByRole('radio', { name: 'Move to another squad' }).check()
+  await dialog.getByLabel('New squad').selectOption({ label: makeUpSquad.label })
+  await expect(dialog.getByText(`${move.nameAt(3)} no longer cashes`)).toBeVisible()
+  await expect(dialog.getByRole('checkbox')).toHaveCount(0)
+  await dialog.getByRole('button', { name: 'Move entry' }).click()
+  await expect(page.getByText(`${name} moved to`)).toBeVisible()
+  await expect(page.getByRole('button', { name: `Move or refund ${name}` })).toHaveCount(0)
+  expect(await namesIn(page, firstUrl, move.name, 'casher')).toEqual([move.nameAt(2)])
+
+  // The third advancer would drop out; the admin keeps them advancing (NSH-20 to NSH-24).
+  name = fullName(ruling.noShow)
+  dialog = await openNoShowDialog(page, resultsPath, ruling.name, name)
+  await dialog.getByRole('radio', { name: 'Move to another squad' }).check()
+  await dialog.getByLabel('New squad').selectOption({ label: makeUpSquad.label })
+  await expect(dialog.getByText(`${forced} no longer advances`)).toBeVisible()
+  const keep = dialog.getByRole('checkbox', { name: new RegExp(escapeRegex(forced)) })
+  await expect(keep).not.toBeChecked()
+  await keep.check()
+  await expect(dialog.getByText(`${forced} no longer advances`)).toHaveCount(0)
+  await dialog.getByRole('button', { name: 'Move entry' }).click()
+  await expect(page.getByText(`${name} moved to`)).toBeVisible()
+  await expect(page.getByText('Advanced by ruling')).toBeVisible()
+  // The squad reads as it did with 21 entries: the same three advance and the same one cashes.
+  expect(await namesIn(page, firstUrl, ruling.name, 'advancer')).toEqual([
+    ruling.nameAt(0),
+    ruling.nameAt(1),
+    forced,
+  ])
+  expect(await namesIn(page, firstUrl, ruling.name, 'casher')).toEqual([ruling.nameAt(3)])
+
+  // Timing: a payout is saved after the admin reviews a refund and before they confirm it.
+  name = fullName(paid.noShow)
+  dialog = await openNoShowDialog(page, resultsPath, paid.name, name)
+  await dialog.getByRole('radio', { name: 'Refund' }).check()
+  await expect(dialog.getByText(/ineligible for sweepers/)).toBeVisible()
+  await expect(dialog.getByText(`${paid.nameAt(3)} no longer cashes`)).toBeVisible()
+  await expect(dialog.getByRole('heading', { name: 'Payouts' })).toHaveCount(0)
+  const saved = await page.request.put(`${apiUrl}${base}/payouts/squad/${first}`, {
+    data: {
+      payouts: [{ registrationId: idOfName(ids, paid.nameAt(3)), amount: '80', paid: true }],
+    },
+  })
+  expect(saved.ok(), await saved.text()).toBe(true)
+  await dialog.getByRole('button', { name: 'Refund entry' }).click()
+  await expect(dialog.getByRole('alert')).toContainText('Check it again')
+  await expect(dialog.getByText(systemNote)).toBeVisible()
+  await dialog.getByRole('button', { name: 'Refund entry' }).click()
+  await expect(page.getByText(`${name} refunded. The registration is deleted.`)).toBeVisible()
+
+  // NSH-10, NSH-11: the amount and paid tick stand, with the system note.
+  const sheet = await page.request.get(`${apiUrl}${base}/payouts/squad/${first}`)
+  const { sheet: payouts } = (await sheet.json()) as {
+    sheet: {
+      payees: {
+        name: string
+        inferred: boolean
+        payout: { amount: string; note: string | null; paid: boolean } | null
+      }[]
+    }
+  }
+  expect(payouts.payees.find((payee) => payee.name === paid.nameAt(3))).toMatchObject({
+    inferred: false,
+    payout: { amount: '80.00', note: systemNote, paid: true },
+  })
+
+  // NSH-12: the casher who dropped before any payout is added by hand, through the usual sheet.
+  await openTournamentPage(page, 'Squads', noShowTournament.name)
+  await page.getByRole('link', { name: missedSquad.label, exact: true }).click()
+  await page
+    .getByRole('navigation', { name: 'Squad pages' })
+    .getByRole('link', { name: 'Payouts' })
+    .click()
+  await page.getByRole('button', { name: 'Enter payouts' }).click()
+  const entry = page.getByRole('dialog', { name: 'Payouts: Squad' })
+  await expect(entry.getByLabel(`Amount for ${move.nameAt(3)}`, { exact: true })).toHaveCount(0)
+  await entry.getByRole('button', { name: 'Add another bowler' }).click()
+  const add = page.getByRole('dialog', { name: 'Add another bowler' })
+  await add.getByLabel('Search by name').fill(move.nameAt(3))
+  await add.getByRole('button', { name: `Add ${move.nameAt(3)}` }).click()
+  await add.getByRole('button', { name: 'Close' }).click()
+  await entry.getByLabel(`Amount for ${move.nameAt(3)}`, { exact: true }).fill('80')
+  await entry.getByLabel(`Note (required) for ${move.nameAt(3)}`).fill('Cashed before the move')
+  await entry.getByRole('button', { name: 'Save payouts' }).click()
+  await expect(page.getByText('Payouts saved.')).toBeVisible()
+  // NSH-13: a payout by hand shows on no public page.
+  const moveRows = await resultRows(page, firstUrl, move.name)
+  expect(moveRows.find((row) => row.name === move.nameAt(3))?.payout).toBeNull()
+
+  // The next morning: both moved bowlers bowl, and the forced advancer bowls best of all.
+  await saveScores(page, secondUrl, [
+    { registrationId: idOfName(ids, fullName(move.noShow)), score: 200 },
+    { registrationId: idOfName(ids, forced), score: 280 },
+    { registrationId: idOfName(ids, fullName(ruling.noShow)), score: 190 },
+    ...makeUpExtras.map((bowler, place) => ({
+      registrationId: idOfName(ids, fullName(bowler)),
+      score: 230 - place * 3,
+    })),
+  ])
+  const done = await page.request.post(`${apiUrl}${secondUrl}/complete`, { data: {} })
+  expect(done.ok(), await done.text()).toBe(true)
+
+  // 7 entries: one advancer. The forced advancer cannot advance again, and cashes (RES-06, D-81).
+  expect(await namesIn(page, secondUrl, ruling.name, 'advancer')).toEqual([
+    fullName(makeUpExtras[0] ?? ruling.noShow),
+  ])
+  const again = (await resultRows(page, secondUrl, ruling.name)).find((row) => row.name === forced)
+  expect(again).toMatchObject({ group: 'casher', advancedEarlier: true })
+  // The first squad did not move.
+  expect(await namesIn(page, firstUrl, ruling.name, 'advancer')).toContain(forced)
+  expect(await namesIn(page, firstUrl, ruling.name, 'casher')).toEqual([ruling.nameAt(3)])
+
+  // They are one finalist, by ruling.
+  await page.goto(`/tournaments/${main.id}/seeding`)
+  const chooser = page.getByRole('combobox', { name: 'Division' })
+  await chooser.selectOption(
+    await chooser
+      .getByRole('option', { name: new RegExp(`^${ruling.name} \\(`) })
+      .getAttribute('value'),
+  )
+  const seeds = page.getByRole('table', { name: `Finals seeding for the ${ruling.name} division` })
+  await expect(seeds.getByRole('row').filter({ hasText: forced })).toContainText(
+    'Advanced by ruling',
+  )
+  await expect(seeds.getByRole('row').filter({ hasText: forced })).toHaveCount(1)
+
+  // NSH-02: once the tournament is complete, the button goes and the API refuses.
+  const closed = await page.request.post(`${apiUrl}${base}/complete`, { data: {} })
+  expect(closed.ok(), await closed.text()).toBe(true)
+  await page.goto(`/tournaments/${main.id}/squads/${second}/results`)
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Complete')
+  await expect(page.getByRole('button', { name: /Move or refund/ })).toHaveCount(0)
+})

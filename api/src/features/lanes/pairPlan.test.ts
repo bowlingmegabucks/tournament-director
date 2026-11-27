@@ -55,6 +55,20 @@ describe('planPairChange', () => {
     })
   })
 
+  it('asks again when someone the caller was not shown is on the pair (OOP-04)', () => {
+    const entries = seated('1A', '2C')
+
+    expect(
+      planPairChange(facts({ entries }), request({ confirmWarnings: true, seen: ['id-1A'] })).type,
+    ).toBe('confirm')
+    expect(
+      planPairChange(
+        facts({ entries }),
+        request({ confirmWarnings: true, seen: ['id-2C', 'id-1A', 'gone'] }),
+      ),
+    ).toEqual({ type: 'save', unassign: ['id-1A', 'id-2C'] })
+  })
+
   it('brings a pair back and moves no one (OOP-05)', () => {
     expect(
       planPairChange(facts({ outOfPlay: [1], entries: seated('1A') }), request({ inPlay: true })),

@@ -37,7 +37,7 @@ function view(
   } = {},
 ) {
   const entries = [ann, bea, cal, dee, late, ...(options.extra ?? [])]
-  const { page } = buildLanePage(session, entries, [open])
+  const { page } = buildLanePage(session, entries, [open], [])
   return buildGamesView(
     page,
     entries,
@@ -78,7 +78,7 @@ describe('the unverified flag (AVG-13, D-293)', () => {
       averageStatus: 'unverified',
     })
     const entries = [flagged, checked, scratch]
-    const { page } = buildLanePage(session, entries, [open, handicapped])
+    const { page } = buildLanePage(session, entries, [open, handicapped], [])
 
     const built = buildGamesView(page, entries, [], 3, 'staggered')
 
@@ -222,7 +222,7 @@ describe('buildGamesView', () => {
       createLaneEntry({ divisionId: open.id, position: '2A', name: 'Third' }),
       createLaneEntry({ divisionId: open.id, position: '1A', name: 'First A' }),
     ]
-    const { page } = buildLanePage(session, entries, [open])
+    const { page } = buildLanePage(session, entries, [open], [])
     const built = buildGamesView(page, entries, [], 1, 'staggered')
     expect(built.games[0]?.pairs[0]?.bowlers.map((bowler) => bowler.lane)).toEqual([
       '1A',
@@ -246,7 +246,7 @@ describe('buildGamesView', () => {
 
   it('leaves out a game with no bowlers when nobody has a lane (D-71)', () => {
     const entries = [late]
-    const { page } = buildLanePage(session, entries, [open])
+    const { page } = buildLanePage(session, entries, [open], [])
     const built = buildGamesView(page, entries, [], 3, 'staggered')
     expect(built.games.map((game) => game.pairs)).toEqual([[], [], []])
     expect(built.withoutLane).toBe(1)

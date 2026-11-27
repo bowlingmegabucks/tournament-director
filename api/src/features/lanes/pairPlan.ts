@@ -19,6 +19,8 @@ export interface PairRequest {
   inPlay: boolean
   /** The caller has agreed that the pair's bowlers go to unassigned (OOP-04). */
   confirmWarnings: boolean
+  /** The registrations the caller was shown. Anyone else on the pair means ask again (OOP-04). */
+  seen?: readonly string[] | undefined
 }
 
 export type PairOutcome =
@@ -64,7 +66,9 @@ export function planPairChange(facts: PairFacts, request: PairRequest): PairOutc
       return position !== undefined && pairOf(position.lane, [pair]) !== undefined
     })
     .map((entry) => entry.registrationId)
-  if (unassign.length > 0 && !request.confirmWarnings) {
+  const { seen } = request
+  const unseen = seen !== undefined && unassign.some((id) => !seen.includes(id))
+  if (unassign.length > 0 && (!request.confirmWarnings || unseen)) {
     const who = unassign.length === 1 ? '1 bowler' : `${unassign.length} bowlers`
     return {
       type: 'confirm',

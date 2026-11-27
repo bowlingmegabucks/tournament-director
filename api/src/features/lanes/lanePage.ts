@@ -46,7 +46,7 @@ export function buildLanePage(
   session: LaneSession,
   entries: readonly LaneEntry[],
   divisions: readonly Division[],
-  outOfPlay: readonly number[] = [],
+  outOfPlay: readonly number[],
 ): BuiltLanePage {
   const divisionById = new Map(divisions.map((division) => [division.id, division]))
   const pairs = buildPairs(session.startingLane, session.numberOfLanes).map((pair) => ({

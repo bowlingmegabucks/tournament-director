@@ -50,3 +50,53 @@ describe('in-memory lane writer', () => {
     await expect(writer.move(input)).resolves.toEqual({ notFound: 'session' })
   })
 })
+
+describe('in-memory setPair (OOP-03, OOP-05)', () => {
+  const change = (inPlay: boolean, lane = 3) => ({
+    tournamentId: 't',
+    kind: 'squad' as const,
+    sessionId: 's',
+    lane,
+    inPlay,
+    confirmWarnings: true,
+  })
+  const store = () =>
+    createInMemoryLaneWriter({
+      tournaments: [{ id: 't' }],
+      sessions: [
+        { id: 's', tournamentId: 't', outOfPlay: [5] },
+        { id: 'other', tournamentId: 't' },
+      ],
+      entries: [
+        { sessionId: 's', registrationId: 'on', position: '3A' },
+        { sessionId: 's', registrationId: 'off', position: '1A' },
+        { sessionId: 'other', registrationId: 'on', position: '3A' },
+      ],
+    })
+
+  it('takes the pair out, unassigns only its bowlers, and brings only it back', async () => {
+    const { writer, state } = store()
+
+    await writer.setPair(change(false))
+    expect(state.sessions[0]?.outOfPlay).toEqual([5, 3])
+    expect(state.entries.map((entry) => entry.position)).toEqual(['', '1A', '3A'])
+
+    await writer.setPair(change(true))
+    expect(state.sessions[0]?.outOfPlay).toEqual([5])
+  })
+
+  it('counts only the entries of its own session', async () => {
+    const { writer } = store()
+
+    await expect(writer.setPair(change(false))).resolves.toEqual({
+      type: 'save',
+      unassign: ['on'],
+    })
+  })
+
+  it('answers not found for an unknown session', async () => {
+    await expect(store().writer.setPair({ ...change(false), sessionId: 'nope' })).resolves.toEqual({
+      notFound: 'session',
+    })
+  })
+})

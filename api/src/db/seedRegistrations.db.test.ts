@@ -108,6 +108,7 @@ describe('seedRegistrations', () => {
       { ...second, kind: 'squad', bonusPins: [] },
       entries,
       divisions,
+      [],
     )
 
     expect(page.pairs[0]?.bowlers.map((bowler) => bowler.position)).toEqual(['1A', '1B', '2C'])

@@ -359,6 +359,33 @@ describe('PUT /v1/tournaments/:id/squads/:sessionId/lanes/pairs/:lane', () => {
     ).toMatchObject({ lane: 1, inPlay: false, unassigned: 1, squadId: context.squad.id })
   })
 
+  it('asks again when the pair holds someone the caller was not shown (OOP-04)', async () => {
+    const context = setup()
+
+    const response = await request(context.app)
+      .put(pairUrl(context))
+      .send({ inPlay: false, confirmWarnings: true, seen: [mine] })
+
+    expect(response.status).toBe(409)
+    expect(positionOf(context, friend)).toBe('1A')
+  })
+
+  it('logs both refusals with a constant message (OOP-02, OOP-06)', async () => {
+    const done = setup({ complete: true })
+    await request(done.app).put(pairUrl(done)).send({ inPlay: false })
+    const out = setup({ outOfPlay: [3] })
+    await request(out.app).put(out.url()).send({ lane: 3 })
+
+    expect(
+      done.captured
+        .records()
+        .find((line) => line['msg'] === 'Lane pair change refused: session or tournament complete'),
+    ).toMatchObject({ level: 30, kind: 'squad', lane: 1, squadId: done.squad.id })
+    expect(
+      out.captured.records().find((line) => line['msg'] === 'Lane move refused: pair out of play'),
+    ).toMatchObject({ level: 30, lane: 3, registrationId: mine })
+  })
+
   it('then refuses a move onto the pair until it is brought back (OOP-02, OOP-05)', async () => {
     const context = setup({ outOfPlay: [3] })
 

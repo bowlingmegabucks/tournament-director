@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { callerOf } from '../../shared/auth/caller.ts'
-import { HttpError } from '../../shared/errors.ts'
+import { HttpError, WarningsError } from '../../shared/errors.ts'
 import type { SessionEvents } from '../../shared/events/sessionEvents.ts'
 import { jsonBody } from '../../shared/jsonBody.ts'
 import type { Logger } from '../../shared/logger.ts'
@@ -24,7 +24,12 @@ const pairParams = z.object({
   lane: z.coerce.number().int().min(1).max(199),
 })
 
-const pairBody = z.strictObject({ inPlay: z.boolean(), confirmWarnings: z.boolean().optional() })
+const pairBody = z.strictObject({
+  inPlay: z.boolean(),
+  confirmWarnings: z.boolean().optional(),
+  /** Who the confirm dialog named. A session holds far fewer than the cap. */
+  seen: z.array(z.uuid()).max(20).optional(),
+})
 
 const sessionName = (kind: SessionKind) => (kind === 'squad' ? 'Squad' : 'Sweeper')
 
@@ -60,7 +65,7 @@ export function createLaneMoveRouter(
 
   router.put('/pairs/:lane', jsonBody, async (req, res) => {
     const { id, sessionId, lane } = pairParams.parse(req.params)
-    const { inPlay, confirmWarnings = false } = pairBody.parse(req.body)
+    const { inPlay, confirmWarnings = false, seen } = pairBody.parse(req.body)
 
     const outcome = await writer.setPair({
       tournamentId: id,
@@ -69,6 +74,7 @@ export function createLaneMoveRouter(
       lane,
       inPlay,
       confirmWarnings,
+      seen,
     })
     if ('notFound' in outcome) throw notFound(outcome.notFound)
 
@@ -81,16 +87,14 @@ export function createLaneMoveRouter(
     const log = requestLogger(res, logger)
     switch (outcome.type) {
       case 'refused':
-        log.info(ids, `Lane pair change refused: ${kind} or tournament complete`)
+        log.info({ ...ids, kind }, 'Lane pair change refused: session or tournament complete')
         throw new HttpError(409, outcome.message)
       case 'badLane':
         throw new HttpError(400, outcome.message)
       case 'confirm':
-        res.status(409).json({
-          message: outcome.message,
-          warnings: [{ field: 'inPlay', message: outcome.message }],
-        })
-        return
+        throw new WarningsError(409, outcome.message, [
+          { field: 'inPlay', message: outcome.message },
+        ])
       case 'unchanged':
         res.json({ inPlay, unassigned: 0 })
         return

@@ -33,6 +33,7 @@ describe('buildLanePage', () => {
       session(),
       [entry('1A'), entry('2C'), entry('4C'), entry('9A')],
       [division],
+      [],
     )
 
     expect(positionsOf(page, 0)).toEqual(['1A', '2C'])
@@ -41,7 +42,7 @@ describe('buildLanePage', () => {
   })
 
   it('draws one pair per two lanes, each with its capacity (LAN-03, LAN-02)', () => {
-    const { page } = buildLanePage(session({ startingLane: 11, maxPerPair: 3 }), [], [division])
+    const { page } = buildLanePage(session({ startingLane: 11, maxPerPair: 3 }), [], [division], [])
 
     expect(
       page.pairs.map(({ firstLane, lanes, capacity }) => ({ firstLane, lanes, capacity })),
@@ -65,6 +66,7 @@ describe('buildLanePage', () => {
       session(),
       [entry('2D'), entry('2C'), entry('1B'), entry('1A'), entry('2E')],
       [division],
+      [],
     )
 
     expect(positionsOf(page, 0)).toEqual(['1A', '1B', '2C', '2D', '2E'])
@@ -79,6 +81,7 @@ describe('buildLanePage', () => {
         entry('', { firstName: 'Bo', lastName: 'Zane', name: 'Bo Zane' }),
       ],
       [division],
+      [],
     )
 
     expect(page.unassigned.map((bowler) => bowler.name)).toEqual([
@@ -98,6 +101,7 @@ describe('buildLanePage', () => {
           entry('', { firstName: 'Joe', lastName: 'Fontaine', registrationId }),
         ),
         [division],
+        [],
       )
 
       expect(page.unassigned.map((bowler) => bowler.registrationId)).toEqual(['a', 'b', 'c'])
@@ -113,6 +117,7 @@ describe('buildLanePage', () => {
         entry('', { firstName: 'Amy', lastName: 'Adams', registrationId: 'c' }),
       ],
       [division],
+      [],
     )
 
     expect(page.unassigned.map((bowler) => bowler.registrationId)).toEqual(['c', 'b', 'a'])
@@ -126,6 +131,7 @@ describe('buildLanePage', () => {
         entry('', { firstName: 'Joe', lastName: 'Adams', registrationId: 'a' }),
       ],
       [division],
+      [],
     )
 
     expect(page.unassigned.map((bowler) => bowler.registrationId)).toEqual(['a', 'b'])
@@ -136,6 +142,7 @@ describe('buildLanePage', () => {
       session({ maxPerPair: 2 }),
       [entry('1A'), entry('2B')],
       [division],
+      [],
     )
 
     expect(positionsOf(page, 0)).toEqual(['1A', '2B'])
@@ -147,6 +154,7 @@ describe('buildLanePage', () => {
       session({ maxPerPair: 2 }),
       [entry('1A'), entry('1B'), entry('2C')],
       [division],
+      [],
     )
 
     expect(positionsOf(page, 0)).toEqual(['1A', '1B', '2C'])
@@ -161,7 +169,7 @@ describe('buildLanePage', () => {
   ])('lists %s under other, with the raw text (D-61)', (_name, position) => {
     const lost = entry(position)
 
-    const { page, outsideLanes } = buildLanePage(session(), [entry('1A'), lost], [division])
+    const { page, outsideLanes } = buildLanePage(session(), [entry('1A'), lost], [division], [])
 
     expect(page.other.map((bowler) => bowler.position)).toEqual([position])
     expect(outsideLanes).toEqual([lost.registrationId])
@@ -169,7 +177,12 @@ describe('buildLanePage', () => {
   })
 
   it('sorts other positions by their text', () => {
-    const { page } = buildLanePage(session(), [entry('31A'), entry('15Z'), entry('2Q')], [division])
+    const { page } = buildLanePage(
+      session(),
+      [entry('31A'), entry('15Z'), entry('2Q')],
+      [division],
+      [],
+    )
 
     expect(page.other.map((bowler) => bowler.position)).toEqual(['15Z', '2Q', '31A'])
   })
@@ -179,6 +192,7 @@ describe('buildLanePage', () => {
       session({ startingLane: 0, numberOfLanes: 0 }),
       [entry('1A'), entry('')],
       [division],
+      [],
     )
 
     expect(page.pairs).toEqual([])
@@ -198,6 +212,7 @@ describe('buildLanePage', () => {
       session(),
       [entry('', { divisionId: handicapped.id, average: 200 })],
       [handicapped],
+      [],
     )
 
     expect(page.unassigned[0]?.pins).toBe(18)
@@ -215,6 +230,7 @@ describe('buildLanePage', () => {
         entry('', { divisionId: division.id, lastName: 'B' }),
       ],
       [division, second],
+      [],
     )
 
     expect(page.unassigned.map((bowler) => bowler.pins)).toEqual([10, 0])
@@ -225,6 +241,7 @@ describe('buildLanePage', () => {
       session(),
       [entry('', { lastName: 'Fontaine', suffix: 'Jr', name: 'Joe Fontaine, Jr' })],
       [division],
+      [],
     )
 
     expect(page.unassigned[0]).toMatchObject({ suffix: 'Jr', name: 'Joe Fontaine, Jr' })
@@ -235,6 +252,7 @@ describe('buildLanePage', () => {
       session({ kind: 'sweeper' }),
       [entry('3A', { average: null, superSweeper: true, firstName: 'Joe', lastName: 'Fontaine' })],
       [division],
+      [],
     )
 
     expect(page.pairs[1]?.bowlers[0]).toMatchObject({
@@ -256,8 +274,12 @@ describe('buildLanePage', () => {
       maximumHandicapPerGame: 50,
     })
     const check = (overrides: Parameters<typeof entry>[1], divisions = [handicapped]) =>
-      buildLanePage(session(), [entry('', { divisionId: handicapped.id, ...overrides })], divisions)
-        .page.unassigned[0]
+      buildLanePage(
+        session(),
+        [entry('', { divisionId: handicapped.id, ...overrides })],
+        divisions,
+        [],
+      ).page.unassigned[0]
 
     it('works the handicap from the average in use, and carries the provided one and the note', () => {
       const bowler = check({
@@ -289,6 +311,7 @@ describe('buildLanePage', () => {
         session(),
         [entry('', { divisionId: scratch.id, averageStatus: 'unverified' })],
         [scratch],
+        [],
       )
 
       expect(page.unassigned[0]?.averageStatus).toBe('none')
@@ -303,6 +326,7 @@ describe('buildLanePage', () => {
       session(),
       [entry('1A'), entry(''), entry('99Z'), entry('', { divisionId: second.id })],
       [third, second, division],
+      [],
     )
 
     expect(page.divisions).toEqual([
@@ -316,7 +340,7 @@ describe('buildLanePage', () => {
     const b = createDivision({ number: 1, name: 'B' })
     const a = createDivision({ number: 1, name: 'A' })
 
-    const { page } = buildLanePage(session(), [], [b, a])
+    const { page } = buildLanePage(session(), [], [b, a], [])
 
     expect(page.divisions.map((item) => item.name)).toEqual(['A', 'B'])
   })
@@ -324,7 +348,7 @@ describe('buildLanePage', () => {
   it('skips an entry whose division is not the tournaments, and says so (D-51)', () => {
     const stray = entry('1A', { divisionId: '7c1e0a52-3f55-4c0e-9a5b-1d2f6b8e4a01' })
 
-    const { page, skipped } = buildLanePage(session(), [stray, entry('2C')], [division])
+    const { page, skipped } = buildLanePage(session(), [stray, entry('2C')], [division], [])
 
     expect(skipped).toEqual([stray.registrationId])
     expect(positionsOf(page, 0)).toEqual(['2C'])
@@ -332,7 +356,7 @@ describe('buildLanePage', () => {
   })
 
   it('describes the session (LAN-13)', () => {
-    const { page } = buildLanePage(session({ complete: true, kind: 'sweeper' }), [], [division])
+    const { page } = buildLanePage(session({ complete: true, kind: 'sweeper' }), [], [division], [])
 
     expect(page.session).toEqual({
       id: '2f6d8b3a-4c55-4d0e-8a11-9b7e5c3d1f02',
@@ -346,7 +370,12 @@ describe('buildLanePage', () => {
   })
 
   it('builds a page that fits the response schema', () => {
-    const { page } = buildLanePage(session(), [entry('1A'), entry(''), entry('99Z')], [division])
+    const { page } = buildLanePage(
+      session(),
+      [entry('1A'), entry(''), entry('99Z')],
+      [division],
+      [],
+    )
 
     expect(lanePageSchema.safeParse(page).success).toBe(true)
   })

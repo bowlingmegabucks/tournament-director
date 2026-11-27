@@ -36,7 +36,7 @@ function build(
   games = 3,
   over: Partial<LaneSession> = {},
 ) {
-  const { page } = buildLanePage(session(over), entries, [open, scratch])
+  const { page } = buildLanePage(session(over), entries, [open, scratch], [])
   return buildScorePage(page, entries, scores, games)
 }
 
@@ -48,7 +48,7 @@ describe('the unverified flag (AVG-13, D-293)', () => {
     handicapPercentage: 90,
   })
   const flags = (...entries: LaneEntry[]) => {
-    const { page } = buildLanePage(session(), entries, [open, handicapped])
+    const { page } = buildLanePage(session(), entries, [open, handicapped], [])
     return buildScorePage(page, entries, [], 3).pairs.flatMap((pair) =>
       pair.bowlers.map((bowler) => bowler.unverified),
     )

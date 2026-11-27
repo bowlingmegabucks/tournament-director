@@ -28,7 +28,7 @@ function sheetsFor(
     ? createDivision({ number: 1, name: 'Open', handicapBase: 220, handicapPercentage: 90 })
     : division
   const entries = positions.map((position) => createLaneEntry({ divisionId: open.id, position }))
-  const { page, skipped } = buildLanePage(options.session ?? session(), entries, [open])
+  const { page, skipped } = buildLanePage(options.session ?? session(), entries, [open], [])
   return { built: buildRecapSheets(page, options.games ?? 6, skipped.length, 'staggered'), entries }
 }
 
@@ -50,7 +50,7 @@ describe('buildRecapSheets', () => {
       // A scratch division has nothing to check.
       createLaneEntry({ divisionId: division.id, position: '3A', averageStatus: 'unverified' }),
     ]
-    const { page, skipped } = buildLanePage(session(), entries, [division, handicapped])
+    const { page, skipped } = buildLanePage(session(), entries, [division, handicapped], [])
 
     const built = buildRecapSheets(page, 6, skipped.length, 'staggered')
 
@@ -86,7 +86,7 @@ describe('buildRecapSheets', () => {
   it('counts a bowler with a lane but an unknown division apart, with no sheet (D-51, D-65)', () => {
     const known = createLaneEntry({ divisionId: division.id, position: '1A' })
     const stranger = createLaneEntry({ position: '3A' })
-    const { page, skipped } = buildLanePage(session(), [known, stranger], [division])
+    const { page, skipped } = buildLanePage(session(), [known, stranger], [division], [])
 
     const built = buildRecapSheets(page, 3, skipped.length, 'staggered')
 

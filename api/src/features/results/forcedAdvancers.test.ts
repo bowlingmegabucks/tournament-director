@@ -100,9 +100,11 @@ describe('results with a forced advancer (NSH-21 to NSH-24)', () => {
   it('seeds them as a finalist by ruling, whichever squad their best score is from', async () => {
     const rows = await rowsOf(`${base}/seeding`)
 
+    // No casher mark, though Cal also cashed squad two: a ruling counts as advancing.
     expect(rows.find((row) => row.name === 'Cal Lane')).toMatchObject({
       group: 'finalist',
       byRuling: true,
+      previousCasher: false,
     })
     expect(rows.filter((row) => row.byRuling)).toHaveLength(1)
   })

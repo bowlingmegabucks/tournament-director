@@ -10,18 +10,13 @@ import { LaneSetupError } from '../../shared/session'
 import { AssignDialog } from './AssignDialog'
 import { BowlerPreview } from './BowlerRow'
 import { decideDrop, pairDropId, unassignedDropId, type DropTarget } from './dropRules'
-import { countBowlers, formatSpots, formatTotals } from './format'
-import styles from './LanesPage.module.css'
-import { OtherPositions } from './OtherPositions'
+import { LaneBoard } from './LaneBoard'
 import { PairOutDialog } from './PairOutDialog'
-import { PairZone } from './PairZone'
 import { useCan } from '../auth/useCan'
-import { AddRegistrationLink } from '../registrations/AddRegistrationLink'
 import { SessionActionsDialog } from '../registrations/SessionActionsDialog'
 import { CheckInDialog } from './CheckInDialog'
 import { RecapDialog } from '../recapSheets/RecapDialog'
 import type { LaneBowler, LanePage, SessionKind } from './types'
-import { UnassignedList } from './UnassignedList'
 import { LiveStatus } from '../../shared/LiveStatus'
 import { useLanes } from './useLanes'
 import { useMoveBowler } from './useMoveBowler'
@@ -131,127 +126,6 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
     }
   }
 
-  // Shown with or without bowlers and lanes (REG-22). The link itself asks for `registrations.write`.
-  const addLink = !session.complete && (
-    <AddRegistrationLink tournamentId={id} session={{ kind, id: sessionId }}>
-      {`Add registration to this ${kind}`}
-    </AddRegistrationLink>
-  )
-
-  let body
-  const noBowlers = countBowlers(view) === 0
-  // With pairs, an empty session still shows them: a lane may go out before anyone enters (OOP-03).
-  if (noBowlers && view.pairs.length === 0) {
-    body = (
-      <>
-        <p>No bowlers have entered this {kind} yet.</p>
-        {addLink}
-      </>
-    )
-  } else if (view.pairs.length === 0) {
-    body = (
-      <>
-        <p>
-          This {kind} has no lanes set, so there is nowhere to drop a bowler. Set its lanes first.
-        </p>
-        {addLink}
-        <UnassignedList
-          bowlers={view.unassigned}
-          kind={kind}
-          dragging={undefined}
-          readOnly
-          onAssign={() => undefined}
-        />
-      </>
-    )
-  } else {
-    body = (
-      <>
-        {noBowlers && <p>No bowlers have entered this {kind} yet.</p>}
-        <div className={styles.stripRow}>
-          <ul className={styles.strip} aria-label="Bowlers per division">
-            {view.divisions.map((division) => (
-              <li key={division.id}>
-                {division.name}: {division.entries}
-              </li>
-            ))}
-            <li>
-              <strong>{formatTotals(view)}</strong>
-            </li>
-            <li>
-              <strong>{formatSpots(view)}</strong>
-            </li>
-          </ul>
-          <span className={styles.stripActions}>
-            {addLink}
-            {/* A sheet with nobody on it is no use. */}
-            {!noBowlers && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRecapOpen(true)
-                  }}
-                >
-                  Recap sheets
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCheckInOpen(true)
-                  }}
-                >
-                  Check-in sheet
-                </button>
-              </>
-            )}
-          </span>
-        </div>
-        {session.complete && (
-          <p className={styles.note}>This {kind} is complete. Lanes cannot change.</p>
-        )}
-        <div className={styles.layout}>
-          <UnassignedList
-            bowlers={view.unassigned}
-            kind={kind}
-            dragging={dragging}
-            readOnly={readOnly}
-            savingIds={savingIds}
-            onAssign={setAssigning}
-            onManage={canManage ? setManaging : undefined}
-          />
-          <section aria-labelledby="lanes-title">
-            <h2 id="lanes-title" className={styles.areaTitle}>
-              Lanes ({session.startingLane} to {session.startingLane + session.numberOfLanes - 1})
-            </h2>
-            {/* A scrolling region must take the keyboard, or its overflow is out of reach. */}
-            {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-            <section className={styles.scroll} tabIndex={0} aria-label="Lane pairs">
-              <ul className={styles.pairs}>
-                {view.pairs.map((pair) => (
-                  <PairZone
-                    key={pair.firstLane}
-                    pair={pair}
-                    kind={kind}
-                    dragging={dragging}
-                    readOnly={readOnly}
-                    savingIds={savingIds}
-                    fresh={live.updated?.pairs.includes(pair.firstLane)}
-                    play={readOnly ? undefined : pairPlay}
-                    savingInPlay={pairPlay.saving.get(pair.firstLane)}
-                    onAssign={setAssigning}
-                    onManage={canManage ? setManaging : undefined}
-                  />
-                ))}
-              </ul>
-            </section>
-          </section>
-        </div>
-        {view.other.length > 0 && <OtherPositions bowlers={view.other} kind={kind} />}
-      </>
-    )
-  }
-
   return (
     <DragDropProvider
       onDragStart={({ operation }) => {
@@ -272,7 +146,25 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
     >
       <title>{`Lane assignments · ${formatSessionDate(session.date)} · ${tournament.name} · Tournament Director`}</title>
       {!session.complete && <LiveStatus state={live.state} updated={live.updated?.text} />}
-      {body}
+      <LaneBoard
+        kind={kind}
+        tournamentId={id}
+        sessionId={sessionId}
+        view={view}
+        dragging={dragging}
+        readOnly={readOnly}
+        savingIds={savingIds}
+        freshPairs={live.updated?.pairs}
+        pairPlay={pairPlay}
+        onAssign={setAssigning}
+        onManage={canManage ? setManaging : undefined}
+        onRecap={() => {
+          setRecapOpen(true)
+        }}
+        onCheckIn={() => {
+          setCheckInOpen(true)
+        }}
+      />
       {checkInOpen && (
         <CheckInDialog
           page={view}

@@ -26,8 +26,8 @@ import { useResultsPrint } from './useResultsPrint'
 /**
  * The results of one squad, one division at a time (RES-10, RES-32, D-80). The first division shows
  * at first and the choice stays in the address (`?division=`), so a reload keeps it. The ranking is
- * through the last full game unless `?mode=live` (RES-45). While the squad is open the page follows
- * its stream (RES-44, D-241), and a failed refresh leaves the last results.
+ * through the last full game unless `?mode=live` (RES-45). While the squad is open the page offers
+ * that choice and follows its stream (RES-44, D-241), and a failed refresh leaves the last results.
  */
 export function SquadResultsPage() {
   // Stryker disable next-line StringLiteral: the route always has these params; this only satisfies the type.
@@ -73,7 +73,10 @@ export function SquadResultsPage() {
         <>
           <div className={styles.toolbar}>
             <DivisionChooser divisions={divisions} chosenId={chosen.id} />
-            <ModeToggle mode={mode} steadyLabel={formatThroughLabel(chosen.throughGame)} />
+            {/* RES-43: a complete squad counts every game, so there is nothing to choose. */}
+            {!session.complete && (
+              <ModeToggle mode={mode} steadyLabel={formatThroughLabel(chosen.throughGame)} />
+            )}
             <PrintButtons
               onPrintThis={() => {
                 void print(chosen.id)

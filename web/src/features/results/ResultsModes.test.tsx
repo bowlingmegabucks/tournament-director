@@ -155,6 +155,18 @@ describe('Results tab ranking mode (RES-45, D-239)', () => {
     })
     expect(await screen.findByRole('radio', { name: 'Through game 3' })).toBeChecked()
   })
+
+  it('offers no ranking choice for a complete squad (RES-43)', async () => {
+    const { first } = serveSquad((mode) => {
+      const results = fourGames(mode)
+      return { ...results, session: { ...results.session, complete: true } }
+    })
+    openSquad(first)
+
+    await screen.findByRole('table', { name: 'Results for the Open division' }, { timeout: 3000 })
+
+    expect(screen.queryByRole('group', { name: 'Ranking' })).not.toBeInTheDocument()
+  })
 })
 
 describe('Results tab games not counted yet (RES-46, D-239)', () => {

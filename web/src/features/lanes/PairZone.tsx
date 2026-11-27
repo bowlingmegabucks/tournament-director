@@ -55,34 +55,38 @@ export function PairZone({
       aria-busy={savingInPlay !== undefined || undefined}
       className={`${styles.pair} ${pair.outOfPlay ? styles.out : ''} ${zone} ${fresh ? styles.fresh : ''}`}
     >
-      <h3 className={styles.title}>
-        {formatPair(pair)}{' '}
-        {cue ? (
-          <span className={styles.cue}>{cue}</span>
-        ) : (
-          <span className={styles.count}>{pair.outOfPlay ? 'Out of play' : formatFill(pair)}</span>
+      <div className={styles.header}>
+        <h3 className={styles.title}>
+          {formatPair(pair)}{' '}
+          {cue ? (
+            <span className={styles.cue}>{cue}</span>
+          ) : (
+            <span className={styles.count}>
+              {pair.outOfPlay ? 'Out of play' : formatFill(pair)}
+            </span>
+          )}
+        </h3>
+        {onSetInPlay && (
+          <div className={styles.inPlay}>
+            <label className={styles.inPlayLabel}>
+              {/* Not `disabled` while saving: that would drop keyboard focus to the page. */}
+              <input
+                type="checkbox"
+                aria-label={`${formatPair(pair)} in play`}
+                aria-disabled={savingInPlay !== undefined || undefined}
+                checked={savingInPlay ?? !pair.outOfPlay}
+                onChange={(event) => {
+                  if (savingInPlay === undefined) onSetInPlay(pair, event.target.checked)
+                }}
+              />
+              In play
+            </label>
+            <span aria-live="polite" className={styles.savingText}>
+              {savingInPlay === undefined ? '' : 'Saving…'}
+            </span>
+          </div>
         )}
-      </h3>
-      {onSetInPlay && (
-        <div className={styles.inPlay}>
-          <label className={styles.inPlayLabel}>
-            {/* Not `disabled` while saving: that would drop keyboard focus to the page. */}
-            <input
-              type="checkbox"
-              aria-label={`${formatPair(pair)} in play`}
-              aria-disabled={savingInPlay !== undefined || undefined}
-              checked={savingInPlay ?? !pair.outOfPlay}
-              onChange={(event) => {
-                if (savingInPlay === undefined) onSetInPlay(pair, event.target.checked)
-              }}
-            />
-            In play
-          </label>
-          <span aria-live="polite" className={styles.savingText}>
-            {savingInPlay === undefined ? '' : 'Saving…'}
-          </span>
-        </div>
-      )}
+      </div>
       {pair.bowlers.length === 0 ? (
         <p className={styles.empty}>{empty}</p>
       ) : (

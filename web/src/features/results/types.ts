@@ -48,6 +48,8 @@ export interface SquadRow extends RankedRow {
   scores: (number | null)[]
   /** True only for an earlier advancer at or above the cut score (D-81). */
   advancedEarlier: boolean
+  /** NSH-24: advances because an admin ruled it. Sent only when true. */
+  byRuling?: boolean
   /** Flagged "did not finish" in a squad that is still open (D-248, D-251). */
   dnf: boolean
 }
@@ -182,6 +184,8 @@ export interface SeedingRow {
   total: number
   highGame: number
   handicap: number
+  /** NSH-24: a finalist who advanced from a squad by ruling. Sent only when true. */
+  byRuling?: boolean
   previousCasher: boolean
   ties: Tie[]
   /** A handicap bowler on an average no director checked (AVG-13, D-293). A flag only. */

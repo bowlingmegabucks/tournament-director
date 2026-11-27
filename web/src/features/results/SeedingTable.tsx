@@ -53,6 +53,7 @@ export function SeedingBody({ division }: Readonly<{ division: SeedingDivision }
                 <th scope="row" className={styles.who}>
                   {item.row.name}
                   <UnverifiedChip show={item.row.unverified} />
+                  {item.row.byRuling && <span className={styles.tag}>Advanced by ruling</span>}
                   {item.row.ties.map((tie) => (
                     <span key={tie.line} className={styles.mark}>
                       {formatTie(tie)}

@@ -61,11 +61,14 @@ export function DivisionBody({
   division,
   games,
   summary = true,
+  onNoShow,
 }: Readonly<{
   division: DivisionResult
   games: number
   /** Draw the summary lines (the default). The TV page draws them in its pinned heading instead. */
   summary?: boolean
+  /** An admin on a completed squad: each no-show gets a "Move or refund" button (NSH-01). */
+  onNoShow?: (row: DivisionResult['noShows'][number]) => void
 }>) {
   const items = squadItems(division.rows)
   const count = gameColumnCount(games, [
@@ -115,6 +118,7 @@ export function DivisionBody({
                     {item.row.name}
                     <UnverifiedChip show={item.row.unverified} />
                     {item.row.dnf && <span className={styles.tag}>DNF</span>}
+                    {item.row.byRuling && <span className={styles.tag}>Advanced by ruling</span>}
                     {item.row.advancedEarlier && (
                       <span className={styles.tag}>Advanced earlier</span>
                     )}
@@ -201,7 +205,24 @@ export function DivisionBody({
           <p className={styles.sub}>Paid an entry and did not bowl. Not placed. Still one entry.</p>
           <ul>
             {division.noShows.map((row) => (
-              <li key={row.registrationId}>{row.name}</li>
+              <li key={row.registrationId}>
+                {row.name}
+                {onNoShow && (
+                  <>
+                    {' '}
+                    <button
+                      type="button"
+                      className={styles.action}
+                      aria-label={`Move or refund ${row.name}`}
+                      onClick={() => {
+                        onNoShow(row)
+                      }}
+                    >
+                      Move or refund
+                    </button>
+                  </>
+                )}
+              </li>
             ))}
           </ul>
         </>
@@ -214,12 +235,17 @@ export function DivisionBody({
 export function DivisionResults({
   division,
   games,
-}: Readonly<{ division: DivisionResult; games: number }>) {
+  onNoShow,
+}: Readonly<{
+  division: DivisionResult
+  games: number
+  onNoShow?: (row: DivisionResult['noShows'][number]) => void
+}>) {
   const headingId = useId()
   return (
     <section aria-labelledby={headingId}>
       <h2 id={headingId}>{division.name}</h2>
-      <DivisionBody division={division} games={games} />
+      <DivisionBody division={division} games={games} onNoShow={onNoShow} />
     </section>
   )
 }

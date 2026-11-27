@@ -746,6 +746,9 @@ export function createDemoScorePage(
   })
 }
 
+/** The one no-show of the demo squad results, so the mock server can move or refund it. */
+export const demoNoShowId = '3f6c1e0a-7b52-4d8e-9a41-5c2f8b7d9e10'
+
 /** A placed bowler of a squad division. Three games of 200, no handicap, no tie, not an earlier advancer. */
 export function createSquadRow(overrides: Partial<SquadRow> = {}): SquadRow {
   return {
@@ -1031,7 +1034,7 @@ function createDemoSquad(
             unverified: false,
           },
         ],
-        noShows: [{ registrationId: faker.string.uuid(), name: 'Mike Tran' }],
+        noShows: [{ registrationId: demoNoShowId, name: 'Mike Tran' }],
       }),
     )
   }
@@ -1400,6 +1403,7 @@ const allPermissions = [
   'tournaments.delete',
   'divisions.write',
   'squads.write',
+  'entries.override',
   'bowlers.read',
   'bowlers.ssn',
   'payouts.read',
@@ -1415,7 +1419,8 @@ const permissionsByRole: Record<string, string[]> = {
     (permission) =>
       permission !== 'users.manage' &&
       permission !== 'bowlers.ssn' &&
-      permission !== 'tournaments.delete',
+      permission !== 'tournaments.delete' &&
+      permission !== 'entries.override',
   ),
   scoreKeeper: ['scores.write', 'registrations.read', 'lanes.read'],
 }

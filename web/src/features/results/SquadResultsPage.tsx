@@ -1,9 +1,14 @@
+import { useState } from 'react'
 import { useOutletContext, useParams } from 'react-router'
 import { LiveStatus } from '../../shared/LiveStatus'
 import { Loading } from '../../shared/Loading'
 import { QueryError } from '../../shared/QueryError'
+import { Toast } from '../../shared/Toast'
 import { formatRatio, formatSessionDate } from '../../shared/sessionFormat'
+import { useCan } from '../auth/useCan'
+import { NoShowDialog } from '../noShows/NoShowDialog'
 import type { Tournament } from '../tournaments/types'
+import { useTournamentSettings } from '../tournaments/useTournamentSettings'
 import { formatThroughLabel } from './format'
 import { DivisionChooser } from './DivisionChooser'
 import { DivisionResults } from './DivisionResults'
@@ -34,6 +39,10 @@ export function SquadResultsPage() {
   const live = useResultsEvents('squad', id, sessionId, streamWanted)
   const { printing, only, print } = useResultsPrint()
   const chosen = useChosenDivision(data?.divisions ?? [])
+  const settings = useTournamentSettings(id)
+  const canOverride = useCan('entries.override')
+  const [noShow, setNoShow] = useState<{ registrationId: string; name: string }>()
+  const [done, setDone] = useState<string>()
 
   if (!data) {
     if (error) {
@@ -77,11 +86,41 @@ export function SquadResultsPage() {
           <p className={styles.note}>
             Finals ratio {formatRatio(data.finalsRatio)} · cash ratio {formatRatio(data.cashRatio)}
           </p>
-          <DivisionResults division={chosen} games={session.games} />
+          <DivisionResults
+            division={chosen}
+            games={session.games}
+            // NSH-01, NSH-02: an admin, a completed squad, and a tournament that is not complete.
+            onNoShow={
+              canOverride && session.complete && settings.data?.completed === false
+                ? setNoShow
+                : undefined
+            }
+          />
           {printing && <PrintResults results={data} only={only} />}
         </>
       ) : (
         <p>No scores entered yet.</p>
+      )}
+      {noShow && (
+        <NoShowDialog
+          target={{ tournamentId: id, squadId: sessionId, registrationId: noShow.registrationId }}
+          bowlerName={noShow.name}
+          onDone={setDone}
+          onClose={() => {
+            setNoShow(undefined)
+          }}
+        />
+      )}
+      {done && (
+        <Toast
+          kind="success"
+          autoDismissMs={6000}
+          onDismiss={() => {
+            setDone(undefined)
+          }}
+        >
+          {done}
+        </Toast>
       )}
     </>
   )

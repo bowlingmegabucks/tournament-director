@@ -24,6 +24,7 @@ import { createDemoGamesView, createDemoScoresWithSaves, mockScoreChange } from 
 import { authHandlers } from './authHandlers'
 import { userHandlers } from './userHandlers'
 import { createAverageHandlers } from './averageHandlers'
+import { createNoShowHandlers } from './noShowHandlers'
 import { createPayoutHandlers } from './payoutHandlers'
 import { createRegistrationHandlers } from './registrationHandlers'
 import type { DivisionChanges, NewDivision } from '../features/divisions/types'
@@ -51,6 +52,8 @@ const registrations = createDemoRegistrationList(divisions, squads, sweepers)
 // The demo's second squad pretends 12 bowlers entered, and its first sweeper pretends scores are
 // saved, so the edit pages show their notes, a warning, and a lock in the browser (D-180).
 const busySquadId = squads[1]?.id
+/** The registrations a no-show move or refund took out of a squad. */
+const removedNoShows = new Set<string>()
 const scoredSweeperId = sweepers[0]?.id
 
 const demoSettings = createSettings()
@@ -463,6 +466,7 @@ function applySweeperChanges(found: Sweeper, changes: SweeperChanges) {
 
 export const handlers = [
   ...authHandlers,
+  ...createNoShowHandlers(squads, removedNoShows),
   ...userHandlers,
   ...createRegistrationHandlers({ tournaments, divisions, squads, sweepers, registrations }),
   ...createPayoutHandlers(),
@@ -849,16 +853,20 @@ export const handlers = [
     if (!tournaments.some((candidate) => candidate.id === params.id)) return notFound()
     const squad = squads.find((candidate) => candidate.id === params.sessionId)
     const query = new URL(request.url).searchParams
-    return squad
-      ? HttpResponse.json(
-          createDemoSquadResults(
-            squad,
-            divisions,
-            modeOf(query),
-            query.get('division') ?? undefined,
-          ),
-        )
-      : HttpResponse.json({ message: 'Squad not found' }, { status: 404 })
+    if (!squad) return HttpResponse.json({ message: 'Squad not found' }, { status: 404 })
+    const results = createDemoSquadResults(
+      squad,
+      divisions,
+      modeOf(query),
+      query.get('division') ?? undefined,
+    )
+    return HttpResponse.json({
+      ...results,
+      divisions: results.divisions.map((division) => ({
+        ...division,
+        noShows: division.noShows.filter((row) => !removedNoShows.has(row.registrationId)),
+      })),
+    })
   }),
   http.get('/v1/tournaments/:id/sweepers/:sessionId/results', ({ params, request }) => {
     if (!tournaments.some((candidate) => candidate.id === params.id)) return notFound()

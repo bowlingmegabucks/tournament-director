@@ -133,6 +133,8 @@ model Registration {
   /// Drives handicap (SCR-07). NULL means no average.
   average      Int?                @map("Average")
   superSweeper Boolean             @map("SuperSweeper")
+  /// Winnings go to the bowler's SMART account (SMT-01).
+  smartScholarship Boolean         @default(false) @map("SmartScholarship")
   bowler       Bowler              @relation(fields: [bowlerId], references: [id])
   division     Division            @relation(fields: [divisionId], references: [id])
   squads       SquadRegistration[]

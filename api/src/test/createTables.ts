@@ -8,6 +8,7 @@ import { laneSchemaSql } from './laneSchema.ts'
 import { legacySchemaSql } from './legacySchema.ts'
 import { payoutSchemaSql } from './payoutSchema.ts'
 import { scoreSchemaSql } from './scoreSchema.ts'
+import { smartScholarshipSchemaSql } from './smartScholarshipSchema.ts'
 
 // Run with `npm run db:tables`. Creates the empty legacy, sign-in, score, payout, average, and lane tables, the same ones
 // the Testcontainers tests use, on an empty LOCAL database. The lifecycle test (web/lifecycle) runs
@@ -29,13 +30,14 @@ try {
     ...averageSchemaSql(),
     ...laneSchemaSql(),
     ...forcedAdvancerSchemaSql(),
+    ...smartScholarshipSchemaSql(),
   ]
   for (const statement of statements) {
     // In order: a table with a foreign key needs the table it points to first.
     await client.$executeRawUnsafe(statement) // NOSONAR: order matters
   }
   console.log(
-    `Created ${statements.length - forcedAdvancerSchemaSql().length} tables on ${describeDatabase(databaseUrl)}.`,
+    `Created ${statements.length - forcedAdvancerSchemaSql().length - smartScholarshipSchemaSql().length} tables on ${describeDatabase(databaseUrl)}.`,
   )
 } finally {
   await client.$disconnect()

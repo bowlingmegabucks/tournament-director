@@ -6,6 +6,7 @@ import { averageSchemaSql } from './averageSchema.ts'
 import { forcedAdvancerSchemaSql } from './forcedAdvancerSchema.ts'
 import { payoutSchemaSql } from './payoutSchema.ts'
 import { scoreSchemaSql } from './scoreSchema.ts'
+import { smartScholarshipSchemaSql } from './smartScholarshipSchema.ts'
 import { laneSchemaSql } from './laneSchema.ts'
 import { legacySchemaSql } from './legacySchema.ts'
 
@@ -34,6 +35,8 @@ export default async function setup(project: TestProject): Promise<() => Promise
       ...averageSchemaSql(),
       ...forcedAdvancerSchemaSql(),
       ...forcedAdvancerSchemaSql(),
+      ...smartScholarshipSchemaSql(),
+      ...smartScholarshipSchemaSql(),
       ...laneSchemaSql(),
       ...laneSchemaSql(),
     ]) {

@@ -270,7 +270,8 @@ function planPairMove(
     return HttpResponse.json({ position: bowler.position })
   }
   if (pair.outOfPlay) {
-    return problem(`${formatPair(pair)} are out of play. Pick another pair.`, 409)
+    const verb = pair.lanes.length === 1 ? 'is' : 'are'
+    return problem(`${formatPair(pair)} ${verb} out of play. Pick another pair.`, 409)
   }
   if (pair.bowlers.length >= pair.capacity) {
     return problem(
@@ -323,13 +324,18 @@ function lanePairHandler(kind: SessionKind) {
       if (found.session.complete) {
         return problem(`This ${kind} is complete. Lanes cannot change.`, 409)
       }
-      const body = (await request.json()) as { inPlay: boolean; confirmWarnings?: boolean }
+      const body = (await request.json()) as {
+        inPlay: boolean
+        confirmWarnings?: boolean
+        seen?: string[]
+      }
       const lane = Number(params['lane'])
       const pair = lanePageOf(kind, found.session).pairs.find((item) => item.firstLane === lane)
       if (!pair) return problem(`Lane ${lane} is not the first lane of a pair`, 400)
       const out = lanesOut.get(found.session.id) ?? new Set<number>()
       const leaving = body.inPlay ? [] : pair.bowlers
-      if (leaving.length > 0 && !body.confirmWarnings) {
+      const unseen = leaving.some((bowler) => body.seen?.includes(bowler.registrationId) === false)
+      if (leaving.length > 0 && (!body.confirmWarnings || unseen)) {
         const message = `Bowlers on ${formatPair(pair).toLowerCase()} will move to unassigned.`
         return HttpResponse.json(
           { message, warnings: [{ field: 'inPlay', message }] },

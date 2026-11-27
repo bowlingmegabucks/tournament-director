@@ -174,7 +174,8 @@ export async function moveBowler(
 
 /**
  * Takes one pair out of play, or brings it back (OOP-03, OOP-05). `confirm` means bowlers are on
- * the pair and the API saved nothing: ask, then send again with `confirmWarnings` (OOP-04).
+ * the pair and the API saved nothing: ask, then send again with `seen`, the registrations the
+ * director was shown (OOP-04). The API answers `confirm` again if anyone else has joined the pair.
  */
 export async function setPairInPlay(
   kind: SessionKind,
@@ -182,14 +183,14 @@ export async function setPairInPlay(
   sessionId: string,
   lane: number,
   inPlay: boolean,
-  confirmWarnings: boolean,
+  seen?: readonly string[],
 ): Promise<'saved' | 'confirm'> {
   const response = await apiFetch(
     apiUrl(`/v1/tournaments/${tournamentId}/${kind}s/${sessionId}/lanes/pairs/${lane}`),
     {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ inPlay, ...(confirmWarnings && { confirmWarnings }) }),
+      body: JSON.stringify({ inPlay, ...(seen && { confirmWarnings: true, seen }) }),
     },
   ).catch(() => {
     throw new LaneMoveError('Could not save the lanes. Check your connection and try again.')

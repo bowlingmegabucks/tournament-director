@@ -52,6 +52,7 @@ export function PairZone({
   return (
     <li
       ref={ref}
+      aria-busy={savingInPlay !== undefined || undefined}
       className={`${styles.pair} ${pair.outOfPlay ? styles.out : ''} ${zone} ${fresh ? styles.fresh : ''}`}
     >
       <h3 className={styles.title}>
@@ -63,18 +64,24 @@ export function PairZone({
         )}
       </h3>
       {onSetInPlay && (
-        <label className={styles.inPlay}>
-          <input
-            type="checkbox"
-            aria-label={`${formatPair(pair)} in play`}
-            checked={savingInPlay ?? !pair.outOfPlay}
-            disabled={savingInPlay !== undefined}
-            onChange={(event) => {
-              onSetInPlay(pair, event.target.checked)
-            }}
-          />
-          In play
-        </label>
+        <div className={styles.inPlay}>
+          <label className={styles.inPlayLabel}>
+            {/* Not `disabled` while saving: that would drop keyboard focus to the page. */}
+            <input
+              type="checkbox"
+              aria-label={`${formatPair(pair)} in play`}
+              aria-disabled={savingInPlay !== undefined || undefined}
+              checked={savingInPlay ?? !pair.outOfPlay}
+              onChange={(event) => {
+                if (savingInPlay === undefined) onSetInPlay(pair, event.target.checked)
+              }}
+            />
+            In play
+          </label>
+          <span aria-live="polite" className={styles.savingText}>
+            {savingInPlay === undefined ? '' : 'Saving…'}
+          </span>
+        </div>
       )}
       {pair.bowlers.length === 0 ? (
         <p className={styles.empty}>{empty}</p>

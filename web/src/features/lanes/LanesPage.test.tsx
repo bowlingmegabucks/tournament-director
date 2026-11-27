@@ -239,7 +239,7 @@ describe('LanesPage', () => {
     expect(
       await screen.findByText('No bowlers have entered this squad yet.', {}, { timeout: 3000 }),
     ).toBeVisible()
-    expect(screen.queryByRole('heading', { name: /Unassigned/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Unassigned (0)' })).toBeVisible()
   })
 
   it('says sweeper for a sweeper (LAN-10)', async () => {

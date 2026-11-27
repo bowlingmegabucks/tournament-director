@@ -341,15 +341,21 @@ test('a pair taken out of play empties, refuses bowlers, and comes back (OOP-02 
   const before = await spots.textContent()
 
   // The pair holds bowlers, so it asks first, and going back changes nothing.
-  await box.click()
+  await box.focus()
+  await page.keyboard.press('Space')
   const dialog = page.getByRole('dialog', { name: 'Take lanes 1-2 out of play?' })
   await dialog.getByRole('button', { name: 'Go back' }).click()
+  await expect(box).toBeFocused()
   await expect(box).toBeChecked()
   await expect(spots).toHaveText(before ?? '')
+  // The closed dialog leaves the page a moment later; a key sent before that reaches the old one.
+  await expect(page.locator('dialog')).toHaveCount(0)
 
-  await box.click()
+  await page.keyboard.press('Space')
   await dialog.getByRole('button', { name: 'Take out of play' }).click()
   await expect(dialog).toBeHidden()
+  // Focus goes back to the box, not to the top of the page (WCAG 2.4.3).
+  await expect(box).toBeFocused()
   await expect(box).not.toBeChecked()
   await expect(pair).toContainText('Out of play')
   await expect(page.getByRole('heading', { name: 'Unassigned (8)' })).toBeVisible()
@@ -370,9 +376,12 @@ test('a pair taken out of play empties, refuses bowlers, and comes back (OOP-02 
   ).toBeDisabled()
   await page.keyboard.press('Escape')
 
-  // Back in play: the bowlers who left stay unassigned.
-  await box.click()
+  // Back in play by keyboard: focus stays through the save, and the bowlers who left stay off.
+  await box.focus()
+  await page.keyboard.press('Space')
   await expect(box).toBeChecked()
+  await expect(box).not.toHaveAttribute('aria-disabled')
+  await expect(box).toBeFocused()
   await expect(spots).toHaveText(before ?? '')
   await expect(pair).toContainText('0 of 4')
   await expect(page.getByRole('heading', { name: 'Unassigned (8)' })).toBeVisible()

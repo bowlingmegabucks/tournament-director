@@ -17,6 +17,11 @@ interface ConfirmChangesDialogProps {
   /** The button that goes ahead. Defaults to "Save anyway"; while `pending` it says "Saving…". */
   confirmLabel?: string
   pending: boolean
+  /**
+   * Close the dialog as it confirms, for a change that shows at once. Closing, not just removing
+   * it, gives focus back to whatever opened it.
+   */
+  closeOnConfirm?: boolean
   /** Why the confirmed save did not go through, when it did not. */
   failure?: string
   onConfirm: () => void
@@ -32,6 +37,7 @@ export function ConfirmChangesDialog({
   title = 'Save these changes?',
   confirmLabel = 'Save anyway',
   pending,
+  closeOnConfirm = false,
   failure,
   onConfirm,
   onClose,
@@ -70,7 +76,14 @@ export function ConfirmChangesDialog({
           >
             Go back
           </button>
-          <button type="button" disabled={pending} onClick={onConfirm}>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={(event) => {
+              onConfirm()
+              if (closeOnConfirm) closeDialogOf(event)
+            }}
+          >
             {pending ? 'Saving…' : confirmLabel}
           </button>
         </div>

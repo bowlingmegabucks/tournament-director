@@ -358,13 +358,12 @@ describe('setPairInPlay', () => {
   const answer = (status: number, body: JsonBodyType) => {
     server.use(http.put(path, () => HttpResponse.json(body, { status })))
   }
-  const send = (confirmWarnings = false) =>
-    setPairInPlay('squad', 't1', 's1', 3, false, confirmWarnings)
+  const send = (seen?: string[]) => setPairInPlay('squad', 't1', 's1', 3, false, seen)
 
   it.each([
-    [false, { inPlay: false }],
-    [true, { inPlay: false, confirmWarnings: true }],
-  ])('sends the pair, with confirmWarnings only once agreed: %s (OOP-04)', async (agreed, body) => {
+    [undefined, { inPlay: false }],
+    [['r1'], { inPlay: false, confirmWarnings: true, seen: ['r1'] }],
+  ])('sends who was agreed to only once asked: %j (OOP-04)', async (seen, body) => {
     let sent: unknown
     let lane: unknown
     server.use(
@@ -375,7 +374,7 @@ describe('setPairInPlay', () => {
       }),
     )
 
-    await expect(send(agreed)).resolves.toBe('saved')
+    await expect(send(seen)).resolves.toBe('saved')
     expect(sent).toEqual(body)
     expect(lane).toBe('3')
   })

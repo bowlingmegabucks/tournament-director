@@ -21,6 +21,7 @@ export function PairOutDialog({ pair, ...rest }: Readonly<PairOutDialogProps>) {
       confirmLabel="Take out of play"
       // The change shows at once, so there is no wait to show here.
       pending={false}
+      closeOnConfirm
       {...rest}
     />
   )

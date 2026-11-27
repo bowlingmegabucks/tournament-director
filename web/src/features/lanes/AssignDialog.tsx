@@ -29,7 +29,8 @@ function status(pair: LanePair, bowler: LaneBowler): string {
 
 /**
  * The way to assign or move a bowler without dragging (WCAG 2.5.7, D-58): a modal listing the
- * pairs, with full ones and the bowler's own pair disabled. A pick does what a drop does.
+ * pairs, with full ones, pairs out of play, and
+ * the bowler's own pair disabled. A pick does what a drop does.
  */
 export function AssignDialog({ bowler, kind, page, onPick, onClose }: Readonly<AssignDialogProps>) {
   const titleId = useId()

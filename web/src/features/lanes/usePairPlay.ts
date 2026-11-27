@@ -2,14 +2,15 @@ import { useMutation, useMutationState, useQueryClient } from '@tanstack/react-q
 import { useState } from 'react'
 import { setPairInPlay } from './api'
 import { applyMoves, planMove } from './optimisticMove'
-import { laneKeys } from './useLanes'
+import { isLastLaneSave, laneKeys } from './useLanes'
 import type { LanePage, LanePair, SessionKind } from './types'
 
 interface PairRequest {
   /** The first lane of the pair. */
   lane: number
   inPlay: boolean
-  confirmWarnings: boolean
+  /** Who the director agreed to unassign. Left out until they have been asked. */
+  seen?: readonly string[]
 }
 
 /** The page as it will be: the pair in or out, and anyone on a pair going out unassigned. */
@@ -46,8 +47,8 @@ export function usePairPlay(
 
   const mutation = useMutation({
     mutationKey,
-    mutationFn: ({ lane, inPlay, confirmWarnings }: PairRequest) =>
-      setPairInPlay(kind, tournamentId, sessionId, lane, inPlay, confirmWarnings),
+    mutationFn: ({ lane, inPlay, seen }: PairRequest) =>
+      setPairInPlay(kind, tournamentId, sessionId, lane, inPlay, seen),
     onMutate: async (request) => {
       // A refetch that lands now would overwrite the change with the page from before it.
       await queryClient.cancelQueries({ queryKey: key })
@@ -58,16 +59,24 @@ export function usePairPlay(
     onSuccess: (result, { lane }, context) => {
       if (result !== 'confirm') return
       // Nothing was saved.
-      if (context.previous) queryClient.setQueryData(key, context.previous)
+      restore(context.previous)
       setAsking(lane)
     },
     onError: (error, _request, context) => {
-      if (context?.previous) queryClient.setQueryData(key, context.previous)
+      restore(context?.previous)
       onError(error.message)
     },
     // Waits for the refetch, so the checkbox stays off limits until the page is the API's.
-    onSettled: () => queryClient.invalidateQueries({ queryKey: key }),
+    onSettled: () =>
+      isLastLaneSave(queryClient, key)
+        ? queryClient.invalidateQueries({ queryKey: key })
+        : undefined,
   })
+
+  /** Puts the page back, unless another save is out: the refetch after the last one does it then. */
+  function restore(previous: LanePage | undefined) {
+    if (previous && isLastLaneSave(queryClient, key)) queryClient.setQueryData(key, previous)
+  }
 
   const pending = useMutationState({
     filters: { mutationKey, status: 'pending' },
@@ -83,12 +92,13 @@ export function usePairPlay(
     asking,
     setInPlay(pair: LanePair, inPlay: boolean) {
       if (!inPlay && pair.bowlers.length > 0) setAsking(pair.firstLane)
-      else mutation.mutate({ lane: pair.firstLane, inPlay, confirmWarnings: false })
+      else mutation.mutate({ lane: pair.firstLane, inPlay })
     },
-    confirm() {
-      if (asking === undefined) return
+    /** `pair` is the one the dialog showed, so the API can tell if someone has joined it since. */
+    confirm(pair: LanePair) {
       setAsking(undefined)
-      mutation.mutate({ lane: asking, inPlay: false, confirmWarnings: true })
+      const seen = pair.bowlers.map((bowler) => bowler.registrationId)
+      mutation.mutate({ lane: pair.firstLane, inPlay: false, seen })
     },
     cancel() {
       setAsking(undefined)

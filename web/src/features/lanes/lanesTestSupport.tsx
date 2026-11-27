@@ -25,6 +25,7 @@ export interface PairPut {
   lane: number
   inPlay: boolean
   confirmWarnings?: boolean
+  seen?: string[]
 }
 
 /**

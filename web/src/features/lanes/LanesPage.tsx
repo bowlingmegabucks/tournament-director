@@ -91,6 +91,9 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
   const bowlers = everyBowler(view)
   const dragging = bowlers.find((bowler) => bowler.registrationId === draggingId)
   const askingPair = view.pairs.find((pair) => pair.firstLane === pairPlay.asking)
+  // The question is stale once the pair is gone or the page can no longer change. Drop it, so it
+  // cannot come back later.
+  if (pairPlay.asking !== undefined && (readOnly || !askingPair)) pairPlay.cancel()
 
   // One place decides what a drop or a dialog pick does (D-58, D-220).
   function attempt(bowler: LaneBowler, target: DropTarget) {
@@ -121,7 +124,9 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
   )
 
   let body
-  if (countBowlers(view) === 0) {
+  const noBowlers = countBowlers(view) === 0
+  // With pairs, an empty session still shows them: a lane may go out before anyone enters (OOP-03).
+  if (noBowlers && view.pairs.length === 0) {
     body = (
       <>
         <p>No bowlers have entered this {kind} yet.</p>
@@ -147,6 +152,7 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
   } else {
     body = (
       <>
+        {noBowlers && <p>No bowlers have entered this {kind} yet.</p>}
         <div className={styles.stripRow}>
           <ul className={styles.strip} aria-label="Bowlers per division">
             {view.divisions.map((division) => (
@@ -163,22 +169,27 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
           </ul>
           <span className={styles.stripActions}>
             {addLink}
-            <button
-              type="button"
-              onClick={() => {
-                setRecapOpen(true)
-              }}
-            >
-              Recap sheets
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setCheckInOpen(true)
-              }}
-            >
-              Check-in sheet
-            </button>
+            {/* A sheet with nobody on it is no use. */}
+            {!noBowlers && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecapOpen(true)
+                  }}
+                >
+                  Recap sheets
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCheckInOpen(true)
+                  }}
+                >
+                  Check-in sheet
+                </button>
+              </>
+            )}
           </span>
         </div>
         {session.complete && (
@@ -258,8 +269,14 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
           }}
         />
       )}
-      {askingPair && (
-        <PairOutDialog pair={askingPair} onConfirm={pairPlay.confirm} onClose={pairPlay.cancel} />
+      {askingPair && !readOnly && (
+        <PairOutDialog
+          pair={askingPair}
+          onConfirm={() => {
+            pairPlay.confirm(askingPair)
+          }}
+          onClose={pairPlay.cancel}
+        />
       )}
       <DragOverlay>{dragging ? <BowlerPreview name={dragging.name} /> : null}</DragOverlay>
       {assigning && (

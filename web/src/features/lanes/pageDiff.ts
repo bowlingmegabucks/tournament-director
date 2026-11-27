@@ -36,7 +36,11 @@ export function diffPages(before: LanePage, after: LanePage): PageChange {
   const pairs = after.pairs
     .filter((pair) => {
       const was = old.get(pair.firstLane)
-      return was?.outOfPlay !== pair.outOfPlay || !sameBowlers(was.bowlers, pair.bowlers)
+      // A pair new to the page counts only when it brings bowlers or is out of play.
+      return (
+        (was?.outOfPlay ?? false) !== pair.outOfPlay ||
+        !sameBowlers(was?.bowlers ?? [], pair.bowlers)
+      )
     })
     .map((pair) => pair.firstLane)
   return { pairs, unassigned: !sameBowlers(before.unassigned, after.unassigned) }

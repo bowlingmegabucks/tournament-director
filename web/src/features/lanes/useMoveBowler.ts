@@ -1,7 +1,7 @@
 import { useMutation, useMutationState, useQueryClient } from '@tanstack/react-query'
 import { moveBowler } from './api'
 import { applyMoves, type Move } from './optimisticMove'
-import { laneKeys } from './useLanes'
+import { isLastLaneSave, laneKeys } from './useLanes'
 import type { LanePage, SessionKind } from './types'
 
 export interface MoveRequest {
@@ -46,9 +46,15 @@ export function useMoveBowler(kind: SessionKind, tournamentId: string, sessionId
       )
     },
     onError: (_error, _request, context) => {
-      if (context?.previous) queryClient.setQueryData(key, context.previous)
+      // With another save out, the refetch after the last one puts this right instead.
+      if (context?.previous && isLastLaneSave(queryClient, key)) {
+        queryClient.setQueryData(key, context.previous)
+      }
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: key }),
+    onSettled: () =>
+      isLastLaneSave(queryClient, key)
+        ? queryClient.invalidateQueries({ queryKey: key })
+        : undefined,
   })
 
   // The bowlers whose saves are still out, so their rows can say so.

@@ -1,7 +1,7 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { tournamentKeys } from '../../shared/tournamentQuery'
 import { applyNoShow, NoShowChangedError, previewNoShow, type NoShowTarget } from './api'
-import type { Choice } from './types'
+import type { Choice, Preview } from './types'
 
 const previewKey = (target: NoShowTarget, choice: Choice | undefined) =>
   [
@@ -12,9 +12,15 @@ const previewKey = (target: NoShowTarget, choice: Choice | undefined) =>
     choice,
   ] as const
 
+/** Whether a preview is of this action and target: only the ticks may differ. */
+const sameMove = (preview: Preview, choice: Choice) =>
+  preview.action === choice.action &&
+  (choice.action === 'refund' || preview.target?.id === choice.targetSquadId)
+
 /**
  * The preview of one choice, read fresh each time. While a new tick is being worked out the last
- * preview stays on screen, so the boxes do not vanish (`isPlaceholderData`).
+ * preview stays on screen, so the boxes do not vanish (`isPlaceholderData`). Another action or
+ * squad starts empty: the old preview would describe the wrong change.
  */
 export function useNoShowPreview(target: NoShowTarget, choice: Choice | undefined) {
   return useQuery({
@@ -24,7 +30,8 @@ export function useNoShowPreview(target: NoShowTarget, choice: Choice | undefine
       return previewNoShow(target, choice)
     },
     enabled: choice !== undefined,
-    placeholderData: choice === undefined ? undefined : keepPreviousData,
+    placeholderData: (previous: Preview | undefined) =>
+      previous && choice && sameMove(previous, choice) ? previous : undefined,
     staleTime: 0,
     gcTime: 0,
     retry: false,

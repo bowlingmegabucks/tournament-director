@@ -120,6 +120,7 @@ Start with these; add one whenever a feature brings a new refusal.
 | Complete  | Complete a tournament that has no squad (D-257)                                  | 409 "Add a squad before you complete this tournament"    |
 | Complete  | Edit a complete tournament                                                       | 409, every field frozen                                  |
 | Delete    | Delete a tournament that has scores                                              | 409, no override                                         |
+| No-show   | Refund while a payout was saved during the review (NSH-08)                       | 409, nothing saved (done, stage 10)                      |
 | Access    | Score keeper opens a director-only action                                        | Link hidden; API refuses                                 |
 
 ## Running it

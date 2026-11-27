@@ -81,7 +81,8 @@ export function markTies(
   const competitors = rankEntries(
     [...outcome.cashers, ...outcome.others].filter((entry) => !advancedBefore.has(entry.bowlerId)),
   )
-  markLine(marks, 'cut', outcome.advancers, competitors)
+  // A forced advancer ranks below those who made it on score, and is not part of the cut (NSH-21).
+  markLine(marks, 'cut', outcome.advancers.slice(0, outcome.advanceSpots), competitors)
   markLine(marks, 'cash', outcome.cashers, outcome.others)
   return marks
 }

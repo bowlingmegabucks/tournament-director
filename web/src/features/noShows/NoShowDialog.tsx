@@ -1,8 +1,10 @@
 import { useId, useState } from 'react'
 import { closeDialogOf, showOnMount } from '../../shared/dialogParts'
 import dialog from '../../shared/Dialog.module.css'
+import { LeaveDialog } from '../../shared/LeaveDialog'
 import { Loading } from '../../shared/Loading'
 import { formatSessionDate } from '../../shared/sessionFormat'
+import { useLeaveGuard } from '../../shared/useLeaveGuard'
 import { useRegistrations } from '../registrations/useRegistrations'
 import { useSquads } from '../squads/useSquads'
 import { NoShowChangedError, type NoShowTarget } from './api'
@@ -33,15 +35,19 @@ function choiceOf(
   return undefined
 }
 
-function PreviewList({ title, lines }: Readonly<{ title: string; lines: string[] }>) {
+interface Line {
+  key: string
+  text: string
+}
+
+function PreviewList({ title, lines }: Readonly<{ title: string; lines: Line[] }>) {
   if (lines.length === 0) return null
   return (
     <div>
       <h3 className={styles.heading}>{title}</h3>
       <ul className={styles.list}>
-        {lines.map((line, index) => (
-          // Two bowlers can share a name, so the position is part of the key.
-          <li key={`${index}:${line}`}>{line}</li>
+        {lines.map((line) => (
+          <li key={line.key}>{line.text}</li>
         ))}
       </ul>
     </div>
@@ -96,9 +102,27 @@ function Review({ preview, kept, onKeep }: Readonly<ReviewProps>) {
           ))}
         </fieldset>
       )}
-      <PreviewList title="Squad results" lines={preview.changes.map(describeChange)} />
-      <PreviewList title="At-large" lines={preview.atLarge.map(describeAtLarge)} />
-      <PreviewList title="Payouts" lines={preview.payouts.map(describePayout)} />
+      <PreviewList
+        title="Squad results"
+        lines={preview.changes.map((change) => ({
+          key: `${keyOf(change)}:${change.change}`,
+          text: describeChange(change),
+        }))}
+      />
+      <PreviewList
+        title="At-large"
+        lines={preview.atLarge.map((change) => ({
+          key: change.divisionId,
+          text: describeAtLarge(change),
+        }))}
+      />
+      <PreviewList
+        title="Payouts"
+        lines={preview.payouts.map((payout) => ({
+          key: payout.payoutId,
+          text: describePayout(payout),
+        }))}
+      />
       {nothing && <p className={dialog.text}>No one’s results or payouts change.</p>}
       {preview.action === 'move' && (
         <p className={dialog.text}>
@@ -131,6 +155,8 @@ export function NoShowDialog({ target, bowlerName, onDone, onClose }: Readonly<N
   const choice = choiceOf(action, targetSquadId, kept)
   const preview = useNoShowPreview(target, choice)
   const apply = useApplyNoShow(target)
+  // Leaving the page loses the choice, so ask first once one is made.
+  const guard = useLeaveGuard(action !== undefined)
 
   const held = new Set(
     registrations.data?.registrations.find((entry) => entry.id === target.registrationId)?.squadIds,
@@ -149,7 +175,8 @@ export function NoShowDialog({ target, bowlerName, onDone, onClose }: Readonly<N
   async function confirm() {
     if (!choice || !preview.data) return
     try {
-      await apply.mutateAsync({ choice, version: preview.data.version })
+      const { version } = preview.data
+      await guard.whileSaving(() => apply.mutateAsync({ choice, version }))
       onDone(doneText(bowlerName, preview.data))
       onClose()
     } catch {
@@ -225,40 +252,52 @@ export function NoShowDialog({ target, bowlerName, onDone, onClose }: Readonly<N
   }
 
   return (
-    <dialog
-      ref={showOnMount}
-      className={`${dialog.dialog} ${styles.sheet}`}
-      aria-labelledby={titleId}
-      onClose={onClose}
-    >
-      <div className={dialog.content}>
-        <h2 id={titleId} className={dialog.title}>
-          Move or refund {bowlerName}
-        </h2>
-        {body}
-        {problem && (
-          <p role="alert" className={dialog.error}>
-            {problem instanceof NoShowChangedError
-              ? 'This changed since you reviewed it. Check it again, then confirm.'
-              : problem.message}
-          </p>
-        )}
-        <div className={dialog.actions}>
-          <button type="button" className={dialog.secondary} onClick={closeDialogOf}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            className={dialog.destructive}
-            disabled={!ready || apply.isPending || preview.error !== null}
-            onClick={() => {
-              void confirm()
-            }}
-          >
-            {apply.isPending ? 'Saving…' : action === 'refund' ? 'Refund entry' : 'Move entry'}
-          </button>
+    <>
+      <dialog
+        ref={showOnMount}
+        className={`${dialog.dialog} ${styles.sheet}`}
+        aria-labelledby={titleId}
+        onClose={onClose}
+        onCancel={(event) => {
+          // Escape must not hide a save that is still running.
+          if (apply.isPending) event.preventDefault()
+        }}
+      >
+        <div className={dialog.content}>
+          <h2 id={titleId} className={dialog.title}>
+            Move or refund {bowlerName}
+          </h2>
+          {body}
+          {problem && (
+            <p role="alert" className={dialog.error}>
+              {problem instanceof NoShowChangedError
+                ? 'This changed since you reviewed it. Check it again, then confirm.'
+                : problem.message}
+            </p>
+          )}
+          <div className={dialog.actions}>
+            <button
+              type="button"
+              className={dialog.secondary}
+              disabled={apply.isPending}
+              onClick={closeDialogOf}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={dialog.destructive}
+              disabled={!ready || apply.isPending || preview.error !== null}
+              onClick={() => {
+                void confirm()
+              }}
+            >
+              {apply.isPending ? 'Saving…' : action === 'refund' ? 'Refund entry' : 'Move entry'}
+            </button>
+          </div>
         </div>
-      </div>
-    </dialog>
+      </dialog>
+      <LeaveDialog blocker={guard.blocker} />
+    </>
   )
 }

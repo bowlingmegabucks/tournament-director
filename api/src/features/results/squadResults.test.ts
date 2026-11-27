@@ -401,8 +401,23 @@ describe('workOutDivision: forced advancers (NSH-20 to NSH-23)', () => {
 
     expect(ids(result.advancers)).toEqual(ids(bowlers.slice(0, 3)))
     expect(ids(result.cashers)).toEqual(ids(bowlers.slice(3, 4)))
-    expect(result.cutTotal).toBe(bowlers[2]?.total)
+    // The cut stays with the last bowler who made it on score.
+    expect(result.cutTotal).toBe(bowlers[1]?.total)
     expect(result.advanceSpots).toBe(2)
+  })
+
+  it('leaves an earlier advancer below the natural cut where they were (D-81)', () => {
+    const bowlers = ranked(20, 3)
+    const third = bowlers[2]
+
+    const result = at(bowlers, { advancedBefore: new Set(third ? [third.bowlerId] : []) })
+
+    // Naturals: first and second. The fourth is forced, below the third, who advanced earlier.
+    expect(result.cutTotal).toBe(bowlers[1]?.total)
+  })
+
+  it('has no cut when the only advancer is forced', () => {
+    expect(at(ranked(6, 0)).cutTotal).toBeUndefined()
   })
 
   it('adds nothing for a forced bowler who already ranks inside the cut', () => {

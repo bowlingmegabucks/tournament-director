@@ -21,7 +21,10 @@ export interface DivisionOutcome {
   advanceSpots: number
   /** `C`, the cash spots beyond the advancers (RES-05). The cashers can number more (RES-08). */
   cashSpots: number
-  /** The last advancer's total. `undefined` when no one advances: there is no cut (D-81). */
+  /**
+   * The total of the last bowler who advanced on score, never a forced one. `undefined` when no one
+   * advances on score: there is no cut (D-81).
+   */
   cutTotal: number | undefined
   /** Best first. These three lists hold every ranked bowler once. */
   advancers: ResultEntry[]
@@ -40,7 +43,8 @@ const isNoShow = (entry: ResultEntry) => entry.games.every((score) => score === 
  * one squad.
  *
  * `A = floor(N / finalsRatio)`. `C` is 1 when `A` is 0 (D-08), else `max(floor(N / cashRatio) - A, 0)`.
- * A forced advancer (NSH-20 to NSH-23) adds one to `A` in that formula.
+ * A forced advancer (NSH-20 to NSH-23) adds one to `A` in that formula, and does not move the cut:
+ * the cut stays with the last bowler who made it on score.
  * An earlier advancer ranks like anyone else but cannot take an advancing spot. The cashers are the
  * next `C` bowlers after the advancers, plus any earlier advancer at or above the cut (who would
  * have advanced), so there can be more than `C`. With fewer bowlers than spots, all of them take
@@ -62,12 +66,13 @@ export function workOutDivision(input: DivisionInput): DivisionOutcome {
 
   // NSH-21: a forced advancer is an advancer on top of the top `A`, in rank order.
   const eligible = ranked.filter((entry) => !advancedBefore.has(entry.bowlerId))
-  const natural = new Set(eligible.slice(0, advanceSpots))
+  const onScore = eligible.slice(0, advanceSpots)
+  const natural = new Set(onScore)
   const advancers = eligible.filter((entry) => natural.has(entry) || entry.forced === true)
   // NSH-22: a forced advancer counts against the cash spots like any other.
   const taken = advanceSpots + advancers.length - natural.size
   const cashSpots = taken === 0 ? 1 : Math.max(Math.floor(entryCount / cashRatio) - taken, 0)
-  const cutTotal = advancers.at(-1)?.total
+  const cutTotal = onScore.at(-1)?.total
 
   const remaining = ranked.filter((entry) => !advancers.includes(entry))
   const cashing = new Set(remaining.slice(0, cashSpots))

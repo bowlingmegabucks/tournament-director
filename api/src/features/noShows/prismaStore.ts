@@ -1,6 +1,7 @@
 import { withDatabaseErrors, type PrismaClient } from '../../shared/database.ts'
 import type { Logger } from '../../shared/logger.ts'
 import { withRetry } from '../../shared/serializableRetry.ts'
+import { isRealPayment } from '../registrations/payment.ts'
 import type { NoShowCommand, NoShowStore } from './store.ts'
 
 type Tx = Parameters<Parameters<PrismaClient['$transaction']>[0]>[0]
@@ -39,6 +40,28 @@ async function sessionsHold(tx: Tx, command: NoShowCommand): Promise<boolean> {
   return target !== null && !held.has(targetSquadId)
 }
 
+/** NSH-06: a refund that keeps the registration leaves it at least one other squad entry. */
+async function hasOtherSquad(tx: Tx, command: NoShowCommand): Promise<boolean> {
+  const rows = await tx.squadRegistration.findMany({
+    where: { registrationId: command.registrationId, squadId: { not: command.sourceSquadId } },
+    select: { squad: { select: { squadType: true } } },
+  })
+  return rows.some((row) => row.squad.squadType === SQUAD)
+}
+
+/** NSH-06, D-211: the payments a delete removes are still the ones the admin was warned about. */
+async function paymentsHold(tx: Tx, command: NoShowCommand): Promise<boolean> {
+  const rows = await tx.payment.findMany({
+    where: { registrationId: command.registrationId },
+    select: { confirmationCode: true, amount: true },
+  })
+  const paid = rows
+    .map((row) => ({ code: row.confirmationCode, amount: row.amount.toNumber() }))
+    .filter((payment) => isRealPayment(payment.code, payment.amount))
+    .reduce((sum, payment) => sum + Math.round(payment.amount * 100), 0)
+  return paid === command.paidCents
+}
+
 /** NSH-03, NSH-07, NSH-08: still a no-show, and nothing that blocks the write has appeared. */
 async function bowlerHolds(tx: Tx, command: NoShowCommand): Promise<boolean> {
   const { tournamentId, sourceSquadId, registrationId, bowlerId, deleteRegistration } = command
@@ -56,12 +79,12 @@ async function bowlerHolds(tx: Tx, command: NoShowCommand): Promise<boolean> {
     select: { id: true },
   })
   if (payout) return false
+  // A move keeps the registration and adds an entry.
+  if (command.targetSquadId !== null) return true
+  // The plan deletes exactly when no other squad entry is left.
+  if ((await hasOtherSquad(tx, command)) === deleteRegistration) return false
   if (!deleteRegistration) return true
-  const squads = await tx.squadRegistration.findMany({
-    where: { registrationId, squadId: { not: sourceSquadId } },
-    select: { squad: { select: { squadType: true } } },
-  })
-  if (squads.some((row) => row.squad.squadType === SQUAD)) return false
+  if (!(await paymentsHold(tx, command))) return false
   const sessions = await tx.squad.findMany({
     where: { tournamentId, id: { not: sourceSquadId } },
     select: { id: true },

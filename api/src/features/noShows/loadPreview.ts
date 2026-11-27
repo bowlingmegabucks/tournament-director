@@ -189,16 +189,18 @@ export async function planNoShow(deps: NoShowDeps, request: Request): Promise<Pl
   const payouts = payoutChanges(records, snapshot, fallout, note)
 
   const warnings: string[] = []
+  // The facts hold real payments only (D-106).
+  const paidCents = deletesRegistration
+    ? facts.payments.reduce((sum, payment) => sum + Math.round(payment.amount * 100), 0)
+    : 0
   const sweeperIds = sweepers
     .map((sweeper) => sweeper.id)
     .filter((id) => detail.sessionIds.includes(id))
   if (deletesRegistration) {
     warnings.push(sweeperIds.length > 0 ? messages.sweepers : messages.noSweepers)
-    // The facts hold real payments only (D-106).
-    const paid = facts.payments.reduce((sum, payment) => sum + Math.round(payment.amount * 100), 0)
-    if (paid > 0) {
+    if (paidCents > 0) {
       warnings.push(
-        `This bowler paid ${dollars(paid)} outside this system. Deleting the registration removes the payment records.`,
+        `This bowler paid ${dollars(paidCents)} outside this system. Deleting the registration removes the payment records.`,
       )
     }
   }
@@ -226,6 +228,7 @@ export async function planNoShow(deps: NoShowDeps, request: Request): Promise<Pl
       bowlerId: detail.bowlerId,
       targetSquadId: target?.id ?? null,
       deleteRegistration: deletesRegistration,
+      paidCents,
       keepAdvancing: fallout.kept,
       notes: payouts.flatMap((item) =>
         item.note === null ? [] : [{ payoutId: item.payoutId, note: item.note }],

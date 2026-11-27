@@ -54,6 +54,23 @@ describe('SeedingBody (RES-18 to RES-21a, D-92)', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('marks a finalist who advanced by ruling (NSH-24) and no one else', () => {
+    render(
+      <SeedingBody
+        division={division({
+          rows: [
+            createSeedingRow({ name: 'Cal Lane', byRuling: true }),
+            createSeedingRow({ name: 'Joe Fontaine', seed: 2 }),
+          ],
+        })}
+      />,
+    )
+
+    const row = (name: RegExp) => within(screen.getByRole('row', { name }))
+    expect(row(/Cal Lane/).getByText('Advanced by ruling')).toBeInTheDocument()
+    expect(row(/Joe Fontaine/).queryByText('Advanced by ruling')).not.toBeInTheDocument()
+  })
+
   it('shows a tie mark under the name', () => {
     const tied = division({
       rows: [

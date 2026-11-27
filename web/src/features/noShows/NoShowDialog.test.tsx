@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { http, HttpResponse } from 'msw'
+import { delay, http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import { setMockUser } from '../../mocks/authHandlers'
 import {
   createDivisionResult,
+  createRegistration,
   createSettings,
   createSignedInUser,
   createSquad,
@@ -150,6 +151,38 @@ async function chooseMove() {
   )
   await opened.user.selectOptions(opened.dialog.getByLabelText('New squad'), next.id)
   return opened
+}
+
+/** The results as they read once the no-show is gone, after a save. */
+function dropNoShowOnSave() {
+  let saved = false
+  server.use(
+    http.post('/v1/tournaments/:id/squads/:sessionId/no-shows/:registrationId', () => {
+      saved = true
+      return HttpResponse.json({ deletedRegistration: false })
+    }),
+    http.get('/v1/tournaments/:id/squads/:sessionId/results', () =>
+      HttpResponse.json(
+        createSquadResults({
+          session: {
+            id: source.id,
+            kind: 'squad',
+            date: source.date,
+            complete: true,
+            games: 3,
+          },
+          divisions: [
+            createDivisionResult({
+              name: 'Open',
+              entries: 2,
+              rows: [createSquadRow({ name: 'Amy Lane' })],
+              noShows: saved ? [] : [{ registrationId: noShowId, name: 'Nora Noshow' }],
+            }),
+          ],
+        }),
+      ),
+    ),
+  )
 }
 
 describe('who sees the no-show button (NSH-01, NSH-02)', () => {
@@ -313,7 +346,125 @@ describe('the no-show dialog (NSH-04, NSH-09, NSH-20)', () => {
     )
     const { dialog } = await openDialog()
 
-    expect(await dialog.findByRole('alert')).toHaveTextContent('500')
+    // The query retries once, a second later, before it reports the failure.
+    expect(await dialog.findByRole('alert', {}, { timeout: 3000 })).toHaveTextContent('500')
+  })
+
+  it('does not offer a squad the bowler has already entered (NSH-04)', async () => {
+    serve()
+    const later = createSquad({ date: '2026-11-28T08:00:00', complete: false })
+    server.use(
+      http.get('/v1/tournaments/:id/squads', () =>
+        HttpResponse.json({ squads: [source, next, later] }),
+      ),
+      http.get('/v1/tournaments/:id/registrations', () =>
+        HttpResponse.json({
+          registrations: [createRegistration({ id: noShowId, squadIds: [source.id, next.id] })],
+          summary: { registrations: 1, superSweepers: 0, divisions: [], squads: [], sweepers: [] },
+        }),
+      ),
+    )
+    const { user, dialog } = await openDialog()
+
+    await user.click(await dialog.findByRole('radio', { name: 'Move to another squad' }))
+
+    const options = within(dialog.getByLabelText('New squad')).getAllByRole('option')
+    expect(options.map((option) => option.getAttribute('value'))).toEqual(['', later.id])
+  })
+
+  it('reads the results again after a save, and puts focus on the division', async () => {
+    serve()
+    dropNoShowOnSave()
+    const { user, dialog } = await chooseMove()
+    await dialog.findByText('No one’s results or payouts change.')
+
+    await user.click(dialog.getByRole('button', { name: 'Move entry' }))
+
+    await waitFor(() => {
+      expect(screen.queryByText('Nora Noshow')).not.toBeInTheDocument()
+    })
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 2, name: 'Open' })).toHaveFocus()
+    })
+  })
+
+  it('confirms again with the new version after the facts changed', async () => {
+    let saves = 0
+    const sent = serve({
+      apply: () => {
+        saves += 1
+        if (saves > 1) return HttpResponse.json({ deletedRegistration: false })
+        return HttpResponse.json(
+          {
+            message: 'Changed',
+            preview: previewOf(
+              { action: 'move', targetSquadId: next.id, keepAdvancing: [] },
+              { warnings: ['A payout was saved since.'], version: 'newer' },
+            ),
+          },
+          { status: 409 },
+        )
+      },
+    })
+    const { user, dialog } = await chooseMove()
+    await dialog.findByText('No one’s results or payouts change.')
+    await user.click(dialog.getByRole('button', { name: 'Move entry' }))
+    await dialog.findByText('A payout was saved since.')
+
+    await user.click(dialog.getByRole('button', { name: 'Move entry' }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Nora Noshow moved to')
+    expect(sent.saves.at(-1)).toMatchObject({ version: 'newer' })
+  })
+
+  it('drops the old preview while another action is checked', async () => {
+    serve()
+    const { user, dialog } = await chooseMove()
+    await dialog.findByText(/at-large figures can change again/)
+    server.use(
+      http.post('/v1/tournaments/:id/squads/:sessionId/no-shows/:registrationId/preview', () =>
+        delay('infinite'),
+      ),
+    )
+
+    await user.click(dialog.getByRole('radio', { name: 'Refund' }))
+
+    expect(dialog.queryByText(/at-large figures can change again/)).not.toBeInTheDocument()
+    expect(dialog.queryByText('No one’s results or payouts change.')).not.toBeInTheDocument()
+  })
+
+  it('cannot be closed while it saves', async () => {
+    serve()
+    server.use(
+      http.post('/v1/tournaments/:id/squads/:sessionId/no-shows/:registrationId', () =>
+        delay('infinite'),
+      ),
+    )
+    const { user, dialog } = await chooseMove()
+    await dialog.findByText('No one’s results or payouts change.')
+
+    await user.click(dialog.getByRole('button', { name: 'Move entry' }))
+
+    expect(await dialog.findByRole('button', { name: 'Saving…' })).toBeDisabled()
+    expect(dialog.getByRole('button', { name: 'Cancel' })).toBeDisabled()
+    const escape = new Event('cancel', { cancelable: true })
+    fireEvent(screen.getByRole('dialog'), escape)
+    expect(escape.defaultPrevented).toBe(true)
+  })
+
+  it('asks before the page is left with a choice made', async () => {
+    serve()
+    const { user, dialog } = await chooseMove()
+    await dialog.findByText('No one’s results or payouts change.')
+    const unload = new Event('beforeunload', { cancelable: true })
+
+    window.dispatchEvent(unload)
+
+    expect(unload.defaultPrevented).toBe(true)
+    await user.click(dialog.getByRole('button', { name: 'Cancel' }))
+    const after = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(after)
+    expect(after.defaultPrevented).toBe(false)
   })
 
   it('closes on Cancel and saves nothing', async () => {

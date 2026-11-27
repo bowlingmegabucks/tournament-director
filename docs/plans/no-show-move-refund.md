@@ -40,7 +40,7 @@ System note (cut to 200 characters):
 | NSH-23 | They come out of the at-large spots. With none left, at-large stays at zero and the finals field has one more.                                                                         |
 | NSH-24 | They show "Advanced by ruling" wherever they show as an advancer. No reason or name is shown or stored.                                                                                |
 
-How a division works out: natural advancers are the same top `A = floor(N / finalsRatio)` as today. Advancers are those **plus** any forced bowler not already among them. `T` is the number of advancers. Cash spots are 1 when `T` is 0, else `max(floor(N / cashRatio) - T, 0)`. The cut score stays the last advancer's total.
+How a division works out: natural advancers are the same top `A = floor(N / finalsRatio)` as today. Advancers are those **plus** any forced bowler not already among them. `T` is the number of advancers. Cash spots are 1 when `T` is 0, else `max(floor(N / cashRatio) - T, 0)`. The cut score is the total of the last bowler who advanced on score: a forced advancer does not lower it, so it does not change who cashes as "advanced earlier" (`D-81`). With no one advancing on score there is no cut.
 
 Example (finals 1 in 7, cash 1 in 5):
 

@@ -47,7 +47,7 @@ System note (cut to 200 characters):
 | NSH-23 | They come out of the at-large spots. With none left, at-large stays at zero and the finals field has one more.                                                                         |
 | NSH-24 | They show "Advanced by ruling" wherever they show as an advancer. No reason or name is shown or stored.                                                                                |
 
-How a division works out: natural advancers are the same top `A = floor(N / finalsRatio)` as today. Advancers are those **plus** any forced bowler not already among them. `T` is the number of advancers. Cash spots are 1 when `T` is 0, else `max(floor(N / cashRatio) - T, 0)`. The cut score stays the last advancer's total.
+How a division works out: natural advancers are the same top `A = floor(N / finalsRatio)` as today. Advancers are those **plus** any forced bowler not already among them. `T` is the number of advancers. Cash spots are 1 when `T` is 0, else `max(floor(N / cashRatio) - T, 0)`. The cut score is the total of the last bowler who advanced on score: a forced advancer does not lower it, so it does not change who cashes as "advanced earlier" (`D-81`). With no one advancing on score there is no cut.
 
 Example (finals 1 in 7, cash 1 in 5):
 
@@ -87,7 +87,7 @@ The preview works the results out twice, as they are and as they would be, and c
 
 The target squad is not previewed. It has not been bowled.
 
-The save is one serializable transaction. It rechecks the tournament, both squads, the no-show, and the payouts before writing. `version` is a hash of the preview, so a change made since the admin looked is shown again instead of saved.
+The save is one serializable transaction. It rechecks the tournament, both squads, the no-show, the payouts, whether another squad entry remains, and, for a delete, the paid total before writing. `version` is a hash of the preview, so a change made since the admin looked is shown again instead of saved.
 
 After the save, publish the entry, result, TV, and payout events for the squads touched.
 

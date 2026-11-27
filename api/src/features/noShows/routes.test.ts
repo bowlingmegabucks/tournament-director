@@ -442,6 +442,7 @@ describe('save (NSH-04 to NSH-06, NSH-14)', () => {
         bowlerId: noShow.bowlerId,
         targetSquadId: openSquad.id,
         deleteRegistration: false,
+        paidCents: 0,
         keepAdvancing: [],
         notes: [{ payoutId: idOf(700), note: preview.payouts[0].note }],
         actorId: expect.any(String),
@@ -462,6 +463,12 @@ describe('save (NSH-04 to NSH-06, NSH-14)', () => {
 
     expect(response.body).toEqual({ deletedRegistration: true })
     expect(commands[0]).toMatchObject({ deleteRegistration: true, targetSquadId: null })
+  })
+
+  it('sends the paid total it warned about, in cents (NSH-06)', async () => {
+    const { commands } = await applied({ payments: 80 }, refundBody)
+
+    expect(commands[0]?.paidCents).toBe(8000)
   })
 
   it('tells the screens of both squads', async () => {

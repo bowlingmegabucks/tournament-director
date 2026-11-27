@@ -81,6 +81,7 @@ describe('Prisma no-show store', () => {
       bowlerId: noShow.bowlerId,
       targetSquadId: target,
       deleteRegistration: false,
+      paidCents: 0,
       keepAdvancing: [],
       notes: [],
       actorId: 'admin-1',
@@ -145,7 +146,7 @@ describe('Prisma no-show store', () => {
     await w.rows.payment(w.noShow.registrationId, 'BowlingSite_abc', 80)
 
     const outcome = await store().apply(
-      w.command({ targetSquadId: null, deleteRegistration: true }),
+      w.command({ targetSquadId: null, deleteRegistration: true, paidCents: 8000 }),
     )
 
     expect(outcome).toBe('saved')
@@ -197,6 +198,16 @@ describe('Prisma no-show store', () => {
     [
       'a sweeper score appeared before a deleting refund',
       (w) => w.rows.score(w.noShow.bowlerId, w.sweeper),
+      () => ({ targetSquadId: null, deleteRegistration: true }),
+    ],
+    [
+      'the other squad entry is gone before a refund that keeps the registration',
+      () => Promise.resolve(),
+      () => ({ targetSquadId: null }),
+    ],
+    [
+      'a payment arrived before a deleting refund',
+      (w) => w.rows.payment(w.noShow.registrationId, 'BowlingSite_late', 80),
       () => ({ targetSquadId: null, deleteRegistration: true }),
     ],
   ])('writes nothing when %s', async (_name, change, over) => {

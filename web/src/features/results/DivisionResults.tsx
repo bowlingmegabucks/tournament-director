@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, type Ref } from 'react'
 import {
   formatGamesOf,
   formatSummary,
@@ -236,15 +236,20 @@ export function DivisionResults({
   division,
   games,
   onNoShow,
+  headingRef,
 }: Readonly<{
   division: DivisionResult
   games: number
   onNoShow?: (row: DivisionResult['noShows'][number]) => void
+  /** Lets the page move focus to this division's heading. */
+  headingRef?: Ref<HTMLHeadingElement>
 }>) {
   const headingId = useId()
   return (
     <section aria-labelledby={headingId}>
-      <h2 id={headingId}>{division.name}</h2>
+      <h2 id={headingId} ref={headingRef} tabIndex={-1}>
+        {division.name}
+      </h2>
       <DivisionBody division={division} games={games} onNoShow={onNoShow} />
     </section>
   )

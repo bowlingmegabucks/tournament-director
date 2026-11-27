@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router'
 import { LiveStatus } from '../../shared/LiveStatus'
 import { Loading } from '../../shared/Loading'
@@ -43,6 +43,12 @@ export function SquadResultsPage() {
   const canOverride = useCan('entries.override')
   const [noShow, setNoShow] = useState<{ registrationId: string; name: string }>()
   const [done, setDone] = useState<string>()
+  const divisionHeading = useRef<HTMLHeadingElement>(null)
+
+  // A save removes the button that opened the dialog, so focus would fall to the page body.
+  useEffect(() => {
+    if (done) divisionHeading.current?.focus()
+  }, [done])
 
   if (!data) {
     if (error) {
@@ -87,6 +93,7 @@ export function SquadResultsPage() {
             Finals ratio {formatRatio(data.finalsRatio)} · cash ratio {formatRatio(data.cashRatio)}
           </p>
           <DivisionResults
+            headingRef={divisionHeading}
             division={chosen}
             games={session.games}
             // NSH-01, NSH-02: an admin, a completed squad, and a tournament that is not complete.

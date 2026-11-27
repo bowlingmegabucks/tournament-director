@@ -10,6 +10,8 @@ export interface NoShowCommand {
   targetSquadId: string | null
   /** A refund of the only squad entry (NSH-06). */
   deleteRegistration: boolean
+  /** The real payments the admin was warned about, in cents (NSH-06). 0 unless it deletes. */
+  paidCents: number
   keepAdvancing: readonly EntryKey[]
   /** Payouts with no note that get one (NSH-11). */
   notes: readonly { payoutId: string; note: string }[]

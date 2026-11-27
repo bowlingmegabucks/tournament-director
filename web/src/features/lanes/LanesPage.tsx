@@ -107,15 +107,28 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
     }
   }
 
+  // Shown with or without bowlers and lanes (REG-22). The link itself asks for `registrations.write`.
+  const addLink = !session.complete && (
+    <AddRegistrationLink tournamentId={id} session={{ kind, id: sessionId }}>
+      {`Add registration to this ${kind}`}
+    </AddRegistrationLink>
+  )
+
   let body
   if (countBowlers(view) === 0) {
-    body = <p>No bowlers have entered this {kind} yet.</p>
+    body = (
+      <>
+        <p>No bowlers have entered this {kind} yet.</p>
+        {addLink}
+      </>
+    )
   } else if (view.pairs.length === 0) {
     body = (
       <>
         <p>
           This {kind} has no lanes set, so there is nowhere to drop a bowler. Set its lanes first.
         </p>
+        {addLink}
         <UnassignedList
           bowlers={view.unassigned}
           kind={kind}
@@ -143,11 +156,7 @@ export function LanesPage({ kind }: Readonly<{ kind: SessionKind }>) {
             </li>
           </ul>
           <span className={styles.stripActions}>
-            {!readOnly && (
-              <AddRegistrationLink tournamentId={id} session={{ kind, id: sessionId }}>
-                {`Add registration to this ${kind}`}
-              </AddRegistrationLink>
-            )}
+            {addLink}
             <button
               type="button"
               onClick={() => {
